@@ -1,0 +1,90 @@
+condition=val  pool 131,072  red rows 11,024  dead channels 67
+
+### seed 0: cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+    24 val corners, judge seed 0
+
+===== K=10 seed=0 cond=val  wells 204..205  A=64 =====
+  built 9.5s  deployed_rank 63..63  span_rank 64..64 (sum 640)
+  RANK/WIDTH  min 0.3122  max 0.3137  (A/width_min = 0.3137)
+  address book fitted 460.5s  361,984 B  (90/10 split, 117,964 train)
+  LEDGER  atoms 524,288 | cov+count 1,713,872 | address 361,984 | coupling 6,610
+          TOTAL 2,606,754 B = 4.972x the 524,288 B REFERENCE (not a budget here)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cov_tensor K=10                    valid 0.8825 +- 0.1021 [0.6944, 1.0000]  (45s)
+    landscape_removed                  valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (43s)
+    landscape_shuffled                 valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (44s)
+    landscape_shuffled_across_wells    valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (37s)
+    random_atoms                       valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (31s)
+  EXACTNESS  downdate 0.79s vs refit 8.3s  max|mode dev| 2.910e-11  max subspace dist 1.981e-11  ranks agree True
+  wrote C:\chlu\outputs\w12-single-design-crossover\val_sweep\val_K10_seed0\row.json
+
+===== K=24 seed=0 cond=val  wells 85..86  A=64 =====
+  built 9.4s  deployed_rank 63..63  span_rank 64..64 (sum 1536)
+  RANK/WIDTH  min 0.7442  max 0.7529  (A/width_min = 0.7529)
+  address book fitted 964.2s  827,904 B  (90/10 split, 117,964 train)
+  LEDGER  atoms 524,288 | cov+count 735,328 | address 827,904 | coupling 6,610
+          TOTAL 2,094,130 B = 3.9942x the 524,288 B REFERENCE (not a budget here)
+    cov_tensor K=24                    valid 0.8981 +- 0.0899 [0.7222, 1.0000]  (52s)
+    landscape_removed                  valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (62s)
+    landscape_shuffled                 valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (57s)
+    landscape_shuffled_across_wells    valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (45s)
+    random_atoms                       valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (50s)
+  EXACTNESS  downdate 1.35s vs refit 12.3s  max|mode dev| 5.821e-11  max subspace dist 2.969e-11  ranks agree True
+  wrote C:\chlu\outputs\w12-single-design-crossover\val_sweep\val_K24_seed0\row.json
+
+===== K=20 seed=0 cond=val  wells 102..103  A=64 =====
+  built 11.9s  deployed_rank 63..63  span_rank 64..64 (sum 1280)
+  RANK/WIDTH  min 0.6214  max 0.6275  (A/width_min = 0.6275)
+  address book fitted 558.6s  694,784 B  (90/10 split, 117,964 train)
+  LEDGER  atoms 524,288 | cov+count 875,104 | address 694,784 | coupling 6,610
+          TOTAL 2,100,786 B = 4.0069x the 524,288 B REFERENCE (not a budget here)
+    cov_tensor K=20                    valid 0.8877 +- 0.0966 [0.7222, 1.0000]  (28s)
+    landscape_removed                  valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (28s)
+    landscape_shuffled                 valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (28s)
+    landscape_shuffled_across_wells    valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (29s)
+    random_atoms                       valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (28s)
+  EXACTNESS  downdate 0.67s vs refit 6.8s  max|mode dev| 1.164e-10  max subspace dist 3.085e-11  ranks agree True
+  wrote C:\chlu\outputs\w12-single-design-crossover\val_sweep\val_K20_seed0\row.json
+
+3 rows written under C:\chlu\outputs\w12-single-design-crossover\val_sweep

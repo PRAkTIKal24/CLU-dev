@@ -1,0 +1,177 @@
+{
+  "INCIDENT_2026-09-20T19:29Z": "hub/single-design ran `exp_w8_downdate --stage fit --condition test` with --out pointed at its OWN build dir, but OUT_ROOT/READY in that module are hardcoded to <CHLU_HUB_OUTPUTS>/w8-downdate and ignore --out, so the publish landed HERE and overwrote this file's val descriptors with a test-condition build. The assertion payloads (downdate_equals_refit, no_pass_over_data_detail, items_kept_detail, smoke, smoke_pinned, post_delete, post_delete_refit, gauge) were MERGED and survived untouched; the top-level descriptors did not and have been restored from build/val_seed0/store.json. Pre-restore file kept at DOWNDATE-READY.json.clobbered-by-single-design.bak. The dangerous state, now corrected, was `condition: test` beside `all_three_assertions_passed: true` when those assertions were run on val. hub/single-design's test-condition build lives in /c/chlu/outputs/w8-single-design/ and is NOT described by this file. Second pass: rank_kept_per_well and rank_over_d_per_well had fallen back to the clobbered test values ([63,63,63,13,40]) because store.json's rank_report does not carry those keys; restored to the val values [63,63,63,16,41] / [0.082,0.067,0.29,0.267,0.683] as reported by the spoke itself at 18:5xZ. \u26a0 Every other field should be re-checked by the spoke against its own artifacts before it is quoted -- this restore is hub/single-design's reconstruction, not the spoke's own write.",
+  "all_three_assertions_passed": true,
+  "any_well_saturated": true,
+  "condition": "val",
+  "content_sha256": "671b4e2faad0dc25cc5cf7fbf7c7c52356f1241bea11c792cc5e50a5800524ed",
+  "cov_bytes": 12258640,
+  "dead_per_well": [
+    0,
+    0,
+    0,
+    48,
+    19
+  ],
+  "downdate_equals_refit": {
+    "max_abs_dev_per_well": [
+      1.1641532182693481e-10,
+      0.0,
+      0.0,
+      3.445152583353428e-12,
+      1.1407541578023483e-13
+    ],
+    "max_abs_dev_per_well_random64": [
+      1.1368683772161603e-13,
+      2.842170943040401e-14,
+      0.0,
+      9.406857237603816e-12,
+      6.283862319378386e-14
+    ],
+    "n_wells_bit_identical": 2,
+    "negative_control_fired": true,
+    "passed": true,
+    "worst_in_float32_ulp": 0.0009765625,
+    "worst_max_abs_dev": 1.1641532182693481e-10
+  },
+  "effective_well_sizes": [
+    771,
+    940,
+    217,
+    12,
+    41
+  ],
+  "eig_rel_tol": 1e-12,
+  "gauge": {
+    "READ_THIS_BEFORE_QUOTING_valid_mean_after_delete": "\u26d4 `smoke.valid_mean_after_delete` is measured with the PRE-delete address book on the default (SVD) basis and is therefore dominated by a GAUGE artefact, not by the deletion: gen_read.span_basis re-derives the basis from an atom block whose singular spectrum is maximally degenerate, so a 1e-10 atom change rotates it by O(1). \u26d4 DO NOT quote it as a composition cost. `smoke_pinned.valid_mean_after_delete` is the same measurement with the gauge pinned and is the number to read.",
+    "improvement_factor": 803588.0,
+    "pinned_basis_fixes_it": true,
+    "pinned_basis_max_render_dev": 3.725290298461914e-09,
+    "stores_agree_to": 1.1641532182693481e-10,
+    "svd_basis_max_render_dev": 0.0029935985803604126
+  },
+  "honest_total_bytes": 12817450,
+  "items_kept": false,
+  "items_kept_asserted": true,
+  "items_kept_detail": {
+    "object_bytes_full": 12833834,
+    "object_bytes_half": 12833834,
+    "size_independent_of_corpus": true
+  },
+  "no_pass_over_data": true,
+  "no_pass_over_data_detail": {
+    "corpus_sizes": [
+      131072,
+      65536
+    ],
+    "invariant_to_corpus_size": true,
+    "rows_consumed_by_delete": [
+      320,
+      320
+    ]
+  },
+  "note": "READY: the store fits at the pin, reads through the shared frozen decoder and judge, and the three assertions are discharged. \u26d4 No scored run and no claim -- hub/single-design scores this object.",
+  "post_delete": {
+    "SUPERSEDED": "NOT RE-RUN at the declared variance-share cut, and SUPERSEDED by post_delete_carry. It measured the three-way before/pinned/re-indexed read on the pre-cut store; the re-indexed leg was a NEGATIVE result (0.0451, no recovery) whose conclusion is unchanged and is recorded in LOG.md at 17:11Z. Do not quote these numbers.",
+    "address_book_bytes_changed": 0,
+    "address_book_refitted": false,
+    "after_pinned_basis": 0.05844907407407407,
+    "after_pinned_basis_reindexed": 0.04513888888888889,
+    "before": 0.8940972222222222,
+    "of_slots": 246,
+    "slots_reordered": 49
+  },
+  "post_delete_carry": {
+    "address_book_refitted": false,
+    "after_carried_book": 0.8964120370370369,
+    "after_naive_same_book": 0.05844907407407407,
+    "before": 0.8940972222222222,
+    "data_rows_touched": 0,
+    "fraction_of_collapse_recovered": 1.0027700831024928
+  },
+  "post_delete_refit": {
+    "SUPERSEDED": "NOT RE-RUN at the declared variance-share cut, and SUPERSEDED by post_delete_carry. It showed 0.9005 with the book REFIT on the pre-cut downdated store, i.e. that the deletion does not damage the content; post_delete_carry now shows 0.8964 with NO refit on the current store, which is the stronger form of the same finding. Do not quote these numbers.",
+    "address_book_refitted": true,
+    "n_corners": 24,
+    "valid_mean": 0.9004629629629629
+  },
+  "rank_kept_per_well": [
+    63,
+    63,
+    63,
+    13,
+    41
+  ],
+  "rank_over_d_per_well": [
+    0.0817,
+    0.067,
+    0.2903,
+    0.2167,
+    0.6833
+  ],
+  "rank_report": {
+    "cut_is_marginal": true,
+    "eig_rel_tol": 1e-12,
+    "marginality_scored_over": "only the wells where the eigenvalue tolerance is what binds the rank; a well limited by the atom budget drops a large eigenvalue by design and says nothing about the cut",
+    "max_largest_dropped_over_threshold": 4340.686489572926,
+    "min_smallest_kept_over_threshold": 732406.4662149303,
+    "n_wells_limited_by_atom_budget": 3,
+    "n_wells_limited_by_tolerance": 2,
+    "what": "a direction below the threshold is written as a ZERO row: it costs the same bytes and buys no span, which is PCASpanStore's own stated convention for an atom a well cannot use"
+  },
+  "reproducibility_floor": {
+    "floor_in_float32_ulp_at_unit_scale": 3.26057052006945e-05,
+    "floor_max_abs_dev": 3.886902952277005e-12,
+    "floor_max_abs_dev_per_well": [
+      8.881784197001252e-16,
+      0.0,
+      0.0,
+      3.886902952277005e-12,
+      5.495603971894525e-14
+    ],
+    "store_reproducible_below_one_float32_ulp": true,
+    "what": "the SAME rows downdated in two orders. Both are valid downdates of the same set, so any disagreement is numerical non-determinism in the accumulate-then-eigendecompose path. \u26d4 It is a FLOOR on any exactness claim about this store on this data -- the downdate-vs-refit deviation cannot be smaller, and may be larger."
+  },
+  "seeds": [
+    0
+  ],
+  "smoke": {
+    "SUPERSEDED": "NOT RE-RUN at the declared variance-share cut, and SUPERSEDED. It measured the SVD-basis read on the pre-cut store. Its pca_tensor comparison is reproduced exactly by smoke_pinned on the current store (0.8941 vs 0.8941, paired delta +0.0000); its post-delete 0.0000 was the gauge failure, which gauge and post_delete_carry now document on the current store. Do not quote these numbers.",
+    "basis_kind": "svd",
+    "downdate_store_val_valid_mean": 0.8940972222222222,
+    "n_val_corners": 24,
+    "paired_delta_mean": 0.0,
+    "pca_tensor_val_valid_mean": 0.8940972222222222,
+    "renders_through_shared_frozen_decoder_and_judge": true,
+    "valid_mean_after_delete": 0.0,
+    "within_pca_tensor_spread": true
+  },
+  "smoke_pinned": {
+    "basis_kind": "pinned",
+    "downdate_store_val_valid_mean": 0.8940972222222222,
+    "n_val_corners": 24,
+    "paired_delta_mean": 0.0,
+    "pca_tensor_val_valid_mean": 0.8940972222222222,
+    "renders_through_shared_frozen_decoder_and_judge": true,
+    "valid_mean_after_delete": 0.05844907407407407,
+    "within_pca_tensor_spread": true
+  },
+  "status": "ready",
+  "store_bytes": 524288,
+  "times_over_budget": 24.4473,
+  "utc": "2026-09-20T20:40:47Z",
+  "well_posedness": {
+    "float32_ulp_at_unit_scale": 1.1920928955078125e-07,
+    "store_bytes_well_posed": true,
+    "wells_not_determined_at_float32": [],
+    "what": "computed from the sufficient statistics at FIT time -- no deletion and no second fit. \u26d4 A well listed in wells_not_determined_at_float32 has atom bytes that are not a function of its data, so no deletion procedure and no refit can agree on them; that is a property of the CONTENT, not of the downdate.",
+    "worst_predicted_byte_sensitivity": 3.0497876855136833e-10,
+    "worst_predicted_in_float32_ulp": 0.0025583473377001568
+  },
+  "well_sizes": [
+    771,
+    940,
+    217,
+    60,
+    60
+  ]
+}

@@ -1,0 +1,124 @@
+{
+ "_doc": "Rival column sets for fig_ladder. One entry = one panel. To add a set: append an entry with status 'landed', its artefact, a reader, the arm map, pool_rows and its STEP BUDGET (steps_label, asserted by steps_check); add its caption line to the draft. No code change. Readers: 'ladder_csv' (w12 LADDER.csv layout), 'json_path' (value = the JSON leaf at path_template with {n}, {seed}, {arm} substituted) and 'w20_carried' (SHAPES-MATCHED.json ladder.{n}: the P1-carried fit per family and seed, ladder.{n}.P3_margin.<store>.per_family.<fam>.<seed>.carried_rival, value = ladder.{n}.arms.<carried>.all.per_seed[seed]). steps_check readers: 'json_path_each' (every rung x seed x arm leaf at path_template equals steps) and 'w20_convergence' (ladder.{n}.convergence_evidence.<fam>.<seed>.<declared|tenx>.optimizer_steps, per carried fit). Every set is drawn beside the same store and floor. Pool size AND step budget are printed in every panel title: the w20 finding is that the operative variable was steps, not data.",
+ "store": {
+  "label": "CLU, K* = 32",
+  "source": "w12b-nr6-and-kstar/KSTAR-LADDER.json",
+  "reader": "json_path",
+  "path_template": "by_rung.{n}.kstar_K32.store.per_seed.{seed}",
+  "mean_template": "by_rung.{n}.kstar_K32.store.mean"
+ },
+ "floor": {
+  "label": "Lookup table (floor)",
+  "source": "w12-composition-ladder/LADDER.csv",
+  "reader": "ladder_csv",
+  "arm": "rival_table"
+ },
+ "rungs": [
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "sets": [
+  {
+   "id": "combination_split_32256",
+   "status": "landed",
+   "title": "Read-path rivals, 32,256-row pool",
+   "pool_rows": 32256,
+   "pool_note": "combination-split pool; carries the held-out values",
+   "pool_source": "_thinkpad/w4/spoke-a-rivals/rivals/seed_0/mlp.rival.json",
+   "source": "w12-composition-ladder/LADDER.csv",
+   "reader": "ladder_csv",
+   "arms": {
+    "mlp": "rival_mlp",
+    "lstm": "rival_lstm",
+    "transformer": "rival_transformer",
+    "cont_mlp": "rival_cont_mlp"
+   },
+   "constant_for_n_ge_3": true,
+   "pool_path": "population.n_rows_fit",
+   "steps": 5040,
+   "steps_label": "5,040 steps",
+   "steps_check": {
+    "reader": "json_path_each",
+    "source_template": "_thinkpad/w4/spoke-a-rivals/rivals/seed_{seed}/{arm}.json",
+    "path": "fit.steps",
+    "arms": [
+     "mlp",
+     "lstm",
+     "transformer",
+     "cont_mlp"
+    ],
+    "rungs_independent": true
+   }
+  },
+  {
+   "id": "data_matched_mlp_32768",
+   "status": "landed",
+   "title": "Data-matched MLP, 32,768-row pool",
+   "pool_rows": 32768,
+   "pool_note": "the store's own content rows of each rung",
+   "pool_source": "w12-composition-ladder/runs/shipped_seed0/rows_learned_ref_ownpool.json",
+   "source": "w12-composition-ladder/LADDER.csv",
+   "reader": "ladder_csv",
+   "arms": {
+    "mlp": "learned_ref_ownpool"
+   },
+   "constant_for_n_ge_3": false,
+   "pool_path": "summary.n_fit_rows",
+   "steps": 2560,
+   "steps_label": "2,560 steps",
+   "steps_check": {
+    "reader": "json_path_each",
+    "source_template": "w12-composition-ladder/runs/{n}_seed{seed}/rows_learned_ref_ownpool.json",
+    "path": "summary.train_info.steps",
+    "arms": [
+     "mlp"
+    ]
+   }
+  },
+  {
+   "id": "data_matched_131072",
+   "status": "landed",
+   "title": "Data-matched rivals, 131,072-row pool",
+   "pool_rows": 131072,
+   "pool_note": "each rung's own 131,072-row pool, the store's exact rows; P1-carried fit per family and seed",
+   "pool_source": "w20-shapes-data-matched/SHAPES-MATCHED.json",
+   "pool_path": "ladder.2.convergence_evidence.mlp.0.declared.n_fit_rows",
+   "source": "w20-shapes-data-matched/SHAPES-MATCHED.json",
+   "reader": "w20_carried",
+   "store_key": "store_K32_n131072",
+   "arms": {
+    "mlp": "mlp",
+    "lstm": "lstm",
+    "transformer": "transformer",
+    "cont_mlp": "cont_mlp"
+   },
+   "constant_for_n_ge_3": false,
+   "steps": [
+    20480,
+    204800
+   ],
+   "steps_label": "20,480/204,800 steps",
+   "steps_check": {
+    "reader": "w20_convergence"
+   },
+   "store_check": "ladder.{n}.arms.store_K32_n131072.all.per_seed == KSTAR-LADDER store per seed"
+  },
+  {
+   "id": "ladder_rivals_32k",
+   "status": "not_landed",
+   "title": "Data-matched rivals, 32,768-row pool",
+   "pool_rows": 32768,
+   "awaiting": "w21 ladder-rivals-32k (32,768-row ladder rival set; still running on forgis-14 at build time). Drop-in: set status 'landed', source, reader, arms, steps, steps_check.",
+   "steps": null,
+   "steps_label": "steps: from its artefact"
+  }
+ ]
+}

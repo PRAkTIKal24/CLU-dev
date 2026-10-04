@@ -1,0 +1,138 @@
+[11:50:06] seed 2: recipe={'name': 'v1_capacity_schedule', 'channels': [256, 128, 64], 'groups': 8, 'blocks_per_stage': 2, 'steps': 1800, 'batch': 128, 'lr': 0.001, 'loss': 'mse', 'edge_weight': 8.0, 'edge_blur': 5, 'grad_weight': 1.0, 'lr_schedule': 'cosine', 'warmup_frac': 0.05}
+[11:50:11]   split shapes3d/recomb2element_wide: n_total=480000 n_train=479064 n_test=936 (hold-out assertion over 479064 train rows, 13 cells)
+[11:50:11]   ⭐ R3.3 no-leak: 8192 training rows checked, 936/936 held-out images excluded, 0 leaked
+[11:50:11]   ⭐ R3.3 per cell: 13 cells, 936 rows excluded, 0 leaked
+[11:50:11]   streaming 8192 train images …
+[11:51:50]   fitting encoder (pretext=recon, 1500 steps) …
+[11:52:09]     step 1/1500  loss=0.15624
+[12:05:14]     step 300/1500  loss=0.00990
+[12:23:27]     step 600/1500  loss=0.00484
+[12:41:29]     step 900/1500  loss=0.00360
+[13:02:17]     step 1200/1500  loss=0.00302
+[13:20:29]     step 1500/1500  loss=0.00252
+[13:20:30]   caching penultimate features: scope=full, 480000 rows …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:20:44]     cached 8192/480000
+[13:20:55]     cached 16384/480000
+[13:21:06]     cached 24576/480000
+[13:21:18]     cached 32768/480000
+[13:21:30]     cached 40960/480000
+[13:21:43]     cached 49152/480000
+[13:21:56]     cached 57344/480000
+[13:22:07]     cached 65536/480000
+[13:22:20]     cached 73728/480000
+[13:22:32]     cached 81920/480000
+[13:22:43]     cached 90112/480000
+[13:22:54]     cached 98304/480000
+[13:23:07]     cached 106496/480000
+[13:23:17]     cached 114688/480000
+[13:23:30]     cached 122880/480000
+[13:23:42]     cached 131072/480000
+[13:23:54]     cached 139264/480000
+[13:24:04]     cached 147456/480000
+[13:24:14]     cached 155648/480000
+[13:24:28]     cached 163840/480000
+[13:24:39]     cached 172032/480000
+[13:24:50]     cached 180224/480000
+[13:25:01]     cached 188416/480000
+[13:25:10]     cached 196608/480000
+[13:25:21]     cached 204800/480000
+[13:25:35]     cached 212992/480000
+[13:25:47]     cached 221184/480000
+[13:25:59]     cached 229376/480000
+[13:26:12]     cached 237568/480000
+[13:26:22]     cached 245760/480000
+[13:26:32]     cached 253952/480000
+[13:26:45]     cached 262144/480000
+[13:26:59]     cached 270336/480000
+[13:27:10]     cached 278528/480000
+[13:27:20]     cached 286720/480000
+[13:27:31]     cached 294912/480000
+[13:27:40]     cached 303104/480000
+[13:27:48]     cached 311296/480000
+[13:28:00]     cached 319488/480000
+[13:28:10]     cached 327680/480000
+[13:28:20]     cached 335872/480000
+[13:28:29]     cached 344064/480000
+[13:28:40]     cached 352256/480000
+[13:28:51]     cached 360448/480000
+[13:29:01]     cached 368640/480000
+[13:29:11]     cached 376832/480000
+[13:29:21]     cached 385024/480000
+[13:29:30]     cached 393216/480000
+[13:29:40]     cached 401408/480000
+[13:29:49]     cached 409600/480000
+[13:29:57]     cached 417792/480000
+[13:30:06]     cached 425984/480000
+[13:30:16]     cached 434176/480000
+[13:30:26]     cached 442368/480000
+[13:30:36]     cached 450560/480000
+[13:30:45]     cached 458752/480000
+[13:30:56]     cached 466944/480000
+[13:31:04]     cached 475136/480000
+[13:31:10]     cached 480000/480000
+[13:31:13]   ⭐ D = 2048 ((128, 4, 4)) — D=2048 <= 20000: a full D x D eigendecomposition is feasible, so the LACE arm runs in fully whitened coordinates and is NOT pushed onto channel-only whitening.
+[13:31:13]   encoder stage: 6067s
+[13:31:14]   split shapes3d/recomb2element_wide: n_total=480000 n_train=479064 n_test=936 (hold-out assertion over 479064 train rows, 13 cells)
+[13:31:14]   ⭐ R3.3 no-leak: 8192 decoder-training rows checked, 936/936 held-out images excluded, 0 leaked
+[13:31:14]   ⭐ R3.3 per cell: 13 cells, 936 rows excluded, 0 leaked
+[13:31:17]   streaming 10152 images (train + eval_A + eval_B, one pass) …
+[13:33:03]   fitting THE shared decoder (1200 steps, encoder frozen) …
+[13:33:27]     step 1/1800  loss=0.16051
+[15:06:13]     step 360/1800  loss=0.00239
+[16:55:12]     step 720/1800  loss=0.00128
+[18:13:01]     step 1080/1800  loss=0.00091
+[19:14:29]     step 1440/1800  loss=0.00077
+[20:00:48]     step 1800/1800  loss=0.00071
+[20:00:48]   fitting the probe on REAL images (1500 steps) …
+[20:00:54]     step 1/1500  loss=2.22282
+[20:02:36]     step 300/1500  loss=0.00512
+[20:04:12]     step 600/1500  loss=0.00078
+[20:05:46]     step 900/1500  loss=0.00041
+[20:07:20]     step 1200/1500  loss=0.00019
+[20:08:52]     step 1500/1500  loss=0.00012
+[20:09:15]   A: n=1024  ceiling=0.9924  probe_on_real=1.0000  decode_mse=0.00083
+[20:09:40]   B: n=936  ceiling=0.9952  probe_on_real=1.0000  decode_mse=0.00098
+[20:09:40]   ⭐ seed 2: ceiling_A=0.9924 ceiling_B=0.9952 ratio=1.0029 -> PROCEED
+[20:09:42]   decoder stage: 23908s

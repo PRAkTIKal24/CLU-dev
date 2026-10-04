@@ -1,0 +1,58 @@
+[00:46:35] judge c8741ac417d88ebf, gate balacc on real = 1.0
+[00:46:35] 512 requests, 48 corners; reading 1024 real rows in one call
+[00:47:40] images read; building ground-truth midpoints
+[00:47:45] ground truth built; rotational pixel fraction 0.0955
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[00:47:49] 
+[00:47:49] ORACLE CEILING on row 2 (512 requests, 48 corners)
+[00:47:49]   HUEMAE          0.3130 D   (per-corner 0.0200-0.0463 raw)
+[00:47:49]   ROW2ACC gated   1.0000
+[00:47:49]   hue hit ungated 1.0000   (cdist <= 0.5D)
+[00:47:49]   other-5 correct 1.0000   {'floor_hue': 1.0, 'wall_hue': 1.0, 'scale': 1.0, 'shape': 1.0, 'orientation': 1.0}
+[00:47:49]   SNAPFRAC        0.6680
+[00:47:49]   mean d_req      0.3130 D
+[00:47:49]   mean d_near     0.1870 D
+[00:47:49]   mean t          0.5092  (0.5 = the requested midpoint)
+[00:47:49]   top1 in bracket 1.0000
+[00:47:49] wrote runs/j4_ceiling.json

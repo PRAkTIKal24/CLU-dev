@@ -1,0 +1,131 @@
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+/Users/user/Desktop/CHLU-gen-dynread/chlu/experiments/exp_gen_dynamical_read.py:683: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-dynread/chlu/experiments/exp_gen_dynamical_read.py:685: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=130)
+  seed 0: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0 · cache scope='full' rows=480000
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 2048 rows
+    gathering CORNER_B: 72 rows
+    gathering SPREAD: 128 rows
+  ⭐ store store_s0.pkl hash=3e3424a1ea40017e… K=5 M=64 30 bits/read (hash + channels asserted)
+  ⭐ decoder guard: recipe=v1_capacity_schedule hash=01ef91f75eeaae7b…
+  budget A
+    [A] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04885 (lambda* = 0.05428)
+    [A] N=64 r=16 store=524,288 B coupling=524,288 B total=1,048,576 B = 2.00x budget (PREREG §3 match: True)
+    [A] sigma per well = 4.4908 4.9164 8.9277 6.3797 4.9167
+    request set CORNER_B: 72 FULL requests
+      [full] beta=1 lambda=0.0488548 clamped=0.00/5 E -551.660->-642.449 acc=0.7859861111111112 disp[1]=0.0664693396538496 disp[T]=0.0007788908587826882 still_descending=0.0 · settled (no chain descending in the final window)
+        separation launch -> settled: 0.2478 -> 0.3852 (min 0.0000 -> 0.0120, collapsed pairs 0.092 -> 0.000)
+      [request_off] beta=0 lambda=0.0488548 clamped=0.00/5 E -491.185->-626.460 acc=0.7810972222222222 disp[1]=0.08246726139138143 disp[T]=0.0034534304124665344 still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+        separation launch -> settled: 0.2478 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 0.092 -> 0.079)
+      [request_off_launch] beta=0 lambda=0.0488548 clamped=0.00/5 E -492.370->-626.460 acc=0.786 disp[1]=0.08113156259059906 disp[T]=0.0034534307196736336 still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+        separation launch -> settled: 0.0000 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 1.000 -> 0.801)
+      [coupling_off] beta=1 lambda=0 clamped=0.00/5 E -526.464->-614.725 acc=0.6818333333333333 disp[1]=0.0720245869209369 disp[T]=0.00023664378770465392 still_descending=0.0 · settled (no chain descending in the final window)
+        separation launch -> settled: 0.2478 -> 0.1269 (min 0.0000 -> 0.0078, collapsed pairs 0.092 -> 0.000)
+      [zero_step] beta=1 lambda=0.0488548 clamped=0.00/5 E -551.660->-551.660 acc=nan disp[1]=nan disp[T]=nan still_descending=nan · ZERO-STEP CONTROL (the launch, decoded; no chain was run)
+        separation launch -> settled: 0.2478 -> 0.2478 (min 0.0000 -> 0.0000, collapsed pairs 0.092 -> 0.092)
+      ⭐ request-off moves the trajectory; the request energy is doing work. ⛔ Whether that work is a GAIN is a scored-run question and is not answered here.
+      decoded 16 rows/arm through the frozen winner decoder
+      ⭐ request-only guarantee HOLDS over launch+settle+read: {'launch': 0.0, 'settle': 0.0, 'read': 0.0} (feature tensors differed by 21.727)
+      ✓ deliberately bypassed at launch: assertion FIRED
+      ✓ deliberately bypassed at settle: assertion FIRED
+      ✓ deliberately bypassed at read: assertion FIRED
+    request set SPREAD: 128 FULL requests
+      [full] beta=1 lambda=0.0488548 clamped=0.00/5 E -579.890->-681.787 acc=0.784 disp[1]=0.06654380497639067 disp[T]=0.0007568666778752231 still_descending=0.0 · settled (no chain descending in the final window)
+        separation launch -> settled: 0.6772 -> 0.7692 (min 0.0000 -> 0.0238, collapsed pairs 0.000 -> 0.000)
+      [request_off] beta=0 lambda=0.0488548 clamped=0.00/5 E -494.251->-626.460 acc=0.78815625 disp[1]=0.08115982462186366 disp[T]=0.003453430126683088 still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+        separation launch -> settled: 0.6772 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 0.000 -> 0.005)
+      [request_off_launch] beta=0 lambda=0.0488548 clamped=0.00/5 E -492.370->-626.460 acc=0.783375 disp[1]=0.08113156259059906 disp[T]=0.003453427867498249 still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+        separation launch -> settled: 0.0000 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 1.000 -> 0.456)
+      [coupling_off] beta=1 lambda=0 clamped=0.00/5 E -538.034->-632.000 acc=0.6374765625 disp[1]=0.07293667655903846 disp[T]=0.00020472889218581258 still_descending=0.0 · settled (no chain descending in the final window)
+        separation launch -> settled: 0.6772 -> 0.3918 (min 0.0000 -> 0.0194, collapsed pairs 0.000 -> 0.000)
+      [zero_step] beta=1 lambda=0.0488548 clamped=0.00/5 E -579.890->-579.890 acc=nan disp[1]=nan disp[T]=nan still_descending=nan · ZERO-STEP CONTROL (the launch, decoded; no chain was run)
+        separation launch -> settled: 0.6772 -> 0.6772 (min 0.0000 -> 0.0000, collapsed pairs 0.000 -> 0.000)
+      ⭐ request-off moves the trajectory; the request energy is doing work. ⛔ Whether that work is a GAIN is a scored-run question and is not answered here.
+      decoded 16 rows/arm through the frozen winner decoder
+      ⭐ request-only guarantee HOLDS over launch+settle+read: {'launch': 0.0, 'settle': 0.0, 'read': 0.0} (feature tensors differed by 25.456)
+      ✓ deliberately bypassed at launch: assertion FIRED
+      ✓ deliberately bypassed at settle: assertion FIRED
+      ✓ deliberately bypassed at read: assertion FIRED
+  budget B
+    [B] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04926 (lambda* = 0.05473)
+    [B] N=512 r=128 store=4,194,304 B coupling=4,194,304 B total=8,388,608 B = 2.00x budget (PREREG §3 match: True)
+    [B] sigma per well = 3.2735 3.6494 7.1231 4.9918 3.6861
+    request set CORNER_B: 72 FULL requests
+      [full] beta=1 lambda=0.0492573 clamped=0.00/5 E -382.232->-593.488 acc=0.869875 disp[1]=0.10316092313991652 disp[T]=0.003097454104540197 still_descending=0.4166666666666667 · ⛔ NOT CONVERGED — chains are still descending at the final step
+        separation launch -> settled: 0.4153 -> 0.7463 (min 0.0000 -> 0.0063, collapsed pairs 0.110 -> 0.002)
+      [request_off] beta=0 lambda=0.0492573 clamped=0.00/5 E -328.653->-621.170 acc=0.8727777777777778 disp[1]=0.10790289876361688 disp[T]=0.0009662207076972765 still_descending=0.0 · settled (no chain descending in the final window)
+        separation launch -> settled: 0.4153 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 0.110 -> 0.056)
+      [request_off_launch] beta=0 lambda=0.0492573 clamped=0.00/5 E -460.778->-621.170 acc=0.867 disp[1]=0.07510858029127121 disp[T]=0.0009662149241194129 still_descending=0.0 · settled (no chain descending in the final window)
+        separation launch -> settled: 0.0000 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 1.000 -> 1.000)
+      [coupling_off] beta=1 lambda=0 clamped=0.00/5 E -379.687->-534.204 acc=0.7935972222222222 disp[1]=0.10069609547240867 disp[T]=0.000234799342959175 still_descending=0.0 · settled (no chain descending in the final window)
+        separation launch -> settled: 0.4153 -> 0.0873 (min 0.0000 -> 0.0055, collapsed pairs 0.110 -> 0.000)
+      [zero_step] beta=1 lambda=0.0492573 clamped=0.00/5 E -382.232->-382.232 acc=nan disp[1]=nan disp[T]=nan still_descending=nan · ZERO-STEP CONTROL (the launch, decoded; no chain was run)
+        separation launch -> settled: 0.4153 -> 0.4153 (min 0.0000 -> 0.0000, collapsed pairs 0.110 -> 0.110)
+      ⭐ request-off moves the trajectory; the request energy is doing work. ⛔ Whether that work is a GAIN is a scored-run question and is not answered here.
+      decoded 16 rows/arm through the frozen winner decoder
+      ⭐ request-only guarantee HOLDS over launch+settle+read: {'launch': 0.0, 'settle': 0.0, 'read': 0.0} (feature tensors differed by 21.727)
+      ✓ deliberately bypassed at launch: assertion FIRED
+      ✓ deliberately bypassed at settle: assertion FIRED
+      ✓ deliberately bypassed at read: assertion FIRED
+    request set SPREAD: 128 FULL requests
+      [full] beta=1 lambda=0.0492573 clamped=0.00/5 E -404.663->-614.316 acc=0.910875 disp[1]=0.09726158360717818 disp[T]=0.001597236094312393 still_descending=0.171875 · ⛔ NOT CONVERGED — chains are still descending at the final step
+        separation launch -> settled: 0.6497 -> 0.9408 (min 0.0000 -> 0.0208, collapsed pairs 0.004 -> 0.000)
+      [request_off] beta=0 lambda=0.0492573 clamped=0.00/5 E -343.952->-621.170 acc=0.8804609375 disp[1]=0.10267131426371634 disp[T]=0.0009662180859777436 still_descending=0.0 · settled (no chain descending in the final window)
+        separation launch -> settled: 0.6497 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 0.004 -> 0.006)
+      [request_off_launch] beta=0 lambda=0.0492573 clamped=0.00/5 E -460.778->-621.170 acc=0.869625 disp[1]=0.07510858029127121 disp[T]=0.0009662165030022152 still_descending=0.0 · settled (no chain descending in the final window)
+        separation launch -> settled: 0.0000 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 1.000 -> 0.394)
+      [coupling_off] beta=1 lambda=0 clamped=0.00/5 E -389.193->-536.897 acc=0.7955703125 disp[1]=0.09762083616806194 disp[T]=0.0002569943170556144 still_descending=0.0 · settled (no chain descending in the final window)
+        separation launch -> settled: 0.6497 -> 0.3937 (min 0.0000 -> 0.0136, collapsed pairs 0.004 -> 0.000)
+      [zero_step] beta=1 lambda=0.0492573 clamped=0.00/5 E -404.663->-404.663 acc=nan disp[1]=nan disp[T]=nan still_descending=nan · ZERO-STEP CONTROL (the launch, decoded; no chain was run)
+        separation launch -> settled: 0.6497 -> 0.6497 (min 0.0000 -> 0.0000, collapsed pairs 0.004 -> 0.004)
+      ⭐ request-off moves the trajectory; the request energy is doing work. ⛔ Whether that work is a GAIN is a scored-run question and is not answered here.
+      decoded 16 rows/arm through the frozen winner decoder
+      ⭐ request-only guarantee HOLDS over launch+settle+read: {'launch': 0.0, 'settle': 0.0, 'read': 0.0} (feature tensors differed by 25.456)
+      ✓ deliberately bypassed at launch: assertion FIRED
+      ✓ deliberately bypassed at settle: assertion FIRED
+      ✓ deliberately bypassed at read: assertion FIRED
+⛔ BUILD ONLY — no falsifier verdict is rendered here; the scored run is gated.

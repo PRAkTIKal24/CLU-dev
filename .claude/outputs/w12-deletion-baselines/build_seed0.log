@@ -1,0 +1,277 @@
+chlu.__file__ = C:\chlu\worktrees\CHLU-w12-deletion-baselines\chlu\__init__.py  (inside C:\chlu\worktrees\CHLU-w12-deletion-baselines)
+feature cache: generation 2, scope=full, sha256=ef6359a4cd54b082..., feat_shape=(128, 4, 4), D=2048
+fit pool: 131072 drawn, 16384 used for this BUILD pass
+
+== matched arms at the 524288 B pin (131072 parameters) ==
+    [mlp] matched width=61, params=130514 vs target 131072 (-0.426%), kind=onehot
+    [cont_mlp] matched width=63, params=131891 vs target 131072 (+0.625%), kind=continuous
+    [transformer] matched width=45, params=130433 vs target 131072 (-0.488%), kind=tokens
+    [lstm] matched width=51, params=130721 vs target 131072 (-0.268%), kind=tokens
+
+== as-trained (the arm BEFORE any deletion) ==
+    mlp as-trained: 11.27 s - 16,384 data rows read - 522,056 B rewritten (327,680 gradient row-visits)
+    cont_mlp as-trained: 11.26 s - 16,384 data rows read - 527,564 B rewritten (327,680 gradient row-visits)
+    transformer as-trained: 37.75 s - 16,384 data rows read - 521,732 B rewritten (327,680 gradient row-visits)
+    lstm as-trained: 19.61 s - 16,384 data rows read - 522,884 B rewritten (327,680 gradient row-visits)
+
+========================================================================
+DELETION VALUE -- value-object_hue-0 (object_hue = 0)
+  rows: 16384 fit -> 15032 kept, 1352 deleted (8.252%)
+
+  -- the AS-TRAINED column (baselines that deleted nothing) --
+    SMOKE mlp__as_trained                                      forget_mse 0.04439  retain_mse 0.04533  (delta -0.00094)
+    SMOKE cont_mlp__as_trained                                 forget_mse 0.17535  retain_mse 0.16540  (delta +0.00995)
+    SMOKE transformer__as_trained                              forget_mse 0.05522  retain_mse 0.05487  (delta +0.00035)
+    SMOKE lstm__as_trained                                     forget_mse 0.04717  retain_mse 0.04836  (delta -0.00119)
+
+  -- COMPARATOR 1: retrain from scratch WITHOUT --
+    mlp retrain_without value-object_hue-0: 8.86 s - 15,032 data rows read - 522,056 B rewritten (296,960 gradient row-visits)
+    SMOKE mlp__retrain_without__value-object_hue-0             forget_mse 0.07943  retain_mse 0.04620  (delta +0.03323)
+    cont_mlp retrain_without value-object_hue-0: 8.87 s - 15,032 data rows read - 527,564 B rewritten (296,960 gradient row-visits)
+    SMOKE cont_mlp__retrain_without__value-object_hue-0        forget_mse 0.20353  retain_mse 0.16473  (delta +0.03880)
+    transformer retrain_without value-object_hue-0: 34.62 s - 15,032 data rows read - 521,732 B rewritten (296,960 gradient row-visits)
+    SMOKE transformer__retrain_without__value-object_hue-0     forget_mse 0.11551  retain_mse 0.05704  (delta +0.05847)
+    lstm retrain_without value-object_hue-0: 15.99 s - 15,032 data rows read - 522,884 B rewritten (296,960 gradient row-visits)
+    SMOKE lstm__retrain_without__value-object_hue-0            forget_mse 0.07847  retain_mse 0.05082  (delta +0.02765)
+
+  -- COMPARATOR 2: approximate unlearning at MATCHED COMPUTE --
+      [mlp/neggrad] step 290/1160 loss 0.04369
+      [mlp/neggrad] step 580/1160 loss 0.04309
+      [mlp/neggrad] step 870/1160 loss 0.04165
+      [mlp/neggrad] step 1160/1160 loss 0.04310
+    mlp unlearn_neggrad value-object_hue-0: 9.25 s - 2,704 data rows read - 522,056 B rewritten (296,960 gradient row-visits)
+    SMOKE mlp__unlearn_neggrad__value-object_hue-0             forget_mse 0.53928  retain_mse 0.04418  (delta +0.49510)
+      [cont_mlp/neggrad] step 290/1160 loss 0.20379
+      [cont_mlp/neggrad] step 580/1160 loss 0.20675
+      [cont_mlp/neggrad] step 870/1160 loss 0.22247
+      [cont_mlp/neggrad] step 1160/1160 loss 0.21096
+    cont_mlp unlearn_neggrad value-object_hue-0: 9.99 s - 2,704 data rows read - 527,564 B rewritten (296,960 gradient row-visits)
+    SMOKE cont_mlp__unlearn_neggrad__value-object_hue-0        forget_mse 0.54824  retain_mse 0.20354  (delta +0.34470)
+      [transformer/neggrad] step 290/1160 loss 0.04991
+      [transformer/neggrad] step 580/1160 loss 0.04771
+      [transformer/neggrad] step 870/1160 loss 0.04522
+      [transformer/neggrad] step 1160/1160 loss 0.04544
+    transformer unlearn_neggrad value-object_hue-0: 31.77 s - 2,704 data rows read - 521,732 B rewritten (296,960 gradient row-visits)
+    SMOKE transformer__unlearn_neggrad__value-object_hue-0     forget_mse 1.49727  retain_mse 0.04697  (delta +1.45030)
+      [lstm/neggrad] step 290/1160 loss 0.04445
+      [lstm/neggrad] step 580/1160 loss 0.04147
+      [lstm/neggrad] step 870/1160 loss 0.03938
+      [lstm/neggrad] step 1160/1160 loss 0.03927
+    lstm unlearn_neggrad value-object_hue-0: 18.01 s - 2,704 data rows read - 522,884 B rewritten (296,960 gradient row-visits)
+    SMOKE lstm__unlearn_neggrad__value-object_hue-0            forget_mse 0.60800  retain_mse 0.04088  (delta +0.56713)
+      [mlp/finetune] step 290/1160 loss 0.03497
+      [mlp/finetune] step 580/1160 loss 0.03005
+      [mlp/finetune] step 870/1160 loss 0.02809
+      [mlp/finetune] step 1160/1160 loss 0.02727
+    mlp unlearn_finetune value-object_hue-0: 9.88 s - 1,352 data rows read - 522,056 B rewritten (296,960 gradient row-visits)
+    SMOKE mlp__unlearn_finetune__value-object_hue-0            forget_mse 0.03826  retain_mse 0.03045  (delta +0.00781)
+      [cont_mlp/finetune] step 290/1160 loss 0.16075
+      [cont_mlp/finetune] step 580/1160 loss 0.13960
+      [cont_mlp/finetune] step 870/1160 loss 0.12765
+      [cont_mlp/finetune] step 1160/1160 loss 0.12496
+    cont_mlp unlearn_finetune value-object_hue-0: 7.25 s - 1,352 data rows read - 527,564 B rewritten (296,960 gradient row-visits)
+    SMOKE cont_mlp__unlearn_finetune__value-object_hue-0       forget_mse 0.16258  retain_mse 0.12687  (delta +0.03571)
+      [transformer/finetune] step 290/1160 loss 0.03698
+      [transformer/finetune] step 580/1160 loss 0.02978
+      [transformer/finetune] step 870/1160 loss 0.02684
+      [transformer/finetune] step 1160/1160 loss 0.02550
+    transformer unlearn_finetune value-object_hue-0: 29.33 s - 1,352 data rows read - 521,732 B rewritten (296,960 gradient row-visits)
+    SMOKE transformer__unlearn_finetune__value-object_hue-0    forget_mse 0.04735  retain_mse 0.02819  (delta +0.01916)
+      [lstm/finetune] step 290/1160 loss 0.03395
+      [lstm/finetune] step 580/1160 loss 0.02806
+      [lstm/finetune] step 870/1160 loss 0.02581
+      [lstm/finetune] step 1160/1160 loss 0.02460
+    lstm unlearn_finetune value-object_hue-0: 14.47 s - 1,352 data rows read - 522,884 B rewritten (296,960 gradient row-visits)
+    SMOKE lstm__unlearn_finetune__value-object_hue-0           forget_mse 0.03976  retain_mse 0.02808  (delta +0.01168)
+  MATCHED COMPUTE CHECKED: every unlearner spent 296,960 gradient row-visits
+
+  -- COMPARATOR 3: the refuse-token transformer --
+    applicability (MEASURED): 1352 of 1352 requests built from the deleted rows are certified impossible [deleted_value]
+    [transformer] matched width=45, params=130479 vs target 131072 (-0.452%), kind=tokens
+    [refuse_token] train 4772 (possible 4096 / impossible 676); feature targets available for 4096
+      [refuse_token] step 90/360 loss 0.23045
+      [refuse_token] step 180/360 loss 0.21701
+      [refuse_token] step 270/360 loss 0.20821
+      [refuse_token] step 360/360 loss 0.20581
+    refuse_token value-object_hue-0: 10.52 s - 4,096 data rows read - 521,916 B rewritten (92,160 gradient row-visits)
+    [refuse_token] separation +0.9911  AUROC 1.0000  refuse@impossible 1.0000  false-refusal@possible 0.0000
+    SMOKE transformer__refuse_token__value-object_hue-0        forget_mse 1.05091  retain_mse 0.20173  (delta +0.84918)
+    SMOKE refuse: deleted-request refuse rate 1.0000  false refusal 0.0000
+    [transformer] matched width=45, params=130479 vs target 131072 (-0.452%), kind=tokens
+    [refuse_token] train 2048 (possible 1024 / impossible 1024); feature targets available for 1024
+      [refuse_token] step 40/160 loss 0.64890
+      [refuse_token] step 80/160 loss 0.58432
+      [refuse_token] step 120/160 loss 0.59727
+      [refuse_token] step 160/160 loss 0.52286
+    refuse_token value-object_hue-0: 5.05 s - 1,024 data rows read - 521,916 B rewritten (40,960 gradient row-visits)
+    [refuse_token] separation +0.4549  AUROC 0.8692  refuse@impossible 0.6709  false-refusal@possible 0.0947
+
+========================================================================
+DELETION CONJUNCTION -- conj-object_hue0-shape2 (object_hue = 0 AND shape = 2)
+  rows: 16384 fit -> 15717 kept, 667 deleted (4.071%)
+
+  -- the AS-TRAINED column (baselines that deleted nothing) --
+    SMOKE mlp__as_trained                                      forget_mse 0.03746  retain_mse 0.04530  (delta -0.00785)
+    SMOKE cont_mlp__as_trained                                 forget_mse 0.17528  retain_mse 0.16668  (delta +0.00859)
+    SMOKE transformer__as_trained                              forget_mse 0.04921  retain_mse 0.05484  (delta -0.00563)
+    SMOKE lstm__as_trained                                     forget_mse 0.04251  retain_mse 0.04809  (delta -0.00558)
+
+  -- COMPARATOR 1: retrain from scratch WITHOUT --
+    mlp retrain_without conj-object_hue0-shape2: 9.22 s - 15,717 data rows read - 522,056 B rewritten (312,320 gradient row-visits)
+    SMOKE mlp__retrain_without__conj-object_hue0-shape2        forget_mse 0.04363  retain_mse 0.04566  (delta -0.00202)
+    cont_mlp retrain_without conj-object_hue0-shape2: 8.51 s - 15,717 data rows read - 527,564 B rewritten (312,320 gradient row-visits)
+    SMOKE cont_mlp__retrain_without__conj-object_hue0-shape2   forget_mse 0.18672  retain_mse 0.16651  (delta +0.02020)
+    transformer retrain_without conj-object_hue0-shape2: 31.80 s - 15,717 data rows read - 521,732 B rewritten (312,320 gradient row-visits)
+    SMOKE transformer__retrain_without__conj-object_hue0-shape2 forget_mse 0.05470  retain_mse 0.05576  (delta -0.00106)
+    lstm retrain_without conj-object_hue0-shape2: 15.66 s - 15,717 data rows read - 522,884 B rewritten (312,320 gradient row-visits)
+    SMOKE lstm__retrain_without__conj-object_hue0-shape2       forget_mse 0.04983  retain_mse 0.04914  (delta +0.00069)
+
+  -- COMPARATOR 2: approximate unlearning at MATCHED COMPUTE --
+      [mlp/neggrad] step 305/1220 loss 0.06390
+      [mlp/neggrad] step 610/1220 loss 0.06275
+      [mlp/neggrad] step 915/1220 loss 0.05587
+      [mlp/neggrad] step 1220/1220 loss 0.05175
+    mlp unlearn_neggrad conj-object_hue0-shape2: 9.07 s - 1,334 data rows read - 522,056 B rewritten (312,320 gradient row-visits)
+    SMOKE mlp__unlearn_neggrad__conj-object_hue0-shape2        forget_mse 0.52285  retain_mse 0.05327  (delta +0.46957)
+      [cont_mlp/neggrad] step 305/1220 loss 0.22736
+      [cont_mlp/neggrad] step 610/1220 loss 0.23302
+      [cont_mlp/neggrad] step 915/1220 loss 0.21504
+      [cont_mlp/neggrad] step 1220/1220 loss 0.21840
+    cont_mlp unlearn_neggrad conj-object_hue0-shape2: 9.77 s - 1,334 data rows read - 527,564 B rewritten (312,320 gradient row-visits)
+    SMOKE cont_mlp__unlearn_neggrad__conj-object_hue0-shape2   forget_mse 0.54530  retain_mse 0.21848  (delta +0.32682)
+      [transformer/neggrad] step 305/1220 loss 0.05527
+      [transformer/neggrad] step 610/1220 loss 0.04624
+      [transformer/neggrad] step 915/1220 loss 0.04640
+      [transformer/neggrad] step 1220/1220 loss 0.04583
+    transformer unlearn_neggrad conj-object_hue0-shape2: 33.71 s - 1,334 data rows read - 521,732 B rewritten (312,320 gradient row-visits)
+    SMOKE transformer__unlearn_neggrad__conj-object_hue0-shape2 forget_mse 1.53919  retain_mse 0.04823  (delta +1.49096)
+      [lstm/neggrad] step 305/1220 loss 0.04952
+      [lstm/neggrad] step 610/1220 loss 0.04110
+      [lstm/neggrad] step 915/1220 loss 0.04058
+      [lstm/neggrad] step 1220/1220 loss 0.04058
+    lstm unlearn_neggrad conj-object_hue0-shape2: 17.24 s - 1,334 data rows read - 522,884 B rewritten (312,320 gradient row-visits)
+    SMOKE lstm__unlearn_neggrad__conj-object_hue0-shape2       forget_mse 0.61710  retain_mse 0.04330  (delta +0.57381)
+      [mlp/finetune] step 305/1220 loss 0.03426
+      [mlp/finetune] step 610/1220 loss 0.02759
+      [mlp/finetune] step 915/1220 loss 0.02729
+      [mlp/finetune] step 1220/1220 loss 0.02679
+    mlp unlearn_finetune conj-object_hue0-shape2: 9.16 s - 667 data rows read - 522,056 B rewritten (312,320 gradient row-visits)
+    SMOKE mlp__unlearn_finetune__conj-object_hue0-shape2       forget_mse 0.03450  retain_mse 0.03160  (delta +0.00290)
+      [cont_mlp/finetune] step 305/1220 loss 0.15609
+      [cont_mlp/finetune] step 610/1220 loss 0.13193
+      [cont_mlp/finetune] step 915/1220 loss 0.12036
+      [cont_mlp/finetune] step 1220/1220 loss 0.11754
+    cont_mlp unlearn_finetune conj-object_hue0-shape2: 9.50 s - 667 data rows read - 527,564 B rewritten (312,320 gradient row-visits)
+    SMOKE cont_mlp__unlearn_finetune__conj-object_hue0-shape2  forget_mse 0.13391  retain_mse 0.12227  (delta +0.01164)
+      [transformer/finetune] step 305/1220 loss 0.03656
+      [transformer/finetune] step 610/1220 loss 0.02663
+      [transformer/finetune] step 915/1220 loss 0.02466
+      [transformer/finetune] step 1220/1220 loss 0.02385
+    transformer unlearn_finetune conj-object_hue0-shape2: 32.72 s - 667 data rows read - 521,732 B rewritten (312,320 gradient row-visits)
+    SMOKE transformer__unlearn_finetune__conj-object_hue0-shape2 forget_mse 0.03065  retain_mse 0.02842  (delta +0.00222)
+      [lstm/finetune] step 305/1220 loss 0.03321
+      [lstm/finetune] step 610/1220 loss 0.02550
+      [lstm/finetune] step 915/1220 loss 0.02455
+      [lstm/finetune] step 1220/1220 loss 0.02374
+    lstm unlearn_finetune conj-object_hue0-shape2: 17.76 s - 667 data rows read - 522,884 B rewritten (312,320 gradient row-visits)
+    SMOKE lstm__unlearn_finetune__conj-object_hue0-shape2      forget_mse 0.03063  retain_mse 0.02964  (delta +0.00099)
+  MATCHED COMPUTE CHECKED: every unlearner spent 312,320 gradient row-visits
+
+  -- COMPARATOR 3: the refuse-token transformer --
+    applicability (MEASURED): 667 of 667 requests built from the deleted rows are certified impossible [deleted_conjunction]
+    [transformer] matched width=45, params=130479 vs target 131072 (-0.452%), kind=tokens
+    [refuse_token] train 4429 (possible 4096 / impossible 333); feature targets available for 4096
+      [refuse_token] step 85/340 loss 0.23370
+      [refuse_token] step 170/340 loss 0.21889
+      [refuse_token] step 255/340 loss 0.21163
+      [refuse_token] step 340/340 loss 0.20882
+    refuse_token conj-object_hue0-shape2: 10.48 s - 4,096 data rows read - 521,916 B rewritten (87,040 gradient row-visits)
+    [refuse_token] separation +0.9887  AUROC 1.0000  refuse@impossible 1.0000  false-refusal@possible 0.0000
+    SMOKE transformer__refuse_token__conj-object_hue0-shape2   forget_mse 1.05266  retain_mse 0.20488  (delta +0.84778)
+    SMOKE refuse: deleted-request refuse rate 1.0000  false refusal 0.0000
+    [transformer] matched width=45, params=130479 vs target 131072 (-0.452%), kind=tokens
+    [refuse_token] train 1869 (possible 1024 / impossible 845); feature targets available for 1024
+      [refuse_token] step 35/140 loss 0.82428
+      [refuse_token] step 70/140 loss 0.71580
+      [refuse_token] step 105/140 loss 0.62735
+      [refuse_token] step 140/140 loss 0.67494
+    refuse_token conj-object_hue0-shape2: 5.54 s - 1,024 data rows read - 521,916 B rewritten (35,840 gradient row-visits)
+    [refuse_token] separation +0.3671  AUROC 0.8269  refuse@impossible 0.5591  false-refusal@possible 0.0781
+
+========================================================================
+DELETION ITEM -- item-0.01 (a random 1% of fit rows)
+  rows: 16384 fit -> 16220 kept, 164 deleted (1.001%)
+
+  -- the AS-TRAINED column (baselines that deleted nothing) --
+    SMOKE mlp__as_trained                                      forget_mse 0.04497  retain_mse 0.04764  (delta -0.00267)
+    SMOKE cont_mlp__as_trained                                 forget_mse 0.16702  retain_mse 0.16463  (delta +0.00239)
+    SMOKE transformer__as_trained                              forget_mse 0.05495  retain_mse 0.05729  (delta -0.00234)
+    SMOKE lstm__as_trained                                     forget_mse 0.04800  retain_mse 0.05037  (delta -0.00238)
+
+  -- COMPARATOR 1: retrain from scratch WITHOUT --
+    mlp retrain_without item-0.01: 10.28 s - 16,220 data rows read - 522,056 B rewritten (322,560 gradient row-visits)
+    SMOKE mlp__retrain_without__item-0.01                      forget_mse 0.04530  retain_mse 0.04781  (delta -0.00252)
+    cont_mlp retrain_without item-0.01: 10.62 s - 16,220 data rows read - 527,564 B rewritten (322,560 gradient row-visits)
+    SMOKE cont_mlp__retrain_without__item-0.01                 forget_mse 0.16722  retain_mse 0.16469  (delta +0.00253)
+    transformer retrain_without item-0.01: 39.66 s - 16,220 data rows read - 521,732 B rewritten (322,560 gradient row-visits)
+    SMOKE transformer__retrain_without__item-0.01              forget_mse 0.05547  retain_mse 0.05774  (delta -0.00227)
+    lstm retrain_without item-0.01: 22.25 s - 16,220 data rows read - 522,884 B rewritten (322,560 gradient row-visits)
+    SMOKE lstm__retrain_without__item-0.01                     forget_mse 0.04836  retain_mse 0.05044  (delta -0.00208)
+
+  -- COMPARATOR 2: approximate unlearning at MATCHED COMPUTE --
+      [mlp/neggrad] step 315/1260 loss 0.14008
+      [mlp/neggrad] step 630/1260 loss 0.09079
+      [mlp/neggrad] step 945/1260 loss 0.07455
+      [mlp/neggrad] step 1260/1260 loss 0.06984
+    mlp unlearn_neggrad item-0.01: 13.10 s - 328 data rows read - 522,056 B rewritten (322,560 gradient row-visits)
+    SMOKE mlp__unlearn_neggrad__item-0.01                      forget_mse 0.58441  retain_mse 0.34356  (delta +0.24085)
+      [cont_mlp/neggrad] step 315/1260 loss 0.43570
+      [cont_mlp/neggrad] step 630/1260 loss 0.42289
+      [cont_mlp/neggrad] step 945/1260 loss 0.39500
+      [cont_mlp/neggrad] step 1260/1260 loss 0.35456
+    cont_mlp unlearn_neggrad item-0.01: 13.63 s - 328 data rows read - 527,564 B rewritten (322,560 gradient row-visits)
+    SMOKE cont_mlp__unlearn_neggrad__item-0.01                 forget_mse 0.52482  retain_mse 0.43773  (delta +0.08709)
+      [transformer/neggrad] step 315/1260 loss 0.06522
+      [transformer/neggrad] step 630/1260 loss 0.04818
+      [transformer/neggrad] step 945/1260 loss 0.04438
+      [transformer/neggrad] step 1260/1260 loss 0.04398
+    transformer unlearn_neggrad item-0.01: 43.03 s - 328 data rows read - 521,732 B rewritten (322,560 gradient row-visits)
+    SMOKE transformer__unlearn_neggrad__item-0.01              forget_mse 1.32347  retain_mse 0.45318  (delta +0.87028)
+      [lstm/neggrad] step 315/1260 loss 0.05541
+      [lstm/neggrad] step 630/1260 loss 0.04448
+      [lstm/neggrad] step 945/1260 loss 0.03908
+      [lstm/neggrad] step 1260/1260 loss 0.03888
+    lstm unlearn_neggrad item-0.01: 22.93 s - 328 data rows read - 522,884 B rewritten (322,560 gradient row-visits)
+    SMOKE lstm__unlearn_neggrad__item-0.01                     forget_mse 0.73791  retain_mse 0.35496  (delta +0.38294)
+      [mlp/finetune] step 315/1260 loss 0.02538
+      [mlp/finetune] step 630/1260 loss 0.01935
+      [mlp/finetune] step 945/1260 loss 0.01768
+      [mlp/finetune] step 1260/1260 loss 0.01725
+    mlp unlearn_finetune item-0.01: 12.40 s - 164 data rows read - 522,056 B rewritten (322,560 gradient row-visits)
+    SMOKE mlp__unlearn_finetune__item-0.01                     forget_mse 0.04893  retain_mse 0.05243  (delta -0.00350)
+      [cont_mlp/finetune] step 315/1260 loss 0.15775
+      [cont_mlp/finetune] step 630/1260 loss 0.12794
+      [cont_mlp/finetune] step 945/1260 loss 0.11761
+      [cont_mlp/finetune] step 1260/1260 loss 0.11461
+    cont_mlp unlearn_finetune item-0.01: 13.43 s - 164 data rows read - 527,564 B rewritten (322,560 gradient row-visits)
+    SMOKE cont_mlp__unlearn_finetune__item-0.01                forget_mse 0.13564  retain_mse 0.13117  (delta +0.00447)
+      [transformer/finetune] step 315/1260 loss 0.02682
+      [transformer/finetune] step 630/1260 loss 0.01864
+      [transformer/finetune] step 945/1260 loss 0.01630
+      [transformer/finetune] step 1260/1260 loss 0.01594
+    transformer unlearn_finetune item-0.01: 42.08 s - 164 data rows read - 521,732 B rewritten (322,560 gradient row-visits)
+    SMOKE transformer__unlearn_finetune__item-0.01             forget_mse 0.04852  retain_mse 0.05098  (delta -0.00246)
+      [lstm/finetune] step 315/1260 loss 0.02254
+      [lstm/finetune] step 630/1260 loss 0.01517
+      [lstm/finetune] step 945/1260 loss 0.01312
+      [lstm/finetune] step 1260/1260 loss 0.01267
+    lstm unlearn_finetune item-0.01: 22.58 s - 164 data rows read - 522,884 B rewritten (322,560 gradient row-visits)
+    SMOKE lstm__unlearn_finetune__item-0.01                    forget_mse 0.05945  retain_mse 0.06089  (delta -0.00144)
+  MATCHED COMPUTE CHECKED: every unlearner spent 322,560 gradient row-visits
+
+  -- COMPARATOR 3: the refuse-token transformer --
+    applicability (MEASURED): 0 of 164 requests built from the deleted rows are certified impossible
+    DECLARED NOT-RUN: a refusal row needs at least one request the post-deletion pool can never answer. 0 of 164 requests built from the deleted rows are certified impossible -- a item deletion clears no (factor, value) bit and punches no conjunction hole, so nothing becomes impossible and there is no DISPLAY row to print.
+
+== BASELINES-READY ==
+wrote C:\chlu\outputs\w12-deletion-baselines\BASELINES-READY.json  (50 comparator records, 884.9 s)

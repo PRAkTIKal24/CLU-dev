@@ -1,0 +1,58 @@
+[18:00:59Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners val --seed 0 --arms "store:C:/chlu/outputs/w20-shapes-data-matched/stores/val/seed0/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K32_seed0/arm.pkl:store_K32_n131072,w12comp:mlp__as_trained,w12comp:lstm__as_trained,w12comp:transformer__as_trained,w12comp:cont_mlp__as_trained,table"
+[20:01:44] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+[20:01:51] corners=val seed=0: 24 corners
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    store_K32_n16384                       24 corners in 95s
+[20:03:27]   store_K32_n16384                             novel/corner 0.000 (ceiling 0.00)  in 96s
+    landscape_removed                      24 corners in 99s
+[20:05:06]   store_K32_n16384__landscape_removed          novel/corner 0.000 (ceiling 0.00)  in 99s
+    landscape_shuffled                     24 corners in 118s
+[20:07:04]   store_K32_n16384__landscape_shuffled         novel/corner 0.000 (ceiling 0.00)  in 118s
+[20:07:04]   across-wells DERANGEMENT perm=[28, 29, 25, 18, 24, 14, 15, 13, 9, 19, 7, 20, 5, 10, 3, 26, 12, 4, 0, 6, 27, 30, 11, 31, 8, 17, 22, 1, 23, 21, 2, 16] fixed_points=0 | historical T7 perm fixed_points=0
+    landscape_shuffled_across_wells        24 corners in 130s
+[20:09:14]   store_K32_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 0.00)  in 130s
+    random_atoms                           24 corners in 122s
+[20:11:16]   store_K32_n16384__random_atoms               novel/corner 0.000 (ceiling 0.00)  in 122s
+[18:11:27Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners val --seed 0 --arms "store:C:/chlu/outputs/w20-shapes-data-matched/stores/val/seed0/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K32_seed0/arm.pkl:store_K32_n131072,w12comp:mlp__as_trained,w12comp:lstm__as_trained,w12comp:transformer__as_trained,w12comp:cont_mlp__as_trained,table"
+[18:11:27Z] LANE DONE

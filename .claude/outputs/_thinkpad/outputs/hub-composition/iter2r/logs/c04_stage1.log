@@ -1,0 +1,87 @@
+[13:44:45] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[13:44:45]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[13:44:45]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[13:44:46] C04 tag=head1 seed=0 spec=0,2,4,6,10,12,14,16 -> 8 corners; budget 475,136 B
+[13:44:46] plan: 45 (design, rank, ridge) points [13 designs x ranks x 3 ridges]
+[13:44:46]   additive               rank=  0 bytes=406,016 (0.8545 x knn_proto)
+[13:44:46]   ref_hue0hue2_x_scale   rank= 17 bytes=473,472 (0.9965 x knn_proto)
+[13:44:46]   ref_hue0hue2_x_scale   rank=  8 bytes=437,760 (0.9213 x knn_proto)
+[13:44:46]   ref_hue0hue2_x_scale   rank=  4 bytes=421,888 (0.8879 x knn_proto)
+[13:44:46]   allhue_x_scale         rank= 16 bytes=474,624 (0.9989 x knn_proto)
+[13:44:46]   allhue_x_shape         rank= 18 bytes=474,560 (0.9988 x knn_proto)
+[13:44:46]   allhue_x_orient        rank= 13 bytes=472,680 (0.9948 x knn_proto)
+[13:44:46]   hue_x_hue              rank= 15 bytes=473,936 (0.9975 x knn_proto)
+[13:44:46]   geom_x_geom            rank= 16 bytes=472,832 (0.9952 x knn_proto)
+[13:44:46]   shape_x_orient         rank= 19 bytes=473,808 (0.9972 x knn_proto)
+[13:44:46]   scale_x_orient         rank= 18 bytes=474,560 (0.9988 x knn_proto)
+[13:44:46]   scale_x_shape          rank= 20 bytes=475,136 (1.0000 x knn_proto)
+[13:44:46]   allhue_x_geom          rank= 10 bytes=471,696 (0.9928 x knn_proto)
+[13:44:46]   geom_plus_refhue       rank= 14 bytes=473,440 (0.9964 x knn_proto)
+[13:44:46]   all15                  rank=  8 bytes=474,944 (0.9996 x knn_proto)
+[13:45:23]   store K=32 M=26 built and cached -> store_s0_c0_K32_M26_n32766.npz
+[13:45:24] [c0] store + sufficient stats in 37.7s; 45 head points to score
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:46:20] [c0] 45 points in 94.5s; best here: ref_hue0hue2_x_scale|r17|g1 = 38
+[13:46:54]   store K=32 M=26 built and cached -> store_s0_c2_K32_M26_n32764.npz
+[13:46:55] [c2] store + sufficient stats in 34.4s; 45 head points to score
+[13:48:05] [c2] 45 points in 104.6s; best here: hue_x_hue|r15|g1 = 52
+[13:48:50]   store K=32 M=26 built and cached -> store_s0_c4_K32_M26_n32766.npz
+[13:48:51] [c4] store + sufficient stats in 45.2s; 45 head points to score
+[13:50:02] [c4] 45 points in 116.3s; best here: ref_hue0hue2_x_scale|r17|g1 = 37
+[13:50:42]   store K=32 M=26 built and cached -> store_s0_c6_K32_M26_n32762.npz
+[13:50:43] [c6] store + sufficient stats in 41.0s; 45 head points to score
+[13:51:47] [c6] 45 points in 104.8s; best here: allhue_x_scale|r16|g1 = 49
+[13:52:24]   store K=32 M=26 built and cached -> store_s0_c10_K32_M26_n32759.npz
+[13:52:25] [c10] store + sufficient stats in 37.9s; 45 head points to score
+[13:53:27] [c10] 45 points in 99.9s; best here: additive|r0|g1 = 0
+[13:54:05]   store K=32 M=26 built and cached -> store_s0_c12_K32_M26_n32757.npz
+[13:54:05] [c12] store + sufficient stats in 38.3s; 45 head points to score
+[13:55:33] [c12] 45 points in 125.7s; best here: allhue_x_shape|r18|g1 = 24
+[13:56:12]   store K=32 M=26 built and cached -> store_s0_c14_K32_M26_n32763.npz
+[13:56:13] [c14] store + sufficient stats in 39.5s; 45 head points to score
+[13:57:30] [c14] 45 points in 116.7s; best here: additive|r0|g1 = 0
+[13:58:11]   store K=32 M=26 built and cached -> store_s0_c16_K32_M26_n32761.npz
+[13:58:12] [c16] store + sufficient stats in 41.5s; 45 head points to score
+[13:59:28] [c16] 45 points in 118.2s; best here: allhue_x_scale|r16|g1 = 22
+[13:59:28] C04 done: 8 corners, 0 refused [], 891.8s

@@ -1,0 +1,993 @@
+{
+  "schema": "hepa-lh-tripwire/1",
+  "generated_utc": "2026-09-07T11:16:20.879959+00:00",
+  "dataset": "ETTm1",
+  "context_len": 512,
+  "seeds": [
+    42,
+    123,
+    456
+  ],
+  "provenance": {
+    "hepa_src": "/Users/user/Desktop/CHLU/.claude/hepa-src",
+    "hepa_commit": "85f55f39a72a677d74c3371707baea67600020d6",
+    "hepa_commit_date": "2026-07-27T07:11:12+02:00",
+    "hepa_dirty": "False",
+    "hepa_data_dir": "/Users/user/Desktop/CHLU/.claude/data/hepa",
+    "torch": "2.14.0",
+    "numpy": "2.4.6",
+    "python": "3.11.13"
+  },
+  "protocol": {
+    "source": "hepa/utils/config.py + REPRODUCIBILITY.md (clone-actual), PREREG \u00a71",
+    "norm_mode": "revin",
+    "K": 200,
+    "horizon_grid": [
+      1,
+      200
+    ],
+    "horizon_conditioning": "scalar-concat: raw dt in native units (PREREG \u00a72.4); no learned horizon embedding",
+    "degenerate_horizon_convention": "SHIPPED CODE: a horizon is dropped only if it is EXACTLY degenerate (n_pos == 0 or n_pos == n_total). The paper and PROTOCOL.md instead threshold prevalence at 0.001/0.999 (scout D4). We use the code's.",
+    "min_context": 128,
+    "stride_train_val": 4,
+    "stride_test": 1,
+    "k_selected_on": "ft_val h-AUROC; test is never used for selection",
+    "k_grid": [
+      1,
+      4,
+      16,
+      64
+    ]
+  },
+  "splits": {
+    "n_entities": {
+      "train": 1,
+      "val": 1,
+      "test": 1
+    },
+    "n_windows": {
+      "train": 10420,
+      "val": 3402,
+      "test": 13607
+    },
+    "entity_len_train": {
+      "min": 41808,
+      "median": 41808.0,
+      "max": 41808
+    },
+    "effective_context_test": {
+      "mean": 506.5675020210186,
+      "median": 512.0,
+      "max": 512,
+      "frac_windows_at_full_rung": 0.9717792312780187,
+      "note": "if this fraction is 0 the rung is not reachable on this dataset and any difference vs a shorter rung is noise"
+    },
+    "n_nondegenerate_horizons_test": 200,
+    "label_surface_prevalence_test": 0.2701525092124939
+  },
+  "byte_ledger": {
+    "context_len": 512,
+    "patch_size": 16,
+    "n_tokens": 32,
+    "d_model": 256,
+    "n_layers": 2,
+    "dtype_bytes": 4,
+    "n_channels": 7,
+    "raw_window_bytes": 14336,
+    "arithmetic": {
+      "n_tokens": "ceil(512/16) = 32",
+      "token_only": "32 * 256 * 4 = 32768",
+      "residual_stream": "(2+1) * 32 * 256 * 4 = 98304",
+      "kv_cache": "(1+2*2) * 32 * 256 * 4 + 256*4 = 164864"
+    },
+    "budget_bytes": {
+      "token_only": 32768,
+      "residual_stream": 98304,
+      "kv_cache": 164864
+    }
+  },
+  "trivial_baselines": {
+    "prevalence": {
+      "status": "OK",
+      "regime": "deterministic",
+      "h_auroc": 0.5,
+      "definition": "per-horizon base rate on ft_train, constant in t"
+    },
+    "seasonal": {
+      "status": "OK",
+      "regime": "deterministic",
+      "h_auroc": 0.483723439951925,
+      "period_steps": 96,
+      "n_bins": 24,
+      "definition": "per-horizon base rate on ft_train conditioned on the phase bin of t within one native period"
+    },
+    "last_event_age": {
+      "status": "OK",
+      "regime": "deterministic",
+      "h_auroc": 0.3395450819533952,
+      "definition": "rank by steps since this entity's previous event; if the entity has had none, steps since its record began. No model, no encoder, no window.",
+      "age_test": {
+        "min": 1,
+        "median": 260.0,
+        "max": 1339
+      }
+    }
+  },
+  "exemplar_store": {
+    "token_only": {
+      "budget_bytes": 32768,
+      "arms": {
+        "chan_stats::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 28,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 116,
+            "n_exemplars_budgeted": 282,
+            "budget_bytes": 32768,
+            "descriptor": "chan_stats",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 282,
+            "store_bytes_realised": 32712,
+            "budget_utilisation": 0.998291015625,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            64,
+            64,
+            64
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.8242144398431233,
+            "std": 0.017739345970649224,
+            "min": 0.8051694730588431,
+            "max": 0.8402677214717454,
+            "range": 0.03509824841290232,
+            "per_seed": [
+              0.8272061249987814,
+              0.8402677214717454,
+              0.8051694730588431
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.763881682129805,
+            "std": 0.010302302113894208,
+            "min": 0.7578140455454461,
+            "max": 0.7757769488676993,
+            "range": 0.017962903322253254,
+            "per_seed": [
+              0.7580540519762698,
+              0.7757769488676993,
+              0.7578140455454461
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "last_patch::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 112,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 452,
+            "n_exemplars_budgeted": 72,
+            "budget_bytes": 32768,
+            "descriptor": "last_patch",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 72,
+            "store_bytes_realised": 32544,
+            "budget_utilisation": 0.9931640625,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            64,
+            64,
+            64
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.7789429667004191,
+            "std": 0.014205664172632986,
+            "min": 0.7663956792708103,
+            "max": 0.7943667512996424,
+            "range": 0.02797107202883209,
+            "per_seed": [
+              0.7943667512996424,
+              0.7663956792708103,
+              0.7760664695308046
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.7448691113838004,
+            "std": 0.03269924699646742,
+            "min": 0.715036134848915,
+            "max": 0.7798289498561793,
+            "range": 0.0647928150072643,
+            "per_seed": [
+              0.7798289498561793,
+              0.715036134848915,
+              0.739742249446307
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "patch_means::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 224,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 900,
+            "n_exemplars_budgeted": 36,
+            "budget_bytes": 32768,
+            "descriptor": "patch_means",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 36,
+            "store_bytes_realised": 32400,
+            "budget_utilisation": 0.98876953125,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            36,
+            36,
+            4
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.6494278125484857,
+            "std": 0.006938814014818943,
+            "min": 0.641522342223628,
+            "max": 0.6545096155296679,
+            "range": 0.012987273306039882,
+            "per_seed": [
+              0.6545096155296679,
+              0.6522514798921609,
+              0.641522342223628
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.6262992084742253,
+            "std": 0.014754637710408379,
+            "min": 0.6094561379031417,
+            "max": 0.6369416814600477,
+            "range": 0.027485543556906022,
+            "per_seed": [
+              0.6369416814600477,
+              0.6094561379031417,
+              0.6324998060594865
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "raw_window::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 3584,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 14340,
+            "n_exemplars_budgeted": 2,
+            "budget_bytes": 32768,
+            "descriptor": "raw_window",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 2,
+            "store_bytes_realised": 28680,
+            "budget_utilisation": 0.875244140625,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            1,
+            1,
+            2
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.5025415437013953,
+            "std": 0.01223155186626016,
+            "min": 0.4917804296746654,
+            "max": 0.5158442014295201,
+            "range": 0.024063771754854746,
+            "per_seed": [
+              0.5,
+              0.4917804296746654,
+              0.5158442014295201
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.5160239029899261,
+            "std": 0.01677806342399089,
+            "min": 0.5,
+            "max": 0.5334660884155262,
+            "range": 0.03346608841552623,
+            "per_seed": [
+              0.5,
+              0.514605620554252,
+              0.5334660884155262
+            ],
+            "n_seeds_run": 3
+          }
+        }
+      }
+    },
+    "residual_stream": {
+      "budget_bytes": 98304,
+      "arms": {
+        "chan_stats::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 28,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 116,
+            "n_exemplars_budgeted": 847,
+            "budget_bytes": 98304,
+            "descriptor": "chan_stats",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 847,
+            "store_bytes_realised": 98252,
+            "budget_utilisation": 0.9994710286458334,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            64,
+            64,
+            64
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.8289792277397154,
+            "std": 0.007464328389077341,
+            "min": 0.8229959465098147,
+            "max": 0.8373436197534301,
+            "range": 0.01434767324361541,
+            "per_seed": [
+              0.8229959465098147,
+              0.8265981169559014,
+              0.8373436197534301
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.7901224104626449,
+            "std": 0.004258733778868599,
+            "min": 0.7859492365100422,
+            "max": 0.7944618351539771,
+            "range": 0.008512598643934832,
+            "per_seed": [
+              0.7859492365100422,
+              0.7944618351539771,
+              0.7899561597239151
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "chan_stats::surface": {
+          "status": "OK",
+          "prereg_compliant": false,
+          "store": {
+            "feature_dim": 28,
+            "payload_floats": 200,
+            "bytes_per_exemplar": 912,
+            "n_exemplars_budgeted": 107,
+            "budget_bytes": 98304,
+            "descriptor": "chan_stats",
+            "payload": "surface",
+            "prereg_compliant": false,
+            "n_pool": 10420,
+            "n_exemplars_realised": 107,
+            "store_bytes_realised": 97584,
+            "budget_utilisation": 0.99267578125,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            64,
+            64,
+            64
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.7643093770914365,
+            "std": 0.0650151068478704,
+            "min": 0.6928554829940956,
+            "max": 0.8199792397289696,
+            "range": 0.12712375673487397,
+            "per_seed": [
+              0.6928554829940956,
+              0.8199792397289696,
+              0.7800934085512442
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.7321026957823422,
+            "std": 0.06245959988755845,
+            "min": 0.6618055359588334,
+            "max": 0.7812131383447223,
+            "range": 0.11940760238588888,
+            "per_seed": [
+              0.6618055359588334,
+              0.7812131383447223,
+              0.753289413043471
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "last_patch::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 112,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 452,
+            "n_exemplars_budgeted": 217,
+            "budget_bytes": 98304,
+            "descriptor": "last_patch",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 217,
+            "store_bytes_realised": 98084,
+            "budget_utilisation": 0.9977620442708334,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            64,
+            64,
+            64
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.8004582734470458,
+            "std": 0.01577469160476336,
+            "min": 0.7837504401444516,
+            "max": 0.8150952725404994,
+            "range": 0.031344832396047795,
+            "per_seed": [
+              0.7837504401444516,
+              0.8025291076561862,
+              0.8150952725404994
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.7641851474382396,
+            "std": 0.011394990183875712,
+            "min": 0.7557187645696866,
+            "max": 0.7771410719380711,
+            "range": 0.021422307368384574,
+            "per_seed": [
+              0.7771410719380711,
+              0.7596956058069609,
+              0.7557187645696866
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "last_patch::surface": {
+          "status": "OK",
+          "prereg_compliant": false,
+          "store": {
+            "feature_dim": 112,
+            "payload_floats": 200,
+            "bytes_per_exemplar": 1248,
+            "n_exemplars_budgeted": 78,
+            "budget_bytes": 98304,
+            "descriptor": "last_patch",
+            "payload": "surface",
+            "prereg_compliant": false,
+            "n_pool": 10420,
+            "n_exemplars_realised": 78,
+            "store_bytes_realised": 97344,
+            "budget_utilisation": 0.990234375,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            64,
+            64,
+            64
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.7713604345913384,
+            "std": 0.015870369970488813,
+            "min": 0.759269863181042,
+            "max": 0.7893318347194487,
+            "range": 0.03006197153840673,
+            "per_seed": [
+              0.7893318347194487,
+              0.759269863181042,
+              0.7654796058735244
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.730439410838716,
+            "std": 0.036509161995739836,
+            "min": 0.6946780281793137,
+            "max": 0.767653015615361,
+            "range": 0.07297498743604736,
+            "per_seed": [
+              0.7289871887214733,
+              0.6946780281793137,
+              0.767653015615361
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "patch_means::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 224,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 900,
+            "n_exemplars_budgeted": 109,
+            "budget_bytes": 98304,
+            "descriptor": "patch_means",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 109,
+            "store_bytes_realised": 98100,
+            "budget_utilisation": 0.9979248046875,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            64,
+            64,
+            64
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.6864366836720549,
+            "std": 0.04447252707359957,
+            "min": 0.6437664860378554,
+            "max": 0.7325153945881553,
+            "range": 0.08874890855029993,
+            "per_seed": [
+              0.6830281703901538,
+              0.7325153945881553,
+              0.6437664860378554
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.631019769859956,
+            "std": 0.029404287580999607,
+            "min": 0.611247583623272,
+            "max": 0.6648099968616359,
+            "range": 0.05356241323836386,
+            "per_seed": [
+              0.611247583623272,
+              0.6648099968616359,
+              0.6170017290949602
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "patch_means::surface": {
+          "status": "OK",
+          "prereg_compliant": false,
+          "store": {
+            "feature_dim": 224,
+            "payload_floats": 200,
+            "bytes_per_exemplar": 1696,
+            "n_exemplars_budgeted": 57,
+            "budget_bytes": 98304,
+            "descriptor": "patch_means",
+            "payload": "surface",
+            "prereg_compliant": false,
+            "n_pool": 10420,
+            "n_exemplars_realised": 57,
+            "store_bytes_realised": 96672,
+            "budget_utilisation": 0.9833984375,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            57,
+            57,
+            16
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.6402412189735102,
+            "std": 0.04686317422273547,
+            "min": 0.5867404311329206,
+            "max": 0.6740205796427395,
+            "range": 0.08728014850981891,
+            "per_seed": [
+              0.6599626461448703,
+              0.6740205796427395,
+              0.5867404311329206
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.6020589060263094,
+            "std": 0.035184464528896876,
+            "min": 0.5693538554418448,
+            "max": 0.6392856090002113,
+            "range": 0.06993175355836645,
+            "per_seed": [
+              0.5975372536368722,
+              0.6392856090002113,
+              0.5693538554418448
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "raw_window::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 3584,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 14340,
+            "n_exemplars_budgeted": 6,
+            "budget_bytes": 98304,
+            "descriptor": "raw_window",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 6,
+            "store_bytes_realised": 86040,
+            "budget_utilisation": 0.875244140625,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            6,
+            6,
+            6
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.5396880444358074,
+            "std": 0.04332401880490508,
+            "min": 0.5124880841002426,
+            "max": 0.5896486107335678,
+            "range": 0.07716052663332518,
+            "per_seed": [
+              0.5169274384736119,
+              0.5896486107335678,
+              0.5124880841002426
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.5366881800467285,
+            "std": 0.0418729856398716,
+            "min": 0.5005985724657624,
+            "max": 0.5825987710122726,
+            "range": 0.0820001985465102,
+            "per_seed": [
+              0.5268671966621503,
+              0.5825987710122726,
+              0.5005985724657624
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "raw_window::surface": {
+          "status": "OK",
+          "prereg_compliant": false,
+          "store": {
+            "feature_dim": 3584,
+            "payload_floats": 200,
+            "bytes_per_exemplar": 15136,
+            "n_exemplars_budgeted": 6,
+            "budget_bytes": 98304,
+            "descriptor": "raw_window",
+            "payload": "surface",
+            "prereg_compliant": false,
+            "n_pool": 10420,
+            "n_exemplars_realised": 6,
+            "store_bytes_realised": 90816,
+            "budget_utilisation": 0.923828125,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            6,
+            6,
+            6
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.5396880444358074,
+            "std": 0.04332401880490508,
+            "min": 0.5124880841002426,
+            "max": 0.5896486107335678,
+            "range": 0.07716052663332518,
+            "per_seed": [
+              0.5169274384736119,
+              0.5896486107335678,
+              0.5124880841002426
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.5366881800467285,
+            "std": 0.0418729856398716,
+            "min": 0.5005985724657624,
+            "max": 0.5825987710122726,
+            "range": 0.0820001985465102,
+            "per_seed": [
+              0.5268671966621503,
+              0.5825987710122726,
+              0.5005985724657624
+            ],
+            "n_seeds_run": 3
+          }
+        }
+      }
+    },
+    "kv_cache": {
+      "budget_bytes": 164864,
+      "arms": {
+        "chan_stats::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 28,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 116,
+            "n_exemplars_budgeted": 1421,
+            "budget_bytes": 164864,
+            "descriptor": "chan_stats",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 1421,
+            "store_bytes_realised": 164836,
+            "budget_utilisation": 0.9998301630434783,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            64,
+            64,
+            64
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.8177649067629464,
+            "std": 0.006018583973399699,
+            "min": 0.8111429503362961,
+            "max": 0.8229022537390143,
+            "range": 0.011759303402718135,
+            "per_seed": [
+              0.8192495162135289,
+              0.8111429503362961,
+              0.8229022537390143
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.7913538731153009,
+            "std": 0.004700292066500812,
+            "min": 0.7868555673320469,
+            "max": 0.7962329840523477,
+            "range": 0.00937741672030079,
+            "per_seed": [
+              0.7909730679615083,
+              0.7962329840523477,
+              0.7868555673320469
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "last_patch::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 112,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 452,
+            "n_exemplars_budgeted": 364,
+            "budget_bytes": 164864,
+            "descriptor": "last_patch",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 364,
+            "store_bytes_realised": 164528,
+            "budget_utilisation": 0.9979619565217391,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            64,
+            64,
+            64
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.8029683854488571,
+            "std": 0.014315939190015484,
+            "min": 0.7867956466798048,
+            "max": 0.814017524723742,
+            "range": 0.027221878043937164,
+            "per_seed": [
+              0.7867956466798048,
+              0.8080919849430245,
+              0.814017524723742
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.7797637171713081,
+            "std": 0.019712334463113663,
+            "min": 0.757999377239729,
+            "max": 0.7964174779483613,
+            "range": 0.038418100708632275,
+            "per_seed": [
+              0.7848742963258339,
+              0.7964174779483613,
+              0.757999377239729
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "patch_means::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 224,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 900,
+            "n_exemplars_budgeted": 183,
+            "budget_bytes": 164864,
+            "descriptor": "patch_means",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 183,
+            "store_bytes_realised": 164700,
+            "budget_utilisation": 0.9990052406832298,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            64,
+            64,
+            64
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.7103977214724168,
+            "std": 0.017081808240385656,
+            "min": 0.7001173757627523,
+            "max": 0.7301160986689588,
+            "range": 0.02999872290620642,
+            "per_seed": [
+              0.7001173757627523,
+              0.7301160986689588,
+              0.7009596899855393
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.6790794371218949,
+            "std": 0.0013323592109162777,
+            "min": 0.6779417393321142,
+            "max": 0.6805451772427762,
+            "range": 0.0026034379106619765,
+            "per_seed": [
+              0.6779417393321142,
+              0.6787513947907943,
+              0.6805451772427762
+            ],
+            "n_seeds_run": 3
+          }
+        },
+        "raw_window::tte": {
+          "status": "OK",
+          "prereg_compliant": true,
+          "store": {
+            "feature_dim": 3584,
+            "payload_floats": 1,
+            "bytes_per_exemplar": 14340,
+            "n_exemplars_budgeted": 11,
+            "budget_bytes": 164864,
+            "descriptor": "raw_window",
+            "payload": "tte",
+            "prereg_compliant": true,
+            "n_pool": 10420,
+            "n_exemplars_realised": 11,
+            "store_bytes_realised": 157740,
+            "budget_utilisation": 0.9567886257763976,
+            "subsampled": true,
+            "seed_active": true
+          },
+          "k_selected_per_seed": [
+            4,
+            11,
+            1
+          ],
+          "val": {
+            "regime": "seeded",
+            "mean": 0.5472093351905746,
+            "std": 0.058567029307723964,
+            "min": 0.5056753851719213,
+            "max": 0.6141963834237485,
+            "range": 0.10852099825182715,
+            "per_seed": [
+              0.5217562369760538,
+              0.6141963834237485,
+              0.5056753851719213
+            ],
+            "n_seeds_run": 3
+          },
+          "test": {
+            "regime": "seeded",
+            "mean": 0.5420898130662954,
+            "std": 0.05678549443996091,
+            "min": 0.507634085025603,
+            "max": 0.6076311791609088,
+            "range": 0.09999709413530578,
+            "per_seed": [
+              0.5110041750123746,
+              0.6076311791609088,
+              0.507634085025603
+            ],
+            "n_seeds_run": 3
+          }
+        }
+      }
+    }
+  },
+  "tripwire": {
+    "budget_used": "residual_stream",
+    "budget_bytes": 98304,
+    "best_exemplar_arm": "chan_stats::tte",
+    "best_exemplar_h_auroc_test": 0.7901224104626449,
+    "best_trivial_arm": "prevalence",
+    "best_trivial_h_auroc_test": 0.5,
+    "tripwire_h_auroc": 0.7901224104626449,
+    "tripwire_source": "exemplar_store",
+    "selection_rule": "descriptor and k chosen by ft_val h-AUROC; the reported number is ft_test at that choice; PREREG-non-compliant diagnostic arms are excluded"
+  },
+  "runtime_seconds": 151.4
+}

@@ -1,0 +1,418 @@
+{
+  "condition": "val",
+  "seed": 0,
+  "corners": "nway",
+  "n_corners": 12,
+  "aux_corners": 2,
+  "n_rows": 20250,
+  "pins": {
+    "eta": 0.05,
+    "gammas": [
+      0.002,
+      0.005,
+      0.01,
+      0.02,
+      0.05,
+      0.1,
+      0.2,
+      0.35,
+      0.5
+    ],
+    "masses": [
+      0.001,
+      0.1,
+      1.0,
+      10.0,
+      1000.0
+    ],
+    "amplitudes": [
+      0.05
+    ],
+    "n_modes_probed": 3,
+    "confinement_alphas": [
+      0.0
+    ],
+    "censor_steps": 5000,
+    "rollout_slack": 3.0,
+    "settle_tol": 1e-10,
+    "settle_max_iter": 2000,
+    "half_life_floor_steps": 3
+  },
+  "pins_aux": {
+    "eta": 0.05,
+    "gammas": [
+      0.002,
+      0.005,
+      0.01,
+      0.02,
+      0.05,
+      0.1,
+      0.2,
+      0.35,
+      0.5
+    ],
+    "masses": [
+      0.001,
+      0.1,
+      1.0,
+      10.0,
+      1000.0
+    ],
+    "amplitudes": [
+      0.05,
+      0.5
+    ],
+    "n_modes_probed": 6,
+    "confinement_alphas": [
+      0.0,
+      1.0
+    ],
+    "censor_steps": 5000,
+    "rollout_slack": 3.0,
+    "settle_tol": 1e-10,
+    "settle_max_iter": 2000,
+    "half_life_floor_steps": 3
+  },
+  "fit1_C": 0.5505058602301417,
+  "fit1_n": 6552,
+  "field_sha": "784891df0dcf3b686af137585c5f83359517f5f6162b0590525341c90686a966",
+  "byte_ledger": {
+    "deployed_bytes": 524288,
+    "budget_bytes": 524288,
+    "matches_budget": true,
+    "what": "64 training items x 2048 float32 -- one item written into every one of the 5 wells",
+    "landscape_bytes": 524608,
+    "interface_bytes": 1527526,
+    "provenance_bytes": 2732,
+    "total_image_bytes": 2054866,
+    "per_segment": {
+      "well_of_channel": {
+        "bytes": 4096,
+        "role": "interface"
+      },
+      "atoms": {
+        "bytes": 524288,
+        "role": "landscape"
+      },
+      "atom_life": {
+        "bytes": 256,
+        "role": "landscape"
+      },
+      "atom_alive": {
+        "bytes": 64,
+        "role": "landscape"
+      },
+      "atom_row": {
+        "bytes": 512,
+        "role": "provenance"
+      },
+      "atom_basin": {
+        "bytes": 1536,
+        "role": "provenance"
+      },
+      "well_sigma": {
+        "bytes": 20,
+        "role": "interface"
+      },
+      "basin_sigma": {
+        "bytes": 228,
+        "role": "interface"
+      },
+      "basin_gap": {
+        "bytes": 228,
+        "role": "interface"
+      },
+      "basin_n": {
+        "bytes": 228,
+        "role": "provenance"
+      },
+      "coupling": {
+        "bytes": 5288,
+        "role": "interface"
+      },
+      "coupling_w": {
+        "bytes": 5288,
+        "role": "interface"
+      },
+      "coupling_dp_fg": {
+        "bytes": 5288,
+        "role": "interface"
+      },
+      "coupling_dp_gf": {
+        "bytes": 5288,
+        "role": "interface"
+      },
+      "coupling_u": {
+        "bytes": 42304,
+        "role": "interface"
+      },
+      "coupling_v": {
+        "bytes": 983040,
+        "role": "interface"
+      },
+      "coupling_hole": {
+        "bytes": 1322,
+        "role": "interface"
+      },
+      "term_mu": {
+        "bytes": 466944,
+        "role": "interface"
+      },
+      "term_n": {
+        "bytes": 456,
+        "role": "provenance"
+      },
+      "global_mu": {
+        "bytes": 8192,
+        "role": "interface"
+      }
+    },
+    "coupling_bytes": 1047818,
+    "term_map_bytes": 475136,
+    "note": "the ATOMS carry the store ledger and are matched to the budget; the address book, the coupling table and the partition are the INTERFACE and are reported beside it, never inside it"
+  },
+  "integrator_check": {
+    "max_abs_diff": 1.884681927188936e-08,
+    "tol": 1e-05,
+    "passed": true,
+    "rows": [
+      {
+        "mass": 1.0,
+        "gamma": 0.05,
+        "eta": 0.05,
+        "max_abs_diff": 5.545679998553155e-09,
+        "mu_unused": 0.9,
+        "trace_len": 6
+      },
+      {
+        "mass": 0.1,
+        "gamma": 0.2,
+        "eta": 0.05,
+        "max_abs_diff": 1.3048770786117103e-08,
+        "mu_unused": 1.7,
+        "trace_len": 6
+      },
+      {
+        "mass": 10.0,
+        "gamma": 0.01,
+        "eta": 0.1,
+        "max_abs_diff": 1.884681927188936e-08,
+        "mu_unused": 0.3,
+        "trace_len": 6
+      }
+    ],
+    "what": "the numpy rollout reproduces chlu.core.integrators.velocity_verlet_step"
+  },
+  "hessian_fd_check": {
+    "n": 10,
+    "max_abs_residual": 2.0184298676895196e-11,
+    "mean_abs_residual": 1.4388434887990798e-11,
+    "eps_fd": 1e-05,
+    "per_well": [
+      {
+        "well": 0,
+        "alpha": 0.0,
+        "max_abs_residual": 1.7570389587717727e-11,
+        "n_dirs": 6
+      },
+      {
+        "well": 0,
+        "alpha": 1.0,
+        "max_abs_residual": 1.7572610033766978e-11,
+        "n_dirs": 6
+      },
+      {
+        "well": 1,
+        "alpha": 0.0,
+        "max_abs_residual": 2.0184298676895196e-11,
+        "n_dirs": 6
+      },
+      {
+        "well": 1,
+        "alpha": 1.0,
+        "max_abs_residual": 2.0182966409265646e-11,
+        "n_dirs": 6
+      },
+      {
+        "well": 2,
+        "alpha": 0.0,
+        "max_abs_residual": 1.5564993738337307e-11,
+        "n_dirs": 6
+      },
+      {
+        "well": 2,
+        "alpha": 1.0,
+        "max_abs_residual": 1.5568435429713645e-11,
+        "n_dirs": 6
+      },
+      {
+        "well": 3,
+        "alpha": 0.0,
+        "max_abs_residual": 5.488165477629536e-12,
+        "n_dirs": 6
+      },
+      {
+        "well": 3,
+        "alpha": 1.0,
+        "max_abs_residual": 5.487166276907374e-12,
+        "n_dirs": 6
+      },
+      {
+        "well": 4,
+        "alpha": 0.0,
+        "max_abs_residual": 1.3131828957568814e-11,
+        "n_dirs": 6
+      },
+      {
+        "well": 4,
+        "alpha": 1.0,
+        "max_abs_residual": 1.3133494292105752e-11,
+        "n_dirs": 6
+      }
+    ],
+    "law": "Hess E = I - Cov_w/sigma^2, and D14: +2 alpha lifts every eigenvalue"
+  },
+  "sigma_provenance": {
+    "well_0": {
+      "well_sigma": 6.221541404724121,
+      "nn_median": 7.143731408604788,
+      "pairwise_median": 18.122722266567767,
+      "well_sigma_over_nn_median": 0.8709091998097985,
+      "well_sigma_over_pairwise_median": 0.3433005987296636,
+      "inherited_item_spacing": false
+    },
+    "well_1": {
+      "well_sigma": 9.496745109558105,
+      "nn_median": 11.137438365955434,
+      "pairwise_median": 22.07729623659078,
+      "well_sigma_over_nn_median": 0.8526866589526954,
+      "well_sigma_over_pairwise_median": 0.43015888394060936,
+      "inherited_item_spacing": false
+    },
+    "well_2": {
+      "well_sigma": 5.639626502990723,
+      "nn_median": 6.584589417330685,
+      "pairwise_median": 11.552211447012592,
+      "well_sigma_over_nn_median": 0.8564887110724302,
+      "well_sigma_over_pairwise_median": 0.48818587928886403,
+      "inherited_item_spacing": false
+    },
+    "well_3": {
+      "well_sigma": 0.7663453817367554,
+      "nn_median": 0.3654060164450608,
+      "pairwise_median": 1.4527778813068726,
+      "well_sigma_over_nn_median": 2.097243469585773,
+      "well_sigma_over_pairwise_median": 0.5275034756499566,
+      "inherited_item_spacing": false
+    },
+    "well_4": {
+      "well_sigma": 1.705377221107483,
+      "nn_median": 1.409398939941072,
+      "pairwise_median": 3.681388931863493,
+      "well_sigma_over_nn_median": 1.2100031955315547,
+      "well_sigma_over_pairwise_median": 0.46324288269216723,
+      "inherited_item_spacing": false
+    }
+  },
+  "estimand": {
+    "corners": [
+      {
+        "corner_id": "nway-000",
+        "n_rows": 546,
+        "median_err_crr": 0.02925791938160849,
+        "median_err_fit1": 0.8127204554219258,
+        "paired_delta": -0.7834625360403173
+      },
+      {
+        "corner_id": "nway-001",
+        "n_rows": 546,
+        "median_err_crr": 0.02925791938161311,
+        "median_err_fit1": 0.8127204554219383,
+        "paired_delta": -0.7834625360403251
+      },
+      {
+        "corner_id": "nway-002",
+        "n_rows": 546,
+        "median_err_crr": 0.0292579193816137,
+        "median_err_fit1": 0.8127204554218945,
+        "paired_delta": -0.7834625360402808
+      },
+      {
+        "corner_id": "nway-003",
+        "n_rows": 546,
+        "median_err_crr": 0.029257919381610063,
+        "median_err_fit1": 0.8127204554218991,
+        "paired_delta": -0.783462536040289
+      },
+      {
+        "corner_id": "nway-004",
+        "n_rows": 546,
+        "median_err_crr": 0.029257919381609702,
+        "median_err_fit1": 0.8127204554219101,
+        "paired_delta": -0.7834625360403004
+      },
+      {
+        "corner_id": "nway-005",
+        "n_rows": 546,
+        "median_err_crr": 0.029257919381610993,
+        "median_err_fit1": 0.8127204554218797,
+        "paired_delta": -0.7834625360402686
+      },
+      {
+        "corner_id": "nway-006",
+        "n_rows": 546,
+        "median_err_crr": 0.02925791938161646,
+        "median_err_fit1": 0.8127204554219755,
+        "paired_delta": -0.783462536040359
+      },
+      {
+        "corner_id": "nway-007",
+        "n_rows": 546,
+        "median_err_crr": 0.029257919381611867,
+        "median_err_fit1": 0.8127204554219463,
+        "paired_delta": -0.7834625360403344
+      },
+      {
+        "corner_id": "nway-008",
+        "n_rows": 546,
+        "median_err_crr": 0.029257919381612228,
+        "median_err_fit1": 0.8127204554219426,
+        "paired_delta": -0.7834625360403303
+      },
+      {
+        "corner_id": "nway-009",
+        "n_rows": 546,
+        "median_err_crr": 0.02925791938161347,
+        "median_err_fit1": 0.8127204554219243,
+        "paired_delta": -0.7834625360403108
+      },
+      {
+        "corner_id": "nway-010",
+        "n_rows": 546,
+        "median_err_crr": 0.029257919381610476,
+        "median_err_fit1": 0.8127204554219767,
+        "paired_delta": -0.7834625360403662
+      },
+      {
+        "corner_id": "nway-011",
+        "n_rows": 546,
+        "median_err_crr": 0.029257919381610348,
+        "median_err_fit1": 0.8127204554218939,
+        "paired_delta": -0.7834625360402835
+      }
+    ],
+    "n_corners": 12
+  },
+  "d14_confinement": {
+    "n": 60,
+    "max_abs_residual": 0.0,
+    "mean_abs_residual": 0.0,
+    "law": "hess_eig(alpha) - [hess_eig(0) + 2 alpha]"
+  },
+  "n_v_curves": {
+    "field": 720,
+    "landscape_removed": 0,
+    "landscape_shuffled": 120
+  },
+  "wall_seconds": 590.9822010993958
+}

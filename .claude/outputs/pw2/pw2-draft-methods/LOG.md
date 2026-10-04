@@ -1,0 +1,5 @@
+- 2026-09-25T15:58:39Z start (START_UTC); bib sha b2cf715f… both; live == pw2-draft-sections INSTALLED; tmux: authtest, hubhost, own session only; arXiv 2603.01768 fetched: title/authors match bib entry jawahar2026chlu; stage 20260925T155839Z: edit.py applied to both drafts
+- 2026-09-25T16:01:17Z stage checks: both exit 0, ucit 0 uref 0 err 0 overfull 0, bibitems 55->56, pages 43/44 unchanged; style diff ALL EMPTY; provenance identical (line-masked); TODO/PH unchanged; rendered Methods = plan char-exact both; char proof PASS both; CHLU verdicts 0 VIOLATION; controls caught (plant word, plant char, plant cite). lock clean; live==snapshot; installed .tex+.pdf both folders
+- 2026-09-25T16:01:26Z CORRECTION: the install in the previous line did not happen (zsh did not split 'set -- $p'; cp failed, live untouched, hashes = snapshot). Re-run: lock clean, live==snapshot, installed; cmp-equal listed above; INSTALLED-SHA256.txt
+- 2026-09-25T16:02:36Z verify-live build ok (labels identical); HEAD-HELD.md written, PASS 7/7 both; FINDINGS.md written
+- 2026-09-25T16:02:49Z committed 2e52807, bundle verified (7a39a165…); bib b2cf715f… at end both; live == INSTALLED; END

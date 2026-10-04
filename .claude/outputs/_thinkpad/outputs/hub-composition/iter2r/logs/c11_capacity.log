@@ -1,0 +1,148 @@
+[19:09:36] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[19:09:36]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[19:09:36]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[19:09:37]   M=   4  bytes=    80,896  ( 0.170 x knn_proto)
+[19:09:37]   M=   8  bytes=   151,552  ( 0.319 x knn_proto)
+[19:09:37]   M=  13  bytes=   239,872  ( 0.505 x knn_proto)
+[19:09:37]   M=  26  bytes=   469,504  ( 0.988 x knn_proto)
+[19:09:37]   M=  52  bytes=   928,768  ( 1.955 x knn_proto)   ⚠ DECLARED OVER BUDGET — curve only
+[19:09:37]   M= 104  bytes= 1,847,296  ( 3.888 x knn_proto)   ⚠ DECLARED OVER BUDGET — curve only
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:09:40] [c0] ceiling = 56
+[19:10:03] [c0] M=   4 bytes=   80,896 ( 0.17x)  tuples=  0  rel_err=0.4015  (23s)
+[19:10:29] [c0] M=   8 bytes=  151,552 ( 0.32x)  tuples=  0  rel_err=0.3651  (26s)
+[19:11:01] [c0] M=  13 bytes=  239,872 ( 0.50x)  tuples=  2  rel_err=0.3356  (32s)
+[19:11:43] [c0] M=  26 bytes=  469,504 ( 0.99x)  tuples= 38  rel_err=0.3104  (42s)
+[19:12:54] [c0] M=  52 bytes=  928,768 ( 1.95x)  tuples= 37  rel_err=0.2930  (72s)
+[19:14:54] [c0] M= 104 bytes=1,847,296 ( 3.89x)  tuples= 43  rel_err=0.2919  (119s)
+[19:14:54] [c0] done in 316.5s
+[19:14:56] [c2] ceiling = 59
+[19:15:18] [c2] M=   4 bytes=   80,896 ( 0.17x)  tuples=  0  rel_err=0.3919  (22s)
+[19:15:43] [c2] M=   8 bytes=  151,552 ( 0.32x)  tuples=  0  rel_err=0.3337  (25s)
+[19:16:10] [c2] M=  13 bytes=  239,872 ( 0.50x)  tuples=  0  rel_err=0.3088  (28s)
+[19:16:50] [c2] M=  26 bytes=  469,504 ( 0.99x)  tuples= 35  rel_err=0.2806  (40s)
+[19:17:56] [c2] M=  52 bytes=  928,768 ( 1.95x)  tuples= 18  rel_err=0.2645  (65s)
+[19:19:39] [c2] M= 104 bytes=1,847,296 ( 3.89x)  tuples=  8  rel_err=0.2633  (103s)
+[19:19:39] [c2] done in 284.6s
+[19:19:41] [c4] ceiling = 31
+[19:19:58] [c4] M=   4 bytes=   80,896 ( 0.17x)  tuples=  0  rel_err=0.4228  (17s)
+[19:20:19] [c4] M=   8 bytes=  151,552 ( 0.32x)  tuples=  0  rel_err=0.3656  (21s)
+[19:20:43] [c4] M=  13 bytes=  239,872 ( 0.50x)  tuples=  1  rel_err=0.3463  (24s)
+[19:21:21] [c4] M=  26 bytes=  469,504 ( 0.99x)  tuples= 35  rel_err=0.3223  (39s)
+[19:22:37] [c4] M=  52 bytes=  928,768 ( 1.95x)  tuples= 34  rel_err=0.3073  (76s)
+[19:24:24] [c4] M= 104 bytes=1,847,296 ( 3.89x)  tuples= 38  rel_err=0.3052  (107s)
+[19:24:24] [c4] done in 284.9s
+[19:24:26] [c6] ceiling = 68
+[19:24:42] [c6] M=   4 bytes=   80,896 ( 0.17x)  tuples=  2  rel_err=0.3952  (17s)
+[19:25:03] [c6] M=   8 bytes=  151,552 ( 0.32x)  tuples= 12  rel_err=0.3409  (20s)
+[19:25:27] [c6] M=  13 bytes=  239,872 ( 0.50x)  tuples= 10  rel_err=0.3140  (24s)
+[19:26:00] [c6] M=  26 bytes=  469,504 ( 0.99x)  tuples= 40  rel_err=0.2890  (33s)
+[19:26:58] [c6] M=  52 bytes=  928,768 ( 1.95x)  tuples= 51  rel_err=0.2754  (58s)
+[19:28:37] [c6] M= 104 bytes=1,847,296 ( 3.89x)  tuples= 56  rel_err=0.2727  (99s)
+[19:28:37] [c6] done in 253.4s
+[19:28:39] [c12] ceiling = 72
+[19:28:56] [c12] M=   4 bytes=   80,896 ( 0.17x)  tuples=  0  rel_err=0.4132  (17s)
+[19:29:20] [c12] M=   8 bytes=  151,552 ( 0.32x)  tuples=  0  rel_err=0.3686  (24s)
+[19:29:48] [c12] M=  13 bytes=  239,872 ( 0.50x)  tuples=  2  rel_err=0.3454  (27s)
+[19:30:22] [c12] M=  26 bytes=  469,504 ( 0.99x)  tuples= 14  rel_err=0.3250  (34s)
+[19:31:21] [c12] M=  52 bytes=  928,768 ( 1.95x)  tuples= 41  rel_err=0.3102  (59s)
+[19:33:05] [c12] M= 104 bytes=1,847,296 ( 3.89x)  tuples= 39  rel_err=0.3078  (105s)
+[19:33:05] [c12] done in 267.9s
+[19:33:07] [c16] ceiling = 58
+[19:33:34] [c16] M=   4 bytes=   80,896 ( 0.17x)  tuples=  0  rel_err=0.3959  (27s)
+[19:34:04] [c16] M=   8 bytes=  151,552 ( 0.32x)  tuples=  1  rel_err=0.3606  (30s)
+[19:34:36] [c16] M=  13 bytes=  239,872 ( 0.50x)  tuples=  6  rel_err=0.3248  (32s)
+[19:35:19] [c16] M=  26 bytes=  469,504 ( 0.99x)  tuples= 18  rel_err=0.3023  (42s)
+[19:36:19] [c16] M=  52 bytes=  928,768 ( 1.95x)  tuples= 46  rel_err=0.2832  (61s)
+[19:38:02] [c16] M= 104 bytes=1,847,296 ( 3.89x)  tuples= 43  rel_err=0.2811  (103s)
+[19:38:02] [c16] done in 296.7s
+[19:38:04] [c20] ceiling = 72
+[19:38:20] [c20] M=   4 bytes=   80,896 ( 0.17x)  tuples=  0  rel_err=0.4015  (16s)
+[19:38:39] [c20] M=   8 bytes=  151,552 ( 0.32x)  tuples=  5  rel_err=0.3563  (19s)
+[19:39:02] [c20] M=  13 bytes=  239,872 ( 0.50x)  tuples= 19  rel_err=0.3240  (23s)
+[19:39:37] [c20] M=  26 bytes=  469,504 ( 0.99x)  tuples= 37  rel_err=0.2954  (35s)
+[19:40:34] [c20] M=  52 bytes=  928,768 ( 1.95x)  tuples= 61  rel_err=0.2772  (57s)
+[19:42:13] [c20] M= 104 bytes=1,847,296 ( 3.89x)  tuples= 62  rel_err=0.2754  (99s)
+[19:42:13] [c20] done in 250.5s
+[19:42:15] [c24] ceiling = 72
+[19:42:31] [c24] M=   4 bytes=   80,896 ( 0.17x)  tuples=  0  rel_err=0.4916  (16s)
+[19:42:50] [c24] M=   8 bytes=  151,552 ( 0.32x)  tuples=  1  rel_err=0.4470  (19s)
+[19:43:13] [c24] M=  13 bytes=  239,872 ( 0.50x)  tuples=  3  rel_err=0.4236  (23s)
+[19:43:46] [c24] M=  26 bytes=  469,504 ( 0.99x)  tuples= 19  rel_err=0.3959  (32s)
+[19:44:42] [c24] M=  52 bytes=  928,768 ( 1.95x)  tuples= 32  rel_err=0.3797  (56s)
+[19:46:21] [c24] M= 104 bytes=1,847,296 ( 3.89x)  tuples= 30  rel_err=0.3782  (99s)
+[19:46:21] [c24] done in 247.9s
+[19:46:23] [c38] ceiling = 72
+[19:46:40] [c38] M=   4 bytes=   80,896 ( 0.17x)  tuples=  0  rel_err=0.4599  (17s)
+[19:46:59] [c38] M=   8 bytes=  151,552 ( 0.32x)  tuples=  0  rel_err=0.4182  (20s)
+[19:47:21] [c38] M=  13 bytes=  239,872 ( 0.50x)  tuples=  0  rel_err=0.4050  (22s)
+[19:47:55] [c38] M=  26 bytes=  469,504 ( 0.99x)  tuples= 19  rel_err=0.3813  (33s)
+[19:48:52] [c38] M=  52 bytes=  928,768 ( 1.95x)  tuples= 55  rel_err=0.3673  (57s)
+[19:50:32] [c38] M= 104 bytes=1,847,296 ( 3.89x)  tuples= 48  rel_err=0.3659  (100s)
+[19:50:32] [c38] done in 251.1s
+[19:50:34] [c44] ceiling = 67
+[19:50:50] [c44] M=   4 bytes=   80,896 ( 0.17x)  tuples=  1  rel_err=0.4255  (16s)
+[19:51:09] [c44] M=   8 bytes=  151,552 ( 0.32x)  tuples=  1  rel_err=0.3775  (19s)
+[19:51:31] [c44] M=  13 bytes=  239,872 ( 0.50x)  tuples=  3  rel_err=0.3460  (22s)
+[19:52:03] [c44] M=  26 bytes=  469,504 ( 0.99x)  tuples= 28  rel_err=0.3236  (32s)
+[19:52:58] [c44] M=  52 bytes=  928,768 ( 1.95x)  tuples= 40  rel_err=0.3044  (55s)
+[19:54:38] [c44] M= 104 bytes=1,847,296 ( 3.89x)  tuples= 42  rel_err=0.3024  (99s)
+[19:54:38] [c44] done in 245.1s
+[19:54:39] [c50] ceiling = 45
+[19:54:56] [c50] M=   4 bytes=   80,896 ( 0.17x)  tuples=  0  rel_err=0.4180  (16s)
+[19:55:15] [c50] M=   8 bytes=  151,552 ( 0.32x)  tuples=  0  rel_err=0.3726  (20s)
+[19:55:38] [c50] M=  13 bytes=  239,872 ( 0.50x)  tuples=  0  rel_err=0.3564  (22s)
+[19:56:10] [c50] M=  26 bytes=  469,504 ( 0.99x)  tuples=  0  rel_err=0.3400  (32s)
+[19:57:07] [c50] M=  52 bytes=  928,768 ( 1.95x)  tuples=  0  rel_err=0.3231  (58s)
+[19:58:46] [c50] M= 104 bytes=1,847,296 ( 3.89x)  tuples=  0  rel_err=0.3222  (98s)
+[19:58:46] [c50] done in 248.0s
+[19:58:48] [c56] ceiling = 62
+[19:59:03] [c56] M=   4 bytes=   80,896 ( 0.17x)  tuples=  0  rel_err=0.4009  (16s)
+[19:59:22] [c56] M=   8 bytes=  151,552 ( 0.32x)  tuples=  0  rel_err=0.3385  (19s)
+[19:59:44] [c56] M=  13 bytes=  239,872 ( 0.50x)  tuples=  0  rel_err=0.3097  (22s)
+[20:00:16] [c56] M=  26 bytes=  469,504 ( 0.99x)  tuples=  1  rel_err=0.2843  (32s)
+[20:01:13] [c56] M=  52 bytes=  928,768 ( 1.95x)  tuples= 28  rel_err=0.2689  (56s)
+[20:02:50] [c56] M= 104 bytes=1,847,296 ( 3.89x)  tuples= 35  rel_err=0.2673  (97s)
+[20:02:50] [c56] done in 243.7s
+[20:02:50] C11 done in 3197.9s

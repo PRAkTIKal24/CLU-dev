@@ -1,0 +1,59 @@
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  fit pool 131072 rows; disjoint from the hold-out: 0 shared
+  dead channels: 64
+  channel-factor relevance: (2048, 6) in 28.3s; mean top-factor MI 0.5458 bits
+  partitions written -> C:\chlu\outputs\w6-retention\run1\partitions\partitions.json
+  term->coordinate map: 57 terms, 2 never held by the pool; marginal count table
+  kernel width per well (median within-value spread): w0=6.184, w1=9.515, w2=5.634, w3=0.767, w4=1.661
+  basin gap / width per well (THE NUMBER REFUSAL READS): w0=1.339, w1=0.812, w2=0.768, w3=0.699, w4=0.404
+  coupling: 1322 term pairs; 102 the pool NEVER held -- their evidence weight is exactly 0, so they back off to INDEPENDENCE (no correction, gain 1) and stay ANSWERABLE; they are NOT holes. 26 scalar entries survive the 2.0-sigma shrink; |pmi| max=0.4104. Coordinate correction rank 8, 1,025,344 B; holes=0
+  atom selection: greedy span over 8192 candidates against a rank-128 sketch of the address manifold
+  atoms: 64 training items written into every well (64 x 2048 x 4 = 524,288 B); atoms per term min=0 max=24
+  WARNING: a term has no atom -- its basin is empty at build time
+  field(seed 0): built in 33.1s; atoms 524,288 B (image 2,054,866 B)
+  decay(seed 0): 17 horizons over 6 item(s) (5 by provenance, 5 by geometry); rho=0.974679434481, n_half=27.0268, refusal step 539
+  invariance(seed 0): 6/16 horizons byte-identical across two clocks (27.027 vs 270.268 steps/half-life); worst lifetime gap 9.013e-03
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+  dev(seed 0): feature 7.95s + judge 1.43s per unit; ~117 units x ~27 generators => ~494.0 min/seed
+  dev(seed 0): first horizon byte-identical to eviction: 539

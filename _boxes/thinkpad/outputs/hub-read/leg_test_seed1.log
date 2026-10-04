@@ -1,0 +1,1058 @@
+[leg] classifier root -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier
+[leg] cache root -> C:/chlu/outputs/spoke-a-rivals/cache_generation2 (generation 2)
+[leg] condition=test seed=1 leg=/c/chlu/outputs/hub-read/run/test_seed1 arms=tensor_addr span_head rival_table rival_mlp rival_mlp_180k rival_transformer rival_lstm rival_cont_mlp pvm_table oracle_span landscape_removed landscape_shuffled lookup_argmax corr_linear
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[20:47:54] stage=prepare arm=None out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[20:47:54]   partitions: already on disk, skipping
+[20:47:54] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- tensor_addr ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[20:48:22] stage=fit arm=tensor_addr out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[20:48:22]   arm tensor_addr: already fitted, loading
+[20:48:22] {"arm": "tensor_addr", "address_bytes": {"address_bytes": 195584, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163840, "normalisation_bytes": 2560, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[20:48:44] stage=run arm=tensor_addr out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[20:48:44]   arm tensor_addr: already fitted, loading
+[20:48:45]   arm tensor_addr: already fitted, loading
+[20:48:45]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[20:55:33]   arm tensor_addr: r1_seen accept=1.0000 valid=0.6367
+[20:55:45]   arm tensor_addr: r2_unseen_valid accept=1.0000 valid=0.6895
+[20:55:57]   arm tensor_addr: r5_comp_refusal accept=0.0000 valid=0.0000
+[20:56:09]   arm tensor_addr: r6_invalid_refusal accept=0.0000 valid=0.0000
+[20:58:22]   arm tensor_addr: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[20:58:22]   arm tensor_addr: all rows done in 552.0s
+[20:58:22] {"incomplete": false, "n_done": 109}
+[leg] ---- span_head ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[20:59:03] stage=fit arm=span_head out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[20:59:03]   arm span_head: already fitted, loading
+[20:59:03] {"arm": "span_head", "address_bytes": {"address_bytes": 1766400, "per_well": [353280, 353280, 353280, 353280, 353280], "dtype": "float32", "bytes_formula": "sum_k P * M_k * 4", "note": "the incumbent ridge head -- this read's address book"}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[20:59:24] stage=run arm=span_head out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[20:59:24]   arm span_head: already fitted, loading
+[20:59:24]   arm span_head: already fitted, loading
+[20:59:24]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[21:07:17]   arm span_head: r1_seen accept=1.0000 valid=0.6348
+[21:07:29]   arm span_head: r2_unseen_valid accept=1.0000 valid=0.6855
+[21:07:40]   arm span_head: r5_comp_refusal accept=0.0000 valid=0.0000
+[21:07:53]   arm span_head: r6_invalid_refusal accept=0.0000 valid=0.0000
+[leg] classifier root -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier
+[leg] cache root -> C:/chlu/outputs/spoke-a-rivals/cache_generation2 (generation 2)
+[leg] condition=test seed=1 leg=/c/chlu/outputs/hub-read/run/test_seed1 arms=tensor_addr span_head rival_table rival_mlp rival_mlp_180k rival_transformer rival_lstm rival_cont_mlp pvm_table oracle_span landscape_removed landscape_shuffled lookup_argmax corr_linear
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:10:38] stage=prepare arm=None out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:10:38]   partitions: already on disk, skipping
+[21:10:38] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- tensor_addr ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:10:50] stage=fit arm=tensor_addr out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:10:50]   arm tensor_addr: already fitted, loading
+[21:10:50] {"arm": "tensor_addr", "address_bytes": {"address_bytes": 195584, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163840, "normalisation_bytes": 2560, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:11:06] stage=run arm=tensor_addr out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:11:06]   arm tensor_addr: rows.npz already on disk, skipping
+[21:11:06] {"arm": "tensor_addr", "incomplete": false, "skipped": true}
+[leg] ---- span_head ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:11:26] stage=fit arm=span_head out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:11:26]   arm span_head: already fitted, loading
+[21:11:27] {"arm": "span_head", "address_bytes": {"address_bytes": 1766400, "per_well": [353280, 353280, 353280, 353280, 353280], "dtype": "float32", "bytes_formula": "sum_k P * M_k * 4", "note": "the incumbent ridge head -- this read's address book"}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:11:47] stage=run arm=span_head out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:11:47]   arm span_head: already fitted, loading
+[21:11:48]   arm span_head: already fitted, loading
+[21:11:48]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+[21:12:16]   arm span_head: resuming with 109 corners already scored
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[21:12:32]   arm span_head: r1_seen accept=1.0000 valid=0.6348
+[21:12:45]   arm span_head: r2_unseen_valid accept=1.0000 valid=0.6855
+[21:12:58]   arm span_head: r5_comp_refusal accept=0.0000 valid=0.0000
+[21:13:12]   arm span_head: r6_invalid_refusal accept=0.0000 valid=0.0000
+[21:15:51]   arm span_head: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[21:15:51]   arm span_head: all rows done in 214.7s
+[21:15:51] {"incomplete": false, "n_done": 109}
+[leg] ---- rival_table ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:16:17] stage=fit arm=rival_table out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:16:17]   arm rival_table: loaded spoke A rival 'table' (params=118784)
+[21:16:17] {"arm": "rival_table", "address_bytes": {"address_bytes": 0, "note": "a rival's parameters ARE its address book"}, "byte_ledger": {"deployed_bytes": 475136, "what": "spoke A's fitted table, generation 2", "param_count": 118784}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:16:41] stage=run arm=rival_table out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:16:42]   arm rival_table: loaded spoke A rival 'table' (params=118784)
+[21:16:42]   arm rival_table: loaded spoke A rival 'table' (params=118784)
+[21:16:42]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[leg] classifier root -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier
+[leg] cache root -> C:/chlu/outputs/spoke-a-rivals/cache_generation2 (generation 2)
+[leg] condition=test seed=1 leg=/c/chlu/outputs/hub-read/run/test_seed1 arms=tensor_addr span_head rival_table rival_mlp rival_mlp_180k rival_transformer rival_lstm rival_cont_mlp pvm_table oracle_span landscape_removed landscape_shuffled lookup_argmax corr_linear
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:24:40] stage=prepare arm=None out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:24:40]   partitions: already on disk, skipping
+[21:24:40] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- tensor_addr ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:24:50] stage=fit arm=tensor_addr out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:24:50]   arm tensor_addr: already fitted, loading
+[21:24:50] {"arm": "tensor_addr", "address_bytes": {"address_bytes": 195584, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163840, "normalisation_bytes": 2560, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:25:00] stage=run arm=tensor_addr out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:25:00]   arm tensor_addr: rows.npz already on disk, skipping
+[21:25:00] {"arm": "tensor_addr", "incomplete": false, "skipped": true}
+[leg] ---- span_head ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:25:12] stage=fit arm=span_head out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:25:12]   arm span_head: already fitted, loading
+[21:25:12] {"arm": "span_head", "address_bytes": {"address_bytes": 1766400, "per_well": [353280, 353280, 353280, 353280, 353280], "dtype": "float32", "bytes_formula": "sum_k P * M_k * 4", "note": "the incumbent ridge head -- this read's address book"}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:25:25] stage=run arm=span_head out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:25:25]   arm span_head: rows.npz already on disk, skipping
+[21:25:25] {"arm": "span_head", "incomplete": false, "skipped": true}
+[leg] ---- rival_table ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:25:43] stage=fit arm=rival_table out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:25:43]   arm rival_table: loaded spoke A rival 'table' (params=118784)
+[21:25:43] {"arm": "rival_table", "address_bytes": {"address_bytes": 0, "note": "a rival's parameters ARE its address book"}, "byte_ledger": {"deployed_bytes": 475136, "what": "spoke A's fitted table, generation 2", "param_count": 118784}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:26:11] stage=run arm=rival_table out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:26:12]   arm rival_table: loaded spoke A rival 'table' (params=118784)
+[21:26:12]   arm rival_table: loaded spoke A rival 'table' (params=118784)
+[21:26:13]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[21:33:33]   arm rival_table: r1_seen accept=1.0000 valid=0.2129
+[21:33:43]   arm rival_table: r2_unseen_valid accept=1.0000 valid=0.2266
+[21:33:54]   arm rival_table: r5_comp_refusal accept=0.0000 valid=0.0000
+[21:34:04]   arm rival_table: r6_invalid_refusal accept=0.0000 valid=0.0000
+[21:36:12]   arm rival_table: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[21:36:12]   arm rival_table: all rows done in 570.5s
+[21:36:12] {"incomplete": false, "n_done": 109}
+[leg] ---- rival_mlp ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:36:53] stage=fit arm=rival_mlp out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:36:57]   arm rival_mlp: loaded spoke A rival 'mlp' (params=117878)
+[21:36:57] {"arm": "rival_mlp", "address_bytes": {"address_bytes": 0, "note": "a rival's parameters ARE its address book"}, "byte_ledger": {"deployed_bytes": 0, "what": "spoke A's fitted mlp, generation 2", "param_count": 117878}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:37:18] stage=run arm=rival_mlp out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:37:23]   arm rival_mlp: loaded spoke A rival 'mlp' (params=117878)
+[21:37:24]   arm rival_mlp: loaded spoke A rival 'mlp' (params=117878)
+[21:37:24]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[21:46:17]   arm rival_mlp: r1_seen accept=1.0000 valid=0.6641
+[21:46:30]   arm rival_mlp: r2_unseen_valid accept=0.0000 valid=0.0000
+[21:46:45]   arm rival_mlp: r5_comp_refusal accept=0.0000 valid=0.0000
+[21:46:57]   arm rival_mlp: r6_invalid_refusal accept=0.0000 valid=0.0000
+[21:49:21]   arm rival_mlp: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[21:49:21]   arm rival_mlp: all rows done in 684.0s
+[21:49:22]   arm rival_mlp: rival refusals recorded -> ['full_request']
+[21:49:22] {"incomplete": false, "n_done": 109}
+[leg] ---- rival_mlp_180k ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:50:56] stage=fit arm=rival_mlp_180k out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:51:00]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[21:51:00] {"arm": "rival_mlp_180k", "address_bytes": {"address_bytes": 0, "note": "a rival's parameters ARE its address book"}, "byte_ledger": {"deployed_bytes": 0, "what": "spoke A's fitted mlp_180k, generation 2", "param_count": 178952}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[21:51:20] stage=run arm=rival_mlp_180k out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[21:51:23]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[21:51:24]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[21:51:24]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[21:58:25]   arm rival_mlp_180k: r1_seen accept=1.0000 valid=0.8359
+[21:58:36]   arm rival_mlp_180k: r2_unseen_valid accept=0.0000 valid=0.0000
+[21:58:47]   arm rival_mlp_180k: r5_comp_refusal accept=0.0000 valid=0.0000
+[21:58:59]   arm rival_mlp_180k: r6_invalid_refusal accept=0.0000 valid=0.0000
+[22:01:03]   arm rival_mlp_180k: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[22:01:03]   arm rival_mlp_180k: all rows done in 555.6s
+[22:01:03]   arm rival_mlp_180k: rival refusals recorded -> ['full_request']
+[22:01:03] {"incomplete": false, "n_done": 109}
+[leg] ---- rival_transformer ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:02:02] stage=fit arm=rival_transformer out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:02:10]   arm rival_transformer: loaded spoke A rival 'transformer' (params=119858)
+[22:02:10] {"arm": "rival_transformer", "address_bytes": {"address_bytes": 0, "note": "a rival's parameters ARE its address book"}, "byte_ledger": {"deployed_bytes": 0, "what": "spoke A's fitted transformer, generation 2", "param_count": 119858}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:02:27] stage=run arm=rival_transformer out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:02:36]   arm rival_transformer: loaded spoke A rival 'transformer' (params=119858)
+[22:02:37]   arm rival_transformer: loaded spoke A rival 'transformer' (params=119858)
+[22:02:37]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[22:12:02]   arm rival_transformer: r1_seen accept=1.0000 valid=0.6016
+[22:12:13]   arm rival_transformer: r2_unseen_valid accept=0.0000 valid=0.0000
+[22:12:26]   arm rival_transformer: r5_comp_refusal accept=0.0000 valid=0.0000
+[22:12:37]   arm rival_transformer: r6_invalid_refusal accept=0.0000 valid=0.0000
+[22:15:14]   arm rival_transformer: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[22:15:14]   arm rival_transformer: all rows done in 731.0s
+[22:15:14]   arm rival_transformer: rival refusals recorded -> ['full_request']
+[22:15:14] {"incomplete": false, "n_done": 109}
+[leg] ---- rival_lstm ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:16:17] stage=fit arm=rival_lstm out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:16:23]   arm rival_lstm: loaded spoke A rival 'lstm' (params=119125)
+[22:16:23] {"arm": "rival_lstm", "address_bytes": {"address_bytes": 0, "note": "a rival's parameters ARE its address book"}, "byte_ledger": {"deployed_bytes": 0, "what": "spoke A's fitted lstm, generation 2", "param_count": 119125}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:16:38] stage=run arm=rival_lstm out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:16:44]   arm rival_lstm: loaded spoke A rival 'lstm' (params=119125)
+[22:16:44]   arm rival_lstm: loaded spoke A rival 'lstm' (params=119125)
+[22:16:44]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[22:23:57]   arm rival_lstm: r1_seen accept=1.0000 valid=0.6719
+[22:24:06]   arm rival_lstm: r2_unseen_valid accept=0.0000 valid=0.0000
+[22:24:16]   arm rival_lstm: r5_comp_refusal accept=0.0000 valid=0.0000
+[22:24:25]   arm rival_lstm: r6_invalid_refusal accept=0.0000 valid=0.0000
+[22:26:39]   arm rival_lstm: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[22:26:39]   arm rival_lstm: all rows done in 571.2s
+[22:26:39]   arm rival_lstm: rival refusals recorded -> ['full_request']
+[22:26:39] {"incomplete": false, "n_done": 109}
+[leg] ---- rival_cont_mlp ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:27:32] stage=fit arm=rival_cont_mlp out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:27:35]   arm rival_cont_mlp: loaded spoke A rival 'cont_mlp' (params=119525)
+[22:27:35] {"arm": "rival_cont_mlp", "address_bytes": {"address_bytes": 0, "note": "a rival's parameters ARE its address book"}, "byte_ledger": {"deployed_bytes": 0, "what": "spoke A's fitted cont_mlp, generation 2", "param_count": 119525}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:27:48] stage=run arm=rival_cont_mlp out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:27:52]   arm rival_cont_mlp: loaded spoke A rival 'cont_mlp' (params=119525)
+[22:27:52]   arm rival_cont_mlp: loaded spoke A rival 'cont_mlp' (params=119525)
+[22:27:52]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[22:34:03]   arm rival_cont_mlp: r1_seen accept=1.0000 valid=0.2168
+[22:34:13]   arm rival_cont_mlp: r2_unseen_valid accept=1.0000 valid=0.2031
+[22:34:22]   arm rival_cont_mlp: r5_comp_refusal accept=0.0000 valid=0.0000
+[22:34:32]   arm rival_cont_mlp: r6_invalid_refusal accept=0.0000 valid=0.0000
+[22:36:01]   arm rival_cont_mlp: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[22:36:01]   arm rival_cont_mlp: all rows done in 465.3s
+[22:36:01] {"incomplete": false, "n_done": 109}
+[leg] ---- pvm_table ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:36:20] stage=fit arm=pvm_table out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:36:20]   partitions: already on disk, skipping
+[22:36:43]   arm pvm_table: fitted in 22.8s; 475,136 B, no store
+[22:36:43] {"arm": "pvm_table", "address_bytes": {"address_bytes": 0, "note": "the table IS its own address book"}, "byte_ledger": {"deployed_bytes": 475136, "what": "the global mean plus one per-(factor,value) mean DEVIATION, full D", "note": "no store, no atoms -- this row is the specialist, not an arm of ours"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:36:55] stage=run arm=pvm_table out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:36:55]   arm pvm_table: already fitted, loading
+[22:36:55]   arm pvm_table: already fitted, loading
+[22:36:55]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[22:41:19]   arm pvm_table: r1_seen accept=1.0000 valid=0.2246
+[22:41:26]   arm pvm_table: r2_unseen_valid accept=1.0000 valid=0.2617
+[22:41:34]   arm pvm_table: r5_comp_refusal accept=0.0000 valid=0.0000
+[22:41:42]   arm pvm_table: r6_invalid_refusal accept=0.0000 valid=0.0000
+[22:43:05]   arm pvm_table: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[22:43:05]   arm pvm_table: all rows done in 349.4s
+[22:43:05] {"incomplete": false, "n_done": 109}
+[leg] ---- oracle_span ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:43:29] stage=fit arm=oracle_span out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:43:29]   arm factor_aligned_balanced: already fitted, loading
+[22:43:29]   arm oracle_span: fitted in 0.1s; store 524,288 B + address 1,766,400 B
+[22:43:29] {"arm": "oracle_span", "address_bytes": {"address_bytes": 1766400, "per_well": [353280, 353280, 353280, 353280, 353280], "dtype": "float32", "bytes_formula": "sum_k P * M_k * 4", "note": "the incumbent ridge head -- this read's address book"}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:43:41] stage=run arm=oracle_span out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:43:41]   arm oracle_span: already fitted, loading
+[22:43:41]   arm oracle_span: already fitted, loading
+[22:43:41]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[22:47:48]   arm oracle_span: r1_seen accept=1.0000 valid=0.7012
+[22:47:54]   arm oracle_span: r2_unseen_valid accept=1.0000 valid=0.7754
+[22:48:00]   arm oracle_span: r5_comp_refusal accept=0.0000 valid=0.0000
+[22:48:07]   arm oracle_span: r6_invalid_refusal accept=0.0000 valid=0.0000
+[22:49:20]   arm oracle_span: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[22:49:20]   arm oracle_span: all rows done in 321.9s
+[22:49:20] {"incomplete": false, "n_done": 109}
+[leg] ---- landscape_removed ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:49:42] stage=fit arm=landscape_removed out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:49:42]   arm factor_aligned_balanced: already fitted, loading
+[22:49:42]   address book: reused address_balanced_tensor_R128_lam0.01_sw40_n131072.pkl
+[22:49:42]   arm landscape_removed: fitted in 0.3s; store 524,288 B + address 195,584 B
+[22:49:42] {"arm": "landscape_removed", "address_bytes": {"address_bytes": 195584, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163840, "normalisation_bytes": 2560, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:49:55] stage=run arm=landscape_removed out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:49:55]   arm landscape_removed: already fitted, loading
+[22:49:56]   arm landscape_removed: already fitted, loading
+[22:49:56]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[22:53:51]   arm landscape_removed: r1_seen accept=1.0000 valid=0.0000
+[22:53:55]   arm landscape_removed: r2_unseen_valid accept=1.0000 valid=0.0000
+[22:53:59]   arm landscape_removed: r5_comp_refusal accept=0.0000 valid=0.0000
+[22:54:03]   arm landscape_removed: r6_invalid_refusal accept=0.3672 valid=0.0000
+[22:54:58]   arm landscape_removed: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[22:54:58]   arm landscape_removed: all rows done in 286.2s
+[22:54:58] {"incomplete": false, "n_done": 109}
+[leg] ---- landscape_shuffled ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:55:15] stage=fit arm=landscape_shuffled out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:55:15]   arm factor_aligned_balanced: already fitted, loading
+[22:55:15]   address book: reused address_balanced_tensor_R128_lam0.01_sw40_n131072.pkl
+[22:55:15]   arm landscape_shuffled: fitted in 0.6s; store 524,288 B + address 195,584 B
+[22:55:15] {"arm": "landscape_shuffled", "address_bytes": {"address_bytes": 195584, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163840, "normalisation_bytes": 2560, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[22:55:23] stage=run arm=landscape_shuffled out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[22:55:23]   arm landscape_shuffled: already fitted, loading
+[22:55:23]   arm landscape_shuffled: already fitted, loading
+[22:55:23]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[22:59:10]   arm landscape_shuffled: r1_seen accept=1.0000 valid=0.0000
+[22:59:15]   arm landscape_shuffled: r2_unseen_valid accept=1.0000 valid=0.0000
+[22:59:21]   arm landscape_shuffled: r5_comp_refusal accept=0.0000 valid=0.0000
+[22:59:26]   arm landscape_shuffled: r6_invalid_refusal accept=0.0000 valid=0.0000
+[23:00:28]   arm landscape_shuffled: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[23:00:28]   arm landscape_shuffled: all rows done in 291.4s
+[23:00:28] {"incomplete": false, "n_done": 109}
+[leg] ---- lookup_argmax ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[23:00:43] stage=fit arm=lookup_argmax out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[23:00:43]   arm factor_aligned_balanced: already fitted, loading
+[23:00:58]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 64) (131072, 64)
+[23:01:13]     als 1/40 train_mse=0.05086 val_mse=0.05104
+[23:01:28]     als 2/40 train_mse=0.02263 val_mse=0.02274
+[23:01:43]     als 3/40 train_mse=0.01727 val_mse=0.01737
+[23:01:57]     als 4/40 train_mse=0.01511 val_mse=0.01519
+[23:02:12]     als 5/40 train_mse=0.01390 val_mse=0.01397
+[23:02:27]     als 6/40 train_mse=0.01309 val_mse=0.01315
+[23:02:42]     als 7/40 train_mse=0.01251 val_mse=0.01256
+[23:02:58]     als 8/40 train_mse=0.01204 val_mse=0.01209
+[23:03:15]     als 9/40 train_mse=0.01167 val_mse=0.01171
+[23:03:30]     als 10/40 train_mse=0.01135 val_mse=0.01140
+[23:03:47]     als 11/40 train_mse=0.01109 val_mse=0.01113
+[23:04:02]     als 12/40 train_mse=0.01086 val_mse=0.01090
+[23:04:16]     als 13/40 train_mse=0.01066 val_mse=0.01070
+[23:04:30]     als 14/40 train_mse=0.01049 val_mse=0.01053
+[23:04:45]     als 15/40 train_mse=0.01033 val_mse=0.01037
+[23:04:58]     als 16/40 train_mse=0.01019 val_mse=0.01023
+[23:05:13]     als 17/40 train_mse=0.01006 val_mse=0.01010
+[23:05:29]     als 18/40 train_mse=0.00994 val_mse=0.00998
+[23:05:45]     als 19/40 train_mse=0.00983 val_mse=0.00987
+[23:06:00]     als 20/40 train_mse=0.00973 val_mse=0.00977
+[23:06:16]     als 21/40 train_mse=0.00963 val_mse=0.00967
+[23:06:32]     als 22/40 train_mse=0.00955 val_mse=0.00958
+[23:06:49]     als 23/40 train_mse=0.00946 val_mse=0.00950
+[23:07:05]     als 24/40 train_mse=0.00939 val_mse=0.00942
+[23:07:21]     als 25/40 train_mse=0.00931 val_mse=0.00934
+[23:07:36]     als 26/40 train_mse=0.00924 val_mse=0.00927
+[23:07:52]     als 27/40 train_mse=0.00917 val_mse=0.00921
+[23:08:08]     als 28/40 train_mse=0.00911 val_mse=0.00914
+[23:08:24]     als 29/40 train_mse=0.00905 val_mse=0.00908
+[23:08:40]     als 30/40 train_mse=0.00899 val_mse=0.00902
+[23:08:56]     als 31/40 train_mse=0.00894 val_mse=0.00896
+[23:09:10]     als 32/40 train_mse=0.00888 val_mse=0.00891
+[23:09:23]     als 33/40 train_mse=0.00883 val_mse=0.00886
+[23:09:36]     als 34/40 train_mse=0.00878 val_mse=0.00881
+[23:09:50]     als 35/40 train_mse=0.00873 val_mse=0.00876
+[23:10:05]     als 36/40 train_mse=0.00869 val_mse=0.00871
+[23:10:19]     als 37/40 train_mse=0.00864 val_mse=0.00867
+[23:10:33]     als 38/40 train_mse=0.00860 val_mse=0.00862
+[23:10:47]     als 39/40 train_mse=0.00856 val_mse=0.00858
+[23:11:01]     als 40/40 train_mse=0.00852 val_mse=0.00854
+[23:11:01]   arm lookup_argmax: fitted in 617.5s; store 524,288 B + address 195,584 B
+[23:11:01] {"arm": "lookup_argmax", "address_bytes": {"address_bytes": 195584, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163840, "normalisation_bytes": 2560, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[23:11:08] stage=run arm=lookup_argmax out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[23:11:08]   arm lookup_argmax: already fitted, loading
+[23:11:08]   arm lookup_argmax: already fitted, loading
+[23:11:08]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[23:14:38]   arm lookup_argmax: r1_seen accept=1.0000 valid=0.0488
+[23:14:44]   arm lookup_argmax: r2_unseen_valid accept=1.0000 valid=0.0410
+[23:14:50]   arm lookup_argmax: r5_comp_refusal accept=0.0000 valid=0.0000
+[23:14:56]   arm lookup_argmax: r6_invalid_refusal accept=0.0000 valid=0.0000
+[23:16:05]   arm lookup_argmax: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[23:16:05]   arm lookup_argmax: all rows done in 281.1s
+[23:16:05] {"incomplete": false, "n_done": 109}
+[leg] ---- corr_linear ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[23:16:26] stage=fit arm=corr_linear out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[23:16:26]   arm corr_linear: already fitted, loading
+[23:16:26] {"arm": "corr_linear", "address_bytes": {"address_bytes": 1766400, "per_well": [353280, 353280, 353280, 353280, 353280], "dtype": "float32", "bytes_formula": "sum_k P * M_k * 4", "note": "the incumbent ridge head -- this read's address book"}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[23:16:36] stage=run arm=corr_linear out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[23:16:36]   arm corr_linear: already fitted, loading
+[23:16:36]   arm corr_linear: already fitted, loading
+[23:16:36]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[23:21:09]   arm corr_linear: r1_seen accept=1.0000 valid=0.6660
+[23:21:16]   arm corr_linear: r2_unseen_valid accept=1.0000 valid=0.6719
+[23:21:23]   arm corr_linear: r5_comp_refusal accept=0.0000 valid=0.0000
+[23:21:29]   arm corr_linear: r6_invalid_refusal accept=0.0000 valid=0.0000
+[23:22:38]   arm corr_linear: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[23:22:38]   arm corr_linear: all rows done in 348.0s
+[23:22:38] {"incomplete": false, "n_done": 109}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[23:22:57] stage=table arm=None out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[23:23:11]   arms with rows: ['span_head', 'tensor_addr', 'pvm_table', 'oracle_span', 'landscape_removed', 'landscape_shuffled', 'lookup_argmax', 'corr_linear', 'rival_table', 'rival_mlp', 'rival_mlp_180k', 'rival_cont_mlp', 'rival_transformer', 'rival_lstm']
+[23:23:11]   declared NOT-RUN: []
+[23:23:15]   table written -> C:\chlu\outputs\hub-read\run\test_seed1\READ-TABLE.json
+[23:23:15]     span_head              ABLATION (the deployed read)       r4= 45.000 judge=0.6250
+[23:23:15]     tensor_addr            ARM                                r4= 44.408 judge=0.6168
+[23:23:15]     pvm_table              SPECIALIST (the plain per-value-mean table, no store) r4= 11.694 judge=0.1624
+[23:23:15]     oracle_span            NOT AN ARM (ceiling)               r4= 50.898 judge=0.7069
+[23:23:15]     landscape_removed      CONTROL (charter C.2, atoms zeroed) r4=  0.000 judge=0.0000
+[23:23:15]     landscape_shuffled     CONTROL (charter C.2, atom values permuted) r4=  0.000 judge=0.0000
+[23:23:15]     lookup_argmax          FLOOR (charter C.1/C.4, matched-bytes lookup) r4=  1.714 judge=0.0238
+[23:23:15]     corr_linear            ABLATION (correlation split + linear head) r4= 37.816 judge=0.5252
+[23:23:15]     rival_table            RIVAL                              r4=  7.020 judge=0.0975
+[23:23:15]     rival_mlp              RIVAL                              r4= 36.633 judge=0.5088
+[23:23:15]     rival_mlp_180k         RIVAL                              r4= 55.653 judge=0.7730
+[23:23:15]     rival_cont_mlp         RIVAL                              r4=  8.184 judge=0.1137
+[23:23:15]     rival_transformer      RIVAL                              r4= 36.245 judge=0.5034
+[23:23:15]     rival_lstm             RIVAL                              r4= 40.653 judge=0.5646
+[leg] done: /c/chlu/outputs/hub-read/run/test_seed1

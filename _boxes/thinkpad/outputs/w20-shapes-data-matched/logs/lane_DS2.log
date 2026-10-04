@@ -1,0 +1,61 @@
+[22:44:48Z] START bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 9 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_delete_store.py --seed 2 --scope item --scope conjunction_live --scope value
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[00:46:35] seed 2  FastJudge identical True
+[00:46:43] ===== item: 1311 rows deleted =====
+[00:48:53]   (a) store max|mode dev| 3.162e-08 ranks agree True
+[00:49:05]   (b1) stat dev count 0 moment 0.000e+00  (0.97 GB statistic)
+[04:08:58]   (b2) book E rel dev 3.064e-13  W rel dev 2.049e-11  rendered rel dev 6.874e-10  (5913s / 6064s)
+[04:15:32]   (d) survivors 109: before 49.119 after 49.110  delta -0.009  | vs refit-without +0.000
+[04:16:00] ===== conjunction_live: 5511 rows deleted =====
+[04:19:03]   (a) store max|mode dev| 6.253e-08 ranks agree True
+[04:19:16]   (b1) stat dev count 0 moment 0.000e+00  (0.97 GB statistic)
+[06:17:04]   (b2) book E rel dev 2.161e-13  W rel dev 1.745e-11  rendered rel dev 2.033e-09  (4067s / 2993s)
+[06:21:06]   (d) survivors 109: before 49.119 after 42.817  delta -6.303  | vs refit-without +0.000
+[06:21:13] ===== value: 11044 rows deleted =====
+[06:22:32]   (a) store max|mode dev| 2.011e-08 ranks agree True
+[06:22:44]   (b1) stat dev count 0 moment 0.000e+00  (0.97 GB statistic)
+[07:47:23]   (b2) book E rel dev 1.166e-12  W rel dev 1.253e-10  rendered rel dev 1.215e-09  (2602s / 2472s)
+[07:50:29]   (d) survivors 89: before 52.607 after 52.000  delta -0.607  | vs refit-without +0.000
+[05:50:40Z] END rc=0 bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 9 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_delete_store.py --seed 2 --scope item --scope conjunction_live --scope value
+[05:50:40Z] LANE DONE

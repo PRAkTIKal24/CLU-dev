@@ -1,0 +1,21 @@
+The artefacts you asked for in NEEDS-ARTEFACTS.json are now staged on this machine. Resume and produce the figures.
+
+STAGE ROOT:  export W17_RC_STAGE=/Users/batmac/clu/stage
+The ThinkPad's C:/chlu/outputs tree is mirrored at $W17_RC_STAGE/outputs/, so every path you listed as
+  C:/chlu/outputs/<X>      is now at   $W17_RC_STAGE/outputs/<X>
+and the one you listed under <CHLU_GEN_DATA_ROOT> is at  $W17_RC_STAGE/data/gen/shapes3d/value_holdout/.
+
+Set these before you run anything:
+  export W17_RC_STAGE=/Users/batmac/clu/stage
+  export CHLU_GEN_DECLIFT_DIR=$W17_RC_STAGE/outputs/gen-decoder-lift/winner
+  export CHLU_GEN_DATA_ROOT=$W17_RC_STAGE/data/gen
+  export CHLU_GEN_FEATURES_ROOT=$W17_RC_STAGE/outputs/spoke-a-rivals/cache_generation2
+The external classifier is at $W17_RC_STAGE/outputs/gen-external-classifier/seed_N/ - if classifier_dir() computes its path from CHLU_GEN_BRIDGE_ROOT, set CHLU_GEN_BRIDGE_ROOT so that BRIDGE_ROOT/../../gen-external-classifier resolves there.
+
+36 of your 37 paths are staged NOW. THE ONE EXCEPTION: features.npy (1.9 GB, deletion panel only) is still copying. Do panel sets 1, 2 and 3 FIRST - you established yourself that they need only arm.pkl plus the request, because the CLU read is request-only. Then poll for
+  $W17_RC_STAGE/outputs/spoke-a-rivals/cache_generation2/shapes3d_recon/seed_0/features.npy
+reaching 1966080128 bytes before you build the deletion panel. Poll INSIDE a turn with sleep; do not end a turn waiting.
+
+Keep every rule from your task file. In particular: assert the SAME frozen decoder for every arm against winner_hashes.json rather than assuming it; ship all three panel sets (CLU-wins, all-succeed, all-fail) - shipping only the flattering one would be dishonest; and if the deletion panel still cannot be built, DECLARE it with the reason rather than omitting it.
+
+Rewrite END_UTC.txt only when you are genuinely finished.

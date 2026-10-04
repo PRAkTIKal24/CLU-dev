@@ -1,0 +1,203 @@
+{
+  "artifacts_root": "C:\\chlu\\outputs\\spoke-a-rivals\\rivals",
+  "cache_gen2": {
+    "seed_0": {
+      "backend": "cpu",
+      "device": [
+        "cpu:0"
+      ],
+      "dtype": "float16",
+      "n_rows": 480000,
+      "precision": "HIGHEST",
+      "scope": "full"
+    },
+    "seed_1": {
+      "backend": "cpu",
+      "device": [
+        "cpu:0"
+      ],
+      "dtype": "float16",
+      "n_rows": 480000,
+      "precision": "HIGHEST",
+      "scope": "full"
+    },
+    "seed_2": {
+      "backend": "cpu",
+      "device": [
+        "cpu:0"
+      ],
+      "dtype": "float16",
+      "n_rows": 480000,
+      "precision": "HIGHEST",
+      "scope": "full"
+    }
+  },
+  "cache_gen2_root": "C:\\chlu\\outputs\\spoke-a-rivals\\cache_generation2\\shapes3d_recon",
+  "callable_api": {
+    "contract": "the same one exp_gen_factor_wells.arm_features uses",
+    "discover": "chlu.eval.rivals.w4_api.available(seed)",
+    "module": "chlu.eval.rivals.w4_api",
+    "refusals": "lace and poe_ebm raise RivalRefusal: both are sampler draws, not functions of the request. Off-grid values are refused by every family whose input is a class index.",
+    "returns": "(features (N, D) float32, out_of_range (N,) bool)",
+    "usage": "from chlu.eval.rivals.w4_api import load_rival; r = load_rival(seed, name); feats, out_of_range = r(values)",
+    "values": "(N, F) float in the order given by r.names; np.nan means that factor was not requested"
+  },
+  "callables_missing_population_record": [],
+  "determinism_check_passed": true,
+  "fit_population": {
+    "NOT_LIKE_FOR_LIKE": "On rows 2 and 5 these rivals are NOT comparable with an arm fitted on a value-holdout pool: they saw the value, it did not. The mechanism can enter the row; the fit cannot. Report with a population footnote and do not count such a rival as beating a value-holdout arm, or refit it on your own pool.",
+    "check_mechanically": "load_rival(seed, name).like_for_like({'object_hue': [0.5]}) returns a verdict with the number of fitted rows carrying each value; every checkpoint also carries population.n_per_value",
+    "held_out_values_seen": {
+      "note": "the two values chlu.data.gen_value_holdout declares as its hold-outs are BOTH present in this fit pool - measured: 3,157 rows at object_hue 0.5 and 7,972 at shape 0.0",
+      "object_hue": [
+        0.5
+      ],
+      "shape": [
+        0.0
+      ]
+    },
+    "n_rows_fit": 32256,
+    "name": "montero_combination",
+    "what_it_contains": "every factor VALUE; only COMBINATIONS are held out"
+  },
+  "gen1_vs_gen2": "C:\\chlu\\outputs\\spoke-a-rivals\\gen1_vs_gen2.json",
+  "generation": 2,
+  "hashes": {
+    "seed_0/encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+    "seed_0/feature_rows.npy": "dbddda1cf6d5a73f0384365068bf7fd7d2db66d70053d4601b5c89a8eff24e6d",
+    "seed_0/features.npy": "ef6359a4cd54b08287cf3709a2b4f7ed39c0fb504b32f5ddb65d483aefa813c3",
+    "seed_1/encoder_param_hash": "fc05e2c5f39694b27b94d6cad5e1d59e11c27fa8e8f92e733acc599edf8944c5",
+    "seed_1/feature_rows.npy": "dbddda1cf6d5a73f0384365068bf7fd7d2db66d70053d4601b5c89a8eff24e6d",
+    "seed_1/features.npy": "86b44d0f1e6470e7f1e0e0c37c961974b8dcf8a083546c0e6600d71d53eb5b08",
+    "seed_2/encoder_param_hash": "154d498610648fac12e9a72be73a69303c1cc3a114ec0401b4cc308a3166b7e1",
+    "seed_2/feature_rows.npy": "dbddda1cf6d5a73f0384365068bf7fd7d2db66d70053d4601b5c89a8eff24e6d",
+    "seed_2/features.npy": "3ab14e583c3f500da060638cb9255072c20cf4053c212321d797469a080d3a3a"
+  },
+  "param_counts": {
+    "cont_mlp": 119525,
+    "lstm": 119125,
+    "mlp": 117878,
+    "poe_ebm": 3556665,
+    "table": 118784,
+    "transformer": 119858
+  },
+  "param_match": {
+    "target": 118784,
+    "target_basis": "the prototype table's own count, (sum_k C_k + 1) x D; 475136 B at float32, which is GenCellConfig.prototype_table_bytes_reference",
+    "tolerance": 0.1
+  },
+  "population": {
+    "all_scored_sets_retained_values_only": true,
+    "detail_file": "C:\\chlu\\outputs\\spoke-a-rivals\\population.json",
+    "measured_novel_value_rows": {
+      "B": 0,
+      "MS": 0,
+      "fit": 0,
+      "val": 0
+    },
+    "n_rows": {
+      "B": 72,
+      "MS": 199,
+      "fit": 32256,
+      "val": 512
+    },
+    "scored_sets": "B (the Montero recombination-to-element corner) against MS (its photometrically matched-seen control)",
+    "split": "a COMBINATION hold-out, NOT the value hold-out",
+    "warning": "MEASURED: every value appearing in B, MS, fit and val also appears in the fit pool, so none of these numbers is row-2 territory and none is evidence about a value the arm never held. The only numbers in this spoke that are about an unheld value are the deletion comparator's. Do not read a rival number here against a number taken from the value-holdout test index: that index is mostly rows carrying a value no training row holds, and the two are different populations.",
+    "what_each_statistic_is_on": {
+      "deletion_comparator": "forget/retain sets defined by a value REMOVED from the arm's fit pool - the only numbers in this spoke that are about an unheld value",
+      "distinct_factor_tuples_B": "B only, retained-values-only",
+      "judge_composition_B": "B only, retained-values-only",
+      "judge_in_corner": "B (positives) against MS (negatives), both retained-values-only",
+      "val_mse_full_schedule": "the stratified validation rows, retained-values-only, fully specified requests",
+      "val_mse_partial_requests": "the same rows with a random subset of factors requested"
+    }
+  },
+  "population_record_complete": true,
+  "rescore_generation2": {
+    "arms_moving_more_than_seed_spread": [
+      "lace/ld_corrected"
+    ],
+    "coverage_caveat": "only 2 of 3 seeds contributed a generation-2 manifest (['0', '2']); seeds ['1'] are declared NOT RUN with their reason. A seed spread computed from fewer than three seeds is weaker evidence and the verdict below inherits that.",
+    "detail_file": "C:\\chlu\\outputs\\spoke-a-rivals\\rescore_gen1_vs_gen2.json",
+    "deterministic_arms_unmoved": {
+      "clu": 0.0,
+      "knn_proto": 0.0,
+      "store_removed": 0.0
+    },
+    "read_this_first": "The three DETERMINISTIC arms (clu, knn_proto, store_removed) move by EXACTLY 0.0000 between generations on every seed compared. Every arm that moves is a SAMPLER arm, where a difference between two independent runs is expected regardless of the cache. The one arm tripping the seed-spread rule is lace/ld_corrected, a companion Langevin leg, at 0.0177 against a 0.0151 spread, on one seed of two.",
+    "seeds_NOT_RUN": [
+      "1"
+    ],
+    "seeds_compared": [
+      "0",
+      "2"
+    ],
+    "verdict": "AT LEAST ONE ARM MOVES BY MORE THAN ITS SEED SPREAD - report this to every hub before it scores against generation 2"
+  },
+  "rivals": {
+    "cont_mlp": true,
+    "lace_repaired": true,
+    "lstm": true,
+    "mlp": true,
+    "poe_ebm": true,
+    "table": true,
+    "transformer": true
+  },
+  "rivals_seeds_present": {
+    "cont_mlp": [
+      0,
+      1,
+      2
+    ],
+    "lace_repaired": [
+      0,
+      1,
+      2
+    ],
+    "lstm": [
+      0,
+      1,
+      2
+    ],
+    "mlp": [
+      0,
+      1,
+      2
+    ],
+    "poe_ebm": [
+      0,
+      1,
+      2
+    ],
+    "table": [
+      0,
+      1,
+      2
+    ],
+    "transformer": [
+      0,
+      1,
+      2
+    ]
+  },
+  "row_eligibility": "C:\\chlu\\outputs\\spoke-a-rivals\\row_eligibility.json",
+  "rules": [
+    "GENERATION 2 ONLY. Never quote a number from this set beside a generation-1 number, in either direction.",
+    "Generation 1 is untouched on disk and still hashed.",
+    "Built entirely on the local CPU, one device; see cache_gen2[*].device.",
+    "A rival that cannot enter a row gets a dash and a footnote. A dash is never a win for us."
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "seeds_complete": [
+    0,
+    1,
+    2
+  ],
+  "status": "ready",
+  "utc": "2026-09-19T21:31:28Z"
+}

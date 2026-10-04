@@ -1,0 +1,787 @@
+{
+ "schema": "hub-refusal-2/go-no-go/1",
+ "DECLARED": "FIT-DERIVED SYNTHETIC ANALOGUE, PREREG-1 section 6. MECHANISM AND GATE ONLY. NOT the benchmark; fit rows are SEEN so the valid side is easier than B; a constructed negative is not a C record. STRUCTURAL, NOT BLIND -- see PREREG-1 section 0.",
+ "criterion": "S = E_store(x_read), x_read = posterior_mean linear read, 0 steps",
+ "gate_rule": "min(AUROC_oor_WORST, AUROC_dup_A7_CONTROLLED) < 0.6 => DO NOT SPEND",
+ "seed": 0,
+ "q": 0.95,
+ "n_bases": 256,
+ "rng_seed": 20260916,
+ "no_invalid_artefact": {
+  "banned_files_not_opened": [
+   "C:\\Users\\PratikJawahar\\chlu\\chlu-bundle-v2\\.claude\\data\\gen\\shapes3d\\c_invalid.json",
+   "C:\\Users\\PratikJawahar\\chlu\\chlu-bundle-v2\\.claude\\data\\gen\\shapes3d\\a7_redundant.json"
+  ],
+  "note": "this script never calls load_c_requests or load_registered_control_requests; the analogue is built from fit rows"
+ },
+ "cache_meta": {
+  "n_rows": 480000,
+  "scope": "full",
+  "D": 2048,
+  "dtype": "float16"
+ },
+ "reencode_check": {
+  "n_checked": 64,
+  "n_elements": 131072,
+  "max_abs_delta": 0.001953125,
+  "max_ulp_delta": 51.0,
+  "n_differing": 1280,
+  "frac_differing": 0.009765625,
+  "n_nonfinite": 0,
+  "cache_dtype": "float16",
+  "ulp_bound": 1.0,
+  "frac_bound": 0.01,
+  "enforced": false,
+  "enforced_reason": "hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.",
+  "would_have_failed": true,
+  "would_have_failed_why": [
+   "ulp"
+  ]
+ },
+ "row_split": {
+  "mode": "stratified",
+  "rule": "deficit-priority greedy on the pool's own per-factor marginals (target[f][v] = n_val * count_pool[f][v] / n_pool), seeded tie-break",
+  "n_pool": 32768,
+  "n_fit": 32256,
+  "n_val": 512,
+  "tiebreak_jitter": 1.0,
+  "rng": "np.random.default_rng(0*6637+20260914)",
+  "fit_is_pool_minus_val": true
+ },
+ "grouping": {
+  "grouping_source": "per_seed (re-derived at the plan's K)",
+  "n_corr_rows": 16384,
+  "n_dead_channels": 71,
+  "grouping_info": {
+   "method_requested": "auto",
+   "method_used": "ward",
+   "method_order": [
+    "average",
+    "ward"
+   ],
+   "min_well_frac": 0.1,
+   "min_well_size_floor": 39,
+   "attempts": [
+    {
+     "method": "average",
+     "sizes": [
+      1973,
+      1,
+      1,
+      1,
+      1
+     ],
+     "min_well_size": 1,
+     "floor": 39,
+     "accepted": false
+    },
+    {
+     "method": "ward",
+     "sizes": [
+      232,
+      305,
+      573,
+      501,
+      366
+     ],
+     "min_well_size": 232,
+     "floor": 39,
+     "accepted": true
+    }
+   ],
+   "n_dead_channels": 71,
+   "n_live_channels": 1977,
+   "well_sizes": [
+    303,
+    305,
+    573,
+    501,
+    366
+   ]
+  },
+  "well_sizes": [
+   303,
+   305,
+   573,
+   501,
+   366
+  ],
+  "plan_encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+  "this_encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+  "reproduces_the_plan_bit_identically": true
+ },
+ "encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+ "budgets": {
+  "A": {
+   "budget": "A",
+   "sigma_ref": 1.0,
+   "shipped_linear_read_proof": {
+    "shipped_entry_point": "gen_landscape.launch_state(launch_mode='posterior_mean')",
+    "bit_identical_float32_path": false,
+    "max_abs_delta_float32_path": 2.384185791015625e-07,
+    "max_abs_delta_float64_path": 2.384185791015625e-07,
+    "rel_delta_float64_path": 7.339911434200985e-08,
+    "max_abs_delta_posterior_vs_atom_posterior": 1.7715533980749987e-08,
+    "n_checked": 512,
+    "state_scale_max_abs": 3.24824857711792
+   },
+   "term_experts_reproduction": {
+    "max_abs_delta_vs_request_experts": 0.0,
+    "bit_identical": true,
+    "shape_ref": [
+     6,
+     512,
+     5,
+     64
+    ],
+    "shape_got": [
+     6,
+     512,
+     5,
+     64
+    ]
+   },
+   "arms": {
+    "full": {
+     "diag": {
+      "val": {
+       "mean_top1": 0.06748104028005655,
+       "mean_entropy": 3.689698960507959,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 5.53554406941109,
+       "mean_C1_d_over_spread": 11.487756168130485,
+       "mean_S": -609.2166355848312,
+       "n": 512
+      },
+      "syn_valid": {
+       "mean_top1": 0.06669790072274168,
+       "mean_entropy": 3.690774659840122,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 5.5583797251088995,
+       "mean_C1_d_over_spread": 11.535146350794811,
+       "mean_S": -609.6249043941498,
+       "n": 256
+      },
+      "syn_a7": {
+       "mean_top1": 0.07677990188903282,
+       "mean_entropy": 3.610387447124384,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 5.463235025960758,
+       "mean_C1_d_over_spread": 11.337695279897591,
+       "mean_S": -607.5827503204346,
+       "n": 256
+      },
+      "syn_dup": {
+       "mean_top1": 0.06473705755984269,
+       "mean_entropy": 3.6930341136352807,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 5.603221210254016,
+       "mean_C1_d_over_spread": 11.628204601457199,
+       "mean_S": -609.2756104469299,
+       "n": 256
+      },
+      "syn_oor_1": {
+       "mean_top1": 0.06836989273628886,
+       "mean_entropy": 3.6627668027978673,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 5.486772010228147,
+       "mean_C1_d_over_spread": 11.386540909668842,
+       "mean_S": -609.4356770515442,
+       "n": 256
+      },
+      "syn_oor_2": {
+       "mean_top1": 0.0730985553416984,
+       "mean_entropy": 3.6273752248431506,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 5.458808407139859,
+       "mean_C1_d_over_spread": 11.328508844557884,
+       "mean_S": -608.5943655967712,
+       "n": 256
+      },
+      "syn_oor_3": {
+       "mean_top1": 0.08076150001884629,
+       "mean_entropy": 3.587813571954496,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 5.44899219737439,
+       "mean_C1_d_over_spread": 11.308137545392537,
+       "mean_S": -607.4555089473724,
+       "n": 256
+      }
+     },
+     "stats": {
+      "S": {
+       "threshold_from_val_only": -594.531704711914,
+       "q": 0.95,
+       "refused_fraction": {
+        "val": 0.05078125,
+        "syn_valid": 0.046875,
+        "syn_a7": 0.06640625,
+        "syn_dup": 0.03125,
+        "syn_oor_1": 0.0234375,
+        "syn_oor_2": 0.03125,
+        "syn_oor_3": 0.05078125
+       },
+       "accepted_fraction": {
+        "val": 0.94921875,
+        "syn_valid": 0.953125,
+        "syn_a7": 0.93359375,
+        "syn_dup": 0.96875,
+        "syn_oor_1": 0.9765625,
+        "syn_oor_2": 0.96875,
+        "syn_oor_3": 0.94921875
+       },
+       "mean": {
+        "val": -609.2166355848312,
+        "syn_valid": -609.6249043941498,
+        "syn_a7": -607.5827503204346,
+        "syn_dup": -609.2756104469299,
+        "syn_oor_1": -609.4356770515442,
+        "syn_oor_2": -608.5943655967712,
+        "syn_oor_3": -607.4555089473724
+       },
+       "n": {
+        "val": 512,
+        "syn_valid": 256,
+        "syn_a7": 256,
+        "syn_dup": 256,
+        "syn_oor_1": 256,
+        "syn_oor_2": 256,
+        "syn_oor_3": 256
+       },
+       "AUROC_oor_by_severity": {
+        "k1": 0.5067596435546875,
+        "k2": 0.536102294921875,
+        "k3": 0.573944091796875
+       },
+       "AUROC_oor_WORST": 0.5067596435546875,
+       "AUROC_dup_A7_CONTROLLED": 0.4477691650390625,
+       "AUROC_a7_vs_valid_TERM_COUNTER_CHECK": 0.56622314453125,
+       "gate_min_oor_dup": 0.4477691650390625
+      },
+      "M_conf": {
+       "threshold_from_val_only": -0.05417833068734691,
+       "q": 0.95,
+       "refused_fraction": {
+        "val": 0.05078125,
+        "syn_valid": 0.046875,
+        "syn_a7": 0.015625,
+        "syn_dup": 0.13671875,
+        "syn_oor_1": 0.03125,
+        "syn_oor_2": 0.01953125,
+        "syn_oor_3": 0.015625
+       },
+       "accepted_fraction": {
+        "val": 0.94921875,
+        "syn_valid": 0.953125,
+        "syn_a7": 0.984375,
+        "syn_dup": 0.86328125,
+        "syn_oor_1": 0.96875,
+        "syn_oor_2": 0.98046875,
+        "syn_oor_3": 0.984375
+       },
+       "mean": {
+        "val": -0.06748104028005655,
+        "syn_valid": -0.06669790072274168,
+        "syn_a7": -0.07677990188903282,
+        "syn_dup": -0.06473705755984269,
+        "syn_oor_1": -0.06836989273628885,
+        "syn_oor_2": -0.0730985553416984,
+        "syn_oor_3": -0.0807615000188463
+       },
+       "n": {
+        "val": 512,
+        "syn_valid": 256,
+        "syn_a7": 256,
+        "syn_dup": 256,
+        "syn_oor_1": 256,
+        "syn_oor_2": 256,
+        "syn_oor_3": 256
+       },
+       "AUROC_oor_by_severity": {
+        "k1": 0.4481201171875,
+        "k2": 0.319305419921875,
+        "k3": 0.214447021484375
+       },
+       "AUROC_oor_WORST": 0.214447021484375,
+       "AUROC_dup_A7_CONTROLLED": 0.7602386474609375,
+       "AUROC_a7_vs_valid_TERM_COUNTER_CHECK": 0.2755279541015625,
+       "gate_min_oor_dup": 0.214447021484375
+      },
+      "M_margin": {
+       "threshold_from_val_only": -0.002783565422818198,
+       "q": 0.95,
+       "refused_fraction": {
+        "val": 0.05078125,
+        "syn_valid": 0.0390625,
+        "syn_a7": 0.02734375,
+        "syn_dup": 0.06640625,
+        "syn_oor_1": 0.03515625,
+        "syn_oor_2": 0.03125,
+        "syn_oor_3": 0.00390625
+       },
+       "accepted_fraction": {
+        "val": 0.94921875,
+        "syn_valid": 0.9609375,
+        "syn_a7": 0.97265625,
+        "syn_dup": 0.93359375,
+        "syn_oor_1": 0.96484375,
+        "syn_oor_2": 0.96875,
+        "syn_oor_3": 0.99609375
+       },
+       "mean": {
+        "val": -0.008816063663517334,
+        "syn_valid": -0.008404012987674878,
+        "syn_a7": -0.0111877528697861,
+        "syn_dup": -0.007832800541108808,
+        "syn_oor_1": -0.009031760884169661,
+        "syn_oor_2": -0.010884913358847826,
+        "syn_oor_3": -0.01431647044108595
+       },
+       "n": {
+        "val": 512,
+        "syn_valid": 256,
+        "syn_a7": 256,
+        "syn_dup": 256,
+        "syn_oor_1": 256,
+        "syn_oor_2": 256,
+        "syn_oor_3": 256
+       },
+       "AUROC_oor_by_severity": {
+        "k1": 0.47283935546875,
+        "k2": 0.3915557861328125,
+        "k3": 0.28564453125
+       },
+       "AUROC_oor_WORST": 0.28564453125,
+       "AUROC_dup_A7_CONTROLLED": 0.6615142822265625,
+       "AUROC_a7_vs_valid_TERM_COUNTER_CHECK": 0.3727874755859375,
+       "gate_min_oor_dup": 0.28564453125
+      },
+      "C1_d_over_spread": {
+       "threshold_from_val_only": 12.116339879596225,
+       "q": 0.95,
+       "refused_fraction": {
+        "val": 0.05078125,
+        "syn_valid": 0.078125,
+        "syn_a7": 0.046875,
+        "syn_dup": 0.1796875,
+        "syn_oor_1": 0.0390625,
+        "syn_oor_2": 0.046875,
+        "syn_oor_3": 0.0390625
+       },
+       "accepted_fraction": {
+        "val": 0.94921875,
+        "syn_valid": 0.921875,
+        "syn_a7": 0.953125,
+        "syn_dup": 0.8203125,
+        "syn_oor_1": 0.9609375,
+        "syn_oor_2": 0.953125,
+        "syn_oor_3": 0.9609375
+       },
+       "mean": {
+        "val": 11.487756168130485,
+        "syn_valid": 11.535146350794811,
+        "syn_a7": 11.337695279897591,
+        "syn_dup": 11.628204601457199,
+        "syn_oor_1": 11.386540909668842,
+        "syn_oor_2": 11.328508844557884,
+        "syn_oor_3": 11.308137545392537
+       },
+       "n": {
+        "val": 512,
+        "syn_valid": 256,
+        "syn_a7": 256,
+        "syn_dup": 256,
+        "syn_oor_1": 256,
+        "syn_oor_2": 256,
+        "syn_oor_3": 256
+       },
+       "AUROC_oor_by_severity": {
+        "k1": 0.4070281982421875,
+        "k2": 0.4099273681640625,
+        "k3": 0.40850830078125
+       },
+       "AUROC_oor_WORST": 0.4070281982421875,
+       "AUROC_dup_A7_CONTROLLED": 0.641326904296875,
+       "AUROC_a7_vs_valid_TERM_COUNTER_CHECK": 0.382080078125,
+       "gate_min_oor_dup": 0.4070281982421875
+      },
+      "C3_S_max": {
+       "threshold_from_val_only": 1.4522338867187499,
+       "q": 0.95,
+       "refused_fraction": {
+        "val": 0.05078125,
+        "syn_valid": 0.07421875,
+        "syn_a7": 0.0859375,
+        "syn_dup": 0.19140625,
+        "syn_oor_1": 0.0859375,
+        "syn_oor_2": 0.11328125,
+        "syn_oor_3": 0.125
+       },
+       "accepted_fraction": {
+        "val": 0.94921875,
+        "syn_valid": 0.92578125,
+        "syn_a7": 0.9140625,
+        "syn_dup": 0.80859375,
+        "syn_oor_1": 0.9140625,
+        "syn_oor_2": 0.88671875,
+        "syn_oor_3": 0.875
+       },
+       "mean": {
+        "val": 0.5707544088363647,
+        "syn_valid": 0.585576057434082,
+        "syn_a7": 0.6043753623962402,
+        "syn_dup": 2.267731189727783,
+        "syn_oor_1": 0.6117796897888184,
+        "syn_oor_2": 0.7055597305297852,
+        "syn_oor_3": 0.7907981872558594
+       },
+       "n": {
+        "val": 512,
+        "syn_valid": 256,
+        "syn_a7": 256,
+        "syn_dup": 256,
+        "syn_oor_1": 256,
+        "syn_oor_2": 256,
+        "syn_oor_3": 256
+       },
+       "AUROC_oor_by_severity": {
+        "k1": 0.5067520141601562,
+        "k2": 0.5306854248046875,
+        "k3": 0.543609619140625
+       },
+       "AUROC_oor_WORST": 0.5067520141601562,
+       "AUROC_dup_A7_CONTROLLED": 0.6229629516601562,
+       "AUROC_a7_vs_valid_TERM_COUNTER_CHECK": 0.5092926025390625,
+       "gate_min_oor_dup": 0.5067520141601562
+      }
+     }
+    },
+    "store_removed": {
+     "diag": {
+      "val": {
+       "mean_top1": 0.06748104028005655,
+       "mean_entropy": 3.689698960507959,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 8.422086662992179,
+       "mean_C1_d_over_spread": 17.478115393562558,
+       "mean_S": -592.014654636383,
+       "n": 512
+      },
+      "syn_valid": {
+       "mean_top1": 0.06669790072274168,
+       "mean_entropy": 3.690774659840122,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 8.423762515890436,
+       "mean_C1_d_over_spread": 17.481593243115814,
+       "mean_S": -592.070826292038,
+       "n": 256
+      },
+      "syn_a7": {
+       "mean_top1": 0.07677990188903282,
+       "mean_entropy": 3.610387447124384,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 8.387614747270288,
+       "mean_C1_d_over_spread": 17.40657681352492,
+       "mean_S": -591.0122487545013,
+       "n": 256
+      },
+      "syn_dup": {
+       "mean_top1": 0.06473705755984269,
+       "mean_entropy": 3.6930341136352807,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 8.425739151327125,
+       "mean_C1_d_over_spread": 17.485695298062044,
+       "mean_S": -592.1773278713226,
+       "n": 256
+      },
+      "syn_oor_1": {
+       "mean_top1": 0.06836989273628886,
+       "mean_entropy": 3.6627668027978673,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 8.414842150369754,
+       "mean_C1_d_over_spread": 17.463081063870696,
+       "mean_S": -591.8167691230774,
+       "n": 256
+      },
+      "syn_oor_2": {
+       "mean_top1": 0.0730985553416984,
+       "mean_entropy": 3.6273752248431506,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 8.403618677778514,
+       "mean_C1_d_over_spread": 17.439789312441903,
+       "mean_S": -591.4578738212585,
+       "n": 256
+      },
+      "syn_oor_3": {
+       "mean_top1": 0.08076150001884629,
+       "mean_entropy": 3.587813571954496,
+       "atom_rms_radius": 0.4818646904055888,
+       "mean_d_nearest": 8.373633798448306,
+       "mean_C1_d_over_spread": 17.377562550599343,
+       "mean_S": -590.906900882721,
+       "n": 256
+      }
+     },
+     "stats": {
+      "S": {
+       "threshold_from_val_only": -590.5284362792969,
+       "q": 0.95,
+       "refused_fraction": {
+        "val": 0.05078125,
+        "syn_valid": 0.03515625,
+        "syn_a7": 0.30078125,
+        "syn_dup": 0.03515625,
+        "syn_oor_1": 0.05859375,
+        "syn_oor_2": 0.171875,
+        "syn_oor_3": 0.41015625
+       },
+       "accepted_fraction": {
+        "val": 0.94921875,
+        "syn_valid": 0.96484375,
+        "syn_a7": 0.69921875,
+        "syn_dup": 0.96484375,
+        "syn_oor_1": 0.94140625,
+        "syn_oor_2": 0.828125,
+        "syn_oor_3": 0.58984375
+       },
+       "mean": {
+        "val": -592.014654636383,
+        "syn_valid": -592.070826292038,
+        "syn_a7": -591.0122487545013,
+        "syn_dup": -592.1773278713226,
+        "syn_oor_1": -591.8167691230774,
+        "syn_oor_2": -591.4578738212585,
+        "syn_oor_3": -590.906900882721
+       },
+       "n": {
+        "val": 512,
+        "syn_valid": 256,
+        "syn_a7": 256,
+        "syn_dup": 256,
+        "syn_oor_1": 256,
+        "syn_oor_2": 256,
+        "syn_oor_3": 256
+       },
+       "AUROC_oor_by_severity": {
+        "k1": 0.5946273803710938,
+        "k2": 0.69085693359375,
+        "k3": 0.7645339965820312
+       },
+       "AUROC_oor_WORST": 0.5946273803710938,
+       "AUROC_dup_A7_CONTROLLED": 0.2790069580078125,
+       "AUROC_a7_vs_valid_TERM_COUNTER_CHECK": 0.7071380615234375,
+       "gate_min_oor_dup": 0.2790069580078125
+      },
+      "M_conf": {
+       "threshold_from_val_only": -0.05417833068734691,
+       "q": 0.95,
+       "refused_fraction": {
+        "val": 0.05078125,
+        "syn_valid": 0.046875,
+        "syn_a7": 0.015625,
+        "syn_dup": 0.13671875,
+        "syn_oor_1": 0.03125,
+        "syn_oor_2": 0.01953125,
+        "syn_oor_3": 0.015625
+       },
+       "accepted_fraction": {
+        "val": 0.94921875,
+        "syn_valid": 0.953125,
+        "syn_a7": 0.984375,
+        "syn_dup": 0.86328125,
+        "syn_oor_1": 0.96875,
+        "syn_oor_2": 0.98046875,
+        "syn_oor_3": 0.984375
+       },
+       "mean": {
+        "val": -0.06748104028005655,
+        "syn_valid": -0.06669790072274168,
+        "syn_a7": -0.07677990188903282,
+        "syn_dup": -0.06473705755984269,
+        "syn_oor_1": -0.06836989273628885,
+        "syn_oor_2": -0.0730985553416984,
+        "syn_oor_3": -0.0807615000188463
+       },
+       "n": {
+        "val": 512,
+        "syn_valid": 256,
+        "syn_a7": 256,
+        "syn_dup": 256,
+        "syn_oor_1": 256,
+        "syn_oor_2": 256,
+        "syn_oor_3": 256
+       },
+       "AUROC_oor_by_severity": {
+        "k1": 0.4481201171875,
+        "k2": 0.319305419921875,
+        "k3": 0.214447021484375
+       },
+       "AUROC_oor_WORST": 0.214447021484375,
+       "AUROC_dup_A7_CONTROLLED": 0.7602386474609375,
+       "AUROC_a7_vs_valid_TERM_COUNTER_CHECK": 0.2755279541015625,
+       "gate_min_oor_dup": 0.214447021484375
+      },
+      "M_margin": {
+       "threshold_from_val_only": -0.002783565422818198,
+       "q": 0.95,
+       "refused_fraction": {
+        "val": 0.05078125,
+        "syn_valid": 0.0390625,
+        "syn_a7": 0.02734375,
+        "syn_dup": 0.06640625,
+        "syn_oor_1": 0.03515625,
+        "syn_oor_2": 0.03125,
+        "syn_oor_3": 0.00390625
+       },
+       "accepted_fraction": {
+        "val": 0.94921875,
+        "syn_valid": 0.9609375,
+        "syn_a7": 0.97265625,
+        "syn_dup": 0.93359375,
+        "syn_oor_1": 0.96484375,
+        "syn_oor_2": 0.96875,
+        "syn_oor_3": 0.99609375
+       },
+       "mean": {
+        "val": -0.008816063663517334,
+        "syn_valid": -0.008404012987674878,
+        "syn_a7": -0.0111877528697861,
+        "syn_dup": -0.007832800541108808,
+        "syn_oor_1": -0.009031760884169661,
+        "syn_oor_2": -0.010884913358847826,
+        "syn_oor_3": -0.01431647044108595
+       },
+       "n": {
+        "val": 512,
+        "syn_valid": 256,
+        "syn_a7": 256,
+        "syn_dup": 256,
+        "syn_oor_1": 256,
+        "syn_oor_2": 256,
+        "syn_oor_3": 256
+       },
+       "AUROC_oor_by_severity": {
+        "k1": 0.47283935546875,
+        "k2": 0.3915557861328125,
+        "k3": 0.28564453125
+       },
+       "AUROC_oor_WORST": 0.28564453125,
+       "AUROC_dup_A7_CONTROLLED": 0.6615142822265625,
+       "AUROC_a7_vs_valid_TERM_COUNTER_CHECK": 0.3727874755859375,
+       "gate_min_oor_dup": 0.28564453125
+      },
+      "C1_d_over_spread": {
+       "threshold_from_val_only": 17.69496603757938,
+       "q": 0.95,
+       "refused_fraction": {
+        "val": 0.05078125,
+        "syn_valid": 0.04296875,
+        "syn_a7": 0.0234375,
+        "syn_dup": 0.0703125,
+        "syn_oor_1": 0.0390625,
+        "syn_oor_2": 0.03125,
+        "syn_oor_3": 0.015625
+       },
+       "accepted_fraction": {
+        "val": 0.94921875,
+        "syn_valid": 0.95703125,
+        "syn_a7": 0.9765625,
+        "syn_dup": 0.9296875,
+        "syn_oor_1": 0.9609375,
+        "syn_oor_2": 0.96875,
+        "syn_oor_3": 0.984375
+       },
+       "mean": {
+        "val": 17.478115393562558,
+        "syn_valid": 17.481593243115814,
+        "syn_a7": 17.40657681352492,
+        "syn_dup": 17.485695298062044,
+        "syn_oor_1": 17.463081063870696,
+        "syn_oor_2": 17.439789312441903,
+        "syn_oor_3": 17.377562550599343
+       },
+       "n": {
+        "val": 512,
+        "syn_valid": 256,
+        "syn_a7": 256,
+        "syn_dup": 256,
+        "syn_oor_1": 256,
+        "syn_oor_2": 256,
+        "syn_oor_3": 256
+       },
+       "AUROC_oor_by_severity": {
+        "k1": 0.4625701904296875,
+        "k2": 0.4183807373046875,
+        "k3": 0.327117919921875
+       },
+       "AUROC_oor_WORST": 0.327117919921875,
+       "AUROC_dup_A7_CONTROLLED": 0.6241302490234375,
+       "AUROC_a7_vs_valid_TERM_COUNTER_CHECK": 0.3882904052734375,
+       "gate_min_oor_dup": 0.327117919921875
+      },
+      "C3_S_max": {
+       "threshold_from_val_only": 3.225482177734374,
+       "q": 0.95,
+       "refused_fraction": {
+        "val": 0.05078125,
+        "syn_valid": 0.0703125,
+        "syn_a7": 0.07421875,
+        "syn_dup": 0.16015625,
+        "syn_oor_1": 0.0703125,
+        "syn_oor_2": 0.06640625,
+        "syn_oor_3": 0.06640625
+       },
+       "accepted_fraction": {
+        "val": 0.94921875,
+        "syn_valid": 0.9296875,
+        "syn_a7": 0.92578125,
+        "syn_dup": 0.83984375,
+        "syn_oor_1": 0.9296875,
+        "syn_oor_2": 0.93359375,
+        "syn_oor_3": 0.93359375
+       },
+       "mean": {
+        "val": 0.6033879518508911,
+        "syn_valid": 0.6460821628570557,
+        "syn_a7": 0.5902738571166992,
+        "syn_dup": 1.2571606636047363,
+        "syn_oor_1": 0.5764176845550537,
+        "syn_oor_2": 0.5829863548278809,
+        "syn_oor_3": 0.5906963348388672
+       },
+       "n": {
+        "val": 512,
+        "syn_valid": 256,
+        "syn_a7": 256,
+        "syn_dup": 256,
+        "syn_oor_1": 256,
+        "syn_oor_2": 256,
+        "syn_oor_3": 256
+       },
+       "AUROC_oor_by_severity": {
+        "k1": 0.4739532470703125,
+        "k2": 0.4973907470703125,
+        "k3": 0.5150680541992188
+       },
+       "AUROC_oor_WORST": 0.4739532470703125,
+       "AUROC_dup_A7_CONTROLLED": 0.6823577880859375,
+       "AUROC_a7_vs_valid_TERM_COUNTER_CHECK": 0.47144317626953125,
+       "gate_min_oor_dup": 0.4739532470703125
+      }
+     }
+    }
+   },
+   "wall_clock_s": 25.31531596183777
+  }
+ },
+ "GATE": {
+  "rule": "min(AUROC_oor_WORST, AUROC_dup_A7_CONTROLLED) < 0.6 => DO NOT SPEND",
+  "threshold": 0.6,
+  "min_oor_dup_by_rung": {
+   "A": 0.4477691650390625
+  },
+  "best_across_rungs": 0.4477691650390625,
+  "VERDICT": "NO-GO",
+  "binding_consequence": "DO NOT SPEND. Report the number and stop the refusal line for this iteration."
+ }
+}

@@ -1,0 +1,1040 @@
+{
+  "experiment": "capture_arm_a",
+  "wave": "C2W8 pass 2",
+  "dial_declaration": {
+    "dial": "none as a new claim \u2014 instrument/mechanism repair on the write side",
+    "laundering_control": "kNN-in-phi launder carried with the byte ledger on every reading; gate is BYTE-BLIND (ERRATA \u00a71 Q3)",
+    "falsifies": "the gate fails on >= 3 seeds => measured negative, reported as such",
+    "does_not_falsify": "losing to the launder (no performance claim); a high foreign contribution (diagnostic); losing to arm B",
+    "depth_is_not_feature_importance": "\u00a7A23.5 ACTIVE"
+  },
+  "seeds": [
+    1
+  ],
+  "arms": {
+    "armA_compact": {
+      "label": "armA_compact",
+      "seeds": [
+        1
+      ],
+      "arm_config": {
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "pilot_seeds": [
+          7,
+          8
+        ],
+        "atom_kernel": "gaussian",
+        "atom_kernel_cutoff": 2.5,
+        "atom_width_frac_spacing": 1.5,
+        "site_local_init": true,
+        "site_local_radius_frac": 1.0,
+        "run_baseline_gaussian": false,
+        "quick": false
+      },
+      "store_flags": [
+        {
+          "addr_dim": 8,
+          "capacity": 16,
+          "atom_width": 0.20630944532092316,
+          "atom_site_local_init": true,
+          "atom_site_local_radius": 0.20630944532092316,
+          "d_safe_override": 0.12103487458827492,
+          "budget": 16,
+          "leak": 0.02,
+          "stage_lifetimes": true,
+          "seed": 1
+        }
+      ],
+      "gate": {
+        "legs_by_seed": [
+          {
+            "n_live": 16,
+            "G_CAP": {
+              "frac_capture_positive": 0.75,
+              "n_capture_positive": 12,
+              "n_capture_ge_sigma_q": 8,
+              "sigma_q": 0.15,
+              "capture_median": 0.123046875,
+              "capture_max": 0.625,
+              "pass": true
+            },
+            "G_DEC": {
+              "decode": 0.1640625,
+              "chance": 0.0625,
+              "n_probed": 128,
+              "se": 0.02139541240254555,
+              "margin_in_se": 4.74692883171144,
+              "pass": true
+            },
+            "G_DRIFT": {
+              "median_site_drift": 0.0412067212164402,
+              "key_spacing": 0.13753963021394877,
+              "ratio": 0.2995988948955395,
+              "pass": true
+            }
+          }
+        ],
+        "G_CAP_pass_seeds": 1,
+        "G_DEC_pass_seeds": 1,
+        "G_DRIFT_pass_seeds": 1,
+        "all_three_same_seed": 1,
+        "n_seeds": 1,
+        "gate_pass": false,
+        "rule": "PREREG-C2W8-PASS2 \u00a73: G-CAP majority of live wells with capture_radius>0; G-DEC decode above chance beyond 2 SE; G-DRIFT median site_drift below the measured key spacing; >= 3 seeds"
+      },
+      "own_foreign_by_seed": [
+        {
+          "status": "DIAGNOSTIC \u2014 never a target, never a gate leg (prereg \u00a73)",
+          "estimator": "frozen census `own_foreign_site_depth`, which assumes a GAUSSIAN atom kernel; kernel-mismatched under arm A",
+          "own_median": 0.7268724809907703,
+          "foreign_median": 0.14749078022660897,
+          "own_mean": 0.6974282287171799,
+          "foreign_mean": 0.1966767947742326,
+          "n_foreign_exceeds_own": 2,
+          "n_wells": 16
+        }
+      ],
+      "bytes_by_seed": [
+        {
+          "clu_store_bytes": 360448,
+          "clu_codebook_bytes": 512,
+          "clu_total_bytes": 360960,
+          "knn_launder_bytes": 288,
+          "gamma_phi_hole_bytes": 0,
+          "gamma_phi_enabled": false,
+          "joint_dial_(d, atom_budget)": {
+            "addr_dim": 8,
+            "n_atoms": 8192,
+            "rule": "n_atoms = max(atoms_per_item*K, min_atoms, round(512*sqrt(2)^d))",
+            "bytes_per_atom": 44,
+            "note": "ONE dial: bytes/well grow with d while the compact reach tightens as the co-scaled width; they are not independent"
+          },
+          "ratio_clu_over_knn_launder": 1253.3333333333333,
+          "gate_reads_bytes": false,
+          "performance_claim": "NONE \u2014 pass 2 is a capture/instrument gate"
+        }
+      ],
+      "depth_raw_median_by_seed": [
+        0.8737212735594473
+      ],
+      "geometry_by_seed": [
+        {
+          "phi_scale": 0.1263089954108446,
+          "median_nn_task1": 0.13753963021394877,
+          "d_safe": 0.12103487458827492,
+          "r95_phi_norm": 7.917092498022848
+        }
+      ],
+      "self_probe_by_seed": [
+        {
+          "acq": 0.5234375,
+          "strict": 0.5234375,
+          "decode": 0.1640625,
+          "chance": 0.0625,
+          "n_probed": 128
+        }
+      ],
+      "cells": [
+        {
+          "seed": 1,
+          "census": {
+            "P": 0.0,
+            "M": 0.2,
+            "n_live": 16,
+            "n_pairs": 120,
+            "n_prunable": 0,
+            "n_mergeable_pairs": 24,
+            "overdig": 2.0,
+            "well_budget": 8,
+            "n_admitted": 16,
+            "theta_att_block": {
+              "theta_att": 1.1880791650528173,
+              "rule": "max fitted depth among wells whose measured capture radius < sigma_q; 0.0 if every well captured (ERRATA-C2W8 \u00a71)",
+              "sigma_q": 0.15,
+              "n_capturing": 8,
+              "n_non_capturing": 8,
+              "n_unmeasured": 0,
+              "capture_radius_median": 0.123046875,
+              "captures": [
+                true,
+                true,
+                false,
+                true,
+                false,
+                false,
+                false,
+                true,
+                true,
+                false,
+                false,
+                true,
+                true,
+                false,
+                false,
+                true
+              ]
+            },
+            "pair_criteria": {
+              "payload_thresh": 0.1,
+              "r_cert": 0.8297319836338193,
+              "n_pairs": 120
+            },
+            "population_eroded_not_attractor": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              1000,
+              1001,
+              1002,
+              1003,
+              1004,
+              1005,
+              1006,
+              1007
+            ],
+            "population_live_attractor_never_read": [],
+            "population_protected": [
+              0,
+              1000
+            ],
+            "depth_raw_median": 0.8737212735594473,
+            "depth_netted_median": 1.0300483536919969,
+            "depth_raw_geomean": 0.8627928559377269,
+            "depth_netted_geomean": 0.9924480534688586,
+            "mergeable_pairs": [
+              {
+                "item_i": 0,
+                "item_j": 2,
+                "center_sep": 0.2710126101995541,
+                "payload_dist": 0.0,
+                "depth_i": 0.7483787968324884,
+                "depth_j": 0.6456529523953601
+              },
+              {
+                "item_i": 0,
+                "item_j": 4,
+                "center_sep": 0.7811454708370544,
+                "payload_dist": 0.0,
+                "depth_i": 0.7483787968324884,
+                "depth_j": 0.8890874481958659
+              },
+              {
+                "item_i": 0,
+                "item_j": 5,
+                "center_sep": 0.4963780733054951,
+                "payload_dist": 0.0,
+                "depth_i": 0.7483787968324884,
+                "depth_j": 0.9438829155542544
+              },
+              {
+                "item_i": 0,
+                "item_j": 6,
+                "center_sep": 0.5960456781161236,
+                "payload_dist": 0.0,
+                "depth_i": 0.7483787968324884,
+                "depth_j": 0.925600924086214
+              },
+              {
+                "item_i": 1,
+                "item_j": 7,
+                "center_sep": 0.5639568041895519,
+                "payload_dist": 0.0,
+                "depth_i": 0.5962726745170084,
+                "depth_j": 0.5983585483270127
+              },
+              {
+                "item_i": 2,
+                "item_j": 5,
+                "center_sep": 0.6909477321974957,
+                "payload_dist": 0.0,
+                "depth_i": 0.6456529523953601,
+                "depth_j": 0.9438829155542544
+              },
+              {
+                "item_i": 2,
+                "item_j": 6,
+                "center_sep": 0.7864758392328791,
+                "payload_dist": 0.0,
+                "depth_i": 0.6456529523953601,
+                "depth_j": 0.925600924086214
+              },
+              {
+                "item_i": 3,
+                "item_j": 7,
+                "center_sep": 0.7258261959739062,
+                "payload_dist": 0.0,
+                "depth_i": 0.6397103577657745,
+                "depth_j": 0.5983585483270127
+              },
+              {
+                "item_i": 4,
+                "item_j": 5,
+                "center_sep": 0.48118567213741414,
+                "payload_dist": 0.0,
+                "depth_i": 0.8890874481958659,
+                "depth_j": 0.9438829155542544
+              },
+              {
+                "item_i": 4,
+                "item_j": 6,
+                "center_sep": 0.3469007656115649,
+                "payload_dist": 0.0,
+                "depth_i": 0.8890874481958659,
+                "depth_j": 0.925600924086214
+              },
+              {
+                "item_i": 5,
+                "item_j": 6,
+                "center_sep": 0.2055168033337777,
+                "payload_dist": 0.0,
+                "depth_i": 0.9438829155542544,
+                "depth_j": 0.925600924086214
+              },
+              {
+                "item_i": 1000,
+                "item_j": 1002,
+                "center_sep": 0.42454175603750827,
+                "payload_dist": 0.0,
+                "depth_i": 1.1359117205140383,
+                "depth_j": 1.144050068264133
+              },
+              {
+                "item_i": 1000,
+                "item_j": 1004,
+                "center_sep": 0.6714257876019225,
+                "payload_dist": 0.0,
+                "depth_i": 1.1359117205140383,
+                "depth_j": 0.8583550989230285
+              },
+              {
+                "item_i": 1000,
+                "item_j": 1006,
+                "center_sep": 0.590838959764594,
+                "payload_dist": 0.0,
+                "depth_i": 1.1359117205140383,
+                "depth_j": 1.1880791650528173
+              },
+              {
+                "item_i": 1000,
+                "item_j": 1007,
+                "center_sep": 0.48130874153162484,
+                "payload_dist": 0.0,
+                "depth_i": 1.1359117205140383,
+                "depth_j": 1.185792043895413
+              },
+              {
+                "item_i": 1002,
+                "item_j": 1004,
+                "center_sep": 0.7224787781047263,
+                "payload_dist": 0.0,
+                "depth_i": 1.144050068264133,
+                "depth_j": 0.8583550989230285
+              },
+              {
+                "item_i": 1002,
+                "item_j": 1006,
+                "center_sep": 0.31776419864724814,
+                "payload_dist": 0.0,
+                "depth_i": 1.144050068264133,
+                "depth_j": 1.1880791650528173
+              },
+              {
+                "item_i": 1002,
+                "item_j": 1007,
+                "center_sep": 0.3189704709470628,
+                "payload_dist": 0.0,
+                "depth_i": 1.144050068264133,
+                "depth_j": 1.185792043895413
+              },
+              {
+                "item_i": 1004,
+                "item_j": 1005,
+                "center_sep": 0.29451707347731915,
+                "payload_dist": 0.0,
+                "depth_i": 0.8583550989230285,
+                "depth_j": 0.854105510469175
+              },
+              {
+                "item_i": 1004,
+                "item_j": 1006,
+                "center_sep": 0.7819866502324923,
+                "payload_dist": 0.0,
+                "depth_i": 0.8583550989230285,
+                "depth_j": 1.1880791650528173
+              },
+              {
+                "item_i": 1004,
+                "item_j": 1007,
+                "center_sep": 0.6379667275980524,
+                "payload_dist": 0.0,
+                "depth_i": 0.8583550989230285,
+                "depth_j": 1.185792043895413
+              },
+              {
+                "item_i": 1005,
+                "item_j": 1006,
+                "center_sep": 0.82377282193487,
+                "payload_dist": 0.0,
+                "depth_i": 0.854105510469175,
+                "depth_j": 1.1880791650528173
+              },
+              {
+                "item_i": 1005,
+                "item_j": 1007,
+                "center_sep": 0.705564183486881,
+                "payload_dist": 0.0,
+                "depth_i": 0.854105510469175,
+                "depth_j": 1.185792043895413
+              },
+              {
+                "item_i": 1006,
+                "item_j": 1007,
+                "center_sep": 0.2779890114367942,
+                "payload_dist": 0.0,
+                "depth_i": 1.1880791650528173,
+                "depth_j": 1.185792043895413
+              }
+            ],
+            "wells": [
+              {
+                "item_id": 0,
+                "slot": 0,
+                "depth_raw": 0.7483787968324884,
+                "depth_netted": 0.7483787968324884,
+                "decay_factor": 1.0,
+                "s_eff": 0.22394957983193275,
+                "own_atom_depth": 0.6794981829255534,
+                "foreign_atom_depth": 0.07181344343313247,
+                "lambda_min": 7.927610874176025,
+                "capture_radius": 0.20703125,
+                "site_drift": 0.03788159415125847,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": true,
+                "born_t": 0
+              },
+              {
+                "item_id": 1,
+                "slot": 1,
+                "depth_raw": 0.5962726745170084,
+                "depth_netted": 0.8048840059317999,
+                "decay_factor": 0.7408181428909302,
+                "s_eff": 0.22394957983193275,
+                "own_atom_depth": 0.591330798209751,
+                "foreign_atom_depth": 0.0062984460828959445,
+                "lambda_min": 10.80759048461914,
+                "capture_radius": 0.484375,
+                "site_drift": 0.009568820707499981,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 1
+              },
+              {
+                "item_id": 2,
+                "slot": 2,
+                "depth_raw": 0.6456529523953601,
+                "depth_netted": 0.8542827424797136,
+                "decay_factor": 0.7557836771011353,
+                "s_eff": 0.23361344537815126,
+                "own_atom_depth": 0.31677092152228287,
+                "foreign_atom_depth": 0.32936947643254794,
+                "lambda_min": 7.927610397338867,
+                "capture_radius": 0.0,
+                "site_drift": 0.24583987891674042,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 2
+              },
+              {
+                "item_id": 3,
+                "slot": 3,
+                "depth_raw": 0.6397103577657745,
+                "depth_netted": 0.829659674012494,
+                "decay_factor": 0.7710515260696411,
+                "s_eff": 0.22394957983193275,
+                "own_atom_depth": 0.6370348329133928,
+                "foreign_atom_depth": 0.000885441930092072,
+                "lambda_min": 13.065967559814453,
+                "capture_radius": 0.625,
+                "site_drift": 0.0025990991853177547,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 3
+              },
+              {
+                "item_id": 4,
+                "slot": 4,
+                "depth_raw": 0.8890874481958659,
+                "depth_netted": 1.1302517090470947,
+                "decay_factor": 0.7866278290748596,
+                "s_eff": 0.22394957983193275,
+                "own_atom_depth": 0.8080514068581568,
+                "foreign_atom_depth": 0.08497442624468138,
+                "lambda_min": 2.275886297225952,
+                "capture_radius": 0.0,
+                "site_drift": 0.12316756695508957,
+                "is_attractor": false,
+                "read_hits": 1,
+                "protected": false,
+                "born_t": 4
+              },
+              {
+                "item_id": 5,
+                "slot": 5,
+                "depth_raw": 0.9438829155542544,
+                "depth_netted": 1.1761505564688233,
+                "decay_factor": 0.8025187849998474,
+                "s_eff": 0.2046218487394958,
+                "own_atom_depth": 0.7126208826171623,
+                "foreign_atom_depth": 0.23308264221410274,
+                "lambda_min": 10.779919624328613,
+                "capture_radius": 0.0703125,
+                "site_drift": 0.05763327330350876,
+                "is_attractor": false,
+                "read_hits": 1,
+                "protected": false,
+                "born_t": 5
+              },
+              {
+                "item_id": 6,
+                "slot": 6,
+                "depth_raw": 0.925600924086214,
+                "depth_netted": 1.1305315784434544,
+                "decay_factor": 0.8187307119369507,
+                "s_eff": 0.21428571428571425,
+                "own_atom_depth": 0.35768262186438804,
+                "foreign_atom_depth": 0.5717614716464456,
+                "lambda_min": 1.4339808225631714,
+                "capture_radius": 0.0,
+                "site_drift": 0.08488339185714722,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 6
+              },
+              {
+                "item_id": 7,
+                "slot": 7,
+                "depth_raw": 0.5983585483270127,
+                "depth_netted": 0.7163652820356424,
+                "decay_factor": 0.8352701663970947,
+                "s_eff": 0.2046218487394958,
+                "own_atom_depth": 0.5756036208653996,
+                "foreign_atom_depth": 0.02475380140189513,
+                "lambda_min": 13.08879566192627,
+                "capture_radius": 0.5703125,
+                "site_drift": 0.001623205142095685,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 7
+              },
+              {
+                "item_id": 1000,
+                "slot": 8,
+                "depth_raw": 1.1359117205140383,
+                "depth_netted": 1.1359117205140383,
+                "decay_factor": 1.0,
+                "s_eff": 0.23361344537815126,
+                "own_atom_depth": 1.056194295080805,
+                "foreign_atom_depth": 0.08583545835029294,
+                "lambda_min": 13.738883018493652,
+                "capture_radius": 0.1796875,
+                "site_drift": 0.04431401565670967,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": true,
+                "born_t": 8
+              },
+              {
+                "item_id": 1001,
+                "slot": 9,
+                "depth_raw": 1.0356689953780123,
+                "depth_netted": 1.1913029829096278,
+                "decay_factor": 0.8693581819534302,
+                "s_eff": 0.19495798319327728,
+                "own_atom_depth": 0.8800392352033987,
+                "foreign_atom_depth": 0.16161832817661984,
+                "lambda_min": 11.780954360961914,
+                "capture_radius": 0.078125,
+                "site_drift": 0.052741751074790955,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 9
+              },
+              {
+                "item_id": 1002,
+                "slot": 10,
+                "depth_raw": 1.144050068264133,
+                "depth_netted": 1.2899129143059018,
+                "decay_factor": 0.8869203925132751,
+                "s_eff": 0.21428571428571425,
+                "own_atom_depth": 0.7989828752481826,
+                "foreign_atom_depth": 0.3638857925844146,
+                "lambda_min": 29.592180252075195,
+                "capture_radius": 0.0625,
+                "site_drift": 0.03809942677617073,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 10
+              },
+              {
+                "item_id": 1003,
+                "slot": 11,
+                "depth_raw": 0.7918899711697467,
+                "depth_netted": 0.8751738129922623,
+                "decay_factor": 0.9048373699188232,
+                "s_eff": 0.23361344537815126,
+                "own_atom_depth": 0.7868558543059848,
+                "foreign_atom_depth": 0.019153180716394765,
+                "lambda_min": 13.706710815429688,
+                "capture_radius": 0.23046875,
+                "site_drift": 0.012737394310534,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 11
+              },
+              {
+                "item_id": 1004,
+                "slot": 12,
+                "depth_raw": 0.8583550989230285,
+                "depth_netted": 0.9298449983368988,
+                "decay_factor": 0.9231163263320923,
+                "s_eff": 0.21428571428571425,
+                "own_atom_depth": 0.7411240793643783,
+                "foreign_atom_depth": 0.1333632322765981,
+                "lambda_min": 8.123308181762695,
+                "capture_radius": 0.39453125,
+                "site_drift": 0.07222109287977219,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 12
+              },
+              {
+                "item_id": 1005,
+                "slot": 13,
+                "depth_raw": 0.854105510469175,
+                "depth_netted": 0.9069204456840676,
+                "decay_factor": 0.9417645335197449,
+                "s_eff": 0.21428571428571425,
+                "own_atom_depth": 0.6113634608801337,
+                "foreign_atom_depth": 0.26147927634430884,
+                "lambda_min": 8.123305320739746,
+                "capture_radius": 0.0,
+                "site_drift": 0.22244633734226227,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 13
+              },
+              {
+                "item_id": 1006,
+                "slot": 14,
+                "depth_raw": 1.1880791650528173,
+                "depth_netted": 1.236565591835139,
+                "decay_factor": 0.9607894420623779,
+                "s_eff": 0.2046218487394958,
+                "own_atom_depth": 0.8137299309714281,
+                "foreign_atom_depth": 0.3909582740699322,
+                "lambda_min": 30.184980392456055,
+                "capture_radius": 0.08984375,
+                "site_drift": 0.03217378631234169,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 14
+              },
+              {
+                "item_id": 1007,
+                "slot": 15,
+                "depth_raw": 1.185792043895413,
+                "depth_netted": 1.209746622242731,
+                "decay_factor": 0.9801986813545227,
+                "s_eff": 0.22394957983193275,
+                "own_atom_depth": 0.7919686606444813,
+                "foreign_atom_depth": 0.40759602448336685,
+                "lambda_min": 17.743785858154297,
+                "capture_radius": 0.15625,
+                "site_drift": 0.0012586172670125961,
+                "is_attractor": false,
+                "read_hits": 0,
+                "protected": false,
+                "born_t": 15
+              }
+            ]
+          },
+          "usage": {
+            "proxy": "read_hits",
+            "key": "item_id",
+            "n_items": 16,
+            "n_read_events": 64,
+            "n_unassigned": 62,
+            "n_never_read": 14,
+            "frac_never_read": 0.875,
+            "hits_mean": 0.125,
+            "hits_median": 0.0,
+            "hits_max": 1.0,
+            "hits_by_item": {
+              "0": 0,
+              "1": 0,
+              "2": 0,
+              "3": 0,
+              "4": 1,
+              "5": 1,
+              "6": 0,
+              "7": 0,
+              "1000": 0,
+              "1001": 0,
+              "1002": 0,
+              "1003": 0,
+              "1004": 0,
+              "1005": 0,
+              "1006": 0,
+              "1007": 0
+            }
+          },
+          "loo": {
+            "proxy": "loss_contribution_loo",
+            "role": "SECONDARY \u2014 reported, never a decision input (prereg \u00a73.2)",
+            "icc_1_1": 0.9313685910375452,
+            "status": "usable",
+            "values": [
+              [
+                -0.04166666666666663,
+                -0.024999999999999967
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                0.008333333333333304,
+                0.0
+              ],
+              [
+                0.00833333333333336,
+                0.0
+              ],
+              [
+                -0.00833333333333336,
+                -0.008333333333333304
+              ],
+              [
+                -0.016666666666666663,
+                -0.01666666666666672
+              ],
+              [
+                -0.03333333333333338,
+                -0.02499999999999991
+              ],
+              [
+                0.0,
+                0.0
+              ],
+              [
+                -0.09166666666666667,
+                -0.09166666666666667
+              ],
+              [
+                -0.025000000000000022,
+                -0.033333333333333326
+              ],
+              [
+                -0.04999999999999999,
+                -0.04166666666666663
+              ],
+              [
+                -0.025000000000000022,
+                -0.008333333333333304
+              ],
+              [
+                -0.06666666666666665,
+                -0.058333333333333404
+              ],
+              [
+                -0.016666666666666663,
+                0.0
+              ],
+              [
+                -0.016666666666666663,
+                -0.016666666666666607
+              ],
+              [
+                -0.08333333333333331,
+                -0.1166666666666667
+              ]
+            ],
+            "note": "ICC(1,1) > 0: values may be reported, still never a decision input",
+            "item_ids": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              1000,
+              1001,
+              1002,
+              1003,
+              1004,
+              1005,
+              1006,
+              1007
+            ],
+            "repeats": 2
+          },
+          "decay_netting_audit": {
+            "n_events": 105,
+            "n_down_own": 0,
+            "n_up_foreign": 32,
+            "n_down_foreign": 73,
+            "rate_down_own_beyond_decay": 0.0,
+            "rate_up_foreign": 0.3047619047619048,
+            "median_own_residual_vs_decay_law": 0.0,
+            "max_abs_own_residual_vs_decay_law": 8.918477052641324e-08,
+            "median_rel_drop_own": 0.019801316853644318,
+            "median_rel_change_foreign": -0.013082576919073172,
+            "max_rel_change_foreign": 241999.19055488627
+          },
+          "depth_trace": [
+            {
+              "t": 4,
+              "n_admitted": 4,
+              "n_live": 4,
+              "depth_raw_median": 0.7392239556013556,
+              "read_event": 1,
+              "read_acc": 0.875,
+              "knn_acc": 1.0
+            },
+            {
+              "t": 8,
+              "n_admitted": 8,
+              "n_live": 8,
+              "depth_raw_median": 0.7480349564625035,
+              "read_event": 2,
+              "read_acc": 0.75,
+              "knn_acc": 1.0
+            },
+            {
+              "t": 12,
+              "n_admitted": 12,
+              "n_live": 12,
+              "depth_raw_median": 0.9066174417412567,
+              "read_event": 3,
+              "read_acc": 0.375,
+              "knn_acc": 0.375
+            },
+            {
+              "t": 16,
+              "n_admitted": 16,
+              "n_live": 16,
+              "depth_raw_median": 0.8737212735594473,
+              "read_event": 4,
+              "read_acc": 0.375,
+              "knn_acc": 0.625
+            }
+          ],
+          "depth_after_first_writes": [
+            0.7256183705664856,
+            0.7693285006571567,
+            0.7260124520440367
+          ],
+          "self_probe": {
+            "acq": 0.5234375,
+            "strict": 0.5234375,
+            "decode": 0.1640625,
+            "chance": 0.0625,
+            "n_probed": 128
+          },
+          "monitor_trips": {
+            "overdamping": {
+              "mode": 1,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            },
+            "settle_argmin": {
+              "mode": 2,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            },
+            "vacuous_gate": {
+              "mode": 3,
+              "tripped": true,
+              "applicable": true,
+              "value": 0.0
+            },
+            "blank": {
+              "mode": 4,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            },
+            "addressing": {
+              "mode": 5,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            },
+            "objective_divergence": {
+              "mode": 6,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            },
+            "mass_gauge": {
+              "mode": 7,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            },
+            "certificates": {
+              "mode": 8,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            },
+            "lifetimes": {
+              "mode": 9,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            },
+            "dead_axis": {
+              "mode": 10,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            },
+            "reach": {
+              "mode": 11,
+              "tripped": false,
+              "applicable": true,
+              "value": 0.18193879900953114
+            },
+            "starvation": {
+              "mode": 12,
+              "tripped": false,
+              "applicable": true,
+              "value": 0.5018795818126315
+            },
+            "maturity": {
+              "mode": 13,
+              "tripped": false,
+              "applicable": true,
+              "value": 300.0
+            },
+            "guard_liveness": {
+              "mode": 14,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            },
+            "launch_collapse": {
+              "mode": 15,
+              "tripped": false,
+              "applicable": false,
+              "value": NaN
+            }
+          },
+          "stream": {
+            "n_offered": 16,
+            "n_admitted": 16,
+            "n_refused": 0,
+            "refusal_rate": 0.0,
+            "n_read_events": 4,
+            "overdig": 2.0,
+            "well_budget": 8,
+            "n_live_end": 16
+          },
+          "geometry": {
+            "phi_scale": 0.1263089954108446,
+            "median_nn_task1": 0.13753963021394877,
+            "d_safe": 0.12103487458827492,
+            "r95_phi_norm": 7.917092498022848
+          },
+          "phi_provenance": {
+            "arm": "pca",
+            "k": 8,
+            "frozen": true,
+            "regime": "task1_only",
+            "role": "PRIMARY \u2014 every headline number",
+            "may_see": "task-1 classes only [0, 1]",
+            "n_fit_pool": 2140,
+            "frozen_from": "end of task 1 (never refit, never re-keyed)",
+            "phi_dim": 8
+          },
+          "flags": {
+            "seed": 1,
+            "clu_system_non_defaults": {
+              "addr_dim": 8,
+              "capacity": 16,
+              "atom_width": 0.20630944532092316,
+              "atom_site_local_init": true,
+              "atom_site_local_radius": 0.20630944532092316,
+              "d_safe_override": 0.12103487458827492,
+              "budget": 16,
+              "leak": 0.02,
+              "stage_lifetimes": true,
+              "seed": 1
+            },
+            "addr_dim": 8,
+            "phi_arm": "pca",
+            "phi_regime": "task1_only",
+            "phi_dim": 8,
+            "well_budget": 8,
+            "capacity": 16,
+            "leak": 0.02,
+            "stage_lifetimes": true,
+            "d_safe_override": 0.12103487458827492,
+            "write_steps": 300,
+            "read_steps": 800,
+            "address_steps": 400,
+            "kinetic_mode": "newtonian_learned",
+            "n_atoms": 8192,
+            "payload_scale": 9.0,
+            "promotable": false,
+            "why_not_promotable": "census cell: phi_dim = addr_dim = 8 is below the CL entry's binding phi_dim >= 16 (ERRATA-C2W8 \u00a73: the learned store is measurably inert at 16 on this rig), and the store runs at demoted write budget"
+          },
+          "bytes": {
+            "clu_store_bytes": 360448,
+            "clu_codebook_bytes": 512,
+            "clu_total_bytes": 360960,
+            "knn_launder_bytes": 288,
+            "gamma_phi_hole_bytes": 0,
+            "gamma_phi_enabled": false
+          },
+          "wall_s": 879.4209249019623
+        }
+      ],
+      "wall_s": 879.4209249019623
+    }
+  },
+  "declared_not_runs": [
+    "merge / prune / depth restoration / \u00a72.7 claim cells \u2014 NOT BUILT (gated on the capture gate)",
+    "factored store / shared well vocabulary \u2014 specified elsewhere (K8), not built",
+    "I2 correlation test (C2W10); cross-stream criterion (C2W10)",
+    "wormholes / learned p0 traversal (C2W9); CSF3 untouched",
+    "any tier-ii, full-CLU or I2 verdict; any performance claim"
+  ],
+  "wall_s": 879.428952217102
+}

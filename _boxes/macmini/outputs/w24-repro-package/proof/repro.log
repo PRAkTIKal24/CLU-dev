@@ -1,0 +1,101 @@
+# Full reproductions from the fresh copy (/private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofC_20260926T012529/pkg), 2026-09-26T00:04:15Z
+
+## Shapes3D: n-CLU K*=32, seed 0, rows 3-4 TEST (Tab. t7, Tab. ledger-kstar)
+$ python scripts/shapes_build_nclu.py --where test --seed 0 --K 32 --npool 131072   (built in the smoke pass: build_nclu_full)
+build_seconds 2.4 address_fit_seconds 86.6
+footprint {"p1_atom_bytes": 516096, "p2_covariance_plus_count_bytes": 560608, "p2_covariance_bytes": 549120, "p2_count_bytes": 11488, "p3_address_book_bytes": 1060864, "p4_coupling_hole_table_bytes": 6610, "honest_total_bytes": 2144178, "reference_pin_bytes": 524288, "times_reference_pin": 4.0897, "netted": false, "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this round -- the single design is 1x its own total"}
+$ python scripts/shapes_score_arms.py --corners rows34 --seed 0 --arms store:runs/shapes3d/stores/test/seed0/K32_n131072/arm.pkl:store_K32_n131072
+[02:04:41]   store_K32_n131072                            novel/corner 47.495 (ceiling 52.18)  in 18s
+[02:04:58]   store_K32_n131072__landscape_removed         novel/corner 0.000 (ceiling 52.18)  in 17s
+[02:05:15]   store_K32_n131072__landscape_shuffled        novel/corner 0.000 (ceiling 52.18)  in 17s
+[02:05:15]   across-wells DERANGEMENT perm=[28, 29, 25, 18, 24, 14, 15, 13, 9, 19, 7, 20, 5, 10, 3, 26, 12, 4, 0, 6, 27, 30, 11, 31, 8, 17, 22, 1, 23, 21, 2, 16] fixed_points=0 | historical T7 perm fixed_points=0
+[02:05:32]   store_K32_n131072__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 17s
+[02:05:50]   store_K32_n131072__random_atoms              novel/corner 0.000 (ceiling 52.18)  in 17s
+scoring runtime_s=95
+n-CLU all-109 47.495 | row3 31.600 | row4 66.959
+control landscape_removed                  all-109 0.000
+control landscape_shuffled                 all-109 0.000
+control landscape_shuffled_across_wells    all-109 0.000
+control random_atoms                       all-109 0.000
+
+## Shapes3D deletion, random 1% of items, seed 0 (Tab. del item row; run in the smoke pass: delete_nclu_item)
+rows deleted 1311
+(a) max|mode dev| 8.102506399154663e-08
+(d) survivors before 47.495 -> after 47.477 (paired -0.018); downdate - refit-without +0.000
+(b) rendered rel dev 2.138e-09; book refit from statistic 86.3 s
+
+## Shapes3D lookup-table floor, seed 0 (Tab. t7 floor row; built and scored in the smoke pass)
+FileNotFoundError: [Errno 2] No such file or directory: 'runs/shapes3d/scores/rows34/seed0/table_FLOOR.json'
+
+## Generation table, K* row and its controls, seed 0 (Tab. gentable-kstar; run in the smoke pass: generation_table_kstar)
+kstar                                    composition-B aggregate 0.5718
+kstar/landscape_removed                  composition-B aggregate 0.0556
+kstar/landscape_shuffled                 composition-B aggregate 0.1481
+kstar/landscape_shuffled_across_wells    composition-B aggregate 0.1273
+kstar/random_atoms                       composition-B aggregate 0.1458
+deployed bytes (four-part) 2145738
+
+## CMAZE-T: words + observation, TEST, seed 0, full run (Tab. cmazet-sym)
+$ python scripts/cmazet_symmetric.py 0 runs/cmaze_t/symmetric/test --cond BOTH --leg test
+exit 0 runtime_s=219
+  CLU                                                                         0.8003
+  control: landscape_removed                                                  0.0000
+  control: landscape_shuffled                                                 0.2313
+  control: landscape_shuffled_across_wells                                    0.4152
+  control: random_atoms                                                       0.2707
+  arm: BLIND-COLOUR (learned: colour identity removed from the request)       0.0000
+  arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)    0.2392
+  rival: mlp                                                                  0.4875
+  rival@10x-steps: mlp                                                        0.6281
+  diagnostic@10x-read-floats: mlp                                             0.6150
+  rival: lstm                                                                 0.2852
+  rival@10x-steps: lstm                                                       0.8003
+  diagnostic@10x-read-floats: lstm                                            0.8108
+  rival: transformer                                                          0.6781
+  rival@10x-steps: transformer                                                0.6991
+  diagnostic@10x-read-floats: transformer                                     0.8239
+  floor: lookup cross-maze WORDS                                              0.0000
+  floor: lookup cross-maze raw r1                                             0.0000
+  floor: fragment cross-maze r1                                               0.0460
+  floor: lookup WITHIN-maze raw r1 (NOT transfer)                             0.1275
+  column: ORACLE (planner)                                                    1.0000
+  column: BLIND-A (planner)                                                   0.5453
+  column: BLIND-B (planner)                                                   0.9080
+  column: BLIND-COLOUR (planner)                                              0.5466
+  column: BLIND-SEQUENTIAL (planner)                                          0.9080
+  column: BLIND-FACTOR (planner)                                              0.6189
+rollout {"n_rollouts": 45, "mean_route_len": 40.955555555555556, "arms": {"CLU": {"label": "", "n_rollouts": 45, "validity": 0.0, "goal_reached_rate": 0.0, "all_steps_exact_rate": 0.0, "per_step_exactness": 0.9303405572755418, "steps_attempted": 646, "mean_rollout_length": 40.955555555555556, "mean_first_er
+$ python scripts/cmazet_tables_six_seeds.py runs/cmaze_t/symmetric   (seed 0 only present)
+wrote TABLES.md + MAZE-T-SEED4.json; BOTH-TEST seeds [0] OBS-VAL [] WF [] REL []; class {}
+end 2026-09-26T00:09:29Z
+table floor all-109 8.229 | row3 5.833 | row4 11.163
+
+# Comparison with the paper (DRAFT-v2.tex), proof C (final package, fresh venv)
+| paper cell (tex line) | printed | reproduced here | verdict |
+|---|---|---|---|
+| Tab. t7, n-CLU K*=32 seed 0, all 109 (l.554) | 47.495 | 47.495 (47.4954) | MATCH |
+| Tab. t7, four landscape controls (l.567) | 0.000 | 0.000 / 0.000 / 0.000 / 0.000 | MATCH |
+| Tab. t7, table floor seed 0 (l.565) | 8.229 | 8.229 | MATCH |
+| K* footprint table seed 0: address book / four-part total (l.647, l.649) | 1,060,864 / 2,144,178 | 1,060,864 / 2,144,178 | MATCH |
+| Tab. del, item 1%, seed 0: rows / (d) before->after (paired) / downdate-refit (l.856) | 1,311 / 47.495 -> 47.477 (-0.018) / +0.000 | 1,311 / 47.495 -> 47.477 (-0.018) / +0.000 | MATCH |
+| Tab. del, item seed 0, (b) statistic dev (l.856) | 0 | 0 | MATCH |
+| Tab. del, item seed 0, (a) max mode dev; (b) rendered rel dev (l.856) | 2.34e-07; 5.83e-10 | 8.10e-08; 2.14e-09 | DIFFERENT VALUES, both at float roundoff (not a claim value) |
+| Tab. del, statistic bytes (l.871) | 967,304,800 B | 967,304,800 B | MATCH |
+| Tab. gentable-kstar, K* seed 0 (l.1399) | 0.5718, 2,145,738 B | 0.5718, 2,145,738 B | MATCH |
+| Tab. gentable-kstar, controls seed 0: removed / shuffled / random atoms (l.1400-1403) | 0.0556 / 0.1481 / 0.1458 | 0.0556 / 0.1481 / 0.1458 | MATCH |
+| Tab. gentable-kstar, shuffled across wells seed 0 (l.1402) | 0.1065 | 0.1273 | MISMATCH (reported, not tuned) |
+| Tab. cmazet-sym, words+observation n-CLU seed 0 (l.2366) | 0.800 | 0.8003 (0.8002628) | MATCH (bit-identical to the original run record) |
+| Tab. cmazet-sym, best matched baseline seed 0 (l.2366) | 0.627 | 0.8003 (lstm, 80,000 steps) | MISMATCH: gradient-trained baselines differ across machines (see below) |
+| Tab. cmazet-sym, n-CLU - baseline seed 0 (l.2366) | +0.173 | +0.000 | MISMATCH, follows from the row above |
+| Tab. cmazet-sym, highest landscape control seed 0 (l.2369) | 0.415 | 0.4152 | MATCH |
+| Tab. cmazet-sym, learned blind-sequential seed 0 (l.2369) | 0.239 | 0.2392 | MATCH |
+| Tab. cmazet-sym, cross-maze word lookup (l.2369) | 0.000 | 0.000 | MATCH |
+| Tab. cmazet, per-step accuracy seed 0 (l.2263) | 0.930 | 0.9303 | MATCH |
+
+Cross-machine diagnostic (proof A + original code): the ORIGINAL unmodified runner from the source
+clone, run on this machine, gives every arm of the package's run exactly (n-CLU 0.8002628; rival@10x-steps
+lstm 0.8002628; rival transformer 0.6780552; ...). Against the original run record
+(rival@10x-steps lstm 0.6268068, rival transformer 0.4717477, rival@10x-steps mlp 0.6123522) the
+gradient-trained baselines differ; the n-CLU, the four controls, the learned blind arms, the lookup
+floors and the planner columns are bit-exact. The package is faithful; gradient training does not
+reproduce across the two machines.

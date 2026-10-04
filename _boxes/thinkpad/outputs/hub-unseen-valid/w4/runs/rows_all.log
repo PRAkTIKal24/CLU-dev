@@ -1,0 +1,78 @@
+=== scored run finished; filling all seven rows ===
+[rows] seed 0 cache gen 2 asserted: {'seed_0': {'encoder_param_hash': '98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d', 'n_rows': 480000, 'generation': 2, 'matches_decoder': True}}
+  arm factor_aligned_balanced: already fitted, loading
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  arm factor_aligned_balanced: r1_seen accept=1.0000 valid=0.6348
+  arm factor_aligned_balanced: r2_unseen_valid accept=1.0000 valid=0.6055
+  arm factor_aligned_balanced: r5_comp_refusal accept=0.0000 valid=0.0000
+  arm factor_aligned_balanced: r6_invalid_refusal accept=0.0000 valid=0.0000
+  arm factor_aligned_balanced: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+  arm factor_aligned_balanced: all rows done in 593.5s
+[rows] seed 0 factor_aligned_balanced: done in 617s -> {'incomplete': False, 'n_done': 109}
+  arm knn_proto: already fitted, loading
+  arm knn_proto: r1_seen accept=1.0000 valid=0.1875
+  arm knn_proto: r2_unseen_valid accept=1.0000 valid=0.2031
+  arm knn_proto: r5_comp_refusal accept=0.0000 valid=0.0000
+  arm knn_proto: r6_invalid_refusal accept=0.0000 valid=0.0000
+  arm knn_proto: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+  arm knn_proto: all rows done in 523.0s
+[rows] seed 0 knn_proto: done in 548s -> {'incomplete': False, 'n_done': 109}
+  arm basis_head: already fitted, loading
+  arm basis_head: r1_seen accept=1.0000 valid=0.5957
+  arm basis_head: r2_unseen_valid accept=1.0000 valid=0.5918
+  arm basis_head: r5_comp_refusal accept=0.0000 valid=0.0000
+  arm basis_head: r6_invalid_refusal accept=0.0000 valid=0.0000
+  arm basis_head: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+  arm basis_head: all rows done in 493.0s
+[rows] seed 0 basis_head: done in 515s -> {'incomplete': False, 'n_done': 109}
+  arm landscape_removed: already fitted, loading
+  arm landscape_removed: r1_seen accept=1.0000 valid=0.0000
+  arm landscape_removed: r2_unseen_valid accept=1.0000 valid=0.0000
+  arm landscape_removed: r5_comp_refusal accept=0.0000 valid=0.0000
+  arm landscape_removed: r6_invalid_refusal accept=0.0000 valid=0.0000
+  arm landscape_removed: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+  arm landscape_removed: all rows done in 473.0s
+[rows] seed 0 landscape_removed: done in 500s -> {'incomplete': False, 'n_done': 109}
+  arm landscape_shuffled: already fitted, loading

@@ -1,0 +1,210 @@
+{
+ "rung": "shipped",
+ "seed": 1,
+ "chlu_file": "C:\\chlu\\worktrees\\CHLU-w20-shapes-data-matched\\chlu\\__init__.py",
+ "cache": {
+  "generation": 2,
+  "scope": "full",
+  "n_rows": 480000,
+  "root": "C:/chlu/outputs/spoke-a-rivals/cache_generation2"
+ },
+ "corner_check": {
+  "n_corners": 109,
+  "n_rows": 5688,
+  "pairwise_disjoint": true,
+  "all_rows_held_out": true,
+  "rows_per_corner": [
+   36,
+   72
+  ]
+ },
+ "n_corners": 109,
+ "DEV_truncated": false,
+ "fastjudge_positive_control": {
+  "check": "FastJudge == exp_gen_factor_wells.Judge.read_back",
+  "n_requests": 256,
+  "n_elements_compared": 1536,
+  "identical": true,
+  "what": "the shipped path rebuilds eqx.filter_jit(jax.vmap(model)) on every call, so it recompiles per call; this path builds it once. Same weights, same dtype, same batching, same argmax."
+ },
+ "fit_split": {
+  "mode": "stratified",
+  "rule": "deficit-priority greedy on the pool's own per-factor marginals (target[f][v] = n_val * count_pool[f][v] / n_pool), seeded tie-break",
+  "n_pool": 131072,
+  "n_fit": 130560,
+  "n_val": 512,
+  "tiebreak_jitter": 1.0,
+  "rng": "np.random.default_rng(1*6637+20260914)",
+  "fit_is_pool_minus_val": true
+ },
+ "estimand": {
+  "metric": "distinct_valid_novel_tuples",
+  "unit": "corner",
+  "function": "exp_gen_factor_wells.per_corner_scores"
+ },
+ "arms": {
+  "lace": {
+   "arm": "lace",
+   "n_corners": 109,
+   "distinct_valid_novel_tuples_mean": 0.045871559633027525,
+   "distinct_valid_novel_tuples_sd": 0.21017281693870976,
+   "judge_accuracy_mean": 0.001019367991845056,
+   "budget": {
+    "classifier_params": 4073663,
+    "whitening_floats": 4196352,
+    "deployed_bytes_classifier_only": 16294652,
+    "deployed_bytes_classifier_plus_whitening": 33080060,
+    "x_store_reference_classifier_only": 31.08,
+    "x_store_reference_with_whitening": 63.095,
+    "fit_rows": 130560,
+    "val_rows": 512,
+    "epochs": 50,
+    "steps": 51000,
+    "tuning_trials": 36,
+    "tune_epochs": 6,
+    "tune_ld_steps": 30,
+    "tune_n": 256,
+    "sampler": "ode (dopri5, the PRIMARY sampler)",
+    "convention": "float32 parameters x 4 B; the classifier alone and classifier + whitening are BOTH printed; \u26d4 never matched to the store"
+   },
+   "selected": {
+    "sigma": 0.03,
+    "form": "both",
+    "shrinkage": "none",
+    "val_aggregate": 0.3170572916666667
+   },
+   "whitening_checks": {
+    "none": {
+     "n": 8192.0,
+     "mean_abs_mean": 0.00822114385664463,
+     "mean_abs_diag_minus_one": 0.061921768839269725,
+     "mean_abs_offdiag": 0.008174557625850011,
+     "roundtrip_max_abs_err": 4.1961669921875e-05
+    },
+    "ledoit_wolf": {
+     "n": 8192.0,
+     "mean_abs_mean": 0.007955455221235752,
+     "mean_abs_diag_minus_one": 0.09534791614522525,
+     "mean_abs_offdiag": 0.0076723562321862155,
+     "roundtrip_max_abs_err": 4.38690185546875e-05
+    },
+    "1e-3": {
+     "n": 8192.0,
+     "mean_abs_mean": 0.007087698206305504,
+     "mean_abs_diag_minus_one": 0.2539740364357834,
+     "mean_abs_offdiag": 0.006479104307632983,
+     "roundtrip_max_abs_err": 3.24249267578125e-05
+    }
+   },
+   "classifier": {
+    "steps": 51000,
+    "steps_per_epoch": 1020,
+    "n_epochs": 50,
+    "batch": 128,
+    "lr": 0.0001,
+    "warmup_iters": 1000,
+    "loss_first": 2.3550400733947754,
+    "loss_final": 0.00045248374226503074
+   },
+   "own_val_accuracy": {
+    "per_factor": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     0.998046875
+    ],
+    "mean": 0.9996744791666666,
+    "n": 512
+   },
+   "seconds_fit": 26556.0,
+   "seconds_score": 2022.4,
+   "seconds_total": 28578.4,
+   "OWN_BUDGET": true,
+   "refusals": {}
+  },
+  "poe": {
+   "arm": "poe",
+   "n_corners": 109,
+   "distinct_valid_novel_tuples_mean": 0.0,
+   "distinct_valid_novel_tuples_sd": 0.0,
+   "judge_accuracy_mean": 0.0,
+   "budget": {
+    "expert_params": 3556665,
+    "standardiser_floats": 4096,
+    "deployed_bytes": 14226660,
+    "x_store_reference": 27.135,
+    "fit_rows": 130560,
+    "val_rows": 512,
+    "n_experts": 6,
+    "hidden": 256,
+    "depth": 2,
+    "epochs": 20,
+    "tuning_trials": 36,
+    "tune_n": 256,
+    "sampler": "SGLD from noise, Langevin-consistent sqrt(2 lr) noise, prior explicit",
+    "convention": "float32 parameters x 4 B; \u26d4 never matched to the store"
+   },
+   "selected": {
+    "step_size": 0.01,
+    "prior_sigma": 1.0,
+    "n_steps": 200,
+    "clip": false,
+    "val_aggregate": 0.20768229166666666
+   },
+   "experts_fit": [
+    {
+     "factor": "floor_hue",
+     "loss_first": 2.2961599826812744,
+     "loss_final": -0.0,
+     "epochs": 20
+    },
+    {
+     "factor": "wall_hue",
+     "loss_first": 2.3086838722229004,
+     "loss_final": -0.0,
+     "epochs": 20
+    },
+    {
+     "factor": "object_hue",
+     "loss_first": 2.294645309448242,
+     "loss_final": -0.0,
+     "epochs": 20
+    },
+    {
+     "factor": "scale",
+     "loss_first": 2.0908899307250977,
+     "loss_final": 7.843061212042812e-06,
+     "epochs": 20
+    },
+    {
+     "factor": "shape",
+     "loss_first": 1.4061992168426514,
+     "loss_final": -0.0,
+     "epochs": 20
+    },
+    {
+     "factor": "orientation",
+     "loss_first": 2.7007293701171875,
+     "loss_final": -0.0,
+     "epochs": 20
+    }
+   ],
+   "own_val_accuracy_per_factor": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "seconds_fit": 5063.4,
+   "seconds_score": 435.6,
+   "seconds_total": 5499.3,
+   "OWN_BUDGET": true,
+   "refusals": {}
+  }
+ },
+ "failed_arms": []
+}

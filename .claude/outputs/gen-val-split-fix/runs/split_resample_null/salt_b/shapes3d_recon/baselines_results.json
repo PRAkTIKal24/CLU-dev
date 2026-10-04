@@ -1,0 +1,544 @@
+{
+  "NO_KILL_RULE_VERDICT": "\u26d4 This spoke reports arm numbers only; gen-cell-run renders verdicts against a filed prereg.",
+  "byte_ledger": {
+    "fp16": {
+      "bits_per_read_formula": "k * log2(n_entries)",
+      "budget_bytes": 524288,
+      "bytes_formula": "n_entries * D * itemsize + overhead",
+      "bytes_per_entry": 4096,
+      "deployment": "fp16",
+      "dim": 2048,
+      "n_entries": 128,
+      "overhead_bytes": 0,
+      "realised_bytes": 524288,
+      "slack_bytes": 0,
+      "within_budget": true
+    },
+    "fp32": {
+      "bits_per_read_formula": "k * log2(n_entries)",
+      "budget_bytes": 524288,
+      "bytes_formula": "n_entries * D * itemsize + overhead",
+      "bytes_per_entry": 8192,
+      "deployment": "fp32",
+      "dim": 2048,
+      "n_entries": 64,
+      "overhead_bytes": 0,
+      "realised_bytes": 524288,
+      "slack_bytes": 0,
+      "within_budget": true
+    },
+    "int8": {
+      "bits_per_read_formula": "k * log2(n_entries)",
+      "budget_bytes": 524288,
+      "bytes_formula": "n_entries * D * itemsize + overhead",
+      "bytes_per_entry": 2048,
+      "deployment": "int8",
+      "dim": 2048,
+      "n_entries": 248,
+      "overhead_bytes": 16384,
+      "realised_bytes": 524288,
+      "slack_bytes": 0,
+      "within_budget": true
+    }
+  },
+  "byte_target": {
+    "K": null,
+    "assertion": "realised == expect_byte_target_bytes",
+    "coupling_bytes": 0,
+    "coupling_bytes_formula": "K(K-1)/2 * M^2 * 4",
+    "expected_total_bytes": 524288,
+    "n_modes": null,
+    "rationale": "\u26d4 R26 ruling 3 (2026-09-13) SUPERSEDES the 2026-09-12 Head ruling that set this target to store + inter-well PMI coupling. Conditional dreaming is dropped as the composition mechanism, so gen_dream's coupling field is neither fitted nor deployed and the target reverts 688,128 -> 524,288 B (= store_bytes). The historical 3-seed run at 688,128 B gave the kNN arm a declared ~31 % byte ADVANTAGE \u2014 conservative in direction, \u26d4 but it is NOT byte-matched and must never be quoted as such. \u2b50 bits_per_read is untouched at K*log2(M) either way (R20).",
+    "source_coupling": "excluded (include_coupling_bytes=False)",
+    "source_store": "/Users/user/Desktop/CHLU/.claude/outputs/gen-store-grouping/runs/shapes3d_recon/store_bytes.json",
+    "store_bytes": 524288,
+    "store_meta": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dataset": "shapes3d",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_wells": 5,
+      "note": "\u2b50 gen-baselines byte-matches its kNN arm to `store_bytes`. The addressing head is NOT included; it is reported in store_results.json under arms.*.bits_per_read.",
+      "pretext": "recon",
+      "schema": "chlu-gen-store-bytes/1",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        77568,
+        78080,
+        146688,
+        128256,
+        93696
+      ]
+    },
+    "superseded_by_R26_ruling_3": false,
+    "total_bytes": 524288
+  },
+  "condition": "recomb2element",
+  "dataset": "shapes3d",
+  "decoder": {
+    "decoder_source": "decoder_lift_v1",
+    "encoder_param_hash_it_was_fit_against": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+    "param_count": 1516227,
+    "param_hash": "01ef91f75eeaae7be8d83a220c9cc6629120345357da9033db22375c278ab196",
+    "recipe": "v1_capacity_schedule",
+    "superseded": false
+  },
+  "n_seeds": 1,
+  "pretext": "recon",
+  "prototype_table_ledger": {
+    "bytes": 475136,
+    "bytes_formula": "(sum_k C_k + 1) * D * 4",
+    "dim": 2048,
+    "dtype": "float32",
+    "n_prototypes": 57,
+    "role": "request embedding == the kNN arm's ADDRESSING HEAD; the store's own byte count excludes the CLU addressing head by the same convention"
+  },
+  "registered_controls": {
+    "base_is_instantiated_by": "B",
+    "control_map": {
+      "duplicate_factor": "a7_redundant",
+      "out_of_range": "base"
+    },
+    "dedup_sensitivity_sets": {
+      "A7D": {
+        "derived_from": "A7",
+        "n_records": 72,
+        "n_terms": 6,
+        "role": "\u2b50 DECLARED SENSITIVITY \u2014 isolates R8's double-counted redundant term; \u26d4 never a registered control"
+      }
+    },
+    "note": "\u2b50 out_of_range declares `base` (the ordinary valid pool) so it is A7-CLEAN AS SHIPPED and must reproduce bit-identically; \u26d4 only the duplicate_factor half and the pooled companion move.",
+    "registry": "/Users/user/Desktop/CHLU/.claude/data/gen/shapes3d/query_sets.json",
+    "scored": true,
+    "sets": {
+      "A7": {
+        "file": "/Users/user/Desktop/CHLU/.claude/data/gen/shapes3d/a7_redundant.json",
+        "held_out_rows_spent": 0,
+        "n_records": 72,
+        "n_terms": 7,
+        "registered_as": "a7_redundant",
+        "sha256_registered": "536773ed9c1bb8cdede0dbd956a5921f0f0bc7746f14c1cb6a261ff9c4e01191"
+      }
+    }
+  },
+  "schema": "chlu-gen-baselines-aggregate/1",
+  "seeds": [
+    0
+  ],
+  "store_ceiling_balanced_accuracy": 0.6866,
+  "summary": {
+    "_ceiling_decoder": {
+      "A_aggregate": {
+        "mean": 0.9892578125,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9892578125
+        ]
+      },
+      "in_corner_auroc": {
+        "mean": 0.9720117845117845,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9720117845117845
+        ]
+      },
+      "in_corner_balacc": {
+        "mean": 0.9223484848484849,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9223484848484849
+        ]
+      }
+    },
+    "knn": {
+      "A7D_SENSITIVITY_duplicate_factor": {
+        "mean": 0.683641975308642,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.683641975308642
+        ]
+      },
+      "A7D_SENSITIVITY_out_of_range": {
+        "mean": 0.9452160493827161,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9452160493827161
+        ]
+      },
+      "A7_duplicate_factor": {
+        "mean": 0.33564814814814814,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.33564814814814814
+        ]
+      },
+      "A7_out_of_range": {
+        "mean": 0.9575617283950617,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9575617283950617
+        ]
+      },
+      "A7_pooled_COMPANION": {
+        "mean": 0.6466049382716049,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.6466049382716049
+        ]
+      },
+      "A_aggregate": {
+        "mean": 0.49462890625,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.49462890625
+        ]
+      },
+      "B_aggregate": {
+        "mean": 0.47453703703703703,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.47453703703703703
+        ]
+      },
+      "B_compositional": {
+        "mean": 0.9583333333333334,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9583333333333334
+        ]
+      },
+      "CONTAMINATED_duplicate_factor": {
+        "mean": 0.7191358024691358,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.7191358024691358
+        ]
+      },
+      "CONTAMINATED_out_of_range": {
+        "mean": 0.9575617283950617,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9575617283950617
+        ]
+      },
+      "ORACLE_auroc_c_vs_a_union_b": {
+        "mean": 0.8306848134630981,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8306848134630981
+        ]
+      },
+      "ORACLE_auroc_c_vs_b": {
+        "mean": 0.8703703703703703,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8703703703703703
+        ]
+      },
+      "auroc_c_vs_a": {
+        "mean": 0.8134223090277778,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8134223090277778
+        ]
+      },
+      "auroc_c_vs_a_union_b": {
+        "mean": 0.8150598134630981,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8150598134630981
+        ]
+      },
+      "auroc_c_vs_b": {
+        "mean": 0.8383487654320988,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8383487654320988
+        ]
+      },
+      "in_corner_auroc": {
+        "mean": 0.4327651515151515,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.4327651515151515
+        ]
+      },
+      "in_corner_balacc": {
+        "mean": 0.4842171717171717,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.4842171717171717
+        ]
+      }
+    },
+    "knn_compsel": {
+      "A7D_SENSITIVITY_duplicate_factor": {
+        "mean": 0.691358024691358,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.691358024691358
+        ]
+      },
+      "A7D_SENSITIVITY_out_of_range": {
+        "mean": 0.9390432098765432,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9390432098765432
+        ]
+      },
+      "A7_duplicate_factor": {
+        "mean": 0.27276234567901236,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.27276234567901236
+        ]
+      },
+      "A7_out_of_range": {
+        "mean": 0.9571759259259259,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9571759259259259
+        ]
+      },
+      "A7_pooled_COMPANION": {
+        "mean": 0.6149691358024691,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.6149691358024691
+        ]
+      },
+      "A_aggregate": {
+        "mean": 0.4563802083333333,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.4563802083333333
+        ]
+      },
+      "B_aggregate": {
+        "mean": 0.3333333333333333,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.3333333333333333
+        ]
+      },
+      "B_compositional": {
+        "mean": 0.027777777777777776,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.027777777777777776
+        ]
+      },
+      "CONTAMINATED_duplicate_factor": {
+        "mean": 0.7496141975308642,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.7496141975308642
+        ]
+      },
+      "CONTAMINATED_out_of_range": {
+        "mean": 0.9571759259259259,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9571759259259259
+        ]
+      },
+      "auroc_c_vs_a": {
+        "mean": 0.8159044053819444,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8159044053819444
+        ]
+      },
+      "auroc_c_vs_a_union_b": {
+        "mean": 0.8183672952149229,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8183672952149229
+        ]
+      },
+      "auroc_c_vs_b": {
+        "mean": 0.8533950617283951,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8533950617283951
+        ]
+      },
+      "in_corner_auroc": {
+        "mean": 0.5329335016835017,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.5329335016835017
+        ]
+      },
+      "in_corner_balacc": {
+        "mean": 0.5063131313131313,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.5063131313131313
+        ]
+      }
+    },
+    "knn_proto": {
+      "A7D_SENSITIVITY_duplicate_factor": {
+        "mean": 0.683641975308642,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.683641975308642
+        ]
+      },
+      "A7D_SENSITIVITY_out_of_range": {
+        "mean": 0.9452160493827161,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9452160493827161
+        ]
+      },
+      "A7_duplicate_factor": {
+        "mean": 0.33564814814814814,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.33564814814814814
+        ]
+      },
+      "A7_out_of_range": {
+        "mean": 0.9575617283950617,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9575617283950617
+        ]
+      },
+      "A7_pooled_COMPANION": {
+        "mean": 0.6466049382716049,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.6466049382716049
+        ]
+      },
+      "A_aggregate": {
+        "mean": 0.7825520833333334,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.7825520833333334
+        ]
+      },
+      "B_aggregate": {
+        "mean": 0.7754629629629629,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.7754629629629629
+        ]
+      },
+      "B_compositional": {
+        "mean": 1.0,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          1.0
+        ]
+      },
+      "CONTAMINATED_duplicate_factor": {
+        "mean": 0.7191358024691358,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.7191358024691358
+        ]
+      },
+      "CONTAMINATED_out_of_range": {
+        "mean": 0.9575617283950617,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9575617283950617
+        ]
+      },
+      "auroc_c_vs_a": {
+        "mean": 0.8134223090277778,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8134223090277778
+        ]
+      },
+      "auroc_c_vs_a_union_b": {
+        "mean": 0.8150598134630981,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8150598134630981
+        ]
+      },
+      "auroc_c_vs_b": {
+        "mean": 0.8383487654320988,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8383487654320988
+        ]
+      },
+      "in_corner_auroc": {
+        "mean": 0.9922839506172839,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.9922839506172839
+        ]
+      },
+      "in_corner_balacc": {
+        "mean": 0.8762626262626263,
+        "n_seeds": 1,
+        "std": 0.0,
+        "values": [
+          0.8762626262626263
+        ]
+      }
+    }
+  },
+  "tuning_budget": {
+    "knn": 36
+  }
+}

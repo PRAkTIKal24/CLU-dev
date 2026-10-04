@@ -1,0 +1,65 @@
+[18:04:30]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[18:04:30]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[18:04:32] rows: pool=32768 B=72 MS=198 fit=32256 val=512
+[18:04:32] cache coverage: 33038/33038 rows cached, shortfall=0 (cache scope=full, n_rows=480000)
+[18:04:36]   ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+[18:04:36]   ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+[18:04:38] shipped store: K=5 wells=[303, 305, 573, 501, 366] deployed=524288 B
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[18:04:44]   clu_argmax_shipped     B=0.5903 tuples= 9/72  MS=0.6069  bytes=598528
+[18:04:48]   clu_argmax_store_removed B=0.1111 tuples= 1/72  MS=0.1625  bytes=598528
+[18:04:52]   clu_linear             B=0.7917 tuples=27/72  MS=0.7458  bytes=598528
+[18:04:55]   clu_linear_store_removed B=0.1111 tuples= 4/72  MS=0.1658  bytes=598528
+[18:04:55]   channel geometry loaded from chan_geom_scored_s0.npz
+[18:07:13]   arm                    B=0.8495 tuples=51/72  MS=0.8199  bytes=454336
+[18:07:13]   C.4 nearest-atom/spread = 2.8963/0.8563 = 3.382
+[18:07:48]   control_kmeans         B=0.8310 tuples=47/72  MS=0.7963  bytes=454336
+[18:08:23]   control_atoms_medoid   B=0.8495 tuples=46/72  MS=0.7870  bytes=454336
+[18:08:36]   control_atoms_kpp      B=0.8634 tuples=46/72  MS=0.8157  bytes=454336
+[18:08:39]   control_atoms_random   B=0.8194 tuples=46/72  MS=0.7980  bytes=454336
+[18:08:45]   control_pca_affine     B=0.8472 tuples=53/72  MS=0.8123  bytes=454336
+[18:08:49]   control_random         B=0.6944 tuples=44/72  MS=0.7643  bytes=454336
+[18:08:53]   control_mean           B=0.3657 tuples=11/72  MS=0.3224  bytes=454336
+[18:08:57]   knn_proto_recheck      B=0.8588 tuples=57/72  MS=0.8148  bytes=475136
+[18:08:57] done in 276.6s -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-generation-table\relaunch\scored\arm

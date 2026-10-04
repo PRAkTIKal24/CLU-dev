@@ -1,0 +1,337 @@
+{
+  "schema": "w17-rendered-compositions/requests/1",
+  "STATUS": "PLACEHOLDER -- CORNER-LEVEL ONLY",
+  "why": "the exact 6-factor tuples are the corners' dataset rows, expanded by exp_gen_factor_wells._cell_mask_rows from value_holdout/value_cells.json + factor_index.npz, neither of which is on this machine (NEEDS-ARTEFACTS.json). `--render` overwrites this file with the exact tuples it rendered.",
+  "written_utc": "2026-09-22T22:27:09Z",
+  "selection": {
+    "schema": "w17-rendered-compositions/selection/1",
+    "render_seed": 0,
+    "K_star": 32,
+    "sources": {
+      "scored_per_seed": {
+        "0": "/Users/batmac/clu/evidence/outputs/w12-single-design-crossover/scored/run1_seed0_K32/scored.json",
+        "1": "/Users/batmac/clu/evidence/outputs/w12b-nr6-and-kstar/scored/run3_seed1_K32/scored.json",
+        "2": "/Users/batmac/clu/evidence/outputs/w12b-nr6-and-kstar/scored/run3_seed2_K32/scored.json"
+      },
+      "deletion": "/Users/batmac/clu/evidence/outputs/w12-single-design-crossover/deletion/test_seed0_K32/deletion.json",
+      "winner_hashes": "/Users/batmac/clu/evidence/outputs/gen-decoder-lift/winner/winner_hashes.json"
+    },
+    "arms": [
+      {
+        "key": "cov_tensor",
+        "label": "CLU",
+        "colour": "#2a78d6"
+      },
+      {
+        "key": "mlp__as_trained",
+        "label": "MLP",
+        "colour": "#1baf7a"
+      },
+      {
+        "key": "lstm__as_trained",
+        "label": "LSTM",
+        "colour": "#eda100"
+      },
+      {
+        "key": "transformer__as_trained",
+        "label": "Transformer",
+        "colour": "#e87ba4"
+      },
+      {
+        "key": "cont_mlp__as_trained",
+        "label": "Continuous\nMLP",
+        "colour": "#008300"
+      },
+      {
+        "key": "table",
+        "label": "Lookup table\n(floor)",
+        "colour": "#6b6a66"
+      }
+    ],
+    "set1_clu_composes_rivals_fail": {
+      "rule": "CLU n_valid == n_requests AND every rival + floor n_valid == 0 (seed 0); first '-hh' pair sub-corner, first n-way corner",
+      "all_qualifying_corners": [
+        "pair-001/f3-hl",
+        "pair-001/f4-hh",
+        "pair-001/f4-hl",
+        "pair-001/f4-lh",
+        "pair-002/f0-ll",
+        "nway-034"
+      ],
+      "corners": [
+        "pair-001/f4-hh",
+        "nway-034"
+      ],
+      "counts_n_valid_of_n": {
+        "pair-001/f4-hh": {
+          "cov_tensor": [
+            36,
+            36
+          ],
+          "mlp__as_trained": [
+            0,
+            36
+          ],
+          "lstm__as_trained": [
+            0,
+            36
+          ],
+          "transformer__as_trained": [
+            0,
+            36
+          ],
+          "cont_mlp__as_trained": [
+            0,
+            36
+          ],
+          "table": [
+            0,
+            36
+          ]
+        },
+        "nway-034": {
+          "cov_tensor": [
+            72,
+            72
+          ],
+          "mlp__as_trained": [
+            0,
+            72
+          ],
+          "lstm__as_trained": [
+            0,
+            72
+          ],
+          "transformer__as_trained": [
+            0,
+            72
+          ],
+          "cont_mlp__as_trained": [
+            0,
+            72
+          ],
+          "table": [
+            0,
+            72
+          ]
+        }
+      },
+      "verdict_by_construction": {
+        "CLU": "valid",
+        "every other arm": "invalid"
+      }
+    },
+    "set2_all_arms_succeed": {
+      "rule": "every arm incl. the continuous MLP n_valid > 0 in the SAME seed (necessary, not sufficient); request-level co-validity decided at render",
+      "candidate_corners_per_seed": {
+        "0": [
+          "nway-029"
+        ],
+        "1": [
+          "nway-029"
+        ],
+        "2": [
+          "nway-038",
+          "nway-041"
+        ]
+      },
+      "counts_n_valid_of_n": {
+        "0": {
+          "nway-029": {
+            "cov_tensor": [
+              60,
+              72
+            ],
+            "mlp__as_trained": [
+              8,
+              72
+            ],
+            "lstm__as_trained": [
+              13,
+              72
+            ],
+            "transformer__as_trained": [
+              10,
+              72
+            ],
+            "cont_mlp__as_trained": [
+              1,
+              72
+            ],
+            "table": [
+              24,
+              72
+            ]
+          }
+        },
+        "1": {
+          "nway-029": {
+            "cov_tensor": [
+              72,
+              72
+            ],
+            "mlp__as_trained": [
+              2,
+              72
+            ],
+            "lstm__as_trained": [
+              20,
+              72
+            ],
+            "transformer__as_trained": [
+              5,
+              72
+            ],
+            "cont_mlp__as_trained": [
+              1,
+              72
+            ],
+            "table": [
+              14,
+              72
+            ]
+          }
+        },
+        "2": {
+          "nway-038": {
+            "cov_tensor": [
+              72,
+              72
+            ],
+            "mlp__as_trained": [
+              6,
+              72
+            ],
+            "lstm__as_trained": [
+              19,
+              72
+            ],
+            "transformer__as_trained": [
+              18,
+              72
+            ],
+            "cont_mlp__as_trained": [
+              1,
+              72
+            ],
+            "table": [
+              9,
+              72
+            ]
+          },
+          "nway-041": {
+            "cov_tensor": [
+              68,
+              72
+            ],
+            "mlp__as_trained": [
+              4,
+              72
+            ],
+            "lstm__as_trained": [
+              6,
+              72
+            ],
+            "transformer__as_trained": [
+              9,
+              72
+            ],
+            "cont_mlp__as_trained": [
+              1,
+              72
+            ],
+            "table": [
+              17,
+              72
+            ]
+          }
+        }
+      },
+      "fallback_if_empty": "SEEN (fit-split) requests where every arm is valid, labelled SEEN, never passed off as held-out; if that is empty too the set is DECLARED NOT BUILDABLE with the counts"
+    },
+    "set3_all_arms_fail": {
+      "rule": "every rival + floor n_valid == 0 AND CLU n_valid < n_requests (seed 0), lowest CLU fraction first",
+      "all_qualifying_corners": [
+        "pair-002/f1-lh",
+        "pair-002/f3-lh",
+        "pair-002/f4-lh",
+        "pair-002/f1-ll",
+        "pair-001/f1-lh",
+        "pair-001/f0-lh",
+        "pair-001/f4-ll",
+        "pair-001/f3-lh"
+      ],
+      "corners": [
+        "pair-002/f1-lh",
+        "pair-002/f3-lh"
+      ],
+      "counts_n_valid_of_n": {
+        "pair-002/f1-lh": {
+          "cov_tensor": [
+            17,
+            36
+          ],
+          "mlp__as_trained": [
+            0,
+            36
+          ],
+          "lstm__as_trained": [
+            0,
+            36
+          ],
+          "transformer__as_trained": [
+            0,
+            36
+          ],
+          "cont_mlp__as_trained": [
+            0,
+            36
+          ],
+          "table": [
+            0,
+            36
+          ]
+        },
+        "pair-002/f3-lh": {
+          "cov_tensor": [
+            20,
+            36
+          ],
+          "mlp__as_trained": [
+            0,
+            36
+          ],
+          "lstm__as_trained": [
+            0,
+            36
+          ],
+          "transformer__as_trained": [
+            0,
+            36
+          ],
+          "cont_mlp__as_trained": [
+            0,
+            36
+          ],
+          "table": [
+            0,
+            36
+          ]
+        }
+      },
+      "verdict_by_construction": {
+        "every arm incl. CLU": "invalid"
+      }
+    },
+    "requests_per_corner": 2,
+    "within_corner_rule": "the corner's requests in the scorer's own order (fw._request_values_from_rows over the corner's rows); the first REQUESTS_PER_CORNER that meet the set's verdict pattern"
+  },
+  "deletion_request_rule": {
+    "scope": "conjunction_live -- every fit row carrying a RED SPHERE (object_hue index 0 AND shape index 2); the task file's red-cube pin is vacuous on this split (deletion.json scopes.conjunction.vacuous_reason)",
+    "pick": "among the deleted fit rows: largest scale index, then largest orientation index, then smallest row id (the task's 'red sphere, large, tilted')",
+    "rival_before": "<family>__as_trained",
+    "rival_after": "<family>__retrain_without__conj-object_hue0-shape2",
+    "clu_after": "the store downdated by the deleted rows' features, atoms re-eigendecomposed, address book carried (scripts/w12_deletion_rows.py, verbatim path)",
+    "floor_excluded": "the lookup table has no retrain-without comparator in w12-deletion-baselines, so it has no after-panel; it is left out of the deletion panel rather than shown half"
+  }
+}

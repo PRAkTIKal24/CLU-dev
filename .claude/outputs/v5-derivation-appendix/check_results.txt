@@ -1,0 +1,40 @@
+R1  det(composed J) d=4 anharmonic gamma=0.13: 0.572897610000  pred (1-g)^4=0.572897610000  rel_err=0.00e+00
+R1b det(gated J): 0.035375485454  pred ((1-g)(1-phi(q')))^4=0.035375485454  (phi(q')=0.501510)  rel_err=2.22e-16
+R2  composed-map eigs vs closed form lam+- : worst |diff| = 1.99e-15
+R3 gamma=0.002: |lam| (composed map) = 0.998999499  sqrt(1-g)=0.998999499  n_half=692.4538  asymptote 2ln2/g=693.1472
+R4 gamma=0.05: |lam| (composed map) = 0.990450703  sqrt(1-g)=0.974679434  n_half=72.2391  (paper floor 27.03)
+R3b mu-independence: h=0.011672 vs h=0.0071222 at gamma=0.002: |lam| = 0.998999499 vs 0.998999499
+R5  designed gamma_crit=2*eps*mu: min=0.0819 max=0.1161  (paper 0.082--0.116)
+R5  emergent s42: 0.02334 (paper 0.02334)   s43: 0.01424 (paper 0.01424)
+R6  h=0.011672: merge gamma*=0.023074  gamma*/(2h)=0.9884  1-h=0.9883  [map: Im just-below=5.19e-04, Im just-above=0.00e+00]
+R6  h=0.0409: merge gamma*=0.078570  gamma*/(2h)=0.9605  1-h=0.9591  [map: Im just-below=1.79e-03, Im just-above=0.00e+00]
+R6  h=0.05: merge gamma*=0.095210  gamma*/(2h)=0.9521  1-h=0.9500  [map: Im just-below=2.18e-03, Im just-above=0.00e+00]
+R7/R8 fitted log-slopes from COMPOSED-MAP eigenvalues, grid geomspace(0.002,0.5,48),
+      windows gamma < gamma_crit/2.5 and gamma > 2.5*gamma_crit (paper's windows):
+    emergent s42: slope-below=-1.0023  slope-above=+1.1262
+    emergent s43: slope-below=-1.0016  slope-above=+1.1030
+    emergent s44: slope-below=-1.0022  slope-above=+1.1254
+    designed mu2=0.67: slope-below=-1.0047  slope-above=+1.2352  (window n=24/8)
+    designed mu2=0.771: slope-below=-1.0051  slope-above=+1.2399  (window n=25/8)
+    designed mu2=1.19: slope-below=-1.0060  slope-above=+1.2727  (window n=27/6)
+    designed mu2=1.093: slope-below=-1.0055  slope-above=+1.2694  (window n=26/6)
+    designed mu2=1.348: slope-below=-1.0060  slope-above=+1.2877  (window n=27/5)
+R9  MC Var(p)/(M T), gamma=0.05, no field: 1.0118  (pred 1.000)
+R10 gphi=0.1: Var(p)/(MT) MC=0.36349  pred g(2-g)/(ge(2-ge))=0.36249  obs/pred=1.0028
+R10 gphi=0.2: Var(p)/(MT) MC=0.23327  pred g(2-g)/(ge(2-ge))=0.23082  obs/pred=1.0106
+R10 gphi=0.3: Var(p)/(MT) MC=0.17567  pred g(2-g)/(ge(2-ge))=0.17480  obs/pred=1.0050
+R10 gphi=0.5: Var(p)/(MT) MC=0.12529  pred g(2-g)/(ge(2-ge))=0.12591  obs/pred=0.9951
+R11 MC D_theta (no field): 2.8084e-04  pred eps*T*(2-g)/(2F^2 g)=2.8846e-04  ratio=0.9736
+R12 MC D_theta (hole gphi=0.5): 2.7671e-06  pred=2.6164e-06  ratio=1.0576
+R12 MC vault D(0)/D(0.5) = 101.49   pred (ge/g)^2 = 110.25  (paper 110.25)
+R12 coupled-bath variant: D=1.9986e-05 pred=2.0781e-05 ratio=0.9618; vault D(0)/Dc(0.5) = 14.05  pred 13.8814*... = 13.88 (paper 13.88)
+R12 ALG identity: vault_absorb/vault_coupled = 7.9423 vs T/T_local = 7.9423  (paper 7.942); T_local=1.2591e-04 (paper 1.26e-4)
+R13 T=0 latch gamma=0.002: max|theta-0.5| after 2e5 steps = 0.00e+00 rad
+R13 T=0 latch gamma=0.5: max|theta-0.5| after 2e5 steps = 0.00e+00 rad
+R13 gamma=0 control: drift at n=5k,10k,15k,20k = [0.9615 1.923  2.8844 3.8459] rad; per-step rate [192.296 192.296 192.296 192.296]e-6 (constant => ballistic/linear). pred eps*p_t/(M r*) = 1.923e-04
+R14 decay/delete commutation (40 keys, delete #17): layout equal=True, amplitudes bit-equal=True
+R4' gamma=0.05, h=0.04: |lam|=0.974679434  sqrt(0.95)=0.974679434  n_half=27.0268  (pred 27.0268; paper 27.03)
+R4' gamma=0.05, h=0.058: |lam|=0.974679434  sqrt(0.95)=0.974679434  n_half=27.0268  (pred 27.0268; paper 27.03)
+R11' D_theta no-field (8192 walkers, burn 20k, 200k fit): 2.8481e-04 pred 2.8846e-04 ratio 0.9873
+R12' D_theta hole gphi=0.5 (8192 walkers, 600k): 2.5543e-06 pred 2.6164e-06 ratio 0.9763
+R12' vault D(0)/D(0.5) = 111.50  pred (ge/g)^2 = 110.25  (paper 110.25)

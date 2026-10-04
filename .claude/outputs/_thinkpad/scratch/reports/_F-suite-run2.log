@@ -1,0 +1,296 @@
+START 2026-09-16T19:34:21
+bringing up nodes...
+bringing up nodes...
+
+.EF.FEFEEFFFFFEEEEEEEEE....E.EE..FFFFFFFFEFFEFEFFEFFF..E.........FFFFFFF [  2%]
+FFE....FFFF.......................F..F..........F..F....F............... [  5%]
+........................................................................ [  7%]
+....................FFFFFF.............................F................ [ 10%]
+..........FF...........................................................F [ 13%]
+FFE..................................................................... [ 15%]
+............................FFFFFF...................................... [ 18%]
+........................................................................ [ 20%]
+........................................................................ [ 23%]
+....................................................................FFFF [ 26%]
+F..................ssss..................................F............ss [ 28%]
+s...................................................s................... [ 31%]
+.............................ss......................................... [ 33%]
+...............sss.sssss................................................ [ 36%]
+........................................................................ [ 39%]
+........................................................................ [ 41%]
+................F..F..F..FFFFFFFFFFF..FFF.F.F..............F............ [ 44%]
+..............s.........F............................................... [ 46%]
+........................................................................ [ 49%]
+........................................................................ [ 52%]
+.................................F...................................... [ 54%]
+.............F.......................................................... [ 57%]
+..............................................F......................... [ 59%]
+.........................F......ss...................................... [ 62%]
+........................................................................ [ 65%]
+....F................................................................... [ 67%]
+........................................................................ [ 70%]
+...........F............................................................ [ 72%]
+........................................................................ [ 75%]
+........................................................................ [ 78%]
+........................................................................ [ 80%]
+........................................................................ [ 83%]
+......F................................................................. [ 85%]
+........................................................................ [ 88%]
+........................................................................ [ 91%]
+................FFFFFFF....................................sss.......... [ 93%]
+............................F........................................... [ 96%]
+.....F.F.........F........F......F...............FFFFF.FFF.......F...... [ 98%]
+..............................                                           [100%]
+============================== warnings summary ===============================
+tests/test_cifar_strong_phi.py: 5 warnings
+tests/test_gen_bridge.py: 2 warnings
+tests/test_cl_entry.py: 5 warnings
+tests/test_gen_bridge_wide.py: 4 warnings
+tests/test_gen_attribution.py: 5 warnings
+tests/test_gen_pretrain.py: 2 warnings
+tests/test_gen_classifier.py: 1 warning
+tests/test_phi_read_in.py: 1 warning
+tests/test_phi_stream.py: 1 warning
+tests/test_phi_encoders.py: 10 warnings
+  C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+  Possibly assigning a JAX-transformed callable as an attribute on
+  equinox._jit._JitWrapper. This will not have any of its parameters updated.
+  
+  For example, the following code is buggy:
+  ```python
+  class MyModule(eqx.Module):
+      vmap_linear: Callable
+  
+      def __init__(self, ...):
+          self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+  
+      def __call__(self, ...):
+          ... = self.vmap_linear(...)
+  ```
+  This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+  the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+  
+  You can most easily fix this either by applying the wrapper at `__call__` time:
+  ```python
+  class MyModule(eqx.Module):
+      linear: Callable
+  
+      def __init__(self, ...):
+          self.linear = eqx.nn.Linear(...)
+  
+      def __call__(self, ...):
+          ... = jax.vmap(self.linear)(...)
+  ```
+  or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+  ```python
+  class MyModule(eqx.Module):
+      vmap_linear: Callable
+  
+      def __init__(self, ...):
+          self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+  
+      def __call__(self, ...):
+          ... = self.vmap_linear(...)
+  ```
+  
+    jit_wrapper = _JitWrapper(
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+tests/test_eval_metrics.py::test_fast_mode_is_subset_of_full
+tests/test_eval_metrics.py::test_point_metrics_keys_and_no_point_adjust
+  C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.venv\Lib\site-packages\sklearn\metrics\_classification.py:1833: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+    _warn_prf(average, modifier, f"{metric.capitalize()} is", result.shape[0])
+
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+  C:\Users\PratikJawahar\chlu\chlu-hub-bundle\chlu\experiments\exp_v1_hopfield_gate.py:232: RuntimeWarning: Mean of empty slice
+    "within_model_auroc": float(np.nanmean(per_ep)) if per_ep else float("nan"),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_c3_csf3_harness.py::test_a_journal_PREDATING_a_memory_field_is_accepted_AT_ITS_DEFAULT
+FAILED tests/test_c3_csf3_harness.py::test_the_same_journal_is_STILL_REFUSED_off_the_default
+FAILED tests/test_c3_csf3_harness.py::test_a_field_the_code_no_longer_has_is_still_refused
+FAILED tests/test_c3_csf3_harness.py::test_the_C3_config_knobs_stay_OUT_of_the_resume_fingerprint
+FAILED tests/test_c3_csf3_harness.py::test_slices_is_a_CLI_ARG_not_a_config_field_so_it_cannot_move_the_journal
+FAILED tests/test_c3_run3_budget_exemption.py::test_a_MISSING_journal_is_refused
+FAILED tests/test_c3_csf3_harness.py::test_a_banked_arm_with_a_MISSING_eqx_fails_loudly_instead_of_retraining
+FAILED tests/test_c3_run3_budget_exemption.py::test_a_CORRUPT_journal_is_refused
+FAILED tests/test_c3_run3_budget_exemption.py::test_a_malformed_spec_is_refused_before_anything_else[journal=x flag=y]
+FAILED tests/test_c3_run3_budget_exemption.py::test_a_malformed_spec_is_refused_before_anything_else[spec1]
+FAILED tests/test_c3_csf3_harness.py::test_the_d_addr_ceiling_probe_is_recorded_but_NOT_applied_as_a_default
+FAILED tests/test_c3_run3_budget_exemption.py::test_a_malformed_spec_is_refused_before_anything_else[spec2]
+FAILED tests/test_c3_gb_geometry.py::test_the_pilot_cell_is_460288_B_per_layer_and_12_layers_bust_the_ceiling
+FAILED tests/test_c3_run3_budget_exemption.py::test_a_malformed_spec_is_refused_before_anything_else[spec3]
+FAILED tests/test_c3_gb_geometry.py::test_G_B_is_1_380_864_B_and_0_658x_of_the_2_MiB_CEILING
+FAILED tests/test_c3_gb_geometry.py::test_G_B_preserves_the_two_sided_CLU_TTT_MATCH_RATIO
+FAILED tests/test_c3_gb_geometry.py::test_every_arm_fits_the_ceiling_under_G_B_and_the_null_arms_are_still_zero
+FAILED tests/test_c3_gb_geometry.py::test_an_unset_store_layers_emits_NOTHING_into_the_pilot_flag_table
+FAILED tests/test_c3_gb_geometry.py::test_the_run2_run3_flag_block_still_differs_by_EXACTLY_the_ONE_key
+FAILED tests/test_c3_run3_budget_exemption.py::test_an_unverified_dict_cannot_pose_as_an_exemption
+FAILED tests/test_c3_gb_geometry.py::test_a_G_B_config_IS_refused_as_a_continuation_of_a_pilot_journal
+FAILED tests/test_c3_gb_geometry.py::test_a_store_layers_journal_RESUMES_despite_the_tuple_list_round_trip
+FAILED tests/test_c3_gb_geometry.py::test_ttt_normalized_write_is_NOT_a_memory_field_and_MEM_would_DROP_it
+FAILED tests/test_c3_gb_geometry.py::test_the_default_model_is_STRUCTURALLY_UNCHANGED_by_the_new_field
+FAILED tests/test_c3_run3_budget_exemption.py::test_the_LADDER_guard_refuses_a_rival_arm_while_the_ceiling_is_INTERIM
+FAILED tests/test_c3_gb_geometry.py::test_the_MODEL_puts_the_cell_in_exactly_the_selected_layers
+FAILED tests/test_c3_run3_budget_exemption.py::test_NO_exemption_plus_over_budget_is_STILL_REFUSED
+FAILED tests/test_c3_gb_geometry.py::test_the_SHELL_stays_bit_identical_across_arms_under_a_selection
+FAILED tests/test_c3_run3_budget_exemption.py::test_the_refusal_message_names_the_exemption_without_offering_a_shortcut
+FAILED tests/test_c3_gb_geometry.py::test_the_none_arm_is_BIT_IDENTICAL_with_and_without_a_selection
+FAILED tests/test_c3_run3_budget_exemption.py::test_the_exemption_is_a_RUN_ARGUMENT_and_NOT_a_PilotConfig_field
+FAILED tests/test_c3_gb_geometry.py::test_a_selected_model_RUNS_and_the_plan_pass_skips_the_non_store_layers
+FAILED tests/test_c3_gb_geometry.py::test_G_B_keeps_the_per_layer_cell_so_the_TTT_eta_n_over_d_CRITERION_FIRES
+FAILED tests/test_c3_run3_budget_exemption.py::test_the_budget_constant_is_named_INTERIM_at_the_point_of_use
+FAILED tests/test_c3_gb_geometry.py::test_the_tokens_the_script_emits_are_ACCEPTED_by_the_REAL_CLI
+FAILED tests/test_c3_run3_budget_exemption.py::test_every_artifact_carries_both_rulings
+FAILED tests/test_c3_gb_geometry.py::test_the_budget_error_names_levers_that_MOVE_BYTES
+FAILED tests/test_c3_geometry_freeze.py::test_the_frozen_geometry_resolves_to_exactly_the_requested_atoms
+FAILED tests/test_c3_geometry_freeze.py::test_the_helper_reproduces_the_built_cell_byte_for_byte
+FAILED tests/test_cloud_launch.py::test_launch_dry_run_plans_a_valid_job - As...
+FAILED tests/test_cloud_launch.py::test_launch_refuses_a_tag_pinned_image - a...
+FAILED tests/test_cloud_launch.py::test_launch_refuses_an_unquotaed_card_naming_card_and_limit
+FAILED tests/test_c3_geometry_freeze.py::test_every_swept_geometry_resolves_to_the_requested_atom_count[512]
+FAILED tests/test_c3_geometry_freeze.py::test_every_swept_geometry_resolves_to_the_requested_atom_count[1024]
+FAILED tests/test_c3_geometry_freeze.py::test_every_swept_geometry_resolves_to_the_requested_atom_count[2048]
+FAILED tests/test_c3_geometry_freeze.py::test_every_swept_geometry_resolves_to_the_requested_atom_count[3072]
+FAILED tests/test_c3_geometry_freeze.py::test_every_swept_geometry_resolves_to_the_requested_atom_count[4096]
+FAILED tests/test_c3_geometry_freeze.py::test_every_swept_geometry_resolves_to_the_requested_atom_count[8192]
+FAILED tests/test_c3_rival_gdn2.py::test_arm_is_drop_in_for_the_pilots_loss_and_per_token_nll
+FAILED tests/test_c3_rival_gdn2.py::test_the_ladder_rows_are_ARITHMETIC_and_build_no_model
+FAILED tests/test_c3_rival_gdn2.py::test_smoke_leg_trains_checkpoints_resumes_ledgers_and_slices
+FAILED tests/test_c3_rival_mamba2.py::test_the_arm_enters_the_ladder_through_the_byte_ledger
+FAILED tests/test_c3_rival_mamba2.py::test_swapping_in_the_rival_leaves_the_shell_BIT_IDENTICAL
+FAILED tests/test_c3_rival_mamba2.py::test_the_arm_runs_the_stream_end_to_end_and_the_loss_is_finite
+FAILED tests/test_c3_csf3_harness.py::test_the_budget_is_one_named_constant_at_the_ruled_value
+FAILED tests/test_c3_csf3_harness.py::test_an_UNLEDGERED_arm_fails_loudly - M...
+FAILED tests/test_c3_csf3_harness.py::test_a_ZERO_state_arm_is_a_LEDGER_not_a_missing_ledger
+FAILED tests/test_c3_csf3_harness.py::test_phi_is_accounted_on_EVERY_arm - Mo...
+FAILED tests/test_c3_csf3_harness.py::test_an_OVER_BUDGET_arm_fails_loudly_and_can_be_declared_instead
+FAILED tests/test_c3_csf3_harness.py::test_occupancy_is_reported_not_just_compliance
+FAILED tests/test_blocks.py::test_every_arm_runs_the_stream_and_shares_a_bit_identical_shell[clu_store]
+FAILED tests/test_blocks.py::test_every_arm_runs_the_stream_and_shares_a_bit_identical_shell[gru_matched]
+FAILED tests/test_blocks.py::test_every_arm_runs_the_stream_and_shares_a_bit_identical_shell[ttt_matched]
+FAILED tests/test_blocks.py::test_every_arm_runs_the_stream_and_shares_a_bit_identical_shell[none]
+FAILED tests/test_blocks.py::test_every_arm_runs_the_stream_and_shares_a_bit_identical_shell[echo]
+FAILED tests/test_dim_scaling.py::test_cli_exposes_exp_dim_scaling - ModuleNo...
+FAILED tests/test_gen_encoder_unfreeze.py::test_frozen_path_is_bit_identical_to_the_pre_change_fingerprint
+FAILED tests/test_gen_launcher.py::test_plan_enumerates_arms_x_seeds_grid - A...
+FAILED tests/test_gen_launcher.py::test_short_array_is_refused_unless_partial
+FAILED tests/test_gen_launcher.py::test_smoke_run_builds_the_tree_and_populates_the_manifest
+FAILED tests/test_gen_launcher.py::test_non_default_arms_and_seeds_are_recorded
+FAILED tests/test_gen_launcher.py::test_run_without_a_resolvable_commit_is_refused
+FAILED tests/test_gen_launcher.py::test_missing_stage_module_fails_loudly_and_names_the_module
+FAILED tests/test_gen_launcher.py::test_stage_refuses_to_run_on_a_missing_upstream[decoder-encoder]
+FAILED tests/test_gen_launcher.py::test_stage_refuses_to_run_on_a_missing_upstream[store-decoder]
+FAILED tests/test_gen_launcher.py::test_stage_refuses_to_run_on_a_missing_upstream[cell-store]
+FAILED tests/test_gen_launcher.py::test_stage_refuses_to_run_on_a_missing_upstream[certificate-store]
+FAILED tests/test_gen_launcher.py::test_full_chain_runs_in_dependency_order
+FAILED tests/test_gen_launcher.py::test_encoder_has_no_upstream_requirement
+FAILED tests/test_gen_launcher.py::test_slurm_streams_are_captured_into_the_run_logs
+FAILED tests/test_gen_launcher.py::test_certificate_plans_its_own_paths_never_the_cells
+FAILED tests/test_gen_launcher.py::test_certificate_upstream_is_the_store_not_the_cell
+FAILED tests/test_gen_launcher.py::test_certificate_writes_its_own_workspace_and_leaves_the_cell_alone
+FAILED tests/test_gen_launcher.py::test_certificate_default_payload_module - ...
+FAILED tests/test_gen_launcher.py::test_certificate_stage_keeps_the_commit_guard
+FAILED tests/test_gen_launcher.py::test_certificate_stage_keeps_the_short_array_guard
+FAILED tests/test_gen_encoder_unfreeze.py::test_the_baseline_decoder_recipe_still_builds_the_same_decoder
+FAILED tests/test_gate_addr.py::test_the_legal_rescale_is_full_state_co_scaling_including_the_payload
+FAILED tests/test_gate_addr.py::test_arm_a_store_config_accepts_the_overrides_seam
+FAILED tests/test_gen_wide_split.py::test_montero_split_is_unchanged_by_the_wide_condition
+FAILED tests/test_gen_wells.py::test_the_objective_rewards_multimodality_and_penalises_dependence
+FAILED tests/test_kt.py::test_reduced_rho_s_round_trip_exact - assert np.floa...
+FAILED tests/test_monitors.py::test_monitor6_dead_band_does_not_trip_on_a_numerically_zero_slope
+FAILED tests/test_retrieval.py::test_cli_exposes_exp_retrieval - ModuleNotFou...
+FAILED tests/test_stage_gcs.py::test_a_root_with_nothing_in_it_is_EMPTY_not_44_missing_files
+FAILED tests/test_stage_gcs.py::test_refuses_a_stale_manifest_rather_than_uploading_wrong_bytes
+FAILED tests/test_stage_gcs.py::test_rejects_a_foreign_manifest_schema - Asse...
+FAILED tests/test_stage_gcs.py::test_uploads_preserve_the_relative_layout_and_carry_the_sha256
+FAILED tests/test_stage_gcs.py::test_second_run_skips_objects_already_there
+FAILED tests/test_stage_gcs.py::test_a_remote_object_with_the_wrong_sha_is_re_uploaded
+FAILED tests/test_stage_gcs.py::test_prefix_and_bucket_are_overridable - Asse...
+FAILED tests/test_route3_attribution.py::test_cli_exposes_exp_route3_attribution
+FAILED tests/test_stage_artefacts.py::test_every_manifest_entry_names_a_loader
+FAILED tests/test_stage_artefacts.py::test_verify_opens_every_artefact_through_its_real_loader
+FAILED tests/test_stage_artefacts.py::test_manifest_checksums_are_the_real_ones
+FAILED tests/test_stage_artefacts.py::test_verify_fails_on_one_corrupted_byte
+FAILED tests/test_stage_artefacts.py::test_verify_fails_on_a_byte_perfect_file_its_loader_rejects
+FAILED tests/test_well_lifecycle.py::test_census_cell_runs_end_to_end_and_reports_both_curves
+FAILED tests/test_well_lifecycle.py::test_phi_address_is_idempotent_on_store_space_points
+FAILED tests/test_well_lifecycle.py::test_label_to_payload_separates_classes_above_the_merge_threshold
+FAILED tests/test_stage_gcs.py::test_dry_run_plans_everything_and_uploads_nothing
+FAILED tests/test_stage_gcs.py::test_dry_run_reports_a_cost_line - AssertionE...
+FAILED tests/test_stage_gcs.py::test_refuses_an_empty_set - AssertionError: (...
+FAILED tests/test_stage_gcs.py::test_refuses_a_partial_set_naming_the_file_and_its_loader
+FAILED tests/test_stage_gcs.py::test_empty_beats_partial_when_both_apply - As...
+FAILED tests/test_well_lifecycle.py::test_census_refuses_to_run_at_an_unselected_atom_width
+SKIPPED [1] tests\test_industrial_loaders.py:10: loaders need the eval extra
+SKIPPED [1] tests\test_gen_bridge_dsprites.py:297: dSprites npz not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\dsprites\dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz (set CHLU_GEN_DATA_ROOT)
+SKIPPED [1] tests\test_gen_bridge_dsprites.py:310: dSprites npz not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\dsprites\dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz (set CHLU_GEN_DATA_ROOT)
+SKIPPED [1] tests\test_gen_bridge_dsprites.py:323: dSprites hdf5 not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\dsprites\dsprites_ndarray_co1sh3sc6or40x32y32_64x64.hdf5 (set CHLU_GEN_DATA_ROOT)
+SKIPPED [1] tests\test_gen_bridge_dsprites.py:336: dSprites npz not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\dsprites\dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz (set CHLU_GEN_DATA_ROOT)
+SKIPPED [1] tests\test_gen_bridge_wide.py:375: Shapes3D h5 not present
+SKIPPED [1] tests\test_gen_bridge_wide.py:391: Shapes3D h5 not present
+SKIPPED [1] tests\test_gen_bridge_wide.py:405: Shapes3D h5 not present
+SKIPPED [1] tests\test_gen_classifier.py:251: Shapes3D not on disk
+SKIPPED [1] tests\test_gen_codebook_exponent.py:349: dSprites npz not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\dsprites\dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz (set CHLU_GEN_DATA_ROOT)
+SKIPPED [1] tests\test_gen_codebook_exponent.py:358: dSprites npz not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\dsprites\dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz (set CHLU_GEN_DATA_ROOT)
+SKIPPED [1] tests\test_gen_data_splits.py:301: dSprites npz not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\dsprites\dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz (chlu data dsprites --download)
+SKIPPED [1] tests\test_gen_data_splits.py:317: dSprites npz not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\dsprites\dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz (chlu data dsprites --download)
+SKIPPED [1] tests\test_gen_data_splits.py:332: dSprites npz not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\dsprites\dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz (chlu data dsprites --download)
+SKIPPED [1] tests\test_gen_data_splits.py:340: dSprites hdf5 mirror not downloaded
+SKIPPED [1] tests\test_gen_data_splits.py:376: Shapes3D h5 not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\shapes3d\3dshapes.h5 (chlu data shapes3d --download)
+SKIPPED [1] tests\test_gen_data_splits.py:389: Shapes3D h5 not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\shapes3d\3dshapes.h5 (chlu data shapes3d --download)
+SKIPPED [1] tests\test_gen_data_splits.py:404: Shapes3D h5 not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\shapes3d\3dshapes.h5 (chlu data shapes3d --download)
+SKIPPED [1] tests\test_gen_data_splits.py:437: dSprites npz not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\dsprites\dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz (chlu data dsprites --download)
+SKIPPED [1] tests\test_gen_rowsplit.py:169: Shapes3D h5 not downloaded (set $CHLU_GEN_DATA_ROOT / chlu data shapes3d)
+SKIPPED [1] tests\test_gen_wide_split.py:305: Shapes3D h5 not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\shapes3d\3dshapes.h5 (chlu data shapes3d --download)
+SKIPPED [1] tests\test_gen_wide_split.py:327: Shapes3D h5 not at C:\Users\PratikJawahar\chlu\chlu-hub-bundle\.claude\data\gen\shapes3d\3dshapes.h5 (chlu data shapes3d --download)
+SKIPPED [2] tests\test_store_lifecycle.py:398: C2W6 artifact tree absent (gitignored); see the spoke report
+SKIPPED [1] tests\test_store_lifecycle.py:421: C2W6 artifact tree absent (gitignored); see the spoke report
+ERROR tests/test_anti_erosion.py
+ERROR tests/test_capture_strong_phi.py
+ERROR tests/test_chlu.py
+ERROR tests/test_cli_data.py
+ERROR tests/test_cluformer_pilot.py
+ERROR tests/test_csf3_memory_fit.py
+ERROR tests/test_gen_c_set_a7.py
+ERROR tests/test_job_cpu_gen.py - AttributeError: module 'signal' has no attr...
+ERROR tests/test_job_cpu_gen.py - AttributeError: module 'signal' has no attr...
+ERROR tests/test_job_cpu_gen.py - AttributeError: module 'signal' has no attr...
+ERROR tests/test_job_cpu_gen.py - AttributeError: module 'signal' has no attr...
+ERROR tests/test_job_cpu_gen.py - AttributeError: module 'signal' has no attr...
+ERROR tests/test_job_cpu_gen.py - AttributeError: module 'signal' has no attr...
+ERROR tests/test_lane_parallel_controller.py
+ERROR tests/test_phi_geometry.py
+ERROR tests/test_pilot_checkpoint_resume.py
+ERROR tests/test_placement_probe.py
+ERROR tests/test_psi_residual.py
+ERROR tests/test_ttt_stability_and_d5_wiring.py
+ERROR tests/test_c3_run3_budget_exemption.py::test_a_journal_carrying_the_field_at_FALSE_is_also_accepted
+ERROR tests/test_c3_run3_budget_exemption.py::test_a_SECOND_differing_key_is_refused_and_BOTH_keys_are_named
+ERROR tests/test_c3_run3_budget_exemption.py::test_a_DIFFERENT_single_key_than_the_registered_one_is_refused
+ERROR tests/test_c3_run3_budget_exemption.py::test_a_GEOMETRY_change_is_refused_even_with_the_registered_flag
+ERROR tests/test_c3_run3_budget_exemption.py::test_a_journal_whose_OWN_FINGERPRINT_does_not_validate_is_refused
+ERROR tests/test_c3_run3_budget_exemption.py::test_a_PINNED_sha256_that_does_not_match_is_refused
+ERROR tests/test_c3_run3_budget_exemption.py::test_a_final_artifact_is_not_a_journal
+ERROR tests/test_c3_run3_budget_exemption.py::test_only_ONE_fully_qualified_flag_is_ever_accepted[memory.erosion_partition,memory.refresh_monotonic]
+ERROR tests/test_c3_run3_budget_exemption.py::test_only_ONE_fully_qualified_flag_is_ever_accepted[memory.*]
+ERROR tests/test_c3_run3_budget_exemption.py::test_only_ONE_fully_qualified_flag_is_ever_accepted[memory.refresh_?]
+ERROR tests/test_c3_run3_budget_exemption.py::test_only_ONE_fully_qualified_flag_is_ever_accepted[erosion_partition]
+ERROR tests/test_c3_run3_budget_exemption.py::test_only_ONE_fully_qualified_flag_is_ever_accepted[store_dim]
+ERROR tests/test_c3_run3_budget_exemption.py::test_only_ONE_fully_qualified_flag_is_ever_accepted[pilot.arms memory.erosion_partition]
+ERROR tests/test_c3_run3_budget_exemption.py::test_only_ONE_fully_qualified_flag_is_ever_accepted[pilot.memory]
+ERROR tests/test_c3_run3_budget_exemption.py::test_only_ONE_fully_qualified_flag_is_ever_accepted[pilot.store]
+ERROR tests/test_c3_run3_budget_exemption.py::test_only_ONE_fully_qualified_flag_is_ever_accepted[pilot.not_a_field]
+ERROR tests/test_c3_run3_budget_exemption.py::test_an_EXTRA_spec_key_is_refused_so_nothing_can_be_smuggled
+ERROR tests/test_c3_run3_budget_exemption.py::test_over_budget_UNDER_the_exemption_still_reports_TRUE_bytes
+ERROR tests/test_c3_run3_budget_exemption.py::test_the_ledger_is_PRINTED_in_full_either_way
+ERROR tests/test_c3_run3_budget_exemption.py::test_the_UNLEDGERED_ARM_guard_is_NOT_reachable_through_the_exemption
+ERROR tests/test_c3_run3_budget_exemption.py::test_PHI_is_still_accounted_on_every_arm_under_the_exemption
+ERROR tests/test_c3_run3_budget_exemption.py::test_run3s_journal_differs_from_run2s_by_EXACTLY_the_one_token
+ERROR tests/test_c3_run3_budget_exemption.py::test_run3_is_ACCEPTED_and_the_exemption_is_STAMPED
+116 failed, 2603 passed, 25 skipped, 43 warnings, 42 errors in 573.70s (0:09:33)
+END 2026-09-16T19:43:55

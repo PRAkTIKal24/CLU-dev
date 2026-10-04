@@ -1,0 +1,49 @@
+PROVENANCE chlu from /Users/user/Desktop/CHLU-c2w8p3c/chlu/__init__.py
+[strong-phi:randconv] census seed 1 (d=12) ...
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  [pilot check] depth after 3 writes: [0.9021, 0.8538, 0.9075]
+  seed 1: G-ADDR A1=0.2422 (thr 0.2500, False) A2=0.4375 (True) A3a=-0.1328 A3b=0.03125 -> gate_addr_pass=False
+  seed 1: P=0.3125 M=0.2333 overdig=2.00 n_live=16 theta_att=0.775 depth_med(raw/netted)=0.7692/0.8897 [2479s]
+[strong-phi] wrote /Users/user/Desktop/CHLU/.claude/outputs/c2w8p3-capture-strong-phi/results/randconv_s1/capture_strong_phi.json (2517s)
+  randconv: gate_pass=False branch=(b) NO DAYLIGHT A1=[0.2421875]

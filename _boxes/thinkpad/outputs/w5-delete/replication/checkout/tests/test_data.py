@@ -1,0 +1,82 @@
+"""Tests for data generators."""
+
+import jax
+import jax.numpy as jnp
+
+from chlu.data.figure8 import generate_figure8
+from chlu.data.sine_waves import generate_sine_waves, add_noise
+
+
+def test_figure8_shape():
+    """Figure-8 generator produces correct shape."""
+    # generate_figure8 works in whole cycles (period 2*pi); with dt=0.02 one
+    # cycle is ~314 steps, so 2 cycles gives a multi-hundred-step trajectory.
+    data = generate_figure8(jax.random.PRNGKey(0), n_cycles=2)
+
+    steps_per_cycle = int(2 * jnp.pi / 0.02)
+    assert data.shape == (2 * steps_per_cycle, 4)  # (x, y, vx, vy)
+    assert jnp.all(jnp.isfinite(data))
+
+
+def test_figure8_periodic():
+    """Figure-8 should be approximately periodic."""
+    data = generate_figure8(jax.random.PRNGKey(0), n_cycles=2, dt=0.01)
+
+    # The lemniscate has period 2π, so at t≈2π should be back to start
+    # With dt=0.01, one period is ~628 steps
+    period_steps = int(2 * jnp.pi / 0.01)
+
+    if period_steps < len(data):
+        start = data[0]
+        end = data[min(period_steps, len(data) - 1)]
+        
+        # Should be close (allowing some numerical error in derivatives)
+        distance = jnp.sqrt(jnp.sum((start[:2] - end[:2]) ** 2))
+        assert distance < 1.0, f"Periodicity check failed: distance={distance}"
+
+
+def test_sine_waves_shape():
+    """Sine wave generator produces correct shape."""
+    data = generate_sine_waves(jax.random.PRNGKey(0), n_waves=10, steps=100)
+    
+    assert data.shape == (10, 100, 2)  # (batch, time, [x, dx/dt])
+    assert jnp.all(jnp.isfinite(data))
+
+
+def test_add_noise():
+    """Noise addition works correctly."""
+    data = jnp.ones((10, 10))
+    noisy = add_noise(data, jax.random.PRNGKey(0), sigma=0.1)
+
+    assert noisy.shape == data.shape
+    assert not jnp.allclose(noisy, data)  # Should be different
+    assert jnp.all(jnp.isfinite(noisy))
+
+
+def test_mnist_subsample_is_seeded(monkeypatch):
+    """Same seed ⇒ identical MNIST subsample; different seed ⇒ different (§7.11).
+
+    fetch_openml is monkeypatched (no network); rows are distinct by
+    construction so array equality ⇔ identical selection.
+    """
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    import chlu.data.mnist as mnist_mod
+
+    fake_pixels = (np.arange(100 * 784, dtype=np.float32).reshape(100, 784)) % 255.0
+    monkeypatch.setattr(
+        mnist_mod,
+        "fetch_openml",
+        lambda *args, **kwargs: SimpleNamespace(data=fake_pixels),
+    )
+
+    # dim=784 skips PCA -> selection is directly visible in the returned arrays
+    train1, test1, _ = mnist_mod.load_mnist_pca(dim=784, n_samples=20, seed=7)
+    train2, test2, _ = mnist_mod.load_mnist_pca(dim=784, n_samples=20, seed=7)
+    train3, _, _ = mnist_mod.load_mnist_pca(dim=784, n_samples=20, seed=8)
+
+    assert jnp.array_equal(train1, train2), "Same seed must select the same subsample"
+    assert jnp.array_equal(test1, test2)
+    assert not jnp.array_equal(train1, train3), "Different seeds must differ"

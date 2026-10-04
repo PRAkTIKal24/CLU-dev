@@ -1,0 +1,51 @@
+[19:26:42] ===== stage carry =====
+[19:26:42]   address book: reused address_downdate_pinned_prod_R128_lam0.01_sw40_n131072.pkl
+[19:26:42]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:27:59]   before delete                                  valid mean 0.8941  sd 0.0903
+[19:28:02]   deleted 11,024 rows; carried the book, 0 data rows touched, refit=False; min singular value of M per well [0.6716, 0.7322, 0.796, 1.0, 1.0]
+[19:29:08]   after delete, book UNCHANGED (naive)           valid mean 0.0584  sd 0.0701
+[19:30:13]   after delete, book CARRIED (no refit)          valid mean 0.8964  sd 0.0924
+[19:30:13]   DOWNDATE-READY.json -> status='ready'
+[19:30:13] done

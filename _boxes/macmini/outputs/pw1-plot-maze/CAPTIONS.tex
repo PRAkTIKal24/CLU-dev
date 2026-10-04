@@ -1,0 +1,102 @@
+% pw1-plot-maze CAPTIONS.tex -- new captions for the five maze figures (PW-1 items 1.10, 8, 16.3),
+% written from scratch; keyed by \label. Built figures: outputs/pw1-plot-maze/build/a/ (not installed).
+% Every number carries its source in a % comment. The explanatory paragraph that used to sit under the
+% panel images is TEXT-INSERTS.tex (a); each panel caption points to it with one sentence.
+% Sources: PROV = outputs/pw1-plot-maze/build/a/PROVENANCE-maze.json; DOOR = .../build/a/DOOR-SEARCH.json;
+% ITEMS = figures/data/cmazet_items.json (n-CLU, seeds 0-2); ITEMS-REL = figures/data/cmazet_items_rel.json.
+
+% ---------------------------------------------------------------- label fig:maze-wm (file fig_maze_conditions)
+% SRC: PROV figures.fig_maze_conditions.rows (seeds per row, comparator arm per row); maze_six.py over the
+% per-seed run JSONs w19-maze-t-symmetric/test/BOTH_test_seed{0,1,2}.json, w21-maze-t-seed4/test/BOTH_test_seed{3,4,5}.json,
+% w21-maze-t-clu-improve/test/BOTH_test_seed{0,1,2}.json, w21-rel-newseeds/test/BOTH_test_seed{3,4,5}.json
+% (asserted float-equal to w21-rel-newseeds/REL-NEWSEEDS.json); rows 1-2: w21-words-full-test/test/BARS-WORDS-FULL-test.json,
+% w19-maze-t-symmetric/val/BARS-OBS-val.json. "four controls": control: {landscape_removed, landscape_shuffled,
+% landscape_shuffled_across_wells, random_atoms} in each run JSON.
+\figslot{fig_maze_conditions}{\textbf{CMAZE-T: the n-CLU against the best matched baseline under
+four input choices, and six seeds without and with relational coding.} (a)~Unseen $n$-way validity
+under the engine's judge, one row per input choice: the full word design (test, seeds 0--2), the
+observation (validation, seeds 0--2), and words plus observation for the n-CLU and for the n-CLU-REL
+(test, seeds 0--5). Every seed of a row is drawn: circles are the n-CLU (n-CLU-REL in the last row),
+diamonds the row's baseline, and a vertical tick marks the mean over the row's seeds. The baseline of
+the first three rows is the matched baseline with the highest mean over the row's seeds, taken over
+every family and both step limits; it is a Transformer in each row, at its declared training steps
+for the full word design and at $10\times$ training steps otherwise. The baseline of the n-CLU-REL
+row is Transformer-REL, the Transformer given the same relational columns, at $10\times$ training
+steps (hollow diamonds). (b)~Words plus observation, test, seeds 0--5, without relational coding: per
+seed, the n-CLU, the Transformer at $10\times$ training steps of the third row, and the highest of the
+four controls on that seed. (c)~The same with relational coding: the n-CLU-REL, the Transformer-REL of
+the last row, and the highest control. Every arm's per-seed value is in
+Tab.~\ref{tab:cmazet-sym}.}{fig:maze-wm}
+
+% ---------------------------------------------------------------- label fig:cmazet-families
+% SRC: PROV figures.fig_cmazet_families.selection; DOOR counts / drawn; ITEMS (rule A rows per seed: 0 / 0 / 1).
+% 199 = DOOR counts.n-CLU most_baselines_wrong 159 + 4 + 36 (seeds 0, 1, 2).
+% 204 = DOOR counts.n-CLU door_then_tint [0,70] + [0,79] + [0,55].
+% 44 of 55 = DOOR counts.n-CLU-REL."2".door_then_tint [44, 55]; seed 16 = DOOR draw_seed.
+\figslot{fig_cmazet_families}{\textbf{Held-out CMAZE-T transitions, one per rule family, with every
+model's next state (words plus observation, test).} Columns: $s_t$ with the action, the engine's
+$s_{t+1}$, and the $s_{t+1}$ that each model's emitted outcome produces, marked by the engine's judge:
+the n-CLU, the matched baselines at 8,000 and 80,000 training steps, the four controls and the two
+blind arms. Rows 1--5: per rule family, the first held-out $n$-way transition at seed 0 (rule A has
+none at seeds 0 and 1, so its row is from seed 2). Row 6 is drawn by rule among the 199 held-out
+transitions at seeds 0--2 on which the n-CLU is correct and at least 4 of the 6 matched baselines are
+wrong. Row 7 is drawn by rule among door successes: transitions that open a door with the key in the
+pocket and enter a tint of the same colour, on which the model is correct. The n-CLU is correct on
+none of its 204 such transitions at seeds 0--2 (no per-transition outputs of the n-CLU exist for
+seeds 3--5), so row 7 is drawn from the n-CLU-REL at seed 2, which is correct on 44 of its 55, and
+every column of row 7 comes from that run. Both draws are one fixed-seed draw (seed 16), stratified
+over rule family and colour. The strip under each $s_{t+1}$ is read as described in
+Sec.~\ref{sec:maze-wm}.}{fig:cmazet-families}
+
+% ---------------------------------------------------------------- label fig:cmazet-per-arm
+% SRC: PROV figures.fig_cmazet_per_arm.selection (numpy default_rng(21); none_exists for
+% control: landscape_removed and the blind-colour arm, want=succeeds); DOOR (n-CLU door class empty, seeds 0-2).
+\figslot{fig_cmazet_per_arm}{\textbf{Each CMAZE-T model succeeding and failing (words plus
+observation, test, seed 0).} For every model, one held-out $n$-way transition on which its $s_{t+1}$
+is correct and one on which it is not, each drawn uniformly with a fixed seed among the qualifying
+transitions. The landscape-removed control and the blind-colour arm are correct on no held-out
+$n$-way transition at seed 0 and show only a failure. The n-CLU has no door success at seeds 0--2
+(Fig.~\ref{fig:cmazet-families}), so its success row is the uniform draw. Columns: $s_t$ with the
+action, the engine's $s_{t+1}$, and the model's $s_{t+1}$ with the engine's judge's mark. The strip
+under each $s_{t+1}$ is read as described in Sec.~\ref{sec:maze-wm}.}{fig:cmazet-per-arm}
+
+% ---------------------------------------------------------------- label fig:cmazet-rel-per-arm
+% SRC: PROV figures.fig_cmazet_rel_per_arm.selection (override row: n-CLU-REL seed 2 i=581, E; 44 qualifying;
+% uniform draw i=226 consumed); data/cmazet_items_rel.REPRO.json + tools/build_maze_only.py gate: 132 of 132
+% arm scores equal the run JSONs, seeds 0-5.
+\figslot{fig_cmazet_rel_per_arm}{\textbf{Each CMAZE-T model succeeding and failing with relational
+coding (words plus observation, test).} As Fig.~\ref{fig:cmazet-per-arm}, for the n-CLU-REL, the
+matched baselines, the controls and the blind arms of the same runs, and for MLP-REL, LSTM-REL and
+Transformer-REL at 8,000 and 80,000 training steps (the baselines given the same relational columns).
+All rows are from seed 0 except the n-CLU-REL success row, which is a door success drawn by rule
+among the 44 at seed 2 (Fig.~\ref{fig:cmazet-families}). Every panel is re-read from the runs'
+persisted models; the re-read reproduces all 132 test scores of seeds 0--5. The strip under each
+$s_{t+1}$ is read as described in Sec.~\ref{sec:maze-wm}.}{fig:cmazet-rel-per-arm}
+
+% ---------------------------------------------------------------- label fig:cmazet-door-tint
+% SRC: PROV figures.fig_cmazet_door_then_tint.selection (seed 0: N i=117, S i=29, W i=55; drawn n-CLU-REL
+% seed 2: E i=214, S i=332, W i=348); ITEMS seed 0 interaction directions N/S/W only; ITEMS-REL seed 2:
+% n-CLU-REL correct on every E/S/W interaction row (13+14+17 = 44) and on none of the 11 N rows.
+\figslot{fig_cmazet_door_then_tint}{\textbf{Door-then-tint transitions: the move opens a door with
+the key in the pocket and enters a tint of the same colour (words plus observation, test).} Columns as
+in Fig.~\ref{fig:cmazet-families}. Rows 1--3: the first such held-out transition at seed 0 for each
+move direction present (north, south, west); the n-CLU is wrong on all three, as on every one of its
+door-then-tint transitions at seeds 0--2. Rows 4--6: door successes drawn by rule from the n-CLU-REL
+at seed 2, one per move direction among its successes (east, south, west; it is wrong on every
+northward one), with every column of these rows from that run; fixed-seed draw (seed 16). The strip
+under each $s_{t+1}$ is read as described in Sec.~\ref{sec:maze-wm}.}{fig:cmazet-door-tint}
+
+% ---------------------------------------------------------------- PLACEHOLDERs NOT carried (decision for the installing spoke)
+% The live captions of fig:cmazet-families, fig:cmazet-door-tint and fig:cmazet-deletion carry three \PLACEHOLDERs
+% (w16 asymmetric-input arms never persisted). Item 17 removes the deletion figure and its placeholder with it.
+% The other two are not in the captions above, because their live wording carries banned words ("store",
+% "exact-judge"). If the Head keeps them, the vocabulary-clean wording is:
+%   fig:cmazet-families:  \PLACEHOLDER{per-model $s_{t+1}$ for the observation-only input of Table~\ref{tab:cmazet}
+%       (n-CLU, Transformer, MLP, LSTM) with the engine's judge's marks, one success and one failure per model:
+%       not drawable, those models were not persisted; may remain undrawn, and if drawn may show the n-CLU
+%       failing where a baseline succeeds}
+%   fig:cmazet-door-tint: \PLACEHOLDER{per-model $s_{t+1}$ on the door-then-tint transitions for the
+%       observation-only input of Table~\ref{tab:cmazet}, with the engine's judge's marks: not drawable, those
+%       models were not persisted; may remain undrawn, and if drawn may show every model, the n-CLU included,
+%       failing}
+% (Table tab:cmazet itself may leave under item 14; then both go.)

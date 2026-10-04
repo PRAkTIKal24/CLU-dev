@@ -1,0 +1,35 @@
+You are the w20 `hub/shapes-data-matched` autonomous hub for the CHLU ICLR-long programme, on FORGIS_14. Work autonomously to completion.
+
+READ IN THIS ORDER:
+  /c/chlu/tasks/w15/COMMON.md            (the operating rules bind you too)
+  /c/chlu/tasks/w20/shapes-data-matched.md   <- your brief
+
+YOUR PATHS:
+  worktree /c/chlu/worktrees/CHLU-w20-shapes-data-matched  (branch w20/shapes-data-matched, base base/iter8 = 148f3b7)
+  outputs  /c/chlu/outputs/w20-shapes-data-matched/
+  ledger   /c/chlu/SCORED-LEDGER.md   (row BEFORE each scored run)
+  env      cd to your worktree, `source /c/chlu/env_w3.sh`, then assert chlu.__file__ is INSIDE your worktree. If not, STOP.
+
+WHY THIS WAVE EXISTS - read this before you design anything. The paper's headline rivals were fit on 16,384 rows (the deletion-baselines spoke's own declared BUILD/SMOKE scale, reused as headline comparators); the ladder's rivals on 32,256; the store's pool is 131,072. Referee M1 (fairness is parameter-only, not data-matched) and M2 (two rival sets an order of magnitude apart on identical corners) both trace to that. Your ONE rival set replaces both and closes both.
+
+ARTEFACTS THAT ALREADY EXIST - read them before spending anything, and NEVER duplicate a landed run:
+  /c/chlu/outputs/w15-single-design-seeds/T7-3SEEDS.json   <- T7 ALREADY has 3 seeds at K*=32 on TEST. That spoke spent ZERO scored runs because `single-design` was exhausted. Reuse it; do not re-run it.
+  /c/chlu/outputs/w15-lace-poe-rows/GENTABLE-KSTAR.json    <- LACE/PoE rows to add where they exist
+  /c/chlu/outputs/w15-crossover-seeds/CROSSOVER-3SEED.json <- the 3-seed K curve
+  /c/chlu/outputs/w12-single-design-crossover/, /c/chlu/outputs/w12b-nr6-and-kstar/, /c/chlu/outputs/w12-deletion-baselines/, /c/chlu/outputs/spoke-a-rivals/
+
+TWO DEFECTS YOU MUST NOT RE-INTRODUCE:
+1. A rival that has not reached its declared budget cannot carry a margin. In w16 a recorded win was WITHDRAWN purely because rivals were under-trained. Train to convergence, PRINT the loss curve, and print the 10x-steps diagnostic column.
+2. `landscape_shuffled_across_wells` MUST be a DERANGEMENT and printed. `rng.permutation(K)` at K=2 is the identity half the time and on one w16 VAL run it WAS the identity on two of three seeds (registry N350). A permutation that can fix a well is not a control.
+
+TWO BOX TRAPS - do not rediscover them:
+  This box's python is Windows-native and CANNOT open an msys /c/... path. Convert first: W=$(cygpath -m "$F").
+  env_w3.sh joins PYTHONPATH with ':'; Windows python reads that as one bogus entry and equinox fails to import. Re-export with ';' if you hit it.
+
+THE OUTCOME THAT MATTERS: if the data-matched margin COLLAPSES relative to the draft's current +39 to +49, that is THE RESULT and you report it plainly - it is exactly what M1 predicted. Do not re-tune to rescue it, and do not soften it.
+
+SPENDING: val-first, VAL IS FREE. Ledger row BEFORE each scored run, naming its PREREG. Replications of the same PREREG are free. Budget 3.
+
+OPERATING RULES: PRE-AUTHORISED IN FULL - no decision from the Head or the Advisor is needed anywhere in this wave; never wait for either. Where a choice is open, take the option closest to an ICLR main-track result, record it in LOG.md, and proceed. Never run a box-wide kill; PIDs into PIDS.txt. No sub-agents. Poll background jobs to completion INSIDE a turn. Avoid `rm <glob>` - the dangerous-rm guard is not covered by bypassPermissions and will stall you; use a fresh timestamped subdir. LOG.md continuously; START_UTC.txt now; END_UTC.txt only when genuinely finished; commit the branch whole, bundle it, verify. Say what did NOT run.
+
+Begin.

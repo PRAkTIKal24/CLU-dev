@@ -1,0 +1,68 @@
+chlu.__file__ = C:\chlu\worktrees\CHLU-w15-lace-poe-rows\chlu\__init__.py
+seed 0: cache coverage {'seed': 0, 'n_needed': 33038, 'n_shortfall': 0, 'cache_scope': 'full', 'cache_n_rows': 480000, 'bridge_dir': 'C:\\Users\\PratikJawahar\\chlu\\chlu-bundle-v2\\.claude\\outputs\\gen-feature-bridge\\runs\\shapes3d_recon\\seed_0'}
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ PRECONDITION 1/2: classifier_gate.json gate=PASS (floor 0.95, 3 seeds)
+  ⭐ PRECONDITION 2/2: refusal_scores.json status=complete (not_run=[])
+[     0.0s] seed 0 · condition=recomb2element · frozen bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[     0.1s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[     0.1s]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[     1.6s]   ⭐ row split: mode=stratified — val realises floor_hue 10/10 · wall_hue 10/10 · object_hue 10/10 · scale 8/8 · shape 4/4 · orientation 15/15 · max per-value count ratio 1.091
+[     1.6s] rows: store_train=32768 B=72 MS=198 fit=32256 val=512
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[     6.2s]   ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+[     6.2s]   ⚠ NOT ENFORCED (enforced=false): w15/lace-poe-rows launcher: n_shortfall == 0 measured for seeds [0] ({0: 33038} rows needed, all in the frozen cache) -- this run cannot extend the cache (no-extension ruling, hub-generation-table REENCODE-VERDICT-iter2.md)
+[     6.2s]   ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: w15/lace-poe-rows launcher: n_shortfall == 0 measured for seeds [0] ({0: 33038} rows needed, all in the frozen cache) -- this run cannot extend the cache (no-extension ruling, hub-generation-table REENCODE-VERDICT-iter2.md). ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'w15/lace-poe-rows launcher: n_shortfall == 0 measured for seeds [0] ({0: 33038} rows needed, all in the frozen cache) -- this run cannot extend the cache (no-extension ruling, hub-generation-table REENCODE-VERDICT-iter2.md)'}
+[     6.2s] cache 480000 rows (scope=full), D=2048; re-encode check within 1 ULP of the cache dtype on 64 rows
+[    14.6s]   ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+[    14.6s]   ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+[    18.5s] ⭐ byte ledger: store 524288 B + addressing head 74240 B (⛔ coupling 163840 B EXCLUDED; ⛔ not 688128)
+[    22.3s] ⭐ no-bypass: pure codebook gather, 30 bits/read (R20's declared design constant) · ⭐ request-only path asserted on all four legs (⛔ no feature argument on ANY CLU call; gen_store.soft_read NOT imported)
+[    32.5s] ⭐ DECODER ceiling on IMAGES: external in-corner balacc=0.9085 · probe=0.9223
+[    41.0s]   ⭐ [knn_proto] IMAGE-space in-corner shape balacc=0.9198 (AUROC 0.9783, TPR 0.986 / TNR 0.854) · distinct on B: 72 vectors / 57 factor-tuples of 72 · probe companion 0.8788
+[    57.6s]   ⭐ [kstar] CovContentStore K=32 A=63 on 32768 store rows: wells 64..64 · dead 61 · rank/width 0.9688..0.9844 (16.4s)
+[   343.8s]   ⭐ [kstar] address book fitted in 286.2s · FOUR-PART LEDGER atoms 516,096 | cov+count 560,608 | address 1,062,424 | coupling 6,610 = 2,145,738 B = 4.0927x the 524,288 B REFERENCE
+[   394.7s]   ⭐ [kstar] VAL GATE: arm 0.9212 · controls {'landscape_removed': 0.12337239583333333, 'landscape_shuffled': 0.1552734375, 'landscape_shuffled_across_wells': 0.123046875, 'random_atoms': 0.1083984375} · PASS=True
+[   394.8s]   ⛔ [kstar] NOT RUN — RuntimeError: val-only invocation (CHLU_KSTAR_VAL_ONLY=1): the gate is on disk, ⛔ no table row is recorded
+[   395.0s] seed 0 done in 395s

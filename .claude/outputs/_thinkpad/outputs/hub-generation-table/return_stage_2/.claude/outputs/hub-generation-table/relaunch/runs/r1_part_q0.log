@@ -1,0 +1,157 @@
+[18:33:44] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[18:33:44]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[18:33:44]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[18:33:44] table=part nvariants=4 corners[0:21] set=confirm
+[18:33:44]   PT_equal_uniform   K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=454336
+[18:33:44]   PT_equal_waterfill K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=waterfill bytes_pred=454336
+[18:33:44]   PT_ward_uniform    K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=454336
+[18:33:44]   PT_ward_waterfill  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=waterfill bytes_pred=454336
+[18:33:45] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[18:34:21] [c13 9025728d08] PT_equal_uniform   agg=0.7292 tup=47 B=454336 r=52 [34.0s]
+[18:34:56] [c13 9025728d08] PT_equal_waterfill agg=0.7546 tup=47 B=454336 r=52 [35.1s]
+[18:35:39] [c13 9025728d08] PT_ward_uniform    agg=0.7269 tup=46 B=454336 r=52 [38.7s]
+[18:36:12] [c13 9025728d08] PT_ward_waterfill  agg=0.7384 tup=46 B=469600 r=52 [33.5s]
+[18:36:12] [c13] corner done in 146.5s
+[18:36:48] [c14 88b0f9e7b7] PT_equal_uniform   agg=0.8218 tup=49 B=454336 r=52 [33.7s]
+[18:37:21] [c14 88b0f9e7b7] PT_equal_waterfill agg=0.8264 tup=48 B=454336 r=52 [33.1s]
+[18:37:58] [c14 88b0f9e7b7] PT_ward_uniform    agg=0.8194 tup=48 B=454336 r=52 [34.1s]
+[18:38:32] [c14 88b0f9e7b7] PT_ward_waterfill  agg=0.8264 tup=48 B=475524 r=52 [34.1s]
+[18:38:32] [c14] corner done in 140.5s
+[18:39:08] [c16 6e27d52e84] PT_equal_uniform   agg=0.7222 tup=48 B=454336 r=52 [33.5s]
+[18:39:41] [c16 6e27d52e84] PT_equal_waterfill agg=0.7130 tup=46 B=454336 r=52 [33.1s]
+[18:40:17] [c16 6e27d52e84] PT_ward_uniform    agg=0.7060 tup=53 B=454336 r=52 [33.3s]
+[18:40:50] [c16 6e27d52e84] PT_ward_waterfill  agg=0.7083 tup=51 B=465672 r=52 [32.4s]
+[18:40:50] [c16] corner done in 137.2s
+[18:41:23] [c19 e87c55b7c8] PT_equal_uniform   agg=0.7847 tup=49 B=454336 r=52 [31.0s]
+[18:41:52] [c19 e87c55b7c8] PT_equal_waterfill agg=0.7708 tup=55 B=454336 r=52 [29.4s]
+[18:42:24] [c19 e87c55b7c8] PT_ward_uniform    agg=0.7778 tup=52 B=454336 r=52 [29.3s]
+[18:42:52] [c19 e87c55b7c8] PT_ward_waterfill  agg=0.7847 tup=55 B=470760 r=52 [28.8s]
+[18:42:52] [c19] corner done in 122.8s
+[18:43:22] [c20 0516a0bb91] PT_equal_uniform   agg=0.7894 tup=62 B=454336 r=52 [28.3s]
+[18:44:05] [c20 0516a0bb91] PT_equal_waterfill agg=0.8218 tup=54 B=454336 r=52 [42.2s]
+[18:44:50] [c20 0516a0bb91] PT_ward_uniform    agg=0.8194 tup=52 B=454336 r=52 [41.4s]
+[18:45:21] [c20 0516a0bb91] PT_ward_waterfill  agg=0.8333 tup=47 B=471276 r=52 [30.9s]
+[18:45:21] [c20] corner done in 148.7s
+[18:45:57] [c21 8604e2959b] PT_equal_uniform   agg=0.7269 tup=43 B=454336 r=52 [34.1s]
+[18:46:31] [c21 8604e2959b] PT_equal_waterfill agg=0.7801 tup=43 B=454336 r=52 [34.0s]
+[18:47:09] [c21 8604e2959b] PT_ward_uniform    agg=0.7546 tup=42 B=454336 r=52 [34.7s]
+[18:47:44] [c21 8604e2959b] PT_ward_waterfill  agg=0.7662 tup=47 B=475524 r=52 [35.0s]
+[18:47:44] [c21] corner done in 143.0s
+[18:48:19] [c22 09225c8ea1] PT_equal_uniform   agg=0.8218 tup=49 B=454336 r=52 [33.2s]
+[18:48:52] [c22 09225c8ea1] PT_equal_waterfill agg=0.8148 tup=47 B=454336 r=52 [32.7s]
+[18:49:28] [c22 09225c8ea1] PT_ward_uniform    agg=0.8287 tup=47 B=454336 r=52 [33.3s]
+[18:50:01] [c22 09225c8ea1] PT_ward_waterfill  agg=0.8287 tup=46 B=467108 r=52 [32.6s]
+[18:50:01] [c22] corner done in 136.6s
+[18:50:34] [c23 11b960f3fe] PT_equal_uniform   agg=0.8843 tup=55 B=454336 r=52 [31.7s]
+[18:51:07] [c23 11b960f3fe] PT_equal_waterfill agg=0.8819 tup=55 B=454336 r=52 [33.2s]
+[18:51:44] [c23 11b960f3fe] PT_ward_uniform    agg=0.8866 tup=53 B=454336 r=52 [33.2s]
+[18:52:16] [c23 11b960f3fe] PT_ward_waterfill  agg=0.8981 tup=56 B=471276 r=52 [32.4s]
+[18:52:16] [c23] corner done in 135.5s
+[18:52:50] [c24 015098345d] PT_equal_uniform   agg=0.8843 tup=43 B=454336 r=52 [32.4s]
+[18:53:23] [c24 015098345d] PT_equal_waterfill agg=0.8981 tup=45 B=454336 r=52 [32.3s]
+[18:53:55] [c24 015098345d] PT_ward_uniform    agg=0.8889 tup=49 B=454336 r=52 [29.5s]
+[18:54:24] [c24 015098345d] PT_ward_waterfill  agg=0.9491 tup=56 B=471276 r=52 [28.6s]
+[18:54:24] [c24] corner done in 127.9s
+[18:54:54] [c25 37c75c3819] PT_equal_uniform   agg=0.8102 tup=37 B=454336 r=52 [28.1s]
+[18:55:22] [c25 37c75c3819] PT_equal_waterfill agg=0.8472 tup=40 B=454336 r=52 [27.8s]
+[18:55:52] [c25 37c75c3819] PT_ward_uniform    agg=0.7986 tup=38 B=454336 r=52 [27.8s]
+[18:56:33] [c25 37c75c3819] PT_ward_waterfill  agg=0.8426 tup=39 B=475524 r=52 [40.9s]
+[18:56:33] [c25] corner done in 128.8s
+[18:57:15] [c26 b5c2db9d4d] PT_equal_uniform   agg=0.8310 tup=42 B=454336 r=52 [40.0s]
+[18:57:47] [c26 b5c2db9d4d] PT_equal_waterfill agg=0.8264 tup=46 B=454336 r=52 [32.2s]
+[18:58:25] [c26 b5c2db9d4d] PT_ward_uniform    agg=0.8333 tup=47 B=454336 r=52 [34.8s]
+[18:58:58] [c26 b5c2db9d4d] PT_ward_waterfill  agg=0.8333 tup=48 B=470480 r=52 [32.8s]
+[18:58:58] [c26] corner done in 145.3s
+[18:59:33] [c28 1f6b16c27d] PT_equal_uniform   agg=0.8889 tup=48 B=454336 r=52 [32.8s]
+[19:00:06] [c28 1f6b16c27d] PT_equal_waterfill agg=0.9097 tup=50 B=454336 r=52 [33.1s]
+[19:00:42] [c28 1f6b16c27d] PT_ward_uniform    agg=0.8356 tup=46 B=454336 r=52 [32.6s]
+[19:01:16] [c28 1f6b16c27d] PT_ward_waterfill  agg=0.8981 tup=48 B=470480 r=52 [34.1s]
+[19:01:16] [c28] corner done in 137.8s
+[19:01:51] [c29 1d997f9be4] PT_equal_uniform   agg=0.7477 tup=44 B=454336 r=52 [33.1s]
+[19:02:24] [c29 1d997f9be4] PT_equal_waterfill agg=0.7731 tup=43 B=454336 r=52 [32.8s]
+[19:03:01] [c29 1d997f9be4] PT_ward_uniform    agg=0.7569 tup=43 B=454336 r=52 [33.9s]
+[19:03:36] [c29 1d997f9be4] PT_ward_waterfill  agg=0.7963 tup=40 B=475524 r=52 [34.4s]
+[19:03:36] [c29] corner done in 139.9s
+[19:04:10] [c30 05064cb9f5] PT_equal_uniform   agg=0.8102 tup=37 B=454336 r=52 [32.2s]
+[19:04:43] [c30 05064cb9f5] PT_equal_waterfill agg=0.8148 tup=37 B=454336 r=52 [33.2s]
+[19:05:20] [c30 05064cb9f5] PT_ward_uniform    agg=0.8032 tup=34 B=454336 r=52 [33.5s]
+[19:05:52] [c30 05064cb9f5] PT_ward_waterfill  agg=0.8148 tup=39 B=470404 r=52 [32.5s]
+[19:05:52] [c30] corner done in 136.2s
+[19:06:26] [c31 06ee734253] PT_equal_uniform   agg=0.7292 tup=49 B=454336 r=52 [32.2s]
+[19:06:52] [c31 06ee734253] PT_equal_waterfill agg=0.7361 tup=55 B=454336 r=52 [26.7s]
+[19:07:22] [c31 06ee734253] PT_ward_uniform    agg=0.7292 tup=44 B=454336 r=52 [27.1s]
+[19:07:49] [c31 06ee734253] PT_ward_waterfill  agg=0.7593 tup=57 B=472676 r=52 [27.0s]
+[19:07:49] [c31] corner done in 116.7s
+[19:08:16] [c32 fa7f5265a2] PT_equal_uniform   agg=0.6713 tup=53 B=454336 r=52 [26.5s]
+[19:08:51] [c32 fa7f5265a2] PT_equal_waterfill agg=0.6991 tup=55 B=454336 r=52 [34.7s]
+[19:09:34] [c32 fa7f5265a2] PT_ward_uniform    agg=0.6736 tup=52 B=454336 r=52 [39.0s]
+[19:10:09] [c32 fa7f5265a2] PT_ward_waterfill  agg=0.6620 tup=52 B=471468 r=52 [35.0s]
+[19:10:09] [c32] corner done in 140.6s
+[19:10:44] [c33 ca39e06229] PT_equal_uniform   agg=0.7130 tup=60 B=454336 r=52 [32.8s]
+[19:11:17] [c33 ca39e06229] PT_equal_waterfill agg=0.7477 tup=61 B=454336 r=52 [33.2s]
+[19:11:54] [c33 ca39e06229] PT_ward_uniform    agg=0.7523 tup=55 B=454336 r=52 [33.7s]
+[19:12:27] [c33 ca39e06229] PT_ward_waterfill  agg=0.7708 tup=55 B=471468 r=52 [33.7s]
+[19:12:27] [c33] corner done in 138.1s
+[19:13:03] [c34 f153055c63] PT_equal_uniform   agg=0.6968 tup=49 B=454336 r=52 [33.6s]
+[19:13:36] [c34 f153055c63] PT_equal_waterfill agg=0.7014 tup=54 B=454336 r=52 [33.4s]
+[19:14:13] [c34 f153055c63] PT_ward_uniform    agg=0.6806 tup=56 B=454336 r=52 [33.2s]
+[19:14:46] [c34 f153055c63] PT_ward_waterfill  agg=0.6921 tup=59 B=471468 r=52 [33.1s]
+[19:14:46] [c34] corner done in 138.3s
+[19:15:21] [c35 4d88305fcf] PT_equal_uniform   agg=0.8981 tup=51 B=454336 r=52 [33.5s]
+[19:15:54] [c35 4d88305fcf] PT_equal_waterfill agg=0.8843 tup=55 B=454336 r=52 [32.8s]
+[19:16:31] [c35 4d88305fcf] PT_ward_uniform    agg=0.8495 tup=55 B=454336 r=52 [33.6s]
+[19:17:05] [c35 4d88305fcf] PT_ward_waterfill  agg=0.8704 tup=52 B=471468 r=52 [33.9s]
+[19:17:05] [c35] corner done in 138.8s
+[19:17:39] [c36 a0f2b6d536] PT_equal_uniform   agg=0.7894 tup=51 B=454336 r=52 [32.8s]
+[19:18:13] [c36 a0f2b6d536] PT_equal_waterfill agg=0.8032 tup=54 B=454336 r=52 [33.8s]
+[19:18:48] [c36 a0f2b6d536] PT_ward_uniform    agg=0.7986 tup=51 B=454336 r=52 [31.9s]
+[19:19:17] [c36 a0f2b6d536] PT_ward_waterfill  agg=0.8032 tup=51 B=471468 r=52 [28.6s]
+[19:19:17] [c36] corner done in 132.2s
+[19:19:46] [c37 cab07f2d2a] PT_equal_uniform   agg=0.7361 tup=48 B=454336 r=52 [28.1s]
+[19:20:14] [c37 cab07f2d2a] PT_equal_waterfill agg=0.7454 tup=50 B=454336 r=52 [27.6s]
+[19:20:45] [c37 cab07f2d2a] PT_ward_uniform    agg=0.7546 tup=51 B=454336 r=52 [28.4s]
+[19:21:14] [c37 cab07f2d2a] PT_ward_waterfill  agg=0.7708 tup=52 B=471468 r=52 [29.9s]
+[19:21:14] [c37] corner done in 117.7s
+[19:21:14] r1 part done in 2851.1s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table/relaunch\runs\r1_ledger_q0.jsonl

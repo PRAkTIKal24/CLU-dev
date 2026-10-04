@@ -1,0 +1,24 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+    [A] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04854 (lambda* = 0.05393)
+    [A] N=64 r=16 store=524,288 B coupling=524,288 B total=1,048,576 B = 2.00x budget (PREREG §3 match: True)
+    [A] sigma per well = 4.6343 5.0714 9.1827 6.3054 5.1006
+  hard-quantisation excess MI, max over wells: floor_hue=2.1534 wall_hue=2.0558 object_hue=1.2534 scale=0.2270 shape=0.4597 orientation=0.6743
+  soft rho=1.0: excess MI max over wells floor_hue=0.9834 wall_hue=0.5740 object_hue=0.0600 scale=0.0060 shape=0.0036 orientation=0.0251
+  soft rho=0.5: excess MI max over wells floor_hue=1.9605 wall_hue=1.6741 object_hue=0.6157 scale=0.0625 shape=0.0985 orientation=0.2855
+  soft rho=0.25: excess MI max over wells floor_hue=2.1576 wall_hue=2.0384 object_hue=1.1996 scale=0.1933 shape=0.3884 orientation=0.6066
+  soft rho=0.125: excess MI max over wells floor_hue=2.1563 wall_hue=2.0568 object_hue=1.2540 scale=0.2237 shape=0.4492 orientation=0.6681
+
+factor         HARD atom idx     soft rho=1        rho=0.5       rho=0.25      rho=0.125
+floor_hue             2.1534         0.9834         1.9605         2.1576         2.1563
+wall_hue              2.0558         0.5740         1.6741         2.0384         2.0568
+object_hue            1.2534         0.0600         0.6157         1.1996         1.2540
+scale                 0.2270         0.0060         0.0625         0.1933         0.2237
+shape                 0.4597         0.0036         0.0985         0.3884         0.4492
+orientation           0.6743         0.0251         0.2855         0.6066         0.6681
+
+wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-refusal\QUANTISATION_BOTTLENECK_seed0_A.json

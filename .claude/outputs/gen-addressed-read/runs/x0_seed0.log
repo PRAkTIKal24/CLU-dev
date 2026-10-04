@@ -1,0 +1,81 @@
+=== gen-cell-harness: shapes3d/recon stage=cell quick=False ===
+  ⭐ PRECONDITION 1/2: classifier_gate.json gate=PASS (floor 0.95, 3 seeds)
+  ⭐ PRECONDITION 2/2: refusal_scores.json status=complete (not_run=[])
+[     0.0s] seed 0 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[     0.0s]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[     1.2s]   ⭐ row split: mode=stratified — val realises floor_hue 10/10 · wall_hue 10/10 · object_hue 10/10 · scale 8/8 · shape 4/4 · orientation 15/15 · max per-value count ratio 1.091
+[     1.2s] rows: store_train=32768 B=72 MS=198 fit=32256 val=512
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[     3.7s]   ⭐ cache re-encode check: 64 rows, 0/131072 elements differ (0.000%), max |delta| = 0 = 0.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+[     3.7s]   ⭐ ENFORCED (enforced=true): no caller opinion — the strict default applies
+[     3.7s] cache 480000 rows (scope=full), D=2048; re-encode check within 1 ULP of the cache dtype on 64 rows
+[     6.3s]   ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+[     6.3s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_0/store_s0.pkl (⛔ not re-trained)
+[     7.5s] ⭐ byte ledger: store 524288 B + addressing head 74240 B (⛔ coupling 163840 B EXCLUDED; ⛔ not 688128)
+[     8.9s] ⭐ no-bypass: pure codebook gather, 30 bits/read (R20's declared design constant) · ⭐ request-only path asserted on all four legs (⛔ no feature argument on ANY CLU call; gen_store.soft_read NOT imported)
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[    12.3s] ⭐ DECODER ceiling on IMAGES: external in-corner balacc=0.9085 · probe=0.9223
+[    12.3s]   ⭐ [x0] artefacts -> /Users/user/Desktop/CHLU/.claude/outputs/gen-addressed-read/runs/artefacts/shapes3d_recon/seed_0
+[    12.3s]   ⭐ [x0] byte point A: the ADDRESSED READ — ⛔ ZERO settling steps, ⛔ no coupling, ⛔ no energy trace
+[    15.6s]     [A] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04854 (lambda* = 0.05393)
+[    15.6s]     [A] N=64 r=16 store=524,288 B coupling=524,288 B total=1,048,576 B = 2.00x budget (PREREG §3 match: True)
+[    15.6s]     [A] sigma per well = 4.6343 5.0714 9.1827 6.3054 5.1006
+[    15.6s]     ⭐⭐ [x0/A] MEASURED LEDGER: store 524,288 B + addressing head 74,240 B = 1.00x the 524,288 B budget · coupling 524,288 B ⛔ NOT DEPLOYED (bit-identical x0 without it) · byte-matched to clu field-for-field: True
+[    19.2s]   ⭐ [x0] IMAGE-space in-corner shape balacc=0.4672 (AUROC 0.4315, TPR 0.000 / TNR 0.934) · distinct on B: 19 vectors / 17 factor-tuples of 72 · probe companion 0.4899
+[    22.7s]   ⭐ [x0/A_atom_mean_lookup] IMAGE-space in-corner shape balacc=0.5657 (AUROC 0.6286, TPR 0.500 / TNR 0.631) · distinct on B: 72 vectors / 11 factor-tuples of 72 · probe companion 0.5644
+[    26.3s]   ⭐ [x0/A_row_lookup] IMAGE-space in-corner shape balacc=0.5000 (AUROC 0.5246, TPR 0.000 / TNR 1.000) · distinct on B: 3 vectors / 3 factor-tuples of 72 · probe companion 0.5000
+[    29.9s]   ⭐ [x0/A_atoms_shuffled] IMAGE-space in-corner shape balacc=0.5335 (AUROC 0.5342, TPR 0.486 / TNR 0.581) · distinct on B: 19 vectors / 18 factor-tuples of 72 · probe companion 0.5423
+[    29.9s]   ⭐ [x0] byte point B: the ADDRESSED READ — ⛔ ZERO settling steps, ⛔ no coupling, ⛔ no energy trace
+[    47.9s]     [B] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04922 (lambda* = 0.05469)
+[    47.9s]     [B] N=512 r=128 store=4,194,304 B coupling=4,194,304 B total=8,388,608 B = 2.00x budget (PREREG §3 match: True)
+[    47.9s]     [B] sigma per well = 3.2317 3.7288 7.1006 5.1012 3.8283
+[    47.9s]     ⭐⭐ [x0/B] MEASURED LEDGER: store 4,194,304 B + addressing head 593,920 B = 8.00x the 524,288 B budget · coupling 4,194,304 B ⛔ NOT DEPLOYED (bit-identical x0 without it) · byte-matched to clu field-for-field: False
+[    51.4s]   ⭐ [x0/B] IMAGE-space in-corner shape balacc=0.6534 (AUROC 0.8708, TPR 0.403 / TNR 0.904) · distinct on B: 32 vectors / 23 factor-tuples of 72 · probe companion 0.6307
+[    55.0s]   ⭐ [x0/B_atom_mean_lookup] IMAGE-space in-corner shape balacc=0.8207 (AUROC 0.7069, TPR 1.000 / TNR 0.641) · distinct on B: 72 vectors / 11 factor-tuples of 72 · probe companion 0.5000
+[    58.6s]   ⭐ [x0/B_row_lookup] IMAGE-space in-corner shape balacc=0.5549 (AUROC 0.5123, TPR 0.236 / TNR 0.874) · distinct on B: 5 vectors / 5 factor-tuples of 72 · probe companion 0.5549
+[    62.1s]   ⭐ [x0/B_atoms_shuffled] IMAGE-space in-corner shape balacc=0.5410 (AUROC 0.5707, TPR 0.653 / TNR 0.429) · distinct on B: 32 vectors / 30 factor-tuples of 72 · probe companion 0.5852
+[    62.2s]   ⛔ REGRESSION on lace: measured 0.6402 vs published 0.7077 (Δ -0.0676) — reported, ⛔ not absorbed
+[    62.2s] seed 0 done in 62s
+=== done in 62s ===

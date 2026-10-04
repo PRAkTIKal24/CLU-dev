@@ -1,0 +1,209 @@
+{
+  "artifact_name": "mlp",
+  "callable_checkpoint": "C:\\chlu\\outputs\\spoke-a-rivals\\rivals\\seed_0\\mlp.rival.eqx",
+  "family": "mlp",
+  "fit": {
+    "batch": 256,
+    "epochs": 40,
+    "loss_final": 0.02240433357656002,
+    "loss_first": 0.518665075302124,
+    "lr": 0.003,
+    "p_full_request": 1.0,
+    "request_dropout": false,
+    "steps": 5040,
+    "weight_decay": 0.0
+  },
+  "input_kind": "onehot",
+  "param_count": 117878,
+  "param_error": -0.0076272898706896556,
+  "param_target": 118784,
+  "param_target_is_table": true,
+  "param_target_multiple_of_table": 1.0,
+  "param_within_10pct": true,
+  "partial_requests": {
+    "absent_encoding": "the factor's one-hot block is all zeros",
+    "caveat": "this variant never saw a partially specified request in training; val_mse_partial_requests below is what it does with one anyway, and is NOT a number to quote as this rival's partial-request performance - use the _dropout variant for that",
+    "note": "rows 3 and 4 ask partially specified requests; this rival was trained with request dropout so an absent factor is in distribution rather than answered blind",
+    "p_full_request_in_training": 1.0,
+    "supported": false
+  },
+  "row2_offgrid_hue": {
+    "NOT_APPLICABLE": true,
+    "reason": "this family's input is 'onehot', a closed vocabulary over the realised grid values. It cannot express an off-grid hue, so row 2 gets a dash and this footnote, never a number."
+  },
+  "scores": {
+    "distinct_counts_B": {
+      "factor_tuples": 42,
+      "feature_vectors": 72,
+      "images": 72,
+      "n": 72,
+      "note": "feature_vectors/images are trivially N for a continuous rival; factor_tuples is the comparable diversity count"
+    },
+    "external": {
+      "composition_B": {
+        "aggregate": 0.8680555555555555,
+        "compositional_factor": "shape",
+        "exact_match": 0.3194444444444444,
+        "n": 72,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "object_hue": 1.0,
+          "orientation": 0.4583333333333333,
+          "scale": 0.75,
+          "shape": 1.0,
+          "wall_hue": 1.0
+        }
+      },
+      "in_corner": {
+        "auroc": 0.9532828282828283,
+        "balanced_accuracy": 0.8409090909090908,
+        "detection_rate": 1.0,
+        "n_neg": 198,
+        "n_pos": 72,
+        "sufficient": true,
+        "target": 1,
+        "tnr": 0.6818181818181818,
+        "tpr": 1.0
+      }
+    },
+    "generation": 2,
+    "probe": {
+      "composition_B": {
+        "aggregate": 0.8449074074074074,
+        "compositional_factor": "shape",
+        "exact_match": 0.2916666666666667,
+        "n": 72,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "object_hue": 1.0,
+          "orientation": 0.4305555555555556,
+          "scale": 0.6388888888888888,
+          "shape": 1.0,
+          "wall_hue": 1.0
+        }
+      },
+      "in_corner": {
+        "auroc": 0.9682940516273849,
+        "balanced_accuracy": 0.845959595959596,
+        "detection_rate": 1.0,
+        "n_neg": 198,
+        "n_pos": 72,
+        "sufficient": true,
+        "target": 1,
+        "tnr": 0.6919191919191919,
+        "tpr": 1.0
+      }
+    }
+  },
+  "trained_on": "fully specified six-factor requests only",
+  "tuning": {
+    "budget": 8,
+    "criterion": "validation MSE against the cached feature. Two stages: lr x weight-decay on the short schedule, then the epoch axis at FULL length, because an axis selected on a schedule that does not vary it is selected by noise.",
+    "entitled": 36,
+    "full_trials": [
+      {
+        "epochs": 20,
+        "full_val_mse": 0.025882471352815628,
+        "lr": 0.003,
+        "weight_decay": 0.0
+      },
+      {
+        "epochs": 40,
+        "full_val_mse": 0.022550437599420547,
+        "lr": 0.003,
+        "weight_decay": 0.0
+      }
+    ],
+    "realised": 8,
+    "selected": {
+      "epochs": 40,
+      "full_val_mse": 0.022550437599420547,
+      "lr": 0.003,
+      "weight_decay": 0.0
+    },
+    "short_trials": [
+      {
+        "lr": 0.0003,
+        "short_val_mse": 0.18042701482772827,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.0003,
+        "short_val_mse": 0.1807837188243866,
+        "weight_decay": 0.0001
+      },
+      {
+        "lr": 0.001,
+        "short_val_mse": 0.05463516712188721,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.001,
+        "short_val_mse": 0.05451062694191933,
+        "weight_decay": 0.0001
+      },
+      {
+        "lr": 0.003,
+        "short_val_mse": 0.04165240377187729,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.003,
+        "short_val_mse": 0.041722457855939865,
+        "weight_decay": 0.0001
+      }
+    ],
+    "trials": [
+      {
+        "lr": 0.0003,
+        "short_val_mse": 0.18042701482772827,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.0003,
+        "short_val_mse": 0.1807837188243866,
+        "weight_decay": 0.0001
+      },
+      {
+        "lr": 0.001,
+        "short_val_mse": 0.05463516712188721,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.001,
+        "short_val_mse": 0.05451062694191933,
+        "weight_decay": 0.0001
+      },
+      {
+        "lr": 0.003,
+        "short_val_mse": 0.04165240377187729,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.003,
+        "short_val_mse": 0.041722457855939865,
+        "weight_decay": 0.0001
+      },
+      {
+        "epochs": 20,
+        "full_val_mse": 0.025882471352815628,
+        "lr": 0.003,
+        "weight_decay": 0.0
+      },
+      {
+        "epochs": 40,
+        "full_val_mse": 0.022550437599420547,
+        "lr": 0.003,
+        "weight_decay": 0.0
+      }
+    ]
+  },
+  "use_for": [
+    "rows 3 and 4 - the pair and n-way corners, whose runner builds FULL six-factor requests"
+  ],
+  "val_mse_full_schedule": 0.022550437599420547,
+  "val_mse_partial_requests": 0.11610259115695953,
+  "variant": "full_only",
+  "wall_clock_s": 411.0368230342865,
+  "width": 55
+}

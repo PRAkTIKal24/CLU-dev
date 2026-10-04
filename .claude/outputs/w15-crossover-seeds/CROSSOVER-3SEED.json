@@ -1,0 +1,3021 @@
+{
+  "K_crossover": null,
+  "K_crossover_note": "no K in the swept range drops more than 0.1 below K=5 at n = 3; the range is NOT extended to manufacture a crossover",
+  "K_star": 32,
+  "K_star_candidates": [
+    5,
+    8,
+    10,
+    12,
+    16,
+    20,
+    24,
+    28,
+    32
+  ],
+  "SMOKE_NOT_A_CLAIM": true,
+  "artefact": "CROSSOVER-3SEED",
+  "byte_convention": "HONEST FOUR-PART TOTAL, uncompressed raw array bytes, SUMMED AND NEVER NETTED: (1) atoms = sum_k modes_k.size x 4 B (float32, the deployed content); (2) covariance + count = sum_k stat_floats_k x 8 B (float64 -- the precision actually retained; counting it at 4 would be netting by dtype) + 11,488 B of count table; (3) address book = TensorAddress.byte_ledger()['address_bytes']; (4) coupling/hole table = 5,288 + 1,322 = 6,610 B. No entropy coding, no deduplication, no subtraction of any part from any other. The 524,288 B pin is a REFERENCE COLUMN for continuity with waves 5-8, NOT a budget in this sweep.",
+  "condition": "val",
+  "frozen_rule": {
+    "K_cross": "min { K in SWEEP : v(5) - mean_seeds v(K) > 0.10 }",
+    "K_star": "max { K in SWEEP : v(5) - mean_seeds v(K) <= 0.02 }",
+    "crossover": 0.1,
+    "declared_at": "2026-09-21T11:10:24Z",
+    "file": "C:/chlu/outputs/w12-single-design-crossover/SELECTION-RULE.md",
+    "note": "the rule is w12's, applied here unchanged at n = 3; this spoke does not move it and does not re-derive it",
+    "within": 0.02
+  },
+  "instrument": {
+    "feature_cache": "GENERATION 2 (spoke A cache_generation2), asserted in-process per seed by assert_generation2",
+    "metric": "24-corner val read, mean `valid`, w8_score_corners code path",
+    "partition": "ward_balanced_labels (label-free correlation-dendrogram cut)",
+    "rank_rule": "A = min(64, min_k d_k - 1), strictly below the narrowest well",
+    "read": "TensorAddress product address, R.READ_PINS rank/ridge/sweeps, 90/10 split, pinned_basis",
+    "runner": "scripts/w15_crossover_seeds.py -> scripts/w12_val_sweep.py main() verbatim, module-level OUT redirected and nothing else"
+  },
+  "not_run": [],
+  "notation": "K = wells.  n in this artefact is the SEED count and it is a column on every table.  (n = factors jointly composed is a different quantity and is not used here.)",
+  "per_K": {
+    "10": {
+      "K": 10,
+      "all_charter_C_controls_collapse": true,
+      "byte_convention": "see the document-level `byte_convention` field",
+      "control_gate": {
+        "landscape_removed": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled_across_wells": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "random_atoms": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        }
+      },
+      "controls_not_collapsing": [],
+      "drop_from_K5": -0.006172839506172867,
+      "exactness_worst": {
+        "data_passes_during_deletion": 0,
+        "max_abs_mode_dev": 2.9103830456733704e-11,
+        "max_subspace_projector_dist": 1.9809277666620125e-11,
+        "n_seeds": 3,
+        "ranks_agree_all_seeds": true,
+        "rows_refitted": 0
+      },
+      "honest_total_bytes": {
+        "max": 2606754.0,
+        "mean": 2606754.0,
+        "min": 2606754.0,
+        "n": 3,
+        "sd": 0.0
+      },
+      "n_seeds": 3,
+      "netted": false,
+      "parts_across_seeds": {
+        "p1_atom_bytes": {
+          "max": 524288.0,
+          "mean": 524288.0,
+          "min": 524288.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p2_covariance_plus_count_bytes": {
+          "max": 1713872.0,
+          "mean": 1713872.0,
+          "min": 1713872.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p3_address_book_bytes": {
+          "max": 361984.0,
+          "mean": 361984.0,
+          "min": 361984.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p4_coupling_hole_table_bytes": {
+          "max": 6610.0,
+          "mean": 6610.0,
+          "min": 6610.0,
+          "n": 3,
+          "sd": 0.0
+        }
+      },
+      "per_seed": {
+        "0": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.8825,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.8825,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.8825,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.8825,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 2.9103830456733704e-11,
+            "max_subspace_projector_dist": 1.9809277666620125e-11,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2606754,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 1702384,
+            "p2_covariance_plus_count_bytes": 1713872,
+            "p3_address_book_bytes": 361984,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.972
+          },
+          "rank_over_width_max": 0.3137,
+          "rank_over_width_min": 0.3122,
+          "seed": 0,
+          "val_composition": 0.882523148148148,
+          "val_composition_corner_sd": 0.10206036061031919,
+          "val_composition_n_corners": 24,
+          "well_width_max": 205,
+          "well_width_min": 204
+        },
+        "1": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.8976,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.8976,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.8976,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.8976,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 2.2737367544323206e-13,
+            "max_subspace_projector_dist": 2.672040791449478e-13,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2606754,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 1702384,
+            "p2_covariance_plus_count_bytes": 1713872,
+            "p3_address_book_bytes": 361984,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.972
+          },
+          "rank_over_width_max": 0.3137,
+          "rank_over_width_min": 0.3122,
+          "seed": 1,
+          "val_composition": 0.8975694444444445,
+          "val_composition_corner_sd": 0.11333911282270331,
+          "val_composition_n_corners": 24,
+          "well_width_max": 205,
+          "well_width_min": 204
+        },
+        "2": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9242,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9242,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9242,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9242,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 1.8189894035458565e-12,
+            "max_subspace_projector_dist": 1.0243178202352244e-12,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2606754,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 1702384,
+            "p2_covariance_plus_count_bytes": 1713872,
+            "p3_address_book_bytes": 361984,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.972
+          },
+          "rank_over_width_max": 0.3137,
+          "rank_over_width_min": 0.3122,
+          "seed": 2,
+          "val_composition": 0.9241898148148148,
+          "val_composition_corner_sd": 0.08802981293148472,
+          "val_composition_n_corners": 24,
+          "well_width_max": 205,
+          "well_width_min": 204
+        }
+      },
+      "primary_C2_control_collapses": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "selection_resolvability": {
+        "composition_seed_sd": 0.021099550793017483,
+        "seed_sd_exceeds_tolerance": true,
+        "tolerance": 0.02
+      },
+      "val_composition": {
+        "max": 0.9241898148148148,
+        "mean": 0.9014274691358025,
+        "min": 0.882523148148148,
+        "n": 3,
+        "sd": 0.021099550793017483
+      }
+    },
+    "12": {
+      "K": 12,
+      "all_charter_C_controls_collapse": true,
+      "byte_convention": "see the document-level `byte_convention` field",
+      "control_gate": {
+        "landscape_removed": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled_across_wells": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "random_atoms": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        }
+      },
+      "controls_not_collapsing": [],
+      "drop_from_K5": -0.012924382716049454,
+      "exactness_worst": {
+        "data_passes_during_deletion": 0,
+        "max_abs_mode_dev": 2.3283064365386963e-10,
+        "max_subspace_projector_dist": 2.1263564198790078e-10,
+        "n_seeds": 3,
+        "ranks_agree_all_seeds": true,
+        "rows_refitted": 0
+      },
+      "honest_total_bytes": {
+        "max": 2393714.0,
+        "mean": 2393714.0,
+        "min": 2393714.0,
+        "n": 3,
+        "sd": 0.0
+      },
+      "n_seeds": 3,
+      "netted": false,
+      "parts_across_seeds": {
+        "p1_atom_bytes": {
+          "max": 524288.0,
+          "mean": 524288.0,
+          "min": 524288.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p2_covariance_plus_count_bytes": {
+          "max": 1434272.0,
+          "mean": 1434272.0,
+          "min": 1434272.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p3_address_book_bytes": {
+          "max": 428544.0,
+          "mean": 428544.0,
+          "min": 428544.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p4_coupling_hole_table_bytes": {
+          "max": 6610.0,
+          "mean": 6610.0,
+          "min": 6610.0,
+          "n": 3,
+          "sd": 0.0
+        }
+      },
+      "per_seed": {
+        "0": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.8929,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.8929,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.8929,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.8929,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 7.275957614183426e-12,
+            "max_subspace_projector_dist": 1.814053963701741e-13,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2393714,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 1422784,
+            "p2_covariance_plus_count_bytes": 1434272,
+            "p3_address_book_bytes": 428544,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.5656
+          },
+          "rank_over_width_max": 0.3765,
+          "rank_over_width_min": 0.3743,
+          "seed": 0,
+          "val_composition": 0.8929398148148148,
+          "val_composition_corner_sd": 0.09280684250209381,
+          "val_composition_n_corners": 24,
+          "well_width_max": 171,
+          "well_width_min": 170
+        },
+        "1": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9109,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9109,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9109,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9109,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 1.1368683772161603e-13,
+            "max_subspace_projector_dist": 1.149219769685107e-13,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2393714,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 1422784,
+            "p2_covariance_plus_count_bytes": 1434272,
+            "p3_address_book_bytes": 428544,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.5656
+          },
+          "rank_over_width_max": 0.3765,
+          "rank_over_width_min": 0.3743,
+          "seed": 1,
+          "val_composition": 0.9108796296296297,
+          "val_composition_corner_sd": 0.09989566707973944,
+          "val_composition_n_corners": 24,
+          "well_width_max": 171,
+          "well_width_min": 170
+        },
+        "2": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9207,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9207,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9207,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9207,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 2.3283064365386963e-10,
+            "max_subspace_projector_dist": 2.1263564198790078e-10,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2393714,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 1422784,
+            "p2_covariance_plus_count_bytes": 1434272,
+            "p3_address_book_bytes": 428544,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.5656
+          },
+          "rank_over_width_max": 0.3765,
+          "rank_over_width_min": 0.3743,
+          "seed": 2,
+          "val_composition": 0.9207175925925926,
+          "val_composition_corner_sd": 0.08175633106695429,
+          "val_composition_n_corners": 24,
+          "well_width_max": 171,
+          "well_width_min": 170
+        }
+      },
+      "primary_C2_control_collapses": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "selection_resolvability": {
+        "composition_seed_sd": 0.014084432358234434,
+        "seed_sd_exceeds_tolerance": false,
+        "tolerance": 0.02
+      },
+      "val_composition": {
+        "max": 0.9207175925925926,
+        "mean": 0.9081790123456791,
+        "min": 0.8929398148148148,
+        "n": 3,
+        "sd": 0.014084432358234434
+      }
+    },
+    "16": {
+      "K": 16,
+      "all_charter_C_controls_collapse": true,
+      "byte_convention": "see the document-level `byte_convention` field",
+      "control_gate": {
+        "landscape_removed": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled_across_wells": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "random_atoms": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        }
+      },
+      "controls_not_collapsing": [],
+      "drop_from_K5": -0.015817901234567833,
+      "exactness_worst": {
+        "data_passes_during_deletion": 0,
+        "max_abs_mode_dev": 1.1641532182693481e-10,
+        "max_subspace_projector_dist": 1.164151223142098e-10,
+        "n_seeds": 3,
+        "ranks_agree_all_seeds": true,
+        "rows_refitted": 0
+      },
+      "honest_total_bytes": {
+        "max": 2177330.0,
+        "mean": 2177330.0,
+        "min": 2177330.0,
+        "n": 3,
+        "sd": 0.0
+      },
+      "n_seeds": 3,
+      "netted": false,
+      "parts_across_seeds": {
+        "p1_atom_bytes": {
+          "max": 524288.0,
+          "mean": 524288.0,
+          "min": 524288.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p2_covariance_plus_count_bytes": {
+          "max": 1084768.0,
+          "mean": 1084768.0,
+          "min": 1084768.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p3_address_book_bytes": {
+          "max": 561664.0,
+          "mean": 561664.0,
+          "min": 561664.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p4_coupling_hole_table_bytes": {
+          "max": 6610.0,
+          "mean": 6610.0,
+          "min": 6610.0,
+          "n": 3,
+          "sd": 0.0
+        }
+      },
+      "per_seed": {
+        "0": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.8906,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.8906,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.8906,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.8906,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 1.1641532182693481e-10,
+            "max_subspace_projector_dist": 1.164151223142098e-10,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2177330,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 1073280,
+            "p2_covariance_plus_count_bytes": 1084768,
+            "p3_address_book_bytes": 561664,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.1529
+          },
+          "rank_over_width_max": 0.5,
+          "rank_over_width_min": 0.5,
+          "seed": 0,
+          "val_composition": 0.890625,
+          "val_composition_corner_sd": 0.09297237431590452,
+          "val_composition_n_corners": 24,
+          "well_width_max": 128,
+          "well_width_min": 128
+        },
+        "1": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9115,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9115,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9115,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9115,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 1.1641532182693481e-10,
+            "max_subspace_projector_dist": 8.828899516363197e-11,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2177330,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 1073280,
+            "p2_covariance_plus_count_bytes": 1084768,
+            "p3_address_book_bytes": 561664,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.1529
+          },
+          "rank_over_width_max": 0.5,
+          "rank_over_width_min": 0.5,
+          "seed": 1,
+          "val_composition": 0.9114583333333334,
+          "val_composition_corner_sd": 0.09301746823116219,
+          "val_composition_n_corners": 24,
+          "well_width_max": 128,
+          "well_width_min": 128
+        },
+        "2": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9311,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9311,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9311,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9311,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 7.275957614183426e-12,
+            "max_subspace_projector_dist": 7.353097584625099e-12,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2177330,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 1073280,
+            "p2_covariance_plus_count_bytes": 1084768,
+            "p3_address_book_bytes": 561664,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.1529
+          },
+          "rank_over_width_max": 0.5,
+          "rank_over_width_min": 0.5,
+          "seed": 2,
+          "val_composition": 0.9311342592592592,
+          "val_composition_corner_sd": 0.07861855415621156,
+          "val_composition_n_corners": 24,
+          "well_width_max": 128,
+          "well_width_min": 128
+        }
+      },
+      "primary_C2_control_collapses": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "selection_resolvability": {
+        "composition_seed_sd": 0.020257385174112737,
+        "seed_sd_exceeds_tolerance": true,
+        "tolerance": 0.02
+      },
+      "val_composition": {
+        "max": 0.9311342592592592,
+        "mean": 0.9110725308641975,
+        "min": 0.890625,
+        "n": 3,
+        "sd": 0.020257385174112737
+      }
+    },
+    "20": {
+      "K": 20,
+      "all_charter_C_controls_collapse": false,
+      "byte_convention": "see the document-level `byte_convention` field",
+      "control_gate": {
+        "landscape_removed": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled_across_wells": {
+          "collapses": false,
+          "mean_over_seeds_and_corners": 0.00019290123456790122,
+          "per_seed_valid_max": [
+            0.0,
+            0.013888888888888888,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0005787037037037037,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.013888888888888888
+        },
+        "random_atoms": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        }
+      },
+      "controls_not_collapsing": [
+        {
+          "arm_valid_mean": 0.9212962962962964,
+          "control": "landscape_shuffled_across_wells",
+          "seed": 1,
+          "valid_max_over_corners": 0.013888888888888888,
+          "valid_mean_over_corners": 0.0005787037037037037
+        }
+      ],
+      "drop_from_K5": -0.02256944444444431,
+      "exactness_worst": {
+        "data_passes_during_deletion": 0,
+        "max_abs_mode_dev": 7.430856641121864e-08,
+        "max_subspace_projector_dist": 1.9756021927986228e-07,
+        "n_seeds": 3,
+        "ranks_agree_all_seeds": true,
+        "rows_refitted": 0
+      },
+      "honest_total_bytes": {
+        "max": 2100786.0,
+        "mean": 2098879.3333333335,
+        "min": 2095586.0,
+        "n": 3,
+        "sd": 2863.936684588773
+      },
+      "n_seeds": 3,
+      "netted": false,
+      "parts_across_seeds": {
+        "p1_atom_bytes": {
+          "max": 524288.0,
+          "mean": 524288.0,
+          "min": 524288.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p2_covariance_plus_count_bytes": {
+          "max": 875104.0,
+          "mean": 875104.0,
+          "min": 875104.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p3_address_book_bytes": {
+          "max": 694784.0,
+          "mean": 692877.3333333334,
+          "min": 689584.0,
+          "n": 3,
+          "sd": 2863.936684588773
+        },
+        "p4_coupling_hole_table_bytes": {
+          "max": 6610.0,
+          "mean": 6610.0,
+          "min": 6610.0,
+          "n": 3,
+          "sd": 0.0
+        }
+      },
+      "per_seed": {
+        "0": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.8877,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.8877,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.8877,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.8877,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 1.1641532182693481e-10,
+            "max_subspace_projector_dist": 3.085254141798328e-11,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2100786,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 863616,
+            "p2_covariance_plus_count_bytes": 875104,
+            "p3_address_book_bytes": 694784,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.0069
+          },
+          "rank_over_width_max": 0.6275,
+          "rank_over_width_min": 0.6214,
+          "seed": 0,
+          "val_composition": 0.8877314814814814,
+          "val_composition_corner_sd": 0.0965658195523395,
+          "val_composition_n_corners": 24,
+          "well_width_max": 103,
+          "well_width_min": 102
+        },
+        "1": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9213,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9213,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9207,
+              "valid_max": 0.013888888888888888,
+              "valid_mean": 0.0005787037037037037
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9213,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 7.430856641121864e-08,
+            "max_subspace_projector_dist": 1.9756021927986228e-07,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2095586,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 863616,
+            "p2_covariance_plus_count_bytes": 875104,
+            "p3_address_book_bytes": 689584,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 3.997
+          },
+          "rank_over_width_max": 0.6275,
+          "rank_over_width_min": 0.5294,
+          "seed": 1,
+          "val_composition": 0.9212962962962964,
+          "val_composition_corner_sd": 0.09416934453414792,
+          "val_composition_n_corners": 24,
+          "well_width_max": 103,
+          "well_width_min": 102
+        },
+        "2": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9444,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9444,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9444,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9444,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 1.6953172199407618e-09,
+            "max_subspace_projector_dist": 3.6720632740558826e-09,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2100266,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 863616,
+            "p2_covariance_plus_count_bytes": 875104,
+            "p3_address_book_bytes": 694264,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.0059
+          },
+          "rank_over_width_max": 0.6275,
+          "rank_over_width_min": 0.6176,
+          "seed": 2,
+          "val_composition": 0.9444444444444443,
+          "val_composition_corner_sd": 0.07176088253319564,
+          "val_composition_n_corners": 24,
+          "well_width_max": 103,
+          "well_width_min": 102
+        }
+      },
+      "primary_C2_control_collapses": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "selection_resolvability": {
+        "composition_seed_sd": 0.028515474524895633,
+        "seed_sd_exceeds_tolerance": true,
+        "tolerance": 0.02
+      },
+      "val_composition": {
+        "max": 0.9444444444444443,
+        "mean": 0.917824074074074,
+        "min": 0.8877314814814814,
+        "n": 3,
+        "sd": 0.028515474524895633
+      }
+    },
+    "24": {
+      "K": 24,
+      "all_charter_C_controls_collapse": true,
+      "byte_convention": "see the document-level `byte_convention` field",
+      "control_gate": {
+        "landscape_removed": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled_across_wells": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "random_atoms": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        }
+      },
+      "controls_not_collapsing": [],
+      "drop_from_K5": -0.027006172839506126,
+      "exactness_worst": {
+        "data_passes_during_deletion": 0,
+        "max_abs_mode_dev": 3.254086422543878e-08,
+        "max_subspace_projector_dist": 5.8653962276365746e-08,
+        "n_seeds": 3,
+        "ranks_agree_all_seeds": true,
+        "rows_refitted": 0
+      },
+      "honest_total_bytes": {
+        "max": 2094130.0,
+        "mean": 2086676.6666666667,
+        "min": 2080090.0,
+        "n": 3,
+        "sd": 7060.009442864317
+      },
+      "n_seeds": 3,
+      "netted": false,
+      "parts_across_seeds": {
+        "p1_atom_bytes": {
+          "max": 524288.0,
+          "mean": 524288.0,
+          "min": 524288.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p2_covariance_plus_count_bytes": {
+          "max": 735328.0,
+          "mean": 735328.0,
+          "min": 735328.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p3_address_book_bytes": {
+          "max": 827904.0,
+          "mean": 820450.6666666666,
+          "min": 813864.0,
+          "n": 3,
+          "sd": 7060.009442864318
+        },
+        "p4_coupling_hole_table_bytes": {
+          "max": 6610.0,
+          "mean": 6610.0,
+          "min": 6610.0,
+          "n": 3,
+          "sd": 0.0
+        }
+      },
+      "per_seed": {
+        "0": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.8981,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.8981,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.8981,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.8981,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 5.820766091346741e-11,
+            "max_subspace_projector_dist": 2.968861505314588e-11,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2094130,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 723840,
+            "p2_covariance_plus_count_bytes": 735328,
+            "p3_address_book_bytes": 827904,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 3.9942
+          },
+          "rank_over_width_max": 0.7529,
+          "rank_over_width_min": 0.7442,
+          "seed": 0,
+          "val_composition": 0.8981481481481483,
+          "val_composition_corner_sd": 0.08988596381706233,
+          "val_composition_n_corners": 24,
+          "well_width_max": 86,
+          "well_width_min": 85
+        },
+        "1": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9236,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9236,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9236,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9236,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 2.0014857327055324e-08,
+            "max_subspace_projector_dist": 2.6859787366257882e-08,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2080090,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 723840,
+            "p2_covariance_plus_count_bytes": 735328,
+            "p3_address_book_bytes": 813864,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 3.9675
+          },
+          "rank_over_width_max": 0.7529,
+          "rank_over_width_min": 0.4353,
+          "seed": 1,
+          "val_composition": 0.923611111111111,
+          "val_composition_corner_sd": 0.09330442961698747,
+          "val_composition_n_corners": 24,
+          "well_width_max": 86,
+          "well_width_min": 85
+        },
+        "2": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.945,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.945,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.945,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.945,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 3.254086422543878e-08,
+            "max_subspace_projector_dist": 5.8653962276365746e-08,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2085810,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 723840,
+            "p2_covariance_plus_count_bytes": 735328,
+            "p3_address_book_bytes": 819584,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 3.9784
+          },
+          "rank_over_width_max": 0.7529,
+          "rank_over_width_min": 0.5647,
+          "seed": 2,
+          "val_composition": 0.9450231481481483,
+          "val_composition_corner_sd": 0.06698284106765762,
+          "val_composition_n_corners": 24,
+          "well_width_max": 86,
+          "well_width_min": 85
+        }
+      },
+      "primary_C2_control_collapses": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "selection_resolvability": {
+        "composition_seed_sd": 0.02346665520097495,
+        "seed_sd_exceeds_tolerance": true,
+        "tolerance": 0.02
+      },
+      "val_composition": {
+        "max": 0.9450231481481483,
+        "mean": 0.9222608024691358,
+        "min": 0.8981481481481483,
+        "n": 3,
+        "sd": 0.02346665520097495
+      }
+    },
+    "28": {
+      "K": 28,
+      "all_charter_C_controls_collapse": true,
+      "byte_convention": "see the document-level `byte_convention` field",
+      "control_gate": {
+        "landscape_removed": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled_across_wells": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "random_atoms": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        }
+      },
+      "controls_not_collapsing": [],
+      "drop_from_K5": -0.03144290123456783,
+      "exactness_worst": {
+        "data_passes_during_deletion": 0,
+        "max_abs_mode_dev": 2.4721291680407376e-08,
+        "max_subspace_projector_dist": 4.667498369984396e-08,
+        "n_seeds": 3,
+        "ranks_agree_all_seeds": true,
+        "rows_refitted": 0
+      },
+      "honest_total_bytes": {
+        "max": 2126890.0,
+        "mean": 2117183.3333333335,
+        "min": 2107130.0,
+        "n": 3,
+        "sd": 9884.560351039056
+      },
+      "n_seeds": 3,
+      "netted": false,
+      "parts_across_seeds": {
+        "p1_atom_bytes": {
+          "max": 524288.0,
+          "mean": 524288.0,
+          "min": 524288.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p2_covariance_plus_count_bytes": {
+          "max": 635488.0,
+          "mean": 635488.0,
+          "min": 635488.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p3_address_book_bytes": {
+          "max": 960504.0,
+          "mean": 950797.3333333334,
+          "min": 940744.0,
+          "n": 3,
+          "sd": 9884.560351039056
+        },
+        "p4_coupling_hole_table_bytes": {
+          "max": 6610.0,
+          "mean": 6610.0,
+          "min": 6610.0,
+          "n": 3,
+          "sd": 0.0
+        }
+      },
+      "per_seed": {
+        "0": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.8976,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.8976,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.8976,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.8976,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 2.3283064365386963e-10,
+            "max_subspace_projector_dist": 3.0650058330200505e-10,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2126890,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 624000,
+            "p2_covariance_plus_count_bytes": 635488,
+            "p3_address_book_bytes": 960504,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.0567
+          },
+          "rank_over_width_max": 0.8767,
+          "rank_over_width_min": 0.863,
+          "seed": 0,
+          "val_composition": 0.8975694444444445,
+          "val_composition_corner_sd": 0.08989957009146467,
+          "val_composition_n_corners": 24,
+          "well_width_max": 74,
+          "well_width_min": 73
+        },
+        "1": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.93,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.93,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.93,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.93,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 1.2969639584525794e-08,
+            "max_subspace_projector_dist": 1.5223997916433494e-08,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2107130,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 624000,
+            "p2_covariance_plus_count_bytes": 635488,
+            "p3_address_book_bytes": 940744,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.019
+          },
+          "rank_over_width_max": 0.8767,
+          "rank_over_width_min": 0.3425,
+          "seed": 1,
+          "val_composition": 0.9299768518518517,
+          "val_composition_corner_sd": 0.08388296667304286,
+          "val_composition_n_corners": 24,
+          "well_width_max": 74,
+          "well_width_min": 73
+        },
+        "2": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9525,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9525,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9525,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9525,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 2.4721291680407376e-08,
+            "max_subspace_projector_dist": 4.667498369984396e-08,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2117530,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 624000,
+            "p2_covariance_plus_count_bytes": 635488,
+            "p3_address_book_bytes": 951144,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.0389
+          },
+          "rank_over_width_max": 0.8767,
+          "rank_over_width_min": 0.6575,
+          "seed": 2,
+          "val_composition": 0.9525462962962963,
+          "val_composition_corner_sd": 0.060736205449079844,
+          "val_composition_n_corners": 24,
+          "well_width_max": 74,
+          "well_width_min": 73
+        }
+      },
+      "primary_C2_control_collapses": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "selection_resolvability": {
+        "composition_seed_sd": 0.02763474297854362,
+        "seed_sd_exceeds_tolerance": true,
+        "tolerance": 0.02
+      },
+      "val_composition": {
+        "max": 0.9525462962962963,
+        "mean": 0.9266975308641975,
+        "min": 0.8975694444444445,
+        "n": 3,
+        "sd": 0.02763474297854362
+      }
+    },
+    "32": {
+      "K": 32,
+      "all_charter_C_controls_collapse": true,
+      "byte_convention": "see the document-level `byte_convention` field",
+      "control_gate": {
+        "landscape_removed": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled_across_wells": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "random_atoms": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        }
+      },
+      "controls_not_collapsing": [],
+      "drop_from_K5": -0.03375771604938271,
+      "exactness_worst": {
+        "data_passes_during_deletion": 0,
+        "max_abs_mode_dev": 2.147003215213772e-07,
+        "max_subspace_projector_dist": 2.578473335158215e-07,
+        "n_seeds": 3,
+        "ranks_agree_all_seeds": true,
+        "rows_refitted": 0
+      },
+      "honest_total_bytes": {
+        "max": 2143138.0,
+        "mean": 2140538.0,
+        "min": 2136378.0,
+        "n": 3,
+        "sd": 3640.0
+      },
+      "n_seeds": 3,
+      "netted": false,
+      "parts_across_seeds": {
+        "p1_atom_bytes": {
+          "max": 516096.0,
+          "mean": 516096.0,
+          "min": 516096.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p2_covariance_plus_count_bytes": {
+          "max": 560608.0,
+          "mean": 560608.0,
+          "min": 560608.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p3_address_book_bytes": {
+          "max": 1059824.0,
+          "mean": 1057224.0,
+          "min": 1053064.0,
+          "n": 3,
+          "sd": 3640.0
+        },
+        "p4_coupling_hole_table_bytes": {
+          "max": 6610.0,
+          "mean": 6610.0,
+          "min": 6610.0,
+          "n": 3,
+          "sd": 0.0
+        }
+      },
+      "per_seed": {
+        "0": {
+          "A_requested": 63,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9016,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9016,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9016,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9016,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 7.54982654171954e-09,
+            "max_subspace_projector_dist": 7.549826557532004e-09,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2143138,
+            "netted": false,
+            "p1_atom_bytes": 516096,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 549120,
+            "p2_covariance_plus_count_bytes": 560608,
+            "p3_address_book_bytes": 1059824,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.0877
+          },
+          "rank_over_width_max": 0.9688,
+          "rank_over_width_min": 0.9531,
+          "seed": 0,
+          "val_composition": 0.9016203703703706,
+          "val_composition_corner_sd": 0.08859370017591894,
+          "val_composition_n_corners": 24,
+          "well_width_max": 64,
+          "well_width_min": 64
+        },
+        "1": {
+          "A_requested": 63,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9323,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9323,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9323,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9323,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 9.313225746154785e-10,
+            "max_subspace_projector_dist": 1.2073440142712937e-11,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2136378,
+            "netted": false,
+            "p1_atom_bytes": 516096,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 549120,
+            "p2_covariance_plus_count_bytes": 560608,
+            "p3_address_book_bytes": 1053064,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.0748
+          },
+          "rank_over_width_max": 0.9844,
+          "rank_over_width_min": 0.2656,
+          "seed": 1,
+          "val_composition": 0.9322916666666666,
+          "val_composition_corner_sd": 0.08564746811759455,
+          "val_composition_n_corners": 24,
+          "well_width_max": 64,
+          "well_width_min": 64
+        },
+        "2": {
+          "A_requested": 63,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9531,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9531,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9531,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9531,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 2.147003215213772e-07,
+            "max_subspace_projector_dist": 2.578473335158215e-07,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2142098,
+            "netted": false,
+            "p1_atom_bytes": 516096,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 549120,
+            "p2_covariance_plus_count_bytes": 560608,
+            "p3_address_book_bytes": 1058784,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 4.0857
+          },
+          "rank_over_width_max": 0.9844,
+          "rank_over_width_min": 0.5781,
+          "seed": 2,
+          "val_composition": 0.953125,
+          "val_composition_corner_sd": 0.061271816034375017,
+          "val_composition_n_corners": 24,
+          "well_width_max": 64,
+          "well_width_min": 64
+        }
+      },
+      "primary_C2_control_collapses": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "selection_resolvability": {
+        "composition_seed_sd": 0.025908438353678856,
+        "seed_sd_exceeds_tolerance": true,
+        "tolerance": 0.02
+      },
+      "val_composition": {
+        "max": 0.953125,
+        "mean": 0.9290123456790124,
+        "min": 0.9016203703703706,
+        "n": 3,
+        "sd": 0.025908438353678856
+      }
+    },
+    "5": {
+      "K": 5,
+      "all_charter_C_controls_collapse": true,
+      "byte_convention": "see the document-level `byte_convention` field",
+      "control_gate": {
+        "landscape_removed": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled_across_wells": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "random_atoms": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        }
+      },
+      "controls_not_collapsing": [],
+      "drop_from_K5": 0.0,
+      "exactness_worst": {
+        "data_passes_during_deletion": 0,
+        "max_abs_mode_dev": 1.4551915228366852e-11,
+        "max_subspace_projector_dist": 1.4296236846058387e-11,
+        "n_seeds": 3,
+        "ranks_agree_all_seeds": true,
+        "rows_refitted": 0
+      },
+      "honest_total_bytes": {
+        "max": 4118034.0,
+        "mean": 4118034.0,
+        "min": 4118034.0,
+        "n": 3,
+        "sd": 0.0
+      },
+      "n_seeds": 3,
+      "netted": false,
+      "parts_across_seeds": {
+        "p1_atom_bytes": {
+          "max": 524288.0,
+          "mean": 524288.0,
+          "min": 524288.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p2_covariance_plus_count_bytes": {
+          "max": 3391552.0,
+          "mean": 3391552.0,
+          "min": 3391552.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p3_address_book_bytes": {
+          "max": 195584.0,
+          "mean": 195584.0,
+          "min": 195584.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p4_coupling_hole_table_bytes": {
+          "max": 6610.0,
+          "mean": 6610.0,
+          "min": 6610.0,
+          "n": 3,
+          "sd": 0.0
+        }
+      },
+      "per_seed": {
+        "0": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.8918,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.8918,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.8918,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.8918,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 1.4551915228366852e-11,
+            "max_subspace_projector_dist": 1.4296236846058387e-11,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 4118034,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 3380064,
+            "p2_covariance_plus_count_bytes": 3391552,
+            "p3_address_book_bytes": 195584,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 7.8545
+          },
+          "rank_over_width_max": 0.1565,
+          "rank_over_width_min": 0.1561,
+          "seed": 0,
+          "val_composition": 0.8917824074074074,
+          "val_composition_corner_sd": 0.10073694893907127,
+          "val_composition_n_corners": 24,
+          "well_width_max": 410,
+          "well_width_min": 409
+        },
+        "1": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.8912,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.8912,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.8912,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.8912,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 7.275957614183426e-12,
+            "max_subspace_projector_dist": 7.27623151966097e-12,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 4118034,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 3380064,
+            "p2_covariance_plus_count_bytes": 3391552,
+            "p3_address_book_bytes": 195584,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 7.8545
+          },
+          "rank_over_width_max": 0.1565,
+          "rank_over_width_min": 0.1561,
+          "seed": 1,
+          "val_composition": 0.8912037037037037,
+          "val_composition_corner_sd": 0.133259507204971,
+          "val_composition_n_corners": 24,
+          "well_width_max": 410,
+          "well_width_min": 409
+        },
+        "2": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9028,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9028,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9028,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9028,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 2.842170943040401e-14,
+            "max_subspace_projector_dist": 2.8816913994401174e-14,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 4118034,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 3380064,
+            "p2_covariance_plus_count_bytes": 3391552,
+            "p3_address_book_bytes": 195584,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 7.8545
+          },
+          "rank_over_width_max": 0.1565,
+          "rank_over_width_min": 0.1561,
+          "seed": 2,
+          "val_composition": 0.9027777777777777,
+          "val_composition_corner_sd": 0.0988052623658048,
+          "val_composition_n_corners": 24,
+          "well_width_max": 410,
+          "well_width_min": 409
+        }
+      },
+      "primary_C2_control_collapses": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "selection_resolvability": {
+        "composition_seed_sd": 0.006521659531009562,
+        "seed_sd_exceeds_tolerance": false,
+        "tolerance": 0.02
+      },
+      "val_composition": {
+        "max": 0.9027777777777777,
+        "mean": 0.8952546296296297,
+        "min": 0.8912037037037037,
+        "n": 3,
+        "sd": 0.006521659531009562
+      }
+    },
+    "8": {
+      "K": 8,
+      "all_charter_C_controls_collapse": true,
+      "byte_convention": "see the document-level `byte_convention` field",
+      "control_gate": {
+        "landscape_removed": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "landscape_shuffled_across_wells": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        },
+        "random_atoms": {
+          "collapses": true,
+          "mean_over_seeds_and_corners": 0.0,
+          "per_seed_valid_max": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "per_seed_valid_mean": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "worst_over_seeds_and_corners": 0.0
+        }
+      },
+      "controls_not_collapsing": [],
+      "drop_from_K5": -0.008487654320987525,
+      "exactness_worst": {
+        "data_passes_during_deletion": 0,
+        "max_abs_mode_dev": 1.8189894035458565e-12,
+        "max_subspace_projector_dist": 1.3704938622643365e-12,
+        "n_seeds": 3,
+        "ranks_agree_all_seeds": true,
+        "rows_refitted": 0
+      },
+      "honest_total_bytes": {
+        "max": 2959602.0,
+        "mean": 2959602.0,
+        "min": 2959602.0,
+        "n": 3,
+        "sd": 0.0
+      },
+      "n_seeds": 3,
+      "netted": false,
+      "parts_across_seeds": {
+        "p1_atom_bytes": {
+          "max": 524288.0,
+          "mean": 524288.0,
+          "min": 524288.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p2_covariance_plus_count_bytes": {
+          "max": 2133280.0,
+          "mean": 2133280.0,
+          "min": 2133280.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p3_address_book_bytes": {
+          "max": 295424.0,
+          "mean": 295424.0,
+          "min": 295424.0,
+          "n": 3,
+          "sd": 0.0
+        },
+        "p4_coupling_hole_table_bytes": {
+          "max": 6610.0,
+          "mean": 6610.0,
+          "min": 6610.0,
+          "n": 3,
+          "sd": 0.0
+        }
+      },
+      "per_seed": {
+        "0": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.8837,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.8837,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.8837,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.8837,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 5.684341886080802e-14,
+            "max_subspace_projector_dist": 6.415080617940259e-14,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2959602,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 2121792,
+            "p2_covariance_plus_count_bytes": 2133280,
+            "p3_address_book_bytes": 295424,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 5.645
+          },
+          "rank_over_width_max": 0.25,
+          "rank_over_width_min": 0.25,
+          "seed": 0,
+          "val_composition": 0.8836805555555555,
+          "val_composition_corner_sd": 0.09489206407533061,
+          "val_composition_n_corners": 24,
+          "well_width_max": 256,
+          "well_width_min": 256
+        },
+        "1": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.923,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.923,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.923,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.923,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 1.8189894035458565e-12,
+            "max_subspace_projector_dist": 1.3704938622643365e-12,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2959602,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 2121792,
+            "p2_covariance_plus_count_bytes": 2133280,
+            "p3_address_book_bytes": 295424,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 5.645
+          },
+          "rank_over_width_max": 0.25,
+          "rank_over_width_min": 0.25,
+          "seed": 1,
+          "val_composition": 0.9230324074074074,
+          "val_composition_corner_sd": 0.08697547781060415,
+          "val_composition_n_corners": 24,
+          "well_width_max": 256,
+          "well_width_min": 256
+        },
+        "2": {
+          "A_requested": 64,
+          "controls": {
+            "landscape_removed": {
+              "drop_from_clu": 0.9045,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled": {
+              "drop_from_clu": 0.9045,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "landscape_shuffled_across_wells": {
+              "drop_from_clu": 0.9045,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            },
+            "random_atoms": {
+              "drop_from_clu": 0.9045,
+              "valid_max": 0.0,
+              "valid_mean": 0.0
+            }
+          },
+          "exactness": {
+            "data_passes_during_deletion": 0,
+            "definition": "STORE-SCOPED: the frozen encoder and decoder are NOT refit. downdate(delete red rows) vs a store fitted from scratch without those rows, same partition, same rank.",
+            "items_kept": false,
+            "max_abs_mode_dev": 1.1368683772161603e-13,
+            "max_subspace_projector_dist": 1.616530657416366e-13,
+            "n_rows_deleted": 11024,
+            "ranks_agree": true,
+            "rows_refitted": 0
+          },
+          "ledger_four_part": {
+            "honest_total_bytes": 2959602,
+            "netted": false,
+            "p1_atom_bytes": 524288,
+            "p2_count_bytes": 11488,
+            "p2_covariance_bytes": 2121792,
+            "p2_covariance_plus_count_bytes": 2133280,
+            "p3_address_book_bytes": 295424,
+            "p4_coupling_hole_table_bytes": 6610,
+            "reference_pin_bytes": 524288,
+            "times_reference_pin": 5.645
+          },
+          "rank_over_width_max": 0.25,
+          "rank_over_width_min": 0.25,
+          "seed": 2,
+          "val_composition": 0.9045138888888888,
+          "val_composition_corner_sd": 0.09633937492547166,
+          "val_composition_n_corners": 24,
+          "well_width_max": 256,
+          "well_width_min": 256
+        }
+      },
+      "primary_C2_control_collapses": true,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "selection_resolvability": {
+        "composition_seed_sd": 0.019687269787304184,
+        "seed_sd_exceeds_tolerance": false,
+        "tolerance": 0.02
+      },
+      "val_composition": {
+        "max": 0.9230324074074074,
+        "mean": 0.9037422839506172,
+        "min": 0.8836805555555555,
+        "n": 3,
+        "sd": 0.019687269787304184
+      }
+    }
+  },
+  "provenance": {
+    "K05_seed0": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K5_seed0/row.json",
+      "sha256": "c449bee42863688a16a175a6a9d209f4c9b954e3d10f13a8ec731504c364325e",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K05_seed1": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K5_seed1/row.json",
+      "sha256": "ccbde06e103efadd8d805d191b3a82d42dcde882fec287d080dc11e5b52651d2",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K05_seed2": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K5_seed2/row.json",
+      "sha256": "78e1f03e715fc8d3dea37ba41b9811e320c5ee1b1a32d9528f63f09450c4a2f4",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K08_seed0": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K8_seed0/row.json",
+      "sha256": "9a1d4bdc6f6e3ea2d6be2da93a0dab935f39344695151e96067d2908ff6b1de7",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K08_seed1": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K8_seed1/row.json",
+      "sha256": "6694b52de077b5a40e88d03a743b431d6a40b370f659735a79bb2dfcb6a93e4a",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K08_seed2": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K8_seed2/row.json",
+      "sha256": "f0b4f736d0e0aaff324433ffec7613d21f79c96795aaac9644bc9fbfec73d2ab",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K10_seed0": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K10_seed0/row.json",
+      "sha256": "0c67ba117c6d776b73c98ec181053d4d2b0ef07e14fc7e840838f44826fdbfe0",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K10_seed1": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K10_seed1/row.json",
+      "sha256": "6f92bf3ab433ab454837212a1378434e99f00b3feb3ee5b298ec9ff531911733",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K10_seed2": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K10_seed2/row.json",
+      "sha256": "b390b57dc6e9dbcb5875ae70b75508179f5583e978eba5f96e2d2da42c27ed4d",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K12_seed0": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K12_seed0/row.json",
+      "sha256": "25dff5678f70f0e91c79b615ddf6045879728dd5af5c4919d2a311f3b3b8a4a9",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K12_seed1": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K12_seed1/row.json",
+      "sha256": "1391acce5282d0a54eb677c3137823e9f18943f01f98b12f523a1416fa74a60b",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K12_seed2": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K12_seed2/row.json",
+      "sha256": "50a3aea51095b8531a54850821bc39fb915fa1ca08da572aab6d680c17cb5041",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K16_seed0": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K16_seed0/row.json",
+      "sha256": "7c9508106592c391b0c821c340cfc10da40110c29b785f96eb90f0b4c21f4b06",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K16_seed1": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K16_seed1/row.json",
+      "sha256": "269c4559996614e40a7a71fa921c4bcfd0775e9640de75a3e8413e66f21ae217",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K16_seed2": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K16_seed2/row.json",
+      "sha256": "10f505cf4db9848a82c261575ab3cb20f34eb3d141b54a4b745ad1c26727ef36",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K20_seed0": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K20_seed0/row.json",
+      "sha256": "1c61cb99732ae210a33ba3a8563f860d1500c71bf99fdc9481f560f8353df60a",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K20_seed1": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K20_seed1/row.json",
+      "sha256": "49d7d01a06e683bb9fcc1931767458eb6b9953ed265fc90bf7ef442ce8bb03b7",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K20_seed2": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K20_seed2/row.json",
+      "sha256": "a997c5377c0b0c9ac5c4ee27bb14b580514d4c258a8a52a69c3d3981c5e56dce",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K24_seed0": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K24_seed0/row.json",
+      "sha256": "ca3d8563141740df4caf783c027a42a141bc63867df0a3fc7e0848e379863858",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K24_seed1": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K24_seed1/row.json",
+      "sha256": "e18ceefde0cecc182e136a3e1759c89b6becc050e88a6a4e4764f6da42381a2a",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K24_seed2": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K24_seed2/row.json",
+      "sha256": "4d8bb04282700519efc885089050afb63c7b5713385a3ccb84af1d10f8650828",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K28_seed0": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K28_seed0/row.json",
+      "sha256": "9afc452dd776ff3733fa5f9d8877f59fc00e5aa7017a7ffdcfa8efba1eefc826",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K28_seed1": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K28_seed1/row.json",
+      "sha256": "ed0131c8db057624c6eb7b47612a40329fd19a85384391fe1c3e562012a187fc",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K28_seed2": {
+      "path": "C:/chlu/outputs/w15-crossover-seeds/val_sweep/val_K28_seed2/row.json",
+      "sha256": "adfaeb8e3fb010150cc4696b8ace4aa79be759fbd005ceed73a43f0ae1d28410",
+      "source_wave": "w15-crossover-seeds"
+    },
+    "K32_seed0": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K32_seed0/row.json",
+      "sha256": "5ad5ae8c7ad6e42a0946462b65200cf91b3586da4f81ac93ebc10316bce274f9",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K32_seed1": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K32_seed1/row.json",
+      "sha256": "4e72c610c0cf993b4569aa9b9241330225fdc5671cfabbb1daa9a6b00c80193f",
+      "source_wave": "w12-single-design-crossover"
+    },
+    "K32_seed2": {
+      "path": "C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K32_seed2/row.json",
+      "sha256": "d89643467f89ade2fd30c7937eb2723e1b5fdd9170d6cc79f1b1e6c9445af37e",
+      "source_wave": "w12-single-design-crossover"
+    }
+  },
+  "scored_runs_spent": 0,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "sweep": [
+    5,
+    8,
+    10,
+    12,
+    16,
+    20,
+    24,
+    28,
+    32
+  ],
+  "u_shape": {
+    "K_with_all_seeds": [
+      5,
+      8,
+      10,
+      12,
+      16,
+      20,
+      24,
+      28,
+      32
+    ],
+    "S1_all_seeds_u_shaped": true,
+    "S2_all_minima_near_K24": true,
+    "S3_verdict": "CONFIRMED",
+    "S4_resolvability": {
+      "K_used": 24,
+      "minimum_resolvable": true,
+      "neighbours": {
+        "20": {
+          "gap_bytes": 12202.666666666744,
+          "gap_exceeds_seed_band": true
+        },
+        "28": {
+          "gap_bytes": 30506.666666666744,
+          "gap_exceeds_seed_band": true
+        }
+      },
+      "seed_band_sd_bytes": 7060.009442864317
+    },
+    "claim": "the honest four-part total is U-shaped in K with its minimum near K = 24",
+    "distinct_minima": [
+      24
+    ],
+    "n_seeds": 3,
+    "note": "S3 REFUTED is a RESULT, not a failure: the per-seed minima are then the reportable quantity and the sentence is not claimed.",
+    "per_seed": {
+      "0": {
+        "K_argmin": 24,
+        "S1_u_shaped": true,
+        "S1_violations_after_min": [],
+        "S1_violations_before_min": [],
+        "S2_min_near_K24": true,
+        "min_bytes": 2094130,
+        "totals_by_K": {
+          "10": 2606754,
+          "12": 2393714,
+          "16": 2177330,
+          "20": 2100786,
+          "24": 2094130,
+          "28": 2126890,
+          "32": 2143138,
+          "5": 4118034,
+          "8": 2959602
+        }
+      },
+      "1": {
+        "K_argmin": 24,
+        "S1_u_shaped": true,
+        "S1_violations_after_min": [],
+        "S1_violations_before_min": [],
+        "S2_min_near_K24": true,
+        "min_bytes": 2080090,
+        "totals_by_K": {
+          "10": 2606754,
+          "12": 2393714,
+          "16": 2177330,
+          "20": 2095586,
+          "24": 2080090,
+          "28": 2107130,
+          "32": 2136378,
+          "5": 4118034,
+          "8": 2959602
+        }
+      },
+      "2": {
+        "K_argmin": 24,
+        "S1_u_shaped": true,
+        "S1_violations_after_min": [],
+        "S1_violations_before_min": [],
+        "S2_min_near_K24": true,
+        "min_bytes": 2085810,
+        "totals_by_K": {
+          "10": 2606754,
+          "12": 2393714,
+          "16": 2177330,
+          "20": 2100266,
+          "24": 2085810,
+          "28": 2117530,
+          "32": 2142098,
+          "5": 4118034,
+          "8": 2959602
+        }
+      }
+    },
+    "per_seed_minima": {
+      "0": 24,
+      "1": 24,
+      "2": 24
+    },
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "test_declared_in": "LOG.md section 5 (S1-S4), written before the seed-1 and seed-2 totals existed"
+  },
+  "u_shape_test_declared_in": "LOG.md section 5, written before the seed-1 and seed-2 totals existed",
+  "wave": "w15 spoke/crossover-seeds"
+}

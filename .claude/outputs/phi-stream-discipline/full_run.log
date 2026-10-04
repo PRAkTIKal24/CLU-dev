@@ -1,0 +1,341 @@
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+{
+  "cost_of_strictness": {
+    "identity_acc": {
+      "ae": {
+        "metric": "identity_acc",
+        "line": "clu_in_phi",
+        "final_by_task": {
+          "generic_frozen": [
+            {
+              "task": 0,
+              "mean": 0.625,
+              "std": 0.06750771560841522,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.8958333333333334,
+              "std": 0.05311478659992484,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "task": 0,
+              "mean": 0.7395833333333334,
+              "std": 0.16204530402191714,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 0.9791666666666666,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.8958333333333334,
+              "std": 0.05311478659992484,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 0.875,
+              "std": 0.0,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "stream_by_position": {
+          "generic_frozen": [
+            {
+              "position": 1,
+              "mean": 0.7083333333333334,
+              "std": 0.0820209153542897,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 0.8072916666666666,
+              "std": 0.02655739329996242,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 0.8541666666666666,
+              "std": 0.008505172717997162,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.8671875,
+              "std": 0.011048543456039806,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.9041666666666667,
+              "std": 0.023570226039551608,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "position": 1,
+              "mean": 0.7395833333333334,
+              "std": 0.05892556509887896,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 0.8645833333333334,
+              "std": 0.0736569563735987,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 0.9027777777777778,
+              "std": 0.046842838761222354,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.90625,
+              "std": 0.049820641848200495,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.8979166666666667,
+              "std": 0.04156236946512501,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "gap_generic_minus_task1": {
+          "by_task_index": [
+            -0.11458333333333337,
+            0.0,
+            0.02083333333333337,
+            0.0,
+            0.125
+          ],
+          "slope_per_task_index": 0.04791666666666667,
+          "by_stream_position": [
+            -0.03125,
+            -0.05729166666666674,
+            -0.04861111111111116,
+            -0.0390625,
+            0.006249999999999978
+          ],
+          "slope_per_stream_position": 0.009322916666666677,
+          "gap_at_task1": -0.11458333333333337,
+          "gap_at_last_task": 0.125,
+          "gap_end_of_stream": 0.006249999999999978,
+          "note": "positive = the (leaky) generic \u03c6 is better; this is the COST OF STRICTNESS paid by the primary task-1-only arm"
+        }
+      },
+      "pca": {
+        "metric": "identity_acc",
+        "line": "clu_in_phi",
+        "final_by_task": {
+          "generic_frozen": [
+            {
+              "task": 0,
+              "mean": 0.625,
+              "std": 0.06750771560841522,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 0.9583333333333334,
+              "std": 0.03897559777889522,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 0.9791666666666666,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.8645833333333334,
+              "std": 0.05311478659992484,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 0.9791666666666666,
+              "std": 0.02946278254943948,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "task": 0,
+              "mean": 0.7395833333333334,
+              "std": 0.16204530402191714,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 0.9895833333333334,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 0.96875,
+              "std": 0.02551551815399144,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.90625,
+              "std": 0.04419417382415922,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 0.9166666666666666,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "stream_by_position": {
+          "generic_frozen": [
+            {
+              "position": 1,
+              "mean": 0.6875,
+              "std": 0.0919975090242484,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 0.7916666666666666,
+              "std": 0.00736569563735987,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 0.84375,
+              "std": 0.008505172717997117,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.8541666666666666,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.88125,
+              "std": 0.018399501804849665,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "position": 1,
+              "mean": 0.7291666666666666,
+              "std": 0.07795119555779044,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 0.8541666666666666,
+              "std": 0.07026425814183355,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 0.8784722222222222,
+              "std": 0.04195502074164783,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.8932291666666666,
+              "std": 0.03146626555623586,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.9041666666666668,
+              "std": 0.03397813839645849,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "gap_generic_minus_task1": {
+          "by_task_index": [
+            -0.1145

@@ -1,0 +1,71 @@
+[23:10:25Z] START bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 5 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_fit_rival.py --where val --seed 0 --family mlp --hp-from val --no-tenx --delete-scope value --suffix _del_value
+[01:15:25] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+[01:15:27] RETRAIN-WITHOUT value: deleted 11024 rows, refit on 120048 survivors
+[01:15:27] where=val seed=0 family=mlp  pool 120048 rows from C:/chlu/outputs/hub-factor-wells/run-val/partitions.npz
+[01:15:27] cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+[01:16:39] gathered (120048, 2048) in 71s
+[01:17:43]     [mlp] matched width=61, params=130514 vs target 131072 (-0.426%), kind=onehot
+[01:18:07] declared: 40 epochs on ALL 120048 rows (lr=0.003 wd=0.0001)
+[01:18:36]       epoch 1/40 train 0.19740  (27s)
+[01:19:32]       epoch 4/40 train 0.02247  (83s)
+[01:20:54]       epoch 8/40 train 0.01834  (165s)
+[01:22:13]       epoch 12/40 train 0.01754  (244s)
+[01:23:28]       epoch 16/40 train 0.01706  (319s)
+[01:24:44]       epoch 20/40 train 0.01675  (395s)
+[01:26:02]       epoch 24/40 train 0.01657  (472s)
+[01:27:23]       epoch 28/40 train 0.01644  (554s)
+[01:28:43]       epoch 32/40 train 0.01635  (634s)
+[01:30:01]       epoch 36/40 train 0.01629  (712s)
+[01:31:20]       epoch 40/40 train 0.01627  (791s)
+[01:31:21] declared done: final train mse 0.01627 in 791s
+[23:31:31Z] END rc=0 bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 5 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_fit_rival.py --where val --seed 0 --family mlp --hp-from val --no-tenx --delete-scope value --suffix _del_value
+[23:31:31Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners val --seed 0 --arms rival:val_del_value:mlp__declared
+[01:33:04] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:34:20] FastJudge positive control: True
+[01:34:20] corners=val seed=0: 24 corners
+[01:35:40]   mlp__declared@val_del_value                  novel/corner 48.542 (ceiling 72.00)  in 69s
+[01:35:40] done
+[23:35:46Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners val --seed 0 --arms rival:val_del_value:mlp__declared
+[23:35:47Z] LANE DONE

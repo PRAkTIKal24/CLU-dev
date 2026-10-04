@@ -1,0 +1,48 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+    [A] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04854 (lambda* = 0.05393)
+    [A] N=64 r=16 store=524,288 B coupling=524,288 B total=1,048,576 B = 2.00x budget (PREREG §3 match: True)
+    [A] sigma per well = 4.6343 5.0714 9.1827 6.3054 5.1006
+--- arm zero_step ---
+
+=== arm=zero_step  threshold(val,q=0.95) = 2.6025 ===
+  set             refused mean S_max AUROC vs syn_valid
+  val              0.0508     0.5745     0.5244
+  syn_valid        0.0352     0.4599         --
+  syn_a7           0.0391     0.3970     0.4818
+  syn_dup          0.3125     8.0294     0.7390
+  syn_oor_1        0.0508     0.4143     0.4921
+  syn_oor_2        0.0820     0.6316     0.5214
+  syn_oor_3        0.0977     0.8551     0.5527
+  A7-CONTROLLED analogue  AUROC(syn_dup vs syn_a7) = 0.7511
+--- arm store_removed_zero_step ---
+
+=== arm=store_removed_zero_step  threshold(val,q=0.95) = 2.2837 ===
+  set             refused mean S_max AUROC vs syn_valid
+  val              0.0508     0.2779     0.5275
+  syn_valid        0.0312     0.1699         --
+  syn_a7           0.0469     0.1797     0.4976
+  syn_dup          0.3125     3.7720     0.7852
+  syn_oor_1        0.0586     0.1196     0.4830
+  syn_oor_2        0.0508     0.2426     0.5153
+  syn_oor_3        0.0703     0.4435     0.5575
+  A7-CONTROLLED analogue  AUROC(syn_dup vs syn_a7) = 0.7809
+--- arm request_off_zero_step ---
+
+=== arm=request_off_zero_step  threshold(val,q=0.95) = 2.6025 ===
+  set             refused mean S_max AUROC vs syn_valid
+  val              0.0508     0.5745     0.5244
+  syn_valid        0.0352     0.4599         --
+  syn_a7           0.0391     0.3970     0.4818
+  syn_dup          0.3125     8.0294     0.7390
+  syn_oor_1        0.0508     0.4143     0.4921
+  syn_oor_2        0.0820     0.6316     0.5214
+  syn_oor_3        0.0977     0.8551     0.5527
+  A7-CONTROLLED analogue  AUROC(syn_dup vs syn_a7) = 0.7511
+
+wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-refusal\SYNTHETIC_PROBE_seed0_A_AMD9.json
+⛔ FIT-DERIVED SYNTHETIC. MECHANISM ONLY. NOT the refusal result.

@@ -1,0 +1,272 @@
+{
+ "spec": {
+  "name": "WIDEN_SHUF",
+  "blocks": [
+   "p",
+   "b3"
+  ],
+  "half_channels": [],
+  "shuffle": [
+   "b3"
+  ],
+  "shuffle_seed": 20260919,
+  "D": 4096,
+  "n_atoms": 32,
+  "store_bytes": 524288,
+  "budget_bytes": 524288,
+  "byte_matched": true,
+  "dims_per_block": {
+   "p": 2048,
+   "b3": 2048
+  },
+  "bytes_formula": "n_atoms * D * 4",
+  "note": "THE LAUNDERING CONTROL for WIDEN. Identical D, N, bytes and marginal statistics; the b3 rows are permuted so the block carries NO information about the row it sits beside. A WIDEN gain that survives here is not content."
+ },
+ "set": "row1",
+ "set_label": "row1 (row1_seen.json)",
+ "n_requests": 512,
+ "seed": 0,
+ "grouping": {
+  "well_sizes": [
+   979,
+   1008,
+   1049,
+   530,
+   530
+  ],
+  "K": 5,
+  "method_used": "ward",
+  "n_dead_channels": 71,
+  "well_block_composition": [
+   {
+    "p": 979,
+    "b3": 0
+   },
+   {
+    "p": 1004,
+    "b3": 4
+   },
+   {
+    "p": 0,
+    "b3": 1049
+   },
+   {
+    "p": 14,
+    "b3": 516
+   },
+   {
+    "p": 51,
+    "b3": 479
+   }
+  ],
+  "mean_well_purity": 0.9746780473195568,
+  "global_block_fractions": {
+   "p": 0.5,
+   "b3": 0.5
+  },
+  "mixing": 0.050643905360886476,
+  "mixing_note": "1.0 = every well holds the global block mixture; 0.0 = every well is a single block. A low value means the joint store is two stores side by side."
+ },
+ "byte_ledger": {
+  "n_atoms_per_well": 32,
+  "dim": 4096,
+  "well_sizes": [
+   979,
+   1008,
+   1049,
+   530,
+   530
+  ],
+  "store_bytes": 524288,
+  "dtype": "float32",
+  "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+  "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72).",
+  "deployed_bytes": 524288,
+  "budget_bytes": 524288,
+  "what": "32 atoms x 4096 float32 = the store, content=['p', 'b3']"
+ },
+ "provenance": {
+  "spec": {
+   "name": "WIDEN_SHUF",
+   "blocks": [
+    "p",
+    "b3"
+   ],
+   "half_channels": [],
+   "shuffle": [
+    "b3"
+   ],
+   "shuffle_seed": 20260919,
+   "D": 4096,
+   "n_atoms": 32,
+   "store_bytes": 524288,
+   "budget_bytes": 524288,
+   "byte_matched": true,
+   "dims_per_block": {
+    "p": 2048,
+    "b3": 2048
+   },
+   "bytes_formula": "n_atoms * D * 4",
+   "note": "THE LAUNDERING CONTROL for WIDEN. Identical D, N, bytes and marginal statistics; the b3 rows are permuted so the block carries NO information about the row it sits beside. A WIDEN gain that survives here is not content."
+  },
+  "scales": {
+   "p": 0.7120305605301868,
+   "b3": 0.6097401877245198
+  },
+  "sigma": [
+   18.3900203704834,
+   15.465038299560547,
+   13.421671867370605,
+   9.141130447387695,
+   7.304128646850586
+  ],
+  "atom_selection": "kmeanspp",
+  "seed": 0,
+  "launch_mode": "clamp_atom",
+  "settling_steps": 0,
+  "read_mode": "state",
+  "sigma_rule": "nn_median",
+  "book_smoothing": 1.0
+ },
+ "rows": {
+  "full": {
+   "n": 512,
+   "aggregate": 0.4388020833333333,
+   "exact_match": 0.001953125,
+   "per_factor": {
+    "floor_hue": 0.75390625,
+    "wall_hue": 0.806640625,
+    "object_hue": 0.376953125,
+    "scale": 0.12109375,
+    "shape": 0.404296875,
+    "orientation": 0.169921875
+   },
+   "n_distinct_index_tuples": 259,
+   "mean_confidence": 0.05754675716161728,
+   "launch_mode": "clamp_atom",
+   "per_corner": {
+    "row1": {
+     "n": 512,
+     "aggregate": 0.4388020833333333,
+     "exact_match": 0.001953125,
+     "per_factor": {
+      "floor_hue": 0.75390625,
+      "wall_hue": 0.806640625,
+      "object_hue": 0.376953125,
+      "scale": 0.12109375,
+      "shape": 0.404296875,
+      "orientation": 0.169921875
+     },
+     "distinct_valid_tuples": 1,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 1,
+     "n_valid": 1
+    }
+   }
+  },
+  "atom_mean_lookup": {
+   "n": 512,
+   "aggregate": 0.3587239583333333,
+   "exact_match": 0.0,
+   "per_factor": {
+    "floor_hue": 0.2890625,
+    "wall_hue": 0.70703125,
+    "object_hue": 0.376953125,
+    "scale": 0.134765625,
+    "shape": 0.58984375,
+    "orientation": 0.0546875
+   },
+   "n_distinct_index_tuples": 259,
+   "mean_confidence": 0.05754675716161728,
+   "launch_mode": "posterior_mean",
+   "per_corner": {
+    "row1": {
+     "n": 512,
+     "aggregate": 0.3587239583333333,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.2890625,
+      "wall_hue": 0.70703125,
+      "object_hue": 0.376953125,
+      "scale": 0.134765625,
+      "shape": 0.58984375,
+      "orientation": 0.0546875
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    }
+   }
+  },
+  "row_lookup": {
+   "n": 512,
+   "aggregate": 0.2783203125,
+   "exact_match": 0.0,
+   "per_factor": {
+    "floor_hue": 0.38671875,
+    "wall_hue": 0.439453125,
+    "object_hue": 0.25390625,
+    "scale": 0.138671875,
+    "shape": 0.34375,
+    "orientation": 0.107421875
+   },
+   "n_distinct_rows_returned": 27,
+   "launch_mode": "row_lookup",
+   "per_corner": {
+    "row1": {
+     "n": 512,
+     "aggregate": 0.2783203125,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.38671875,
+      "wall_hue": 0.439453125,
+      "object_hue": 0.25390625,
+      "scale": 0.138671875,
+      "shape": 0.34375,
+      "orientation": 0.107421875
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    }
+   }
+  },
+  "atoms_shuffled": {
+   "n": 512,
+   "aggregate": 0.12532552083333334,
+   "exact_match": 0.0,
+   "per_factor": {
+    "floor_hue": 0.03125,
+    "wall_hue": 0.08203125,
+    "object_hue": 0.16015625,
+    "scale": 0.125,
+    "shape": 0.28125,
+    "orientation": 0.072265625
+   },
+   "n_distinct_index_tuples": 259,
+   "launch_mode": "atoms_shuffled",
+   "per_corner": {
+    "row1": {
+     "n": 512,
+     "aggregate": 0.12532552083333334,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.03125,
+      "wall_hue": 0.08203125,
+      "object_hue": 0.16015625,
+      "scale": 0.125,
+      "shape": 0.28125,
+      "orientation": 0.072265625
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    }
+   }
+  }
+ },
+ "wall_seconds": 73.98188924789429
+}

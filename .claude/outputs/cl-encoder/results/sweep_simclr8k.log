@@ -1,0 +1,73 @@
+fit pool = 4966 images
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+fit simclr in 1264s: {'arm': 'simclr', 'k': 32, 'h_dim': 512, 'objective': 'simclr', 'steps': 8000, 'loss_first': 5.512242317199707, 'loss_final': 4.074422359466553, 'n_fit': 4966, 'frozen': True}
+keep        pca d=32   l2=0 ring=0.3148 full=0.4176
+keep        pca d=32   l2=1 ring=0.3384 full=0.4288
+keep        pca d=64   l2=0 ring=0.3432 full=0.4396
+keep        pca d=64   l2=1 ring=0.3408 full=0.4500
+keep        pca d=128  l2=0 ring=0.3400 full=0.4436
+keep        pca d=128  l2=1 ring=0.3436 full=0.4532
+keep        pca d=256  l2=0 ring=0.3428 full=0.4580
+keep        pca d=256  l2=1 ring=0.3496 full=0.4600
+keep pca_whiten d=32   l2=0 ring=0.3004 full=0.4196
+keep pca_whiten d=32   l2=1 ring=0.2964 full=0.4132
+keep pca_whiten d=64   l2=0 ring=0.3132 full=0.4280
+keep pca_whiten d=64   l2=1 ring=0.3264 full=0.4228
+keep pca_whiten d=128  l2=0 ring=0.2984 full=0.4540
+keep pca_whiten d=128  l2=1 ring=0.3052 full=0.4592
+keep pca_whiten d=256  l2=0 ring=0.2676 full=0.4380
+keep pca_whiten d=256  l2=1 ring=0.3084 full=0.4548
+ gap        pca d=32   l2=0 ring=0.3096 full=0.3936
+ gap        pca d=32   l2=1 ring=0.3020 full=0.4148
+ gap        pca d=64   l2=0 ring=0.3076 full=0.4044
+ gap        pca d=64   l2=1 ring=0.3056 full=0.4180
+ gap        pca d=128  l2=0 ring=0.3124 full=0.4112
+ gap        pca d=128  l2=1 ring=0.3032 full=0.4228
+ gap pca_whiten d=32   l2=0 ring=0.3024 full=0.3940
+ gap pca_whiten d=32   l2=1 ring=0.3012 full=0.3928
+ gap pca_whiten d=64   l2=0 ring=0.2740 full=0.4048
+ gap pca_whiten d=64   l2=1 ring=0.2952 full=0.4040
+ gap pca_whiten d=128  l2=0 ring=0.2756 full=0.4128
+ gap pca_whiten d=128  l2=1 ring=0.2976 full=0.4104
+BEST: {"spatial": "keep", "head": "pca", "phi_dim": 256, "l2": true, "acc_ring": 0.34959999999999997, "acc_full_stream": 0.4600000000000001}

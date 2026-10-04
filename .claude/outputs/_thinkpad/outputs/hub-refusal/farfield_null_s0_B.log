@@ -1,0 +1,87 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+    [B] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04922 (lambda* = 0.05469)
+    [B] N=512 r=128 store=4,194,304 B coupling=4,194,304 B total=8,388,608 B = 2.00x budget (PREREG §3 match: True)
+    [B] sigma per well = 3.2317 3.7288 7.1006 5.1012 3.8283
+  posteriors built for 7 sets
+  shuffle 1/16: pair = (0.7815, 0.1677)
+  shuffle 2/16: pair = (0.7584, 0.1875)
+  shuffle 3/16: pair = (0.7844, 0.1612)
+  shuffle 4/16: pair = (0.7840, 0.1677)
+  shuffle 5/16: pair = (0.7860, 0.1749)
+  shuffle 6/16: pair = (0.7827, 0.1649)
+  shuffle 7/16: pair = (0.7743, 0.1765)
+  shuffle 8/16: pair = (0.7768, 0.1559)
+  shuffle 9/16: pair = (0.7704, 0.1762)
+  shuffle 10/16: pair = (0.7726, 0.1781)
+  shuffle 11/16: pair = (0.7734, 0.1664)
+  shuffle 12/16: pair = (0.7721, 0.1695)
+  shuffle 13/16: pair = (0.7707, 0.1640)
+  shuffle 14/16: pair = (0.7916, 0.1676)
+  shuffle 15/16: pair = (0.7714, 0.1782)
+  shuffle 16/16: pair = (0.7797, 0.1672)
+
+{
+ "far_field_fit": {
+  "pearson_r": 0.2344409290320173,
+  "r2_linear_fit": 0.05496254920539556,
+  "spearman": 0.19646079725955062,
+  "slope": 0.11779847274131099,
+  "intercept": -532.0467313721592,
+  "note": "Q contains the atom CENTROID and nothing else. A slope near 1 and an R^2 near 1 say E_store(x_read) IS a centroid distance -- and a column permutation preserves the centroid EXACTLY.",
+  "mean_d_over_spread": {
+   "val": 20.157157340919284,
+   "syn_valid": 20.226231448676845,
+   "syn_a7": 19.915341147981003,
+   "syn_dup": 20.717488254197974,
+   "syn_oor_1": 20.31022681824083,
+   "syn_oor_2": 20.328089179386062,
+   "syn_oor_3": 20.261055527713935
+  },
+  "residual_std_over_S_std": 0.972130367180557
+ },
+ "invariant_residual_split": {
+  "AUROC_pair_E_store_FULL": [
+   0.6119105021158854,
+   0.4704437255859375
+  ],
+  "AUROC_pair_Q_centroid_only": [
+   0.5695292154947916,
+   0.25531005859375
+  ],
+  "AUROC_pair_RESIDUAL_the_only_part_atom_JOINT_structure_can_reach": [
+   0.5928904215494791,
+   0.5323486328125
+  ],
+  "note": "(oor pooled vs syn_valid, dup vs syn_a7). If Q alone reproduces E_store's pair, the criterion carries no atom identity; if the residual is at chance, the atoms' joint structure contributes nothing to refusal."
+ }
+}
+{
+ "R_shuffles": 16,
+ "full_store_pair": [
+  0.6119105021158854,
+  0.4704437255859375
+ ],
+ "null_oor": {
+  "mean": 0.7768664360046387,
+  "std": 0.008099762511407076,
+  "min": 0.7583541870117188,
+  "max": 0.7915929158528646
+ },
+ "null_dup": {
+  "mean": 0.1702251434326172,
+  "std": 0.007815254490770014,
+  "min": 0.15590667724609375,
+  "max": 0.18746185302734375
+ },
+ "full_inside_null_oor": false,
+ "full_inside_null_dup": false,
+ "two_sided_rank_p_oor": 1.0,
+ "two_sided_rank_p_dup": 1.0,
+ "note": "Each shuffle is a legitimate instance of the SHIPPED charter C.2 control (refusal_lib.shuffled_store) at a different seed. A full-store value inside its own landscape-removed null is decorative, measured not asserted."
+}
+wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-refusal\FARFIELD_NULL_seed0_B.json

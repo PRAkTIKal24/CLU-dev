@@ -1,0 +1,131 @@
+--- REPLICATION arm=place_norm_rank 2026-09-19T18:23:51Z ---
+[    0.0s] arm=place_norm_rank seed=0 condition=test cache={"generation": 2, "n_rows": 480000, "scope": "full", "features_sha256": "ef6359a4cd54b08287cf3709a2b4f7ed39c0fb504b32f5ddb65d483aefa813c3", "encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d", "root": "C:\\chlu\\outputs\\spoke-a-rivals\\cache_generation2"}
+[    1.3s]   fit pool 131072 rows, 0 shared with the hold-out
+[   91.4s]   relevance (2048, 6) in 82.5s; dead 64
+[  123.8s]   candidates: 14 written -> C:\chlu\outputs\hub-placement\replication\seed0\candidates.npz
+[  123.9s]   seed 0: 18 partitions handed over -> extra_partitions.npz
+[  124.9s]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+[  131.1s]   dead channels: 64
+[  211.7s]   channel-factor relevance: (2048, 6) in 80.6s; mean top-factor MI 0.5458 bits
+[  241.2s]   partitions written -> C:\chlu\outputs\hub-placement\replication\seed0\partitions.json
+[  243.3s]   arm place_norm_rank: partition=norm_rank sizes=[410, 410, 410, 409, 409]
+[  297.4s]     step 1/1200  loss=39.18429  tau=1.000
+[  310.8s]     step 300/1200  loss=30.81524  tau=0.563
+[  323.1s]     step 600/1200  loss=27.83266  tau=0.317
+[  335.4s]     step 900/1200  loss=26.65045  tau=0.178
+[  348.5s]     step 1200/1200  loss=27.53498  tau=0.100
+[  422.9s]   gram: accumulated over 131072 rows -> gram_pair.npz
+[  425.3s]   arm place_norm_rank: fitted in 183.7s; store 524,288 B + head 1,766,400 B
+[  425.7s]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[  858.4s]   arm place_norm_rank: r1_seen accept=1.0000 valid=0.6035
+[  871.2s]   arm place_norm_rank: r2_unseen_valid accept=1.0000 valid=0.6152
+[  884.1s]   arm place_norm_rank: r5_comp_refusal accept=0.0000 valid=0.0000
+[  897.7s]   arm place_norm_rank: r6_invalid_refusal accept=0.0000 valid=0.0000
+[ 1041.3s]   arm place_norm_rank: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[ 1041.4s]   arm place_norm_rank: all rows done in 591.5s
+[ 1041.4s] done: {"incomplete": false, "n_done": 109}
+--- REPLICATION arm=place_norm_rank rc=0 2026-09-19T18:42:06Z ---
+--- REPLICATION arm=factor_aligned_balanced 2026-09-19T18:42:06Z ---
+[    0.0s] arm=factor_aligned_balanced seed=0 condition=test cache={"generation": 2, "n_rows": 480000, "scope": "full", "features_sha256": "ef6359a4cd54b08287cf3709a2b4f7ed39c0fb504b32f5ddb65d483aefa813c3", "encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d", "root": "C:\\chlu\\outputs\\spoke-a-rivals\\cache_generation2"}
+[    0.5s]   partitions: already on disk, skipping
+[    2.5s]   arm factor_aligned_balanced: partition=balanced sizes=[410, 410, 410, 409, 409]
+[   59.6s]     step 1/1200  loss=39.49906  tau=1.000
+[   71.5s]     step 300/1200  loss=29.81933  tau=0.563
+[   83.6s]     step 600/1200  loss=28.08714  tau=0.317
+[   95.6s]     step 900/1200  loss=26.87512  tau=0.178
+[  107.5s]     step 1200/1200  loss=27.03945  tau=0.100
+[  126.7s]   gram: reused from gram_pair.npz
+[  130.2s]   arm factor_aligned_balanced: fitted in 129.4s; store 524,288 B + head 1,766,400 B
+[  130.5s]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[  568.1s]   arm factor_aligned_balanced: r1_seen accept=1.0000 valid=0.6348
+[  580.8s]   arm factor_aligned_balanced: r2_unseen_valid accept=1.0000 valid=0.6055
+[  592.7s]   arm factor_aligned_balanced: r5_comp_refusal accept=0.0000 valid=0.0000
+[  604.7s]   arm factor_aligned_balanced: r6_invalid_refusal accept=0.0000 valid=0.0000
+[  754.9s]   arm factor_aligned_balanced: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[  755.0s]   arm factor_aligned_balanced: all rows done in 599.2s
+[  755.0s] done: {"incomplete": false, "n_done": 109}
+--- REPLICATION arm=factor_aligned_balanced rc=0 2026-09-19T18:55:25Z ---

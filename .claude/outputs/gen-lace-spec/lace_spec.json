@@ -1,0 +1,348 @@
+{
+  "_meta": {
+    "slug": "gen-lace-spec",
+    "agent": "web-scout",
+    "date": "2026-09-09",
+    "paper": {
+      "title": "Controllable and Compositional Generation with Latent-Space Energy-Based Models",
+      "authors": ["Weili Nie", "Arash Vahdat", "Anima Anandkumar"],
+      "venue": "NeurIPS 2021 (peer-reviewed)",
+      "arxiv": "arXiv:2110.10873",
+      "openreview": "https://openreview.net/forum?id=kcI3T5qe1jr",
+      "project_page": "https://nvlabs.github.io/LACE/"
+    },
+    "official_code": {
+      "url": "https://github.com/NVlabs/LACE",
+      "head_commit": "dcfd4a57bee40fcb17ac8304413f1e35a64323cd",
+      "head_commit_date": "2021-12-01T22:53:56Z",
+      "head_commit_msg": "update readme",
+      "author": "weilinie",
+      "license": "NVIDIA source-code license, non-commercial research/eval only",
+      "note": "Repo has only 5 commits, all 2021-11-20..2021-12-01. No maintenance since. HEAD == the release used for the paper."
+    },
+    "provenance_legend": {
+      "PAPER": "stated in arXiv:2110.10873 (main text or appendix)",
+      "OFFICIAL_IMPLEMENTATION": "read from NVlabs/LACE @ dcfd4a5 source or shipped scripts",
+      "DERIVED": "arithmetic performed by this spoke from PAPER/OFFICIAL constants; flagged as such",
+      "NOT_OBTAINED": "could not retrieve from primary source"
+    },
+    "reading_caveat": "Equation NUMBERS below come from a single ar5iv rendering pass of arXiv:2110.10873 and are single-sourced. Equation CONTENT was independently cross-verified against the official code. Trust the content; re-check the numbering before citing an equation number in a paper."
+  },
+
+  "1_classifier_head": {
+    "one_classifier_per_attribute": {
+      "value": true,
+      "provenance": "OFFICIAL_IMPLEMENTATION",
+      "locator": "FFHQ/scripts/run_clf.sh loops `for att_name in yaw smile gender age glasses light3 pitch haircolor beard bald light0 width` and trains + checkpoints one classifier per attribute; CCF.classify() iterates `self.f` (a list of per-attribute nets) and concatenates their logits."
+    },
+    "architecture_as_published": {
+      "value": "four-layer MLP: Linear(384)+LeakyReLU -> Linear(256)+LeakyReLU -> Linear(128)+LeakyReLU -> Linear(#logits)",
+      "provenance": "PAPER",
+      "locator": "Appendix A.3 ('four-layer MLP as network architecture when trained in z-space or w-space of StyleGAN2')"
+    },
+    "architecture_as_implemented": {
+      "class": "DenseEmbedder",
+      "provenance": "OFFICIAL_IMPLEMENTATION",
+      "locator": "FFHQ/latent_model.py and CIFAR10/latent_model.py",
+      "verbatim": "class DenseEmbedder(nn.Module):\n    \"\"\"Supposed to map small-scale features (e.g. labels) to some given latent dim\"\"\"\n    def __init__(self, input_dim, up_dim, depth=4, num_classes_list=[2], given_dims=None, norm=None):\n        super().__init__()\n        self.net = nn.ModuleList()\n        if given_dims is not None:\n            assert given_dims[0] == input_dim\n            assert given_dims[-1] == up_dim\n            dims = given_dims\n        else:\n            dims = np.linspace(input_dim, up_dim, depth).astype(int)\n\n        for l in range(len(dims)-1):\n            self.net.append(nn.Conv2d(dims[l], dims[l + 1], 1))\n\n            self.net.append(get_norm(dims[l + 1], norm))\n            self.net.append(nn.LeakyReLU(0.2))\n\n        self.num_classes_list = num_classes_list\n        self.last_dim = up_dim\n        self.heads = nn.Linear(up_dim, sum(num_classes_list))\n\n    def forward(self, x):\n        if x.ndim == 2:\n            x = x[:, :, None, None]\n\n        for layer in self.net:\n            x = layer(x)\n\n        out = x.squeeze(-1).squeeze(-1)\n        out = self.heads(out)\n        out_list = list(torch.split(out, self.num_classes_list, dim=1))\n        return out_list",
+      "reconciliation": "DERIVED: with input_dim=512 (StyleGAN2 z/w), up_dim=128, depth=4, np.linspace(512,128,4).astype(int) = [512, 384, 256, 128]. The 1x1 Conv2d on a 1x1 spatial map is exactly a Linear. So DenseEmbedder == the paper's 'Linear 384 / 256 / 128 / #logits' MLP. Paper and code AGREE.",
+      "activation": "LeakyReLU(negative_slope=0.2)",
+      "norm": "get_norm(dims[l+1], norm); `norm` defaults to None -> Identity. Options: BatchNorm2d / InstanceNorm2d / GroupNorm.",
+      "depth": "hard-coded depth=4 in the F class init (OFFICIAL_IMPLEMENTATION, FFHQ/train_classifier.py)"
+    },
+    "how_attribute_labels_are_consumed": {
+      "discrete": "integer class index -> nn.CrossEntropyLoss with uniform class weights",
+      "continuous": "float target -> 0.5 * ||logits - y||^2 (single-logit regression head, num_classes==1)",
+      "missing_labels": "entries with y == -1 are MASKED OUT before the loss (`eff_idxes = (y != -1)`)",
+      "provenance": "OFFICIAL_IMPLEMENTATION",
+      "locator": "FFHQ/utils.py :: get_loss",
+      "verbatim": "def get_loss(logits, y, device='cuda', reduce=False):\n    assert y.ndim == 1 and logits.ndim == 2, (y.ndim, logits.ndim)\n    n_classes = logits.size(1)\n    eff_idxes = (y != -1)\n    logits, y = logits[eff_idxes], y[eff_idxes]\n\n    if n_classes > 1:  # discrete attribute\n        y = y.long()\n        weight = torch.tensor([1 for _ in range(n_classes)]).float().to(device)\n        reduction = 'mean' if reduce else 'none'\n        loss = nn.CrossEntropyLoss(reduction=reduction, weight=weight)(logits, y)\n    else:  # continuous attribute\n        assert n_classes == 1, n_classes\n        y = y.float()\n        weight = torch.tensor([1 for _ in range(y.size(0))]).float().to(device)\n        loss = torch.linalg.norm(logits - y[:, None], dim=1) ** 2 * 0.5 * weight\n        if reduce:\n            loss = loss.mean()\n\n    return loss",
+      "multi_attribute_loss": "loss += utils.get_loss(logits, ys[:, i], reduce=True, device=device) summed over attribute heads (OFFICIAL_IMPLEMENTATION, FFHQ/train_classifier.py)"
+    },
+    "optimizer_and_schedule": {
+      "optimizer": {"value": "adam", "provenance": "OFFICIAL_IMPLEMENTATION + PAPER", "locator": "run_clf.sh `--optimizer adam`; Appendix A.3 'Adam optimizer'"},
+      "lr": {"value": 1e-4, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "run_clf.sh `--lr .0001`; argparse default also 1e-4"},
+      "batch_size": {"value_ffhq": 128, "value_cifar10": 512, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "FFHQ/scripts/run_clf.sh `--batch_size 128`; CIFAR10/scripts/run_clf.sh `--batch_size 512`. NOTE argparse default is 64 and is NOT what was run."},
+      "n_epochs": {"value_scripts": 50, "value_paper": 100, "value_argparse_default": 200, "provenance": "OFFICIAL_IMPLEMENTATION vs PAPER", "CONFLICT": "run_clf.sh (both CIFAR10 and FFHQ) uses `--n_epochs 50`; Appendix A.3 as rendered says 'Adam optimizer for 100 epochs using a staircase decay schedule'; argparse default is 200. Use 50 (the shipped script) and report the conflict."},
+      "warmup_iters": {"value": 1000, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "run_clf.sh `--warmup_iters 1000` (linear LR warmup; argparse default is -1 = disabled)"},
+      "decay_epochs": {"value": [160, 180], "decay_rate": 0.3, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "FFHQ/train_classifier.py argparse defaults `--decay_epochs` [160,180], `--decay_rate` .3", "DERIVED_note": "At the shipped --n_epochs 50 the decay milestones (160/180) are NEVER REACHED. Effective schedule = 1000-iter linear warmup then CONSTANT lr=1e-4. The paper's 'staircase decay schedule' is nominal only."},
+      "weight_decay": {"value": 0.0, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "argparse default `--weight_decay 0.0`; not overridden in run_clf.sh"},
+      "seed": {"value": 123, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "run_clf.sh `--seed 123`"},
+      "up_dim": {"value": 128, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "run_clf.sh `--up_dim 128`"},
+      "model_selection": {"value": "best-validation checkpoint (`best_valid_ckpt_${att_name}.pt`) on a held-out validation set of n_valid=500", "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "run_clf.sh cp line; train_classifier.py `--n_valid` default 500, split after shuffling with seed 1234"}
+    }
+  },
+
+  "2_the_energy": {
+    "joint_energy_paper": {
+      "verbatim": "E_theta(z, c) = sum_i E_theta(c_i | g(z)) + (1/2) ||z||_2^2",
+      "equation_number": "Eq. (5), Sec. 2.2 'Modelling joint EBM in latent space' (single-sourced numbering)",
+      "provenance": "PAPER"
+    },
+    "conditional_energy_discrete_paper": {
+      "verbatim": "E_theta(c_i | x) = -f_i(x; theta)[c_i] + log sum_{c_i} exp(f_i(x; theta)[c_i])",
+      "meaning": "negative log-softmax of the target class = cross-entropy of the target class",
+      "provenance": "PAPER"
+    },
+    "conditional_energy_continuous_paper": {
+      "verbatim": "E_theta(c_i | x) = (1 / (2 sigma^2)) (c_i - f_i(x, theta))^2",
+      "provenance": "PAPER"
+    },
+    "gaussian_prior_term": {
+      "form": "(1/2) ||z||_2^2",
+      "justification_verbatim": "Appendix A.2: 'distribution of latent z in most generative models satisfies p_0(z) = N(0, I), diffusing it with VP-SDE will not change distribution at time t ... p_t(z(t)) = N(0, I)'",
+      "provenance": "PAPER",
+      "CRITICAL": "This is the exact log-density (up to constant) of the StyleGAN z-space prior, which is N(0,I) BY CONSTRUCTION. It is not a fitted or approximate prior. See transfer audit item 6."
+    },
+    "implementation_verbatim": {
+      "locator": "FFHQ/sampling.py :: class CCF",
+      "code": "def get_cond_energy(self, z, ys, seq_indices=[], reweight=True, dis_temp=1.):\n    logits_list = self.classify(z, seq_indices=seq_indices)\n\n    weight_list = [1. for _ in range(len(logits_list))]\n    if len(seq_indices) > 0 and reweight:\n        weight_list = [0.1 for _ in range(len(logits_list) - 1)]\n        weight_list += [10.] if self.n_classes_list[seq_indices[-1]] == 1 else [1.]\n\n    energy_outs = []\n    for j, logits in enumerate(logits_list):\n        energy_neg_cond = self._get_single_cond_energy(logits, ys[:, j], dis_temp)\n        energy_outs.append(energy_neg_cond * weight_list[j])\n\n    if self.expr != '':\n        energy_output = utils.logical_comb(self.expr, energy_outs)\n    else:\n        energy_output = torch.stack(energy_outs).sum(dim=0)\n\n    return energy_output\n\ndef forward(self, z, ys, seq_indices=[], reweight=True, dis_temp=1.):\n    energy_output = self.get_cond_energy(z, ys, seq_indices=seq_indices,\n                    reweight=reweight, dis_temp=dis_temp) \\\n                    - torch.linalg.norm(z, dim=1) ** 2 * 0.5\n    return energy_output",
+      "sign_convention_WARNING": "get_cond_energy / forward return the NEGATIVE energy (i.e. an unnormalised log-density). Hence `- 0.5*||z||^2` in forward corresponds to `+ 0.5*||z||^2` in E. Get this sign wrong and the arm samples the anti-mode.",
+      "prior_is_NOT_in_the_ODE_drift": "DERIVED (structural, high confidence): VPODE.forward calls `self.ccf.get_cond_energy(...)`, NOT `self.ccf(...)`. The (1/2)||z||^2 prior term therefore enters the ODE arm ONLY through (a) the N(0,I) initialisation and (b) the p_t-invariance argument of Appendix A.2. It DOES enter the LD arm, because sample_q_sgld calls `ccf(z_k, ...)` (i.e. forward). This asymmetry is load-bearing for the transfer audit."
+    },
+    "single_conditional_energy_implementation_verbatim": {
+      "locator": "FFHQ/sampling.py :: CCF._get_single_cond_energy",
+      "code": "def _get_single_cond_energy(self, logits, y, dis_temp=1.):\n    assert y.ndim == 1 and logits.ndim == 2, (y.ndim, logits.ndim)\n    n_classes = logits.size(1)\n    if n_classes > 1:  # discrete attribute\n        y = y.long()\n        single_cond_energy = torch.gather(logits / dis_temp, 1, y[:, None]).squeeze() - logits.logsumexp(1)\n    else:  # continuous attribute\n        assert n_classes == 1, n_classes\n        y = y.float()\n        sigma = 0.1  # this value works well\n        single_cond_energy = -torch.linalg.norm(logits - y[:, None], dim=1) ** 2 * 0.5 / (sigma ** 2)\n    assert single_cond_energy.ndim == 1, single_cond_energy.ndim\n    return single_cond_energy",
+      "NOTE_temperature_asymmetry": "DERIVED: `logits / dis_temp` is applied to the gathered target logit but NOT inside `logits.logsumexp(1)`. So dis_temp != 1 does NOT produce a proper tempered log-softmax. Default dis_temp = 1.0 in all shipped scripts, so this never bites in the published runs, but do not sweep dis_temp assuming it is a clean temperature."
+    },
+    "weighting_and_temperature_constants": {
+      "sigma_continuous": {"value": 0.1, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "_get_single_cond_energy, inline comment 'this value works well'", "DERIVED_note": "1/sigma^2 = 100. The ENERGY sharpens the regression head by 100x relative to the TRAINING loss (get_loss uses plain 0.5*L2, no sigma). Paper Eq. for continuous energy carries 1/(2 sigma^2) consistently; the training loss does not."},
+      "dis_temp": {"value": 1.0, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "argparse/kwargs default; not overridden in any shipped sampling script"},
+      "sequential_edit_reweighting": {"value": "[0.1] * (n-1) + [10.0 if last attribute is continuous else 1.0]", "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "get_cond_energy, active only when seq_indices is non-empty and reweight=True", "note": "This is the SEQUENTIAL-EDITING path only. For plain conditional / zero-shot composition seq_indices=[] and all weights are 1.0."},
+      "sequential_edit_regularisers": {"reg_z": "penalises ||g(z)-g(z_anchor)||^2 + ||z-z_anchor||^2", "reg_id": "ArcFace-style IDLoss to the anchor image", "reg_logits": "keeps logits of non-edited attributes near the anchor", "defaults": "all 0 unless a seq-edit script sets them", "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "VPODE.forward / sample_q_sgld"}
+    }
+  },
+
+  "3_the_sampler": {
+    "ode_formulation_paper": {
+      "verbatim": "dz = (1/2) beta(t) sum_i grad_z E(c_i | g(z)) dt",
+      "equation_number": "Eq. (7), Sec. 2.3 'Sampling through ODE solver' (single-sourced numbering)",
+      "integration_direction": "reverse time, 'with negative time increments from T to 0'",
+      "provenance": "PAPER"
+    },
+    "vp_sde_and_beta_schedule": {
+      "forward_sde_verbatim": "dx = -(1/2) beta(t) x dt + sqrt(beta(t)) dw",
+      "beta_verbatim": "beta(t) = beta_min + (beta_max - beta_min) t",
+      "beta_min": 0.1,
+      "beta_max": 20,
+      "T": 1.0,
+      "provenance": "PAPER + OFFICIAL_IMPLEMENTATION (identical)",
+      "code_locator": "FFHQ/sampling.py :: class VPODE.__init__(self, ccf, ys, beta_min=0.1, beta_max=20, T=1.0, ...)"
+    },
+    "ode_drift_implementation_verbatim": {
+      "locator": "FFHQ/sampling.py :: VPODE.forward",
+      "code": "beta_t = self.beta_0 + t_k * (self.beta_1 - self.beta_0)\ncond_energy_neg = self.ccf.get_cond_energy(z, self.ys, self.seq_indices, self.reweight, self.dis_temp)\ncond_f_prime = torch.autograd.grad(cond_energy_neg.sum(), [z])[0]\ndz_dt = -0.5 * beta_t * cond_f_prime",
+      "provenance": "OFFICIAL_IMPLEMENTATION"
+    },
+    "ode_solver": {
+      "library": {"value": "torchdiffeq 0.2.1", "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "README requirements"},
+      "method": {"value": "dopri5", "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "all run_cond_ode_*.sh: `--method dopri5`"},
+      "atol": {"value": 1e-3, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "`--atol 1e-3`"},
+      "rtol": {"value": 1e-3, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "`--rtol 1e-3`"},
+      "use_adjoint": {"value": true, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "`--use_adjoint True`"},
+      "integration_times": {"value": "torch.linspace(vpode.T, 1e-3, 2) -> [1.0, 1e-3]; only the endpoint is requested, dopri5 chooses its own internal steps", "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "sample_q_ode"},
+      "nfe": {"value": "~41.8 average function evaluations reported for the ACC>=95% / FID<=10 operating point on CIFAR-10", "provenance": "PAPER", "confidence": "single-sourced via ar5iv rendering; the code prints the true count as `#ODE steps for {ys_seq}: {vpode.n_evals}` so this is measurable at run time"},
+      "initialisation": {"value": "z_init ~ N(0, I) of shape (batch, latent_dim); latent_dim=512 for StyleGAN2", "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "sample_q_ode: `z_init = torch.FloatTensor(ys.size(0), latent_dim).normal_(0, 1)`"},
+      "noise_schedule": "NONE. sample_q_ode is a deterministic probability-flow ODE. The only stochasticity is the N(0,I) initialisation."
+    },
+    "langevin_variant": {
+      "paper_equation_verbatim": "x_{t+1} = x_t - (eta/2) grad_x E_theta(x_t) + eps_t,  eps_t ~ N(0, eta I)",
+      "equation_number": "Eq. (2), Sec. 2.1 'Energy-based models' (single-sourced numbering)",
+      "provenance": "PAPER",
+      "implementation_verbatim": "energy_neg = ccf(z_k, ys=ys, seq_indices=seq_indices, reweight=reweight, dis_temp=dis_temp)\nf_prime = torch.autograd.grad(energy_neg.sum(), [z_k])[0]\nz_k.data += sgld_lr * f_prime + sgld_std * torch.randn_like(z_k)",
+      "implementation_locator": "FFHQ/sampling.py :: sample_q_sgld",
+      "n_steps": {"value": 100, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "run_cond_ld_sample.sh `--n_steps 100`"},
+      "sgld_lr": {"value": 1e-2, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "`--sgld_lr 1e-2`"},
+      "sgld_std": {"value": 1e-2, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "`--sgld_std 1e-2`"},
+      "DERIVED_temperature_finding": {
+        "claim": "The shipped LACE-LD is NOT a calibrated Langevin sampler; it is ~200x colder than the target posterior.",
+        "derivation": "Implementation is z += lr * grad(log p) + std * xi with lr=0.01, std=0.01. Correct ULA at the target temperature is z += (eta/2) * grad(log p) + sqrt(eta) * xi. Matching drift: eta/2 = 0.01 -> eta = 0.02 -> required std = sqrt(0.02) = 0.1414. Shipped std = 0.01, i.e. 14.1x too small. Effective temperature T_eff = std^2 / (2*lr) = 1e-4 / 0.02 = 0.005 ~= 1/200.",
+        "confidence": "DERIVED from primary constants; arithmetic is elementary but this is MY inference, not a claim made by the authors.",
+        "implication": "LACE-LD behaves as near-deterministic noisy gradient ascent on the energy. It will not cover modes. Reproduce their constants for the faithful arm, and ALSO run a temperature-correct variant (std = sqrt(2*lr)) as an anti-hobbling check."
+      }
+    },
+    "metropolis_hastings": {
+      "applied": false,
+      "evidence_paper": "No occurrence of 'Metropolis' or 'Metropolis-Hastings' anywhere in arXiv:2110.10873 (checked via full-document ar5iv rendering).",
+      "evidence_code": "sample_q_sgld is a bare unadjusted update with no accept/reject step; sample_q_ode is a deterministic ODE integration; sample_q_vpsde is the third registered sampler. No accept/reject logic in FFHQ/sampling.py or CIFAR10/sampling.py.",
+      "provenance": "PAPER + OFFICIAL_IMPLEMENTATION"
+    },
+    "du_et_al_2023_context": {
+      "citation": "Du, Durkan, Strudel, Tenenbaum, Dieleman, Fergus, Sohl-Dickstein, Doucet, Grathwohl (2023), 'Reduce, Reuse, Recycle: Compositional Generation with Energy-Based Diffusion Models and MCMC', ICML 2023, arXiv:2302.11552",
+      "precise_claim_verbatim": "'We conclude that the sampler (not the model) is responsible for this failure and propose new samplers, inspired by MCMC, which enable successful compositional generation.'",
+      "mechanism_verbatim": "For a product of two diffused models, 'For t > 0, this quantity is *not* equal to the sum of the scores of the two models' (Eq. 12 vs Eq. 11, Sec. 4). Consequently 'plugging the composed score function into the standard diffusion ancestral sampling procedure ... does not correspond to sampling from the composed model, and thus reverse diffusion sampling will generate incorrect samples from composed distributions' (Sec. 4).",
+      "samplers_proposed": ["ULA (unadjusted Langevin)", "MALA (Metropolis-adjusted Langevin)", "U-HMC (unadjusted HMC)", "HMC (Metropolis-corrected HMC)", "annealed variants of each across the timestep sequence (Algorithm 1, Sec. 4.1)"],
+      "when_uncorrected_is_defensible_verbatim": "On unadjusted samplers: 'While they can perform well in practice, there exist many distributions from which they cannot generate decent samples' (Sec. 4.2).",
+      "how_this_bears_on_LACE": "IMPORTANT SCOPE NOTE (this spoke's reading, flagged as interpretation): Du et al.'s failure argument is about diffusing EACH composed model and summing DIFFUSED scores at t>0. LACE structurally sidesteps this: it never diffuses the classifiers. It diffuses only the N(0,I) prior, which is VP-SDE-invariant, so p_t = p_0 = N(0,I) and the composition is applied to the UNDIFFUSED classifier log-densities at every t. LACE's ODE arm therefore is NOT the failure mode Du et al. diagnose, and 'no MH correction' is not per se a defect for a deterministic probability-flow ODE (validity rests on the invariance argument, not on detailed balance). Du et al.'s critique DOES apply to any arm we build that (a) uses the LD sampler at a wrong temperature, or (b) breaks the N(0,I) invariance (see transfer audit). Anti-hobbling recommendation: offer LACE an optional annealed-MALA / HMC sampler arm per Du et al. and report the best of {ODE, LD-as-published, LD-temperature-corrected, MALA}.",
+      "verification_status": "abstract quote verified from arXiv abstract page AND ar5iv full text; section-level quotes single-sourced from ar5iv."
+    }
+  },
+
+  "4_composition_operators": {
+    "paper_equations_verbatim": {
+      "AND": "E(z, {c1 AND c2}) := E(c1 | g(z)) + E(c2 | g(z)) + (1/2) ||z||_2^2",
+      "OR": "E(z, {c1 OR c2}) := -log( e^{beta - E(c1 | g(z))} + e^{-E(c2 | g(z))} ) + (1/2) ||z||_2^2",
+      "AND_NOT": "E(z, {c1 AND (NOT c2)}) := E(c1 | g(z)) - alpha E(c2 | g(z)) + (1/2) ||z||_2^2",
+      "constants": {"beta_OR": "ln 20", "alpha_NOT": "min( 0.1 / |E(z, c2)| , 1 )"},
+      "locator": "Sec. 3.3 'Compositional generation' (section locator single-sourced)",
+      "provenance": "PAPER"
+    },
+    "implementation_verbatim": {
+      "locator": "FFHQ/utils.py :: logical_comb  (called from CCF.get_cond_energy when self.expr != '')",
+      "code": "def logical_comb(s: str, es: list):\n    stack = [0, '+']\n    val = 0.\n    s += '$'\n    for c in s:\n\n        if c.isnumeric():\n            val = es[int(c)]\n        elif c in ['+', '-', '*', ')', '$']:\n\n            symbol = stack.pop()\n            if symbol == '+':\n                stack[-1] += val\n            elif symbol == '-':\n                alpha = torch.clamp(0.1 / torch.abs(val.detach().clone()), min=0, max=1.)\n                stack[-1] -= val * alpha\n            else:\n                tl, tr, cof = 1.0, 1.0, 20.0  # these values work well\n                stack[-1] = torch.log(torch.exp(stack[-1] * tl) * cof + torch.exp(val * tr))\n\n            if c == ')':\n                val = stack.pop()\n                stack.pop()\n            elif c in ['+', '-', '*']:\n                stack.append(c)\n                val = 0.\n\n        elif c == '(':\n            stack.append(c)\n            stack.extend([0, '+'])\n\n    return stack[-1]",
+      "provenance": "OFFICIAL_IMPLEMENTATION"
+    },
+    "operator_syntax": {
+      "AND": "'+'  (e.g. --expr '0+1')",
+      "OR": "'*'  (e.g. --expr '0*1')",
+      "NOT": "'-'  used as 'AND NOT', written as '0+(-1)'",
+      "recursive": "parenthesised, e.g. --expr '(0+1)*(2+(-3))'",
+      "operands": "single decimal digits indexing into the per-attribute energy list -> AT MOST 10 OPERANDS (c.isnumeric() reads one char). Hard structural limit.",
+      "provenance": "OFFICIAL_IMPLEMENTATION",
+      "locator": "FFHQ/scripts/run_combine_energy.sh, which runs exactly expr in {'0+1', '0*1', '0+(-1)', '(0+1)*(2+(-3))'}"
+    },
+    "code_paper_reconciliation": {
+      "status": "AGREE",
+      "derivation": "logical_comb operates on NEGATIVE energies a_i = -E_i. OR branch computes log(exp(a1)*20 + exp(a2)) = log(e^{ln20 - E1} + e^{-E2}); negating gives the paper's E_OR = -log(e^{beta - E1} + e^{-E2}) with beta = ln 20. Exact match. NOT branch computes a1 - alpha*a2 with alpha = clamp(0.1/|a2|, 0, 1); negating gives E1 - alpha*E2 with alpha = min(0.1/|E2|, 1). Exact match.",
+      "provenance": "DERIVED (sign algebra), both endpoints primary"
+    },
+    "asymmetry_warnings": {
+      "OR_is_not_commutative": "DERIVED: the cof=20 factor multiplies only the LEFT operand (`exp(stack[-1]*tl) * cof`). '0*1' != '1*0'. Also chained ORs accumulate the factor 20 on the running accumulator each fold, so 'a*b*c' is not a symmetric 3-way OR.",
+      "alpha_is_scale_sensitive": "DERIVED: alpha = min(0.1/|E2|, 1) is calibrated to the magnitude of THEIR classifiers' log-softmax energies. If our energies are typically >> 0.1, NOT is attenuated to ~0.1/|E2| and becomes weak; if << 0.1 it saturates to alpha=1. This constant must be treated as a tunable, not a law (see transfer audit)."
+    }
+  },
+
+  "5_official_code": {
+    "repo": "https://github.com/NVlabs/LACE",
+    "commit": "dcfd4a57bee40fcb17ac8304413f1e35a64323cd",
+    "date": "2021-12-01",
+    "license": "NVIDIA non-commercial research/evaluation license",
+    "energy_files": ["FFHQ/sampling.py (class CCF: get_cond_energy, _get_single_cond_energy, forward)", "CIFAR10/sampling.py (same, simplified single-attribute)", "FFHQ/utils.py (logical_comb)", "FFHQ/latent_model.py, CIFAR10/latent_model.py (DenseEmbedder, get_norm, generator wrapper class F)"],
+    "sampler_files": ["FFHQ/sampling.py (class VPODE, sample_q_ode, sample_q_sgld, sample_q_vpsde, @register_sample_q)", "CIFAR10/sampling.py (same)"],
+    "training_files": ["FFHQ/train_classifier.py", "CIFAR10/train_classifier.py"],
+    "dataset_dirs": ["CIFAR10", "FFHQ", "MetFaces", "AFHQ"],
+    "scripts": {
+      "FFHQ": ["run_clf.sh", "run_combine_energy.sh", "run_cond_ld_sample.sh", "run_cond_ld_score.sh", "run_cond_ode_sample.sh", "run_cond_ode_score.sh", "run_seq_edit_sample.sh", "run_seq_edit_score.sh", "run_zero_shot.sh"],
+      "CIFAR10": ["run_clf.sh", "run_cond_ld_sample.sh", "run_cond_ld_score.sh", "run_cond_ode_sample.sh", "run_cond_ode_score.sh", "(listing truncated by GitHub UI)"]
+    },
+    "environment": {"python": "3.8 (64-bit)", "pytorch": "1.7.1", "torchdiffeq": "0.2.1", "cuda": "10.0", "gpu": "1 high-end NVIDIA GPU with at least 24 GB of memory (V100 32GB tested)", "provenance": "OFFICIAL_IMPLEMENTATION, README"},
+    "external_checkpoints_required": "Pre-trained StyleGAN2 (config-f) must be obtained separately and converted from the official checkpoints; not shipped in the repo. StyleGAN2-ADA for CIFAR-10.",
+    "verbatim_scripts": {
+      "FFHQ/scripts/run_clf.sh": "#!/usr/bin/env bash\n\n# train each attribute classifier in sequence\nfor att_name in yaw smile gender age glasses light3 pitch haircolor beard bald light0 width; do\n\n  python train_classifier.py --lr .0001 --up_dim 128 --optimizer adam \\\n    --att_names $att_name --batch_size 128 --n_epochs 50 \\\n    --save_dir exp_out/classifiers --warmup_iters 1000 --seed 123\n\n  # copy ckpt to the pretrained folder\n  mkdir -p pretrained/dense_embedder_w\n  cp exp_out/classifiers/${att_name}_bs128_seed123_/best_valid_ckpt_${att_name}.pt pretrained/dense_embedder_w/\n\ndone",
+      "FFHQ/scripts/run_cond_ode_sample.sh": "#!/usr/bin/env bash\n\n# conditional generation (ODE)\nfor att_names_vals in \"glasses 1.\" \"gender_smile_age 1._1._0.76\"; do\n  set -- $att_names_vals\n  for seed in 125; do\n\n    python main.py --att_names $1 --sample_method sample_q_ode --save_dir exp_out/cond_ode \\\n      --n_steps 100 --sgld_lr 1e-2 --sgld_std 1e-2 --batch_size 16 --dataset ffhq_latent_test --seed $seed \\\n      --atol 1e-3 --rtol 1e-3 --use_adjoint True --method dopri5 --truncation 0.7 --discrete_num 3 --test_clf \\\n      --cond_use_case --att_vals $2 --every_n_plot 100 --every_n_print 40 --trim_num 3 --trim_seed 0\n\n  done\ndone",
+      "FFHQ/scripts/run_zero_shot.sh": "#!/usr/bin/env bash\n\n# zero-shot generation (ODE)\nfor att_names_vals in \"smile_age_glasses_beard 0._0.22_1._1.\" \"gender_smile_glasses_age 1._0._1._0.14\"; do\n  set -- $att_names_vals\n\n  python main.py --att_names $1 --sample_method sample_q_ode --save_dir exp_out/zero_shot \\\n    --n_steps 100 --sgld_lr 1e-2 --sgld_std 1e-2 --batch_size 16 --dataset ffhq_latent_test --seed 124 \\\n    --atol 1e-3 --rtol 1e-3 --use_adjoint True --method dopri5 --truncation 0.7 --discrete_num 3 --test_clf \\\n    --att_source uniform \\\n    --cond_use_case --att_vals $2 --every_n_plot 100 --every_n_print 40 --trim_num 3 --trim_seed 0\n\ndone",
+      "CIFAR10/scripts/run_clf.sh_core": "python train_classifier.py --lr .0001 --up_dim 128 --optimizer adam \\\n  --x_space cifar10_${x} --batch_size 512 --n_epochs 50 \\\n  --save_dir exp_out/classifiers --warmup_iters 1000 --seed 123",
+      "CIFAR10/scripts/run_cond_ode_sample.sh": "#!/usr/bin/env bash\n\n# ode (cifar10_w)\nfor x in w; do\n  for seed in 125; do\n\n    python main.py --x_space cifar10_$x --sample_method sample_q_ode --cifar10_pretrained dense_embedder_$x \\\n      --n_steps 100 --sgld_lr 1e-2 --sgld_std 1e-2 --batch_size 64 --save_dir exp_out/cond_ode --dataset cifar_test --seed $seed \\\n      --atol 1e-3 --rtol 1e-3 --use_adjoint True --method dopri5 --inception pretrained/metrics/inception_cifar10.pkl \\\n      --test_clf \\\n      --cond --every_n_plot 100\n\n  done\ndone"
+    },
+    "other_sampling_constants": {
+      "truncation": {"value": 0.7, "scope": "FFHQ only", "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "`--truncation 0.7` in every FFHQ sampling script; StyleGAN2 truncation trick, NOT part of the EBM"},
+      "batch_size_sampling": {"ffhq": 16, "cifar10": 64, "provenance": "OFFICIAL_IMPLEMENTATION"},
+      "discrete_num": {"value": 3, "scope": "FFHQ", "provenance": "OFFICIAL_IMPLEMENTATION"},
+      "seeds_used": {"cond": 125, "zero_shot": 124, "combine_energy": 129, "clf_training": 123, "provenance": "OFFICIAL_IMPLEMENTATION"},
+      "latent_dim": {"value": 512, "provenance": "OFFICIAL_IMPLEMENTATION", "locator": "CCF.__init__(..., latent_dim=512, ...)"}
+    }
+  },
+
+  "6_transfer_audit": {
+    "our_setting": "Frozen CONV FEATURE MAPS (shape C x H x W) from a frozen backbone. No generator g. No known base distribution over features.",
+    "headline": "LACE has exactly ONE component that hard-assumes the StyleGAN prior — the (1/2)||z||^2 term and, via it, the VP-SDE invariance argument that makes the ODE drift correct. Everything else is latent-space-agnostic. The prior is therefore the single point at which this arm gets quietly crippled, and it must be fixed with a fitted-Gaussian + whitening substitute, not with a bare L2.",
+    "components": [
+      {
+        "component": "Attribute classifier head (DenseEmbedder)",
+        "class": "LATENT-SPACE-AGNOSTIC",
+        "reasoning": "1x1 convolutions + LeakyReLU + linear head. It already operates on a 4D tensor; the 2D->4D unsqueeze exists only because StyleGAN latents are vectors. On a C x H x W feature map it runs NATIVELY as a 1x1-conv stack; only the final squeeze must become a global average pool over (H,W).",
+        "substitute": "Keep DenseEmbedder verbatim; replace `out = x.squeeze(-1).squeeze(-1)` with `out = x.mean(dim=(-2,-1))`. Set input_dim = C, up_dim = 128, depth = 4 (dims = linspace(C,128,4)). Cost: none. Anti-hobbling extra: also report a variant with input_dim = C*H*W flattened, in case spatial pooling destroys the attribute signal."
+      },
+      {
+        "component": "Conditional energy (log-softmax for discrete, scaled L2 for continuous)",
+        "class": "LATENT-SPACE-AGNOSTIC",
+        "reasoning": "A function of logits only. No dependence on the geometry of the space it is differentiated in.",
+        "substitute": "None needed. Port verbatim, including sigma=0.1 for continuous factors and the sign convention."
+      },
+      {
+        "component": "Composition operators (logical_comb)",
+        "class": "LATENT-SPACE-AGNOSTIC in form, SCALE-COUPLED in its constants",
+        "reasoning": "Pure algebra on energies. But cof=20 (OR) and alpha=min(0.1/|E|,1) (NOT) are calibrated to the numeric magnitude of THEIR classifiers' energies, which depends on logit scale, class count and how well-separated the attributes are. The authors literally comment 'these values work well'.",
+        "substitute": "Port the operators verbatim. Treat cof and the 0.1 in alpha as HYPERPARAMETERS and tune them on a held-out validation split of OUR features (small log-spaced sweep, e.g. cof in {5,20,80}, alpha-numerator in {0.03,0.1,0.3,1.0}). Cost: a validation sweep the original paper did not pay for; this is a CONCESSION IN LACE'S FAVOUR and must be declared. Freezing them at 20/0.1 without checking our energy scale is the single easiest way to hobble the OR and NOT arms."
+      },
+      {
+        "component": "Gaussian prior term (1/2)||z||^2",
+        "class": "*** ASSUMES THE STYLEGAN PRIOR ***",
+        "reasoning": "In LACE this is not a modelling choice — it is the EXACT log-density of StyleGAN's z-space, which is N(0,I) by construction of the generator. Note also that even the 'w-space' LACE variant samples in z-space and maps through g: z -> w, so the prior term is exact there too. Our frozen conv features have no such prior: post-ReLU features are non-negative, heavy-tailed, strongly anisotropic and spatially correlated. ||x||^2 over raw features is not a log-density of anything.",
+        "least_hobbling_substitute": {
+          "primary": "FIT A FULL-COVARIANCE GAUSSIAN OVER CACHED TRAIN FEATURES AND SAMPLE IN WHITENED COORDINATES. One pass of the frozen backbone over the train split -> cache features -> estimate mu and Sigma (with Ledoit-Wolf or ridge shrinkage Sigma + lambda I) -> define u = Sigma^{-1/2}(x - mu), run the ENTIRE LACE machinery in u-space, decode x = Sigma^{1/2} u + mu before feeding the classifier. Then p_0(u) = N(0,I) EXACTLY (to the accuracy of the Gaussian fit), the VP-SDE invariance argument of Appendix A.2 goes through unchanged, and the ODE drift dz_dt = -0.5*beta_t*grad(log p(c|.)) remains the correct probability-flow drift. This is the only substitute that preserves LACE's mathematical guarantee rather than merely gesturing at it.",
+          "cost": "One forward pass over train features (already needed for our own store); one eigendecomposition. If D = C*H*W is large relative to N_train, the empirical Sigma is rank-deficient — MUST use shrinkage, and report lambda. Memory: D x D. If D > ~2e4 this is infeasible.",
+          "fallback_if_D_too_large": "CHANNEL-WISE WHITENING: estimate mu_c, and either a C x C channel covariance (pooling over space and batch) or per-channel sigma_c, and whiten channels, treating spatial positions as i.i.d. draws. Weaker (ignores spatial correlation) but still a legitimate base measure and still gives p_0 = N(0,I) per-position. Declare the approximation.",
+          "rejected_substitutes": [
+            "BARE (1/2)||x||^2 ON RAW FEATURES — ⛔ HOBBLING. Features are non-negative and far from isotropic; this term pulls samples toward the origin, which is off-manifold, and the ODE-drift derivation is simply false. If the arm is built this way and loses, the result is worthless.",
+            "A NORMALIZING FLOW or learned prior over features — more accurate as a density, but it BREAKS the 'VP-SDE leaves p_t invariant' identity that makes LACE's ODE exact, so the drift would need the prior score added back at every t. Strictly more code, more moving parts, and it stops being LACE. Do not do this without also reporting the Gaussian version.",
+            "SAMPLING IN THE BACKBONE'S INPUT (pixel) SPACE — that is a different method (pixel-space EBM), which LACE explicitly positions itself against on speed."
+          ]
+        }
+      },
+      {
+        "component": "VP-SDE / probability-flow ODE sampler",
+        "class": "CONDITIONALLY AGNOSTIC — agnostic ONLY IF the sampling coordinates have an exact N(0,I) base",
+        "reasoning": "The drift omits the prior score entirely (VPODE.forward calls get_cond_energy, not forward). That omission is licensed exclusively by p_t(z) = p_0(z) = N(0,I) for all t under the VP-SDE. In non-whitened feature coordinates the prior score does NOT cancel and the shipped drift is the wrong vector field.",
+        "substitute": "Run the ODE in the whitened coordinates u defined above. Then port beta_min=0.1, beta_max=20, T=1, dopri5, atol=rtol=1e-3, integration_times = linspace(1, 1e-3, 2), use_adjoint=True verbatim. Cost: nothing beyond the whitening. Report the realised NFE (the code already prints vpode.n_evals) so the compute comparison against our arm is honest."
+      },
+      {
+        "component": "Langevin sampler (sample_q_sgld)",
+        "class": "CONDITIONALLY AGNOSTIC — same whitening condition, plus a temperature defect",
+        "reasoning": "sample_q_sgld DOES include the prior term (it calls ccf.forward), so it needs a correct log-prior in whatever coordinates it runs in. Independently, the shipped constants (lr=1e-2, std=1e-2) are ~200x colder than the target posterior (see 3.langevin_variant.DERIVED_temperature_finding).",
+        "substitute": "Run in whitened coordinates. Report THREE LD variants: (a) as-published lr=1e-2, std=1e-2, n_steps=100; (b) temperature-corrected std = sqrt(2*lr); (c) optionally annealed MALA per Du et al. 2023. Take LACE's best. Cost: 2-3x sampling compute for the baseline arm. This is the anti-hobbling insurance."
+      },
+      {
+        "component": "The generator g (StyleGAN2 / StyleGAN2-ADA) and the truncation trick (0.7)",
+        "class": "*** REQUIRES A STYLEGAN — and this is the one hard blocker ***",
+        "reasoning": "g is used for (i) the z -> w map inside CCF.classify, (ii) rendering z into an image for FID and for visual/attribute evaluation, (iii) generating the labelled training pairs in the first place. Truncation 0.7 is a StyleGAN-specific device with no analogue in a feature space.",
+        "substitute": "TWO CASES, and the Hub must pick one explicitly. (A) IF OUR PROTOCOL IS EVALUATED IN FEATURE SPACE — i.e. success is measured by a held-out probe reading factors off the generated feature map — then NO GENERATOR IS NEEDED. Set g = identity (classify the feature map directly), drop truncation, and the arm runs end-to-end on cached frozen features. This is the clean, runnable configuration and is what I recommend specifying. (B) IF OUR PROTOCOL REQUIRES IMAGES (FID, human/CLIP inspection), a decoder from feature space to pixels is REQUIRED and must be trained or supplied; LACE cannot produce images from conv features without one. There is no honest way around this. ⚠ FLAG FOR THE HUB: if the benchmark needs images, the LACE arm acquires a decoder that our arm may not have, and the comparison changes character.",
+        "note_on_LACE_pixel_variant": "The repo's `x` flag admits 'i' = pixel space for the CIFAR-10 CLASSIFIER, but this only moves the classifier onto g(z)'s output image — the SAMPLING is still in StyleGAN z-space. It is not a generator-free mode."
+      },
+      {
+        "component": "Best-validation checkpoint selection, n_valid=500",
+        "class": "LATENT-SPACE-AGNOSTIC",
+        "substitute": "Port. Give LACE the same validation budget we give ourselves; declare it."
+      }
+    ],
+    "runnability_verdict": "LACE IS RUNNABLE ON FROZEN CONV FEATURE MAPS WITHOUT A STYLEGAN, provided (a) sampling is done in whitened feature coordinates from a fitted Gaussian, and (b) the evaluation is feature-space (case A above). If the evaluation needs images, a decoder is a hard additional requirement and the arm is not generator-free.",
+    "minimum_deviations_from_published_LACE": [
+      "Gaussian prior replaced by a fitted-and-whitened Gaussian over cached train features (REQUIRED, not optional).",
+      "Global average pool over (H,W) before the classifier head (or flatten).",
+      "g := identity; truncation trick dropped (no StyleGAN).",
+      "OR/NOT constants re-tuned on a validation split (concession in LACE's favour).",
+      "LD temperature reported both as-published and corrected (concession in LACE's favour)."
+    ]
+  },
+
+  "7_supervision_ledger": {
+    "what_LACE_must_be_given": "A DENSE FACTOR-LABEL MATRIX over the training split: one label per attribute per sample, for every attribute in a CLOSED, FIXED vocabulary decided before classifier training. Plus, in the original setting, a pre-trained generator.",
+    "counts_as_published": {
+      "CIFAR10": {"pairs": "50k (z,c) pairs and 50k (w,c) pairs", "n_attributes": 1, "attribute": "class label (10-way)", "label_source": "verbatim PAPER: '50k z latent variables from standard Gaussian and pass them to StyleGAN2 generator to get 50k w samples ... then label the 50k images using pre-trained DenseNet with error rate 4.54%'", "provenance": "PAPER"},
+      "FFHQ": {"pairs": "10k (w,c) pairs", "n_attributes": 12, "attributes": ["yaw", "smile", "gender", "age", "glasses", "light3", "pitch", "haircolor", "beard", "bald", "light0", "width"], "label_source": "verbatim PAPER: 'directly use 10k (w,c) pairs created by StyleFlow paper to train attribute classifier'", "provenance": "PAPER + OFFICIAL_IMPLEMENTATION (attribute list from run_clf.sh)"},
+      "MetFaces": {"label_source": "verbatim PAPER: 'apply image classifier pre-trained on FFHQ data to label painting faces data'", "provenance": "PAPER"},
+      "AFHQ_Cats": {"label_source": "verbatim PAPER: 'apply CLIP to annotate AFHQ-Cats data by designing proper prompts containing controlling attributes'", "provenance": "PAPER"},
+      "validation_split": {"n_valid": 500, "provenance": "OFFICIAL_IMPLEMENTATION"}
+    },
+    "honest_framing_for_the_prereg": [
+      "The labels are MACHINE-GENERATED in every dataset (DenseNet teacher / StyleFlow / FFHQ-classifier transfer / CLIP prompts), not hand-annotated. So 'LACE needs 50k human labels' would be an OVERSTATEMENT and must not be written. The correct statement is that LACE needs a dense label matrix, obtainable from a teacher.",
+      "The load-bearing asymmetry is STRUCTURAL, not cost: (i) the concept vocabulary is CLOSED and fixed at classifier-training time; (ii) adding a concept requires labelling the split for it and training a new head; (iii) there is NO deletion, NO refusal, NO invalid-combination detection, NO persistent or enumerable concept store; (iv) there is no notion of admission — every query is answered.",
+      "LACE additionally requires a generator in its published form (see transfer audit); our re-implementation removes this by fiat and must say so.",
+      "Declare in the prereg: 'The LACE arm is given a dense factor-label matrix over the train split (N x K) that our method is not given, plus a validation split used to tune the OR/NOT composition constants. Both are concessions in LACE's favour.'"
+    ]
+  },
+
+  "8_reported_numbers_DO_NOT_USE_AS_A_BAR": {
+    "WARNING": "These are StyleGAN at up to 1024^2 on THEIR splits with THEIR labels. They are NOT a bar for our re-implementation on our features and must never be transferred into our tables as a target. Recorded here only so nobody re-searches for them.",
+    "CIFAR10_LACE_ODE": "FID = 6.63 +/- 0.06, ACC = 0.972 +/- 0.001 (PAPER)",
+    "FFHQ_glasses": "FID = 20.93, ACC = 0.998 (PAPER)",
+    "unseen_combination_accuracy": "0.94 - 0.98 (given to this spoke by the Advisor read; consistent with the paper's zero-shot section)",
+    "sampling_speed_claim": "verbatim PAPER: 'our sampling is at least 49x and 876x faster than EBMs and score-based models in the pixel space'"
+  },
+
+  "9_not_obtained": [
+    {"item": "Appendix A.3 verbatim block on classifier training (to resolve the 50-vs-100-epoch conflict)", "tried": "arxiv.org/pdf/2110.10873v2 direct fetch failed (maxContentLength exceeded); openreview.net/pdf?id=kcI3T5qe1jr returned a browser-verification interstitial; ar5iv rendering gave '100 epochs' consistently but is a single source.", "impact": "low — the shipped script (50) is the authoritative reproducible number and is what the arm should use."},
+    {"item": "CIFAR10/latent_model.py pixel-space ('cifar10_i') network definition", "tried": "fetched CIFAR10/latent_model.py; the retrieved excerpt contained only DenseEmbedder and get_norm, no x_space branching or generator wrapper. The branching is likely in CIFAR10/main.py or CIFAR10/networks.py.", "impact": "low — the pixel-space variant is a classifier-placement ablation, not a generator-free mode, and is not needed for our arm."},
+    {"item": "Exact equation numbers cross-verified against the published PDF", "tried": "ar5iv only (see reading_caveat).", "impact": "low for implementation, MEDIUM if we cite an equation number in a paper — re-verify before publication."}
+  ]
+}

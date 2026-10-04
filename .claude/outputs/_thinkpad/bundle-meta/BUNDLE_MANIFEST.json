@@ -1,0 +1,1488 @@
+{
+  "artefact_axes": {
+    "datasets": [
+      "shapes3d"
+    ],
+    "pretexts": [
+      "recon"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ]
+  },
+  "built_from_root": "/Users/user/Desktop/CHLU",
+  "built_on_host": "batMac.local",
+  "claude_bytes": 2321832945,
+  "code": {
+    "bundle_base_tree": "345244bbd40a29a7842357342e32e528890e0670",
+    "bundle_base_tree_matches_pin": true,
+    "n_tracked_files": 419,
+    "pin_tree": "345244bbd40a29a7842357342e32e528890e0670",
+    "source": "git archive 4125fce70b60ba1d9627ddc352d25bad5a08974a",
+    "tar_bytes": 10291200,
+    "tooling_overlay": {
+      "files": [
+        "scripts/bundle_hub_workspace.sh",
+        "scripts/verify_hub_workspace.sh",
+        "tests/test_hub_workspace.py"
+      ],
+      "from_commit": "4125fce70b60ba1d9627ddc352d25bad5a08974a",
+      "why": "the pin predates the bundle tooling; without these three files the far side could neither verify the workspace nor return a result. \u26d4 None is imported by chlu; none is part of the frozen scoring harness."
+    }
+  },
+  "env": {
+    "CHLU_CLAUDE_ROOT": "$CHLU_ROOT/.claude",
+    "CHLU_GEN_BRIDGE_ROOT": "$CHLU_CLAUDE_ROOT/outputs/gen-feature-bridge/runs",
+    "CHLU_GEN_DATA_ROOT": "$CHLU_CLAUDE_ROOT/data/gen",
+    "CHLU_GEN_DECLIFT_DIR": "$CHLU_CLAUDE_ROOT/outputs/gen-decoder-lift/winner",
+    "CHLU_GEN_STORE_RUNS": "$CHLU_CLAUDE_ROOT/outputs/gen-store-grouping/runs",
+    "CHLU_HUB_OUTPUTS": "$CHLU_CLAUDE_ROOT/outputs",
+    "CHLU_ROOT": "<the bundle root, wherever it is extracted>"
+  },
+  "files": [
+    {
+      "bytes": 9802,
+      "kind": "doc",
+      "loader": "the spoke protocol (agent profile line 1)",
+      "open_with": "doc",
+      "path": ".claude/AGENT_PROTOCOL.md",
+      "required": true,
+      "sha256": "abf4992f828b1aef25bbcd5e214ddb2715287072a5376a22649f3a742d33ea4c"
+    },
+    {
+      "bytes": 10694,
+      "kind": "doc",
+      "loader": "the hub's own agent profile (\u00a70 sandbox, \u00a70.3 allow-list)",
+      "open_with": "doc",
+      "path": ".claude/agents/autonomous-hub.md",
+      "required": true,
+      "sha256": "3dbb40ee2ef43e3b95451d73957452cc8751fc18b07ad53671abffa35e10173f"
+    },
+    {
+      "bytes": 8672,
+      "kind": "doc",
+      "loader": "the charter: the pin, pre-registration, the philosophy, the floor",
+      "open_with": "doc",
+      "path": ".claude/autonomous-hub-charter.md",
+      "required": true,
+      "sha256": "0204f799c2ff3c9ce4a09acf01b98eeb4d3d0c03013f32a62150674a4b4047b3"
+    },
+    {
+      "bytes": 69217,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_request.load_registered_control_requests via exp_gen_baselines.py:1562 \u2014 the 'a7_redundant' query set, named BY query_sets.json['sets']['a7_redundant']['file']",
+      "open_with": "control_set",
+      "path": ".claude/data/gen/shapes3d/a7_redundant.json",
+      "required": true,
+      "sha256": "536773ed9c1bb8cdede0dbd956a5921f0f0bc7746f14c1cb6a261ff9c4e01191"
+    },
+    {
+      "bytes": 72041,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_certificate.load_c_requests via exp_gen_certificate.c_invalid_path; chlu.experiments.exp_gen_store.load_c_set",
+      "open_with": "c_invalid",
+      "path": ".claude/data/gen/shapes3d/c_invalid.json",
+      "required": true,
+      "sha256": "b886da239e97b19e9001a88ce04fded329dda4884d301f78c3097ea6cc66ba49"
+    },
+    {
+      "bytes": 3844150,
+      "kind": "artefact",
+      "loader": "chlu.data.gen_splits.load_index via load_registered_query_sets \u2014 'base' is derived_from this file",
+      "open_with": "npz_index",
+      "path": ".claude/data/gen/shapes3d/factor_index.npz",
+      "required": true,
+      "sha256": "5f1fce25c40cceae6de2d00fd2145c4cdc73dcc38cee7f6545cbcaea3ce78f49"
+    },
+    {
+      "bytes": 1616,
+      "kind": "artefact",
+      "loader": "chlu.data.gen_splits.load_registered_query_sets via exp_gen_baselines.py:1547 (gen_baselines.query_set_registry_file); \u26d4 absent => require_registered_controls raises, or the CONTAMINATED column runs alone",
+      "open_with": "query_registry",
+      "path": ".claude/data/gen/shapes3d/query_sets.json",
+      "required": true,
+      "sha256": "1ff464d988e2aa412166994e0f9d240fb44664c08d8bf12748fca4b795f21f35"
+    },
+    {
+      "bytes": 1023731,
+      "kind": "doc",
+      "loader": "read for \u00a77 Known Issues only (profile line 2)",
+      "open_with": "doc",
+      "path": ".claude/handover_context.md",
+      "required": true,
+      "sha256": "5620b61032793425fc8cee91be1ca49ddab5274c67b4ac35e2311a400f46f4d5"
+    },
+    {
+      "bytes": 2660729,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_cell.check_preconditions (\u26d4 PRECONDITION: 'status' must read 'complete')",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-arms-a7-wiring/refusal_scores.json",
+      "required": true,
+      "sha256": "4d9f87b439cc2b6ede2d2f66c2f490f6338eaf86478cbece1c4e53fbc77b707d",
+      "superseded_for_hub": "hub-refusal",
+      "superseded_note": "\u26d4 hub-refusal's charter marks this SUPERSEDED \u2014 never quote it as the rival row. It ships only because another consumer opens it (chlu.experiments.exp_gen_cell.check_preconditions (\u26d4 PRECONDITION: 'status' must)."
+    },
+    {
+      "bytes": 107880,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_cell.lace_selection (gen_cell.lace_selection_source/pattern \u2014 the INHERITED LACE configuration; re-tuning here would weaken the rival through our own code)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-arms-a7-wiring/runs/historical_688128/seed_0/baselines_manifest.json",
+      "required": true,
+      "sha256": "85127d42a27b0fb1ae0c0fd7193fff854519f86634cdcaec070dcb008d825b25"
+    },
+    {
+      "bytes": 94556,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_cell.lace_selection (gen_cell.lace_selection_source/pattern \u2014 the INHERITED LACE configuration; re-tuning here would weaken the rival through our own code)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-arms-a7-wiring/runs/historical_688128/seed_1/baselines_manifest.json",
+      "required": true,
+      "sha256": "6386038e741af1e7ab2cb095eb50eb728561941cfee571e62d0b7e970c7043ce"
+    },
+    {
+      "bytes": 114245,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_cell.lace_selection (gen_cell.lace_selection_source/pattern \u2014 the INHERITED LACE configuration; re-tuning here would weaken the rival through our own code)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-arms-a7-wiring/runs/historical_688128/seed_2/baselines_manifest.json",
+      "required": true,
+      "sha256": "7539d29a17cd1471dde45e33f9ed16564f9f4f8993e8eac30dad6e52a00411af"
+    },
+    {
+      "bytes": 6069142,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_compose.resolve_decoder (gen_cell.winner_decoder_pattern; recipe + param hash asserted)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-decoder-lift/winner/decoder_v1_s0.pkl",
+      "required": true,
+      "sha256": "bcf39c42bc7885d81b21847a4ae13324ee5d49991f96ca5fc9cc79a6e5295153"
+    },
+    {
+      "bytes": 6069142,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_compose.resolve_decoder (gen_cell.winner_decoder_pattern; recipe + param hash asserted)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-decoder-lift/winner/decoder_v1_s1.pkl",
+      "required": true,
+      "sha256": "7a31fa49ada6ce04f5e8bbc0353e947398dd2cb62f4cf6b254f941c0d6c3dc09"
+    },
+    {
+      "bytes": 6069142,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_compose.resolve_decoder (gen_cell.winner_decoder_pattern; recipe + param hash asserted)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-decoder-lift/winner/decoder_v1_s2.pkl",
+      "required": true,
+      "sha256": "55957abd50e87453a5f68bda29a59dd5377503cb1169d6106efb6e6c492aa939"
+    },
+    {
+      "bytes": 2157,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_dream.load_winner_hashes via exp_gen_compose.resolve_decoder",
+      "open_with": "winner_hashes",
+      "path": ".claude/outputs/gen-decoder-lift/winner/winner_hashes.json",
+      "required": true,
+      "sha256": "d1f02bdadfd68861c72d053c4b5ab69743d76fbb1f02a3102822059cf9b5b3ae"
+    },
+    {
+      "bytes": 1296,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_cell.check_preconditions (\u26d4 PRECONDITION: top-level 'gate' must read 'PASS')",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-external-classifier/classifier_gate.json",
+      "required": true,
+      "sha256": "88079d5fdf974761e801b988296260b6c27e282e0b308eb237779096d63f7254"
+    },
+    {
+      "bytes": 8131,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_cell.load_external_classifier (supplies the asserted param_hash)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-external-classifier/seed_0/classifier_manifest.json",
+      "required": true,
+      "sha256": "415345b35e124e940213413cc2672e80088689b8f1e523adbd6ebe8f07bc82e6"
+    },
+    {
+      "bytes": 3918847,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_cell.load_external_classifier (param hash asserted against its own manifest)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-external-classifier/seed_0/external_classifier.pkl",
+      "required": true,
+      "sha256": "2b76a4a97963c4a9eb76fddf6bc8a2f56ed0b4cb3c8aeb19ada7297c5ae97e24"
+    },
+    {
+      "bytes": 8092,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_cell.load_external_classifier (supplies the asserted param_hash)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-external-classifier/seed_1/classifier_manifest.json",
+      "required": true,
+      "sha256": "dfcf33fd84c7714dc2bd1b3f7fed64052c2954f57508fcafedae6e64cdc080a9"
+    },
+    {
+      "bytes": 3918847,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_cell.load_external_classifier (param hash asserted against its own manifest)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-external-classifier/seed_1/external_classifier.pkl",
+      "required": true,
+      "sha256": "a33c305b51e756488402b12d5848ecb0352d35f7121d43ab4ebe6eeddeb42692"
+    },
+    {
+      "bytes": 7997,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_cell.load_external_classifier (supplies the asserted param_hash)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-external-classifier/seed_2/classifier_manifest.json",
+      "required": true,
+      "sha256": "eef5cff4b9228e61e7e23f1a77af9394842a0d54b595fcb93c3c8d33ecac5c8a"
+    },
+    {
+      "bytes": 3918847,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_cell.load_external_classifier (param hash asserted against its own manifest)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-external-classifier/seed_2/external_classifier.pkl",
+      "required": true,
+      "sha256": "72c1bdd27cafab2d16bdc6cf83aa0f070b2ff3b9b62530b5b7a60753df8d07ea"
+    },
+    {
+      "bytes": 4128,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_store.bridge_dir + exp_gen_cell.run_seed + exp_gen_certificate.bridge_dir (json.load; existence is the bridge's own precondition check)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0/bridge_manifest.json",
+      "required": true,
+      "sha256": "4ac006602cddaaefd3cee3bb112d36e99b3594f0b6787e61e62fcabab4884665"
+    },
+    {
+      "bytes": 1004401,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_store.fit_seed (assert_decoder_hash) and exp_gen_compose.resolve_decoder when decoder_source='bridge'",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0/decoder.pkl",
+      "required": true,
+      "sha256": "4ba4fa6639980cc94cf051ee49854b5225ce4fa048eed475d80cc778fc42a778"
+    },
+    {
+      "bytes": 1716565,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_store.fit_seed / exp_gen_cell.run_seed / exp_gen_certificate (param_hash asserted against bridge_manifest.json)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0/encoder.pkl",
+      "required": true,
+      "sha256": "97e27fe583f2b7526f09ac41c1147d53468381a6fb5ab0a3b290ee3a373e5810"
+    },
+    {
+      "bytes": 555,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_bridge.load_feature_cache (reads rows_file/features_file, verifies features_sha256)",
+      "open_with": "feature_cache",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0/feature_cache.json",
+      "required": true,
+      "sha256": "cc863722ffeeb4c1cf0d3ceb3c026546e1322138e88335fed52d3fdced942cff"
+    },
+    {
+      "bytes": 3840128,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_bridge.load_feature_cache -> np.load (named by feature_cache.json['rows_file'])",
+      "open_with": "npy",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0/feature_rows.npy",
+      "required": true,
+      "sha256": "dbddda1cf6d5a73f0384365068bf7fd7d2db66d70053d4601b5c89a8eff24e6d"
+    },
+    {
+      "bytes": 1966080128,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_bridge.load_feature_cache -> np.load (named by feature_cache.json['features_file'])",
+      "open_with": "npy",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0/features.npy",
+      "required": true,
+      "sha256": "d6728f01d102b0d0301198dc617f40bfb8ddb6c5b4a12b21a1ec08e1d974f2e2"
+    },
+    {
+      "bytes": 2534999,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_store.fit_seed / exp_gen_cell.run_seed (probe_param_hash asserted)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0/probe.pkl",
+      "required": true,
+      "sha256": "ac518194cbf447cb5fba363d060105c4925225ead598dfc3af1da81731ff50b0"
+    },
+    {
+      "bytes": 4142,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_store.bridge_dir + exp_gen_cell.run_seed + exp_gen_certificate.bridge_dir (json.load; existence is the bridge's own precondition check)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1/bridge_manifest.json",
+      "required": true,
+      "sha256": "01313148af98f3e5c7312bd5b25b9ccafc849c0aa330b173386e4486dc006f72"
+    },
+    {
+      "bytes": 1004401,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_store.fit_seed (assert_decoder_hash) and exp_gen_compose.resolve_decoder when decoder_source='bridge'",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1/decoder.pkl",
+      "required": true,
+      "sha256": "b32a7647b5a69f0f2b62fe507276332e16cc17099f65cd2180415d1900957ab6"
+    },
+    {
+      "bytes": 1716565,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_store.fit_seed / exp_gen_cell.run_seed / exp_gen_certificate (param_hash asserted against bridge_manifest.json)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1/encoder.pkl",
+      "required": true,
+      "sha256": "5ef85fd73a3946c1adace1ed26ff72699130de9b4fc2813e3d7cd49ef2b982d5"
+    },
+    {
+      "bytes": 551,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_bridge.load_feature_cache (reads rows_file/features_file, verifies features_sha256)",
+      "open_with": "feature_cache",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1/feature_cache.json",
+      "required": true,
+      "sha256": "4f189ca6e054e5cd5caa603c42d15977505223a357fdb751b1cc95bbdc1554f2"
+    },
+    {
+      "bytes": 74432,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_bridge.load_feature_cache -> np.load (named by feature_cache.json['rows_file'])",
+      "open_with": "npy",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1/feature_rows.npy",
+      "required": true,
+      "sha256": "d7177d099dc76fdeb6b7e12d5c7d4264f403df924201459a09b792fc56b10179"
+    },
+    {
+      "bytes": 38043776,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_bridge.load_feature_cache -> np.load (named by feature_cache.json['features_file'])",
+      "open_with": "npy",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1/features.npy",
+      "required": true,
+      "sha256": "484b446c4dbb9fc499863ff6873a15a8c555a517c8c290bdfa8087f95350b416"
+    },
+    {
+      "bytes": 2534999,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_store.fit_seed / exp_gen_cell.run_seed (probe_param_hash asserted)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1/probe.pkl",
+      "required": true,
+      "sha256": "1b8070dd06decb28947295133cacb764edd0eff4ed913b4be8a7feab59002d72"
+    },
+    {
+      "bytes": 4121,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_store.bridge_dir + exp_gen_cell.run_seed + exp_gen_certificate.bridge_dir (json.load; existence is the bridge's own precondition check)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2/bridge_manifest.json",
+      "required": true,
+      "sha256": "405f8164b6863023b6f8371a06feedf8abca4fdf9cb4136661bbaf21bd0d316b"
+    },
+    {
+      "bytes": 1004401,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_store.fit_seed (assert_decoder_hash) and exp_gen_compose.resolve_decoder when decoder_source='bridge'",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2/decoder.pkl",
+      "required": true,
+      "sha256": "28a19bf0acb195c48b9dc33d15962e1d71ca6a0c79c9280712e8bc3e6e8b637f"
+    },
+    {
+      "bytes": 1716565,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_store.fit_seed / exp_gen_cell.run_seed / exp_gen_certificate (param_hash asserted against bridge_manifest.json)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2/encoder.pkl",
+      "required": true,
+      "sha256": "22072966835d6ae7750770ed7d6399e303890a60d1a8d8e123f2153b14ae72e8"
+    },
+    {
+      "bytes": 551,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_bridge.load_feature_cache (reads rows_file/features_file, verifies features_sha256)",
+      "open_with": "feature_cache",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2/feature_cache.json",
+      "required": true,
+      "sha256": "63cdecf9200ddcb67e090ab86ff8f3850833b8ce24127770efef63769f325632"
+    },
+    {
+      "bytes": 74432,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_bridge.load_feature_cache -> np.load (named by feature_cache.json['rows_file'])",
+      "open_with": "npy",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2/feature_rows.npy",
+      "required": true,
+      "sha256": "cf1e29eea8e478b5af86d2a03cd747fcfd6a902714237022b8d0399b2a07f929"
+    },
+    {
+      "bytes": 38043776,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_bridge.load_feature_cache -> np.load (named by feature_cache.json['features_file'])",
+      "open_with": "npy",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2/features.npy",
+      "required": true,
+      "sha256": "8c0a69e88beb46b863d178518d1e3220009d2e0d6c5b5cd5dc3c8c4200ecfa58"
+    },
+    {
+      "bytes": 2534999,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_store.fit_seed / exp_gen_cell.run_seed (probe_param_hash asserted)",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2/probe.pkl",
+      "required": true,
+      "sha256": "3b84b3e9ebb11f7b711dfc4c24325ebb81ce23469ef13cad6c67654ab0984f25"
+    },
+    {
+      "bytes": 3623341,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/decoded_s0_dynread_B.npz",
+      "required": true,
+      "sha256": "9aa739ce76c56effc2368f0842f338794b952451e69fcb7ffc130cb5b9bf3620"
+    },
+    {
+      "bytes": 9960308,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/decoded_s0_dynread_MS.npz",
+      "required": true,
+      "sha256": "359a0d4a8d60e58b66da13fcb2f01fda9b763abb3a8cfd00bb6947b142f21817"
+    },
+    {
+      "bytes": 3156223,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/decoded_s0_dynread__A_request_off_B.npz",
+      "required": true,
+      "sha256": "2c235fd67489e6fa2efd301980a3c50d0752fca524e1d7dd650ee1483f9623a8"
+    },
+    {
+      "bytes": 8769454,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/decoded_s0_dynread__A_request_off_MS.npz",
+      "required": true,
+      "sha256": "d93211bb898a86be4e8d17ea1b8383305f399d22ef073eb84ea9e34054cf0465"
+    },
+    {
+      "bytes": 3633301,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/decoded_s0_dynread__B_B.npz",
+      "required": true,
+      "sha256": "91129c7658be2b228ef8beec23c8012b125b6f900f40ae1d5adf77d2ec1fceb0"
+    },
+    {
+      "bytes": 9987693,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/decoded_s0_dynread__B_MS.npz",
+      "required": true,
+      "sha256": "5d5c5a0e6c96e6397049e24f06a632a96e1e34cd3aea3db49be490fde153bc1d"
+    },
+    {
+      "bytes": 3211198,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/decoded_s0_dynread__B_request_off_B.npz",
+      "required": true,
+      "sha256": "ccefcbeadfc8035b72f8222301f23be945f580ad361a2ed4c65aa96ebda03250"
+    },
+    {
+      "bytes": 8999993,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/decoded_s0_dynread__B_request_off_MS.npz",
+      "required": true,
+      "sha256": "f23ecb21ff891544539f5a5ba27113e537f9ec704f116056c316e0a3002ff7e9"
+    },
+    {
+      "bytes": 593848,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/energy_traces_s0_A_B_full.npz",
+      "required": true,
+      "sha256": "2c391875a44392465bc188e9d5fa755004b97a98084cd0531606e6a8e3b6162b"
+    },
+    {
+      "bytes": 134637,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/energy_traces_s0_A_B_request_off.npz",
+      "required": true,
+      "sha256": "5c4e260f46acab15a69a955e2bed82e5933db7e00b6a5a11875634af8731e170"
+    },
+    {
+      "bytes": 1579430,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/energy_traces_s0_A_MS_full.npz",
+      "required": true,
+      "sha256": "a546d7e5992369b7176f084432872e6152e7e49e264d990bf53eb6625fdee535"
+    },
+    {
+      "bytes": 329547,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/energy_traces_s0_A_MS_request_off.npz",
+      "required": true,
+      "sha256": "3bf5acb779591b6b6cb13cb5f1bf895be2491498828c14658c5e10c07612ffc9"
+    },
+    {
+      "bytes": 1147479,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/energy_traces_s0_B_B_full.npz",
+      "required": true,
+      "sha256": "7680d320c30faf60e6fa051cfd352589324088bc450ed487bba90b22f7147147"
+    },
+    {
+      "bytes": 344000,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/energy_traces_s0_B_B_request_off.npz",
+      "required": true,
+      "sha256": "46850f8a5a4a7a1d937513a5a0460f0ced54ae96f4db1503e1f401f72c81c65d"
+    },
+    {
+      "bytes": 3097619,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/energy_traces_s0_B_MS_full.npz",
+      "required": true,
+      "sha256": "d0f070bb76bca50ac92a8d38202c5da7b596c2b653c120b07a1d9a22daf6072e"
+    },
+    {
+      "bytes": 1026021,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/energy_traces_s0_B_MS_request_off.npz",
+      "required": true,
+      "sha256": "aa8c2aeb1f942e7ec5801c6c7fac8011f9d0b3abe6f3aec50969dd12a5aada56"
+    },
+    {
+      "bytes": 1121198,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/settled_states_s0_A_B_full.npz",
+      "required": true,
+      "sha256": "ab041e49f5f0cd90dac142b3ea5d0d9ee4dce31ad9d8fc6b79cc76a7fedb842f"
+    },
+    {
+      "bytes": 202112,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/settled_states_s0_A_B_request_off.npz",
+      "required": true,
+      "sha256": "20a49fa05efb2cb26fce7da35b6aa1d8abd39b14f5ebd2edae65223265b82bc7"
+    },
+    {
+      "bytes": 3113230,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/settled_states_s0_A_MS_full.npz",
+      "required": true,
+      "sha256": "7f05da358e077312561e079af95c0d66174f7796d2d2dc44ec9292090c223d03"
+    },
+    {
+      "bytes": 771292,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/settled_states_s0_A_MS_request_off.npz",
+      "required": true,
+      "sha256": "21366e183e920a42c6078839c63effa51010614068d451dfd0ebc7d027ddb081"
+    },
+    {
+      "bytes": 1152646,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/settled_states_s0_B_B_full.npz",
+      "required": true,
+      "sha256": "5dc8e92c8c5394ec023003e94efacf5f736fd0b501c9973c959d7d340a884a2d"
+    },
+    {
+      "bytes": 311001,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/settled_states_s0_B_B_request_off.npz",
+      "required": true,
+      "sha256": "9bd0b61ba4c80edaf2a63a32a4f88818647ee20c7d15bb0446dcdbd29ffb6f53"
+    },
+    {
+      "bytes": 3267209,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/settled_states_s0_B_MS_full.npz",
+      "required": true,
+      "sha256": "28485685d74f309bfae5f5c3b75c7807223d62d6e60a59699c9a6679b5e9711f"
+    },
+    {
+      "bytes": 1297327,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/settled_states_s0_B_MS_request_off.npz",
+      "required": true,
+      "sha256": "7b2610452d196eecea80ba0d77d22499b9e927658667e4e87ac8dd8e50b9e7fc"
+    },
+    {
+      "bytes": 1926,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/stored_atom_tuples_s0_A.npz",
+      "required": true,
+      "sha256": "b6efe365ddf9ea0bd236f72eb747bc34e3f5e65a44589a80801c9846bd2f3032"
+    },
+    {
+      "bytes": 6891,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_0/stored_atom_tuples_s0_B.npz",
+      "required": true,
+      "sha256": "80089f3f4b87b2e1f8ef8366cb7fc8b812a99d9bfc5e1a85823f5c7e4c2e2f46"
+    },
+    {
+      "bytes": 3638162,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/decoded_s1_dynread_B.npz",
+      "required": true,
+      "sha256": "16801170ec42a88f1e3eedfc701ed724fb6b4164a420c1152cf1a037002072fe"
+    },
+    {
+      "bytes": 10049806,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/decoded_s1_dynread_MS.npz",
+      "required": true,
+      "sha256": "128a02b83d0abcb9bb372fc1b4a50896746d28bee811214185ac8d75ee1fd099"
+    },
+    {
+      "bytes": 3246984,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/decoded_s1_dynread__A_request_off_B.npz",
+      "required": true,
+      "sha256": "653e0cc7422484d4f292e41e6c7dc12d3a472e529e8d9beb50a1b1d9d0f453c0"
+    },
+    {
+      "bytes": 9194132,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/decoded_s1_dynread__A_request_off_MS.npz",
+      "required": true,
+      "sha256": "f7be3e1e193d18b43137b009d11108baa94ebd1fe9f82a03a9bbee1d43490b11"
+    },
+    {
+      "bytes": 3626304,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/decoded_s1_dynread__B_B.npz",
+      "required": true,
+      "sha256": "bcefe94f2a12f725a8db2b0f2dbd1988be566cd3a078ddc1a06fefe8ebb4d74f"
+    },
+    {
+      "bytes": 10026172,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/decoded_s1_dynread__B_MS.npz",
+      "required": true,
+      "sha256": "bdc0a6cd1f852802b457c9f89f3d49e6e978438802f3b02a413c7f26fe4d98a9"
+    },
+    {
+      "bytes": 3217651,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/decoded_s1_dynread__B_request_off_B.npz",
+      "required": true,
+      "sha256": "bee82af963fbb7f45e9547bae016ec65dbb5d7a4fc55a44d0da69758f6c5fdc3"
+    },
+    {
+      "bytes": 9045279,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/decoded_s1_dynread__B_request_off_MS.npz",
+      "required": true,
+      "sha256": "1ab8887105c3299db50081d631537134c6c871ec411f1791b1e246fbef58ce71"
+    },
+    {
+      "bytes": 583546,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/energy_traces_s1_A_B_full.npz",
+      "required": true,
+      "sha256": "776d90e0dd123d49a25e3aad52aebc96a158b60d40803980f93b348beb1f637d"
+    },
+    {
+      "bytes": 151292,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/energy_traces_s1_A_B_request_off.npz",
+      "required": true,
+      "sha256": "6e5db8503944c534315fff52603d83d51338b853469bd54b660d0f05bc188f75"
+    },
+    {
+      "bytes": 1556770,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/energy_traces_s1_A_MS_full.npz",
+      "required": true,
+      "sha256": "b131140f6103fd81a3beb80371ecd8996c16b133608f686e2794060cccf922dc"
+    },
+    {
+      "bytes": 386908,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/energy_traces_s1_A_MS_request_off.npz",
+      "required": true,
+      "sha256": "e2a72ff53f9f142b47d681266f323b1691b019cd22654400f41e798fc26652d7"
+    },
+    {
+      "bytes": 1129030,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/energy_traces_s1_B_B_full.npz",
+      "required": true,
+      "sha256": "9a2d6e10b81b38a5f2596011ffbf6096cec4d2bf6e74762582b05590d6136d0a"
+    },
+    {
+      "bytes": 355184,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/energy_traces_s1_B_B_request_off.npz",
+      "required": true,
+      "sha256": "9d36e559865d2eae47df7a070af51142e445523f87067762324cd8cb971e0326"
+    },
+    {
+      "bytes": 3064573,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/energy_traces_s1_B_MS_full.npz",
+      "required": true,
+      "sha256": "d9fffbc55d226add81a44c80409b31cf66167b4f0eed45c19fcbb250c023cab9"
+    },
+    {
+      "bytes": 1032526,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/energy_traces_s1_B_MS_request_off.npz",
+      "required": true,
+      "sha256": "33624dfedd78a996a0bce93208b836e86efe47a3e568857d2a7282a4c7f5ec59"
+    },
+    {
+      "bytes": 1127647,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/settled_states_s1_A_B_full.npz",
+      "required": true,
+      "sha256": "77c88b0e2ad21cd9b5466d7b356a75a078eb5c9f85c5046b04d7f2243977b727"
+    },
+    {
+      "bytes": 365069,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/settled_states_s1_A_B_request_off.npz",
+      "required": true,
+      "sha256": "46a2a898c6c938508ac46b3b64f1df0fca34bf90bbea44aea850ecf98dc7b7e9"
+    },
+    {
+      "bytes": 3164201,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/settled_states_s1_A_MS_full.npz",
+      "required": true,
+      "sha256": "5bbdaeed579c7ab14f6b4299557254f50ce1294d3182511f61cf6af09d68526a"
+    },
+    {
+      "bytes": 1501918,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/settled_states_s1_A_MS_request_off.npz",
+      "required": true,
+      "sha256": "375db1cbd9081df725d517847c66821c5633b652e2bde05621ecfbe21342fb7e"
+    },
+    {
+      "bytes": 1155751,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/settled_states_s1_B_B_full.npz",
+      "required": true,
+      "sha256": "5162f8e2b203788e2565b4287fdd6247514d5a4da864b91c575c55e7317d652b"
+    },
+    {
+      "bytes": 321925,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/settled_states_s1_B_B_request_off.npz",
+      "required": true,
+      "sha256": "17c0eafed9c6f5985e2bf94c067d46f4282b405b3e19ca3a11c42329b9c13d09"
+    },
+    {
+      "bytes": 3294506,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/settled_states_s1_B_MS_full.npz",
+      "required": true,
+      "sha256": "534fa54346487b2aa89400b58c5434f0112d00c3513489e8007756d683021e7a"
+    },
+    {
+      "bytes": 1300830,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/settled_states_s1_B_MS_request_off.npz",
+      "required": true,
+      "sha256": "9262237062805581310b75c62347ce3dc1cbd7c57994d8398d2cee9f28260175"
+    },
+    {
+      "bytes": 1953,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/stored_atom_tuples_s1_A.npz",
+      "required": true,
+      "sha256": "7514d119a9e02449cbcfa705660ac456eb348be1c5f90cfbb4a08a130301a946"
+    },
+    {
+      "bytes": 6908,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_1/stored_atom_tuples_s1_B.npz",
+      "required": true,
+      "sha256": "b897630c0e17ca15abbb49b4a01fcdce83dbe815b247ce97abca630a8dff8ccb"
+    },
+    {
+      "bytes": 3626807,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/decoded_s2_dynread_B.npz",
+      "required": true,
+      "sha256": "9ab96c58d6010fb8fc97ffe6dc57775aa488cc9103eaecb4cf45f18a2a194d28"
+    },
+    {
+      "bytes": 10024146,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/decoded_s2_dynread_MS.npz",
+      "required": true,
+      "sha256": "51681f0b840fce19b99799805aa5eccfa1df373dc68ce9bee5efa030cff2c0ee"
+    },
+    {
+      "bytes": 3300825,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/decoded_s2_dynread__A_request_off_B.npz",
+      "required": true,
+      "sha256": "97b9173d8b3b9f12f01165df443afb377ba9cdc3a2d8891eaf0199e9a7680caf"
+    },
+    {
+      "bytes": 9153161,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/decoded_s2_dynread__A_request_off_MS.npz",
+      "required": true,
+      "sha256": "49ef017ba291e18acf3471a6ae6c301a35f790d98b158d4d449453f4383dd01f"
+    },
+    {
+      "bytes": 3637464,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/decoded_s2_dynread__B_B.npz",
+      "required": true,
+      "sha256": "47373bcc04c9b680847336eba3405a20d95d29b89da133981881fa4877e3e89d"
+    },
+    {
+      "bytes": 10052469,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/decoded_s2_dynread__B_MS.npz",
+      "required": true,
+      "sha256": "bc1786ca19fa30e4e37515da9d9b2307c1a7fa53b6cbe7e8932c386df91b8aa2"
+    },
+    {
+      "bytes": 3233791,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/decoded_s2_dynread__B_request_off_B.npz",
+      "required": true,
+      "sha256": "cd9a3f81953c9ef908d098b474c91ed2c4350017f917ebecc236f008bad511fb"
+    },
+    {
+      "bytes": 9072137,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/decoded_s2_dynread__B_request_off_MS.npz",
+      "required": true,
+      "sha256": "6fbcff93055d77c03dc1c826a55603680ee484d79051f6252ae8b72fa0137711"
+    },
+    {
+      "bytes": 595313,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/energy_traces_s2_A_B_full.npz",
+      "required": true,
+      "sha256": "e18648999e32eddfc72be76f91471078c98e63dfd8e532c1aa70bff14a621196"
+    },
+    {
+      "bytes": 173101,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/energy_traces_s2_A_B_request_off.npz",
+      "required": true,
+      "sha256": "aab1f00e5e7cdf373415d66cd51c35106ba152b7f38c89763f7d1f53364b98ee"
+    },
+    {
+      "bytes": 1588317,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/energy_traces_s2_A_MS_full.npz",
+      "required": true,
+      "sha256": "e4e6a1565f9dfd3272f23205437374263cba4e3eccf3fd386ab03d5d42a2b220"
+    },
+    {
+      "bytes": 376656,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/energy_traces_s2_A_MS_request_off.npz",
+      "required": true,
+      "sha256": "bd52a599d966c36c9e5b5d51eb9957860bc5d2758cd93efc36427d577574b5ff"
+    },
+    {
+      "bytes": 1145035,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/energy_traces_s2_B_B_full.npz",
+      "required": true,
+      "sha256": "37b579b2a2bf566ee96bf4d762d765b4545705cdda6ac761bbfa90e17c079eb9"
+    },
+    {
+      "bytes": 365561,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/energy_traces_s2_B_B_request_off.npz",
+      "required": true,
+      "sha256": "b8a499d72c380c15e5372a29b46577f9e533235de6e29db61b7b247644cdf268"
+    },
+    {
+      "bytes": 3119299,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/energy_traces_s2_B_MS_full.npz",
+      "required": true,
+      "sha256": "9e06139399f5f2656e13ae462fa7a9bd3617b1bbadc07efeb8a7c2c92489dc1f"
+    },
+    {
+      "bytes": 1032481,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/energy_traces_s2_B_MS_request_off.npz",
+      "required": true,
+      "sha256": "fd1a46b01e29c54930bd1ea95ccc77616e706cdb944eee9ba55beda115b787c2"
+    },
+    {
+      "bytes": 1136788,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/settled_states_s2_A_B_full.npz",
+      "required": true,
+      "sha256": "7b1539444aa194000cc59eb498742f2fdccf2162f927fa695e3d318d0eaab26c"
+    },
+    {
+      "bytes": 501657,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/settled_states_s2_A_B_request_off.npz",
+      "required": true,
+      "sha256": "de48a191706b19383666e6205b2cb621efcb95961688c75d69f1eb5f1682f209"
+    },
+    {
+      "bytes": 3138005,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/settled_states_s2_A_MS_full.npz",
+      "required": true,
+      "sha256": "8a176130bb28a79bac52063cf81608d1734f9b11c2b176eaebd4284c541e943d"
+    },
+    {
+      "bytes": 1444559,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/settled_states_s2_A_MS_request_off.npz",
+      "required": true,
+      "sha256": "884a2551f7a7d9b91e47eadb6f0cc247a9326f76ede05894bb09b7d3bbb46691"
+    },
+    {
+      "bytes": 1160183,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/settled_states_s2_B_B_full.npz",
+      "required": true,
+      "sha256": "3137712672a58e2308e1845d753bfea8af2aeb9667d55c372ce05358f60326d9"
+    },
+    {
+      "bytes": 335845,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/settled_states_s2_B_B_request_off.npz",
+      "required": true,
+      "sha256": "9c612c4c2d53830411e072159dba9bf7dc33d0bbf483db743274dea5652be15b"
+    },
+    {
+      "bytes": 3312339,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/settled_states_s2_B_MS_full.npz",
+      "required": true,
+      "sha256": "bab03edc02b0146dbb34775f7c7d991210e739f312a9abd55b286467d4ec1d3b"
+    },
+    {
+      "bytes": 1307559,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/settled_states_s2_B_MS_request_off.npz",
+      "required": true,
+      "sha256": "0abec9c024e4e3fdc8619d1e06bd008f0c7396b06112e76b849a6b62b955f12d"
+    },
+    {
+      "bytes": 1936,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/stored_atom_tuples_s2_A.npz",
+      "required": true,
+      "sha256": "1386fcef830654c82337539e6157f486c1d68a46e0b579b97d38029cc505fd48"
+    },
+    {
+      "bytes": 6886,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "npz",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2/stored_atom_tuples_s2_B.npz",
+      "required": true,
+      "sha256": "b8ad17ab8babcc8cc8019f04c3cf6b1bcd943025acb692a45083da806072e2d9"
+    },
+    {
+      "bytes": 159147,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/cell/seed_0/seed_0/cell_manifest.json",
+      "required": true,
+      "sha256": "10093b69b46c7edfed31c00ea61b77736bcc61b65266d1922aa4408572f48155"
+    },
+    {
+      "bytes": 160106,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/cell/seed_1/seed_1/cell_manifest.json",
+      "required": true,
+      "sha256": "98fdb076d84ca6a05f6374a0b9950e83e171fa9aeb6d1b6eaefb6ed955f12048"
+    },
+    {
+      "bytes": 159882,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/cell/seed_2/seed_2/cell_manifest.json",
+      "required": true,
+      "sha256": "5111428316cf08ecc7dbc822fcfb4184f8721fabf957ff4de594bc28f1d164c1"
+    },
+    {
+      "bytes": 51804,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/cell_results.json",
+      "required": true,
+      "sha256": "ca740b5d3c7d9407b89d657f37b94db8a501c4328d61645b0d7b7459381572bf"
+    },
+    {
+      "bytes": 9710,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "doc",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/dynread_seed0.log",
+      "required": true,
+      "sha256": "a4247dedc195d1743bf2b627fbfc823e2875ffa6605b2fa45755981c0b6975ff"
+    },
+    {
+      "bytes": 10087,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "doc",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/dynread_seed1.log",
+      "required": true,
+      "sha256": "f08febf1940a118a3887a73e915b39b88e7b628e6dadb3339ff9375b42c022ff"
+    },
+    {
+      "bytes": 10120,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "doc",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/dynread_seed2.log",
+      "required": true,
+      "sha256": "523690178d499f5b780444586ca6e09ea76fc0a758603e3655f9cf95356b1c6b"
+    },
+    {
+      "bytes": 602,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/launch_diagnostic.json",
+      "required": true,
+      "sha256": "dc05efdc3be59ccdfd00ad777e3f6547035893c31c8354a06fddd3e50f72b7b0"
+    },
+    {
+      "bytes": 414,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "doc",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/progress.txt",
+      "required": true,
+      "sha256": "26b7e5759e757df660251fa3bf571a98722c927bc0461c9d680a5b81097e62e2"
+    },
+    {
+      "bytes": 414,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `.claude/outputs/gen-read-cell-arm/runs/`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "doc",
+      "path": ".claude/outputs/gen-read-cell-arm/runs/run_scored.out",
+      "required": true,
+      "sha256": "26b7e5759e757df660251fa3bf571a98722c927bc0461c9d680a5b81097e62e2"
+    },
+    {
+      "bytes": 536929,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_cell.resolve_store (gen_cell.store_checkpoint_pattern); \u26d4 absent => the cell silently RE-TRAINS a store and its row is no longer comparable",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_0/store_s0.pkl",
+      "required": true,
+      "sha256": "dc627aefb17d5a762bc56424e0e5d0a37862c60207c0b8ce5099efcd9c6fed84"
+    },
+    {
+      "bytes": 536929,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_cell.resolve_store (gen_cell.store_checkpoint_pattern); \u26d4 absent => the cell silently RE-TRAINS a store and its row is no longer comparable",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_1/store_s1.pkl",
+      "required": true,
+      "sha256": "a67121445e5afd1b1f37e18b519799e136243f1fece460f79675e0e49c776197"
+    },
+    {
+      "bytes": 536929,
+      "kind": "artefact",
+      "loader": "chlu.utils.checkpoints.load_model via exp_gen_cell.resolve_store (gen_cell.store_checkpoint_pattern); \u26d4 absent => the cell silently RE-TRAINS a store and its row is no longer comparable",
+      "open_with": "eqx_pickle",
+      "path": ".claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_2/store_s2.pkl",
+      "required": true,
+      "sha256": "255394b5a64548ac2845681a4032ab69e2fecba89950b38be7e8e71dc9411e63"
+    },
+    {
+      "bytes": 131506,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_certificate.run_seed (the 'shipped' record; optional \u2014 absent means no bit-identity assertion)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-store-grouping/runs/shapes3d_recon/seed_0/store_manifest.json",
+      "required": true,
+      "sha256": "580dbdfdba2c202a644e3119c83a69b0c525cceb1e1c3754b45830096a1172bb"
+    },
+    {
+      "bytes": 131335,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_certificate.run_seed (the 'shipped' record; optional \u2014 absent means no bit-identity assertion)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-store-grouping/runs/shapes3d_recon/seed_1/store_manifest.json",
+      "required": true,
+      "sha256": "9de19eb4d8e58cc5e0650f41aa399061c68f7db43cfeb616fe9ef73f4f0abe2c"
+    },
+    {
+      "bytes": 130926,
+      "kind": "artefact",
+      "loader": "chlu.experiments.exp_gen_certificate.run_seed (the 'shipped' record; optional \u2014 absent means no bit-identity assertion)",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-store-grouping/runs/shapes3d_recon/seed_2/store_manifest.json",
+      "required": true,
+      "sha256": "ed2dce29fbffa6ac015d1de806d29832bd8c36229b1b2add7f7b4f5d58400f38"
+    },
+    {
+      "bytes": 17695,
+      "kind": "artefact",
+      "loader": "chlu.core.gen_store.load_store_plan via exp_gen_cell.store_plan_path and exp_gen_certificate.store_runs_dir",
+      "open_with": "store_plan",
+      "path": ".claude/outputs/gen-store-grouping/runs/shapes3d_recon/store_plan.json",
+      "required": true,
+      "sha256": "bf93d0dec7c1b69ea6e0c179d64b34170cd2ec5c1c35be0a55bbf367ecc6b95f"
+    },
+    {
+      "bytes": 2899315,
+      "kind": "hub-requirement",
+      "loader": "declared by hub-refusal.md as `gen-val-split-fix/refusal_scores.json`; \u26d4 without it that charter's own premise ('scored off artefacts that already exist') is false on the far side",
+      "open_with": "json",
+      "path": ".claude/outputs/gen-val-split-fix/refusal_scores.json",
+      "required": true,
+      "sha256": "e718af430563c41004e9aaee732907fd39d7341cbaf38c0aa7b2374c38719eb3"
+    },
+    {
+      "bytes": 4838,
+      "kind": "doc",
+      "loader": "the hub's own charter (agent profile line 3)",
+      "open_with": "doc",
+      "path": ".claude/tasks/hub-composition.md",
+      "required": true,
+      "sha256": "e62bde4313c27542a2a0d0bfb0df1858766adcb0990b058ad4dc0f1a3b1634a1"
+    },
+    {
+      "bytes": 5978,
+      "kind": "doc",
+      "loader": "the hub's own charter (agent profile line 3)",
+      "open_with": "doc",
+      "path": ".claude/tasks/hub-generation-table.md",
+      "required": true,
+      "sha256": "15fa05f7f833b4cb06c61ff3bc584d0f6d833f69adb08e0af65e18fcafb51a6a"
+    },
+    {
+      "bytes": 4889,
+      "kind": "doc",
+      "loader": "the hub's own charter (agent profile line 3)",
+      "open_with": "doc",
+      "path": ".claude/tasks/hub-refusal.md",
+      "required": true,
+      "sha256": "1654adf83d8cc5b5e02d94ee2986fdb408c7fd175baba44285080043ebe1fcac"
+    },
+    {
+      "bytes": 77124,
+      "kind": "tooling",
+      "loader": "the workspace plumbing, overlaid on the pin from 4125fce70b60ba1d9627ddc352d25bad5a08974a; \u26d4 not imported by chlu and \u26d4 not part of the frozen scoring harness",
+      "open_with": "code",
+      "path": "scripts/bundle_hub_workspace.sh",
+      "required": true,
+      "sha256": "607b9dab99c8d4a0ff6e0679b973f9a3600b72185255015e9f3f7bf4a6d8d66b"
+    },
+    {
+      "bytes": 25876,
+      "kind": "tooling",
+      "loader": "the workspace plumbing, overlaid on the pin from 4125fce70b60ba1d9627ddc352d25bad5a08974a; \u26d4 not imported by chlu and \u26d4 not part of the frozen scoring harness",
+      "open_with": "code",
+      "path": "scripts/verify_hub_workspace.sh",
+      "required": true,
+      "sha256": "e9fa770ace1ca82b4b39c43cb1faa192b2442fa102fdaa54b7c8815a4562a03b"
+    },
+    {
+      "bytes": 56531,
+      "kind": "tooling",
+      "loader": "the workspace plumbing, overlaid on the pin from 4125fce70b60ba1d9627ddc352d25bad5a08974a; \u26d4 not imported by chlu and \u26d4 not part of the frozen scoring harness",
+      "open_with": "code",
+      "path": "tests/test_hub_workspace.py",
+      "required": true,
+      "sha256": "bed159d510c8d2f89248ebea481da2a019c98d55e5418bf2fe4a584a9cbf659b"
+    }
+  ],
+  "generated_at": "2026-09-16T17:59:35.593667+00:00",
+  "hub_requirements": {
+    "hub-composition": {
+      "excluded": [],
+      "hub": "hub-composition",
+      "ignored_tokens": [
+        ".claude/outputs/hub-composition.md  (the hub's OWN write path \u2014 it produces this)",
+        ".claude/outputs/hub-composition/LOG.md  (the hub's OWN write path \u2014 it produces this)"
+      ],
+      "n_files": 3,
+      "required": [
+        {
+          "is_dir": false,
+          "n_files": 1,
+          "path": ".claude/AGENT_PROTOCOL.md",
+          "token": ".claude/AGENT_PROTOCOL.md"
+        },
+        {
+          "is_dir": false,
+          "n_files": 1,
+          "path": ".claude/autonomous-hub-charter.md",
+          "token": ".claude/autonomous-hub-charter.md"
+        },
+        {
+          "is_dir": false,
+          "n_files": 1,
+          "path": ".claude/handover_context.md",
+          "token": ".claude/handover_context.md"
+        }
+      ],
+      "task_file": "/Users/user/Desktop/CHLU/.claude/tasks/hub-composition.md"
+    },
+    "hub-generation-table": {
+      "excluded": [],
+      "hub": "hub-generation-table",
+      "ignored_tokens": [
+        ".claude/outputs/hub-generation-table.md  (the hub's OWN write path \u2014 it produces this)",
+        ".claude/outputs/hub-generation-table/LOG.md  (the hub's OWN write path \u2014 it produces this)"
+      ],
+      "n_files": 3,
+      "required": [
+        {
+          "is_dir": false,
+          "n_files": 1,
+          "path": ".claude/AGENT_PROTOCOL.md",
+          "token": ".claude/AGENT_PROTOCOL.md"
+        },
+        {
+          "is_dir": false,
+          "n_files": 1,
+          "path": ".claude/autonomous-hub-charter.md",
+          "token": ".claude/autonomous-hub-charter.md"
+        },
+        {
+          "is_dir": false,
+          "n_files": 1,
+          "path": ".claude/handover_context.md",
+          "token": ".claude/handover_context.md"
+        }
+      ],
+      "task_file": "/Users/user/Desktop/CHLU/.claude/tasks/hub-generation-table.md"
+    },
+    "hub-refusal": {
+      "excluded": [
+        {
+          "path": ".claude/outputs/gen-arms-a7-wiring/refusal_scores.json",
+          "token": "gen-arms-a7-wiring/refusal_scores.json",
+          "why": "\u26d4 marked superseded/never-ship in its own clause of the charter"
+        }
+      ],
+      "hub": "hub-refusal",
+      "ignored_tokens": [
+        ".claude/outputs/hub-refusal.md  (the hub's OWN write path \u2014 it produces this)",
+        ".claude/outputs/hub-refusal/LOG.md  (the hub's OWN write path \u2014 it produces this)"
+      ],
+      "n_files": 92,
+      "required": [
+        {
+          "is_dir": false,
+          "n_files": 1,
+          "path": ".claude/AGENT_PROTOCOL.md",
+          "token": ".claude/AGENT_PROTOCOL.md"
+        },
+        {
+          "is_dir": false,
+          "n_files": 1,
+          "path": ".claude/autonomous-hub-charter.md",
+          "token": ".claude/autonomous-hub-charter.md"
+        },
+        {
+          "is_dir": false,
+          "n_files": 1,
+          "path": ".claude/handover_context.md",
+          "token": ".claude/handover_context.md"
+        },
+        {
+          "is_dir": true,
+          "n_files": 88,
+          "path": ".claude/outputs/gen-read-cell-arm/runs",
+          "token": ".claude/outputs/gen-read-cell-arm/runs/"
+        },
+        {
+          "is_dir": false,
+          "n_files": 1,
+          "path": ".claude/outputs/gen-val-split-fix/refusal_scores.json",
+          "token": "gen-val-split-fix/refusal_scores.json"
+        }
+      ],
+      "task_file": "/Users/user/Desktop/CHLU/.claude/tasks/hub-refusal.md"
+    }
+  },
+  "hubs": [
+    "hub-refusal",
+    "hub-generation-table",
+    "hub-composition"
+  ],
+  "n_files": 146,
+  "not_bundled": {
+    "campaign_ledgers": "advisor-*, c3-handover, claims_matrix, negative_results, papers/ \u2014 \u26d4 excluded on purpose (agent profile: 'Read nothing else from the campaign archive')",
+    "datasets": "3dshapes.h5 (255 MiB, sha256 0a0f6ed9\u2026be1785) and the dSprites blobs \u2014 re-downloadable with `chlu data shapes3d --download`; see README-HUB-BUNDLE.md",
+    "foreign_slugs": "every other slug's .claude/outputs/** \u2014 the agent profile forbids reading the campaign archive, so shipping it would be shipping a distraction",
+    "scratch": ".claude/scratch/ (11 GB) \u2014 \u26d4 no loader names any of it"
+  },
+  "pin": "4125fce70b60ba1d9627ddc352d25bad5a08974a",
+  "schema": "chlu-hub-workspace-bundle/1",
+  "total_bytes": 2332124145
+}

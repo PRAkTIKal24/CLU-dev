@@ -1,0 +1,68 @@
+@@@ 229 233
+A claim about any of the three properties is only as precise as the definitions of the object,
+its judge and its byte ledger; we therefore fix these here, before any result.
+
+\paragraph{The store.} A frozen encoder maps each training item to a latent. The latent
+space is partitioned without labels into $K$ wells by a balanced correlation partition, and in
+each well the store keeps the leading principal subspace of the fit pool, with the pool mean as
+the first atom. No label enters the content. We write $n$ for the number of factors a request
+composes jointly and $K$ for the number of wells, and never write either as $k$.
+@@@ 235 243
+\paragraph{The read.} A request is a tuple of factor values. A tensor-product address book,
+fitted on the fit pool, maps the request to per-well coefficients; the read renders
+$x_k=U_k c_k$ in the orthonormal basis of each well, and the frozen decoder renders the image.
+The read is request-only: no feature tensor enters it, and we assert this on the deployed object
+(bitwise stable under feature perturbation over 64 checks at $\Kstar$).
+% SRC: w13-seeds-and-tables/TABLES.md
+Labels therefore touch the model only at the address book. This is the \textbf{interface
+split}: unsupervised content, a request-indexed head and a frozen renderer, with no
+Cartesian-product training requirement.
+@@@ 245 250
+\paragraph{The retained statistic and exact deletion.} Alongside the content, the store keeps
+the running covariance, mean and count of the fit rows in each well. A deletion proceeds in
+three steps:
+\begin{itemize}[leftmargin=*,nosep]
+\item the contribution of the deleted rows is subtracted from the statistic;
+\item the atoms are re-eigendecomposed from the downdated statistic;
+\item the address book is carried across the basis change by a closed-form rotation formed at
+  delete time.
+\end{itemize}
+No row of data is read. We use a single definition of exactness throughout, and state its
+scope before any table:
+@@@ 260 269
+\noindent We declare the frozen encoder and decoder outside the deletable object. The choice
+is forced: the frozen autoencoder's own training set contains evaluation-bank items
+(543 / 529 / 552 on the three maze seeds), so the weights fitted with the deleted rows present
+remain untouched by any deletion. % SRC: w13-seeds-and-tables/TABLES.md
+We carry the scoping sentence that our deletion theory states for its own store: the guarantee
+is store-level only; the frozen encoder and any residue of past writes in a learned
+landscape are separate channels, measured separately; and we do not claim certified
+$(\varepsilon,\delta)$ unlearning. % SRC: shorts-evidence-inventory.md
+We keep two senses of ``exact'' apart: an exact \emph{judge} is integer arithmetic with no
+tolerance, whereas exact \emph{deletion} is the store-scoped definition above.
+@@@ 271 278
+\paragraph{The four-part ledger, never netted.} Every store row prints four byte counts
+separately: (1) the atoms, (2) the covariance and count statistic, (3) the address book, and
+(4) the coupling and hole table used for refusal.
+We never net them into a single number, and every byte figure names its convention
+(symmetric-triangle float64 for the statistic, unless marked otherwise). The 524,288-byte figure
+recurring below is a \emph{reference} column: the store of the earlier composition-only design
+was pinned there, and read-path-matched rivals carry about 131,072 float32 parameters at it. % SRC: w13-seeds-and-tables/TABLES.md
+It is not a budget that the deletable object meets.
+@@@ 280 288
+\paragraph{Rivals: naive against naive.} Learned rivals (MLP, LSTM, transformer, and a
+continuous-input MLP) are fitted from the same frozen features and matched to the
+\emph{read path} of the store. At $\Kstar$ the fitted rivals carry 130,433 to 131,891 parameters.
+% SRC: w13-seeds-and-tables/TABLES.md
+The ledger is memory, not a read-path parameter: it is printed, never matched. A lookup table
+of written items is a printed \emph{floor}, never a rival. Before any row is claimed for the
+store, the charter controls (\texttt{landscape\_removed}, \texttt{landscape\_shuffled},
+\texttt{landscape\_shuffled\_across\_wells}, \texttt{random\_atoms}) must collapse; if they do
+not, the row is an interface row or nothing.
+@@@ 290 295
+\paragraph{The judge and the estimand.} On Shapes3D, each rendered image is judged by an
+external classifier, hash-pinned per seed. The metric is a count, the number of \emph{distinct
+valid novel factor tuples per corner}, with ceilings of 36 (pair corners) and 72 (six-factor
+corners). The estimand is paired over corners, with a margin of 1.0 tuple per corner declared
+before any number. % SRC: w13-seeds-and-tables/TABLES.md
+Every table carries the seed count as a column.

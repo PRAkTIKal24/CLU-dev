@@ -1,0 +1,54 @@
+[17:33:50] decoder hash OK (47c0f83196cd220d…)
+[17:33:52] round-trip digest OK: 1eb231178193f1afcb284622…
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[17:33:59]   [a] n=1024 clu=0.5830 floor=0.1237 feataddr=0.5864 conf=0.749
+[17:34:16]   [dev] n=4096 clu=0.5861 floor=0.1209 feataddr=0.5876 conf=0.754
+[17:34:21]   [tgt_conj_f2v5_f4v2] n=1024 clu=0.6201 floor=0.0669 feataddr=0.6216 conf=0.813
+[17:34:25]   [tgt_f0v5] n=1024 clu=0.5680 floor=0.1123 feataddr=0.5674 conf=0.753
+[17:34:30]   [tgt_f1v5] n=1024 clu=0.5869 floor=0.1032 feataddr=0.5900 conf=0.755
+[17:34:35]   [tgt_f2v5] n=1024 clu=0.5731 floor=0.1092 feataddr=0.5680 conf=0.783
+[17:34:40]   [tgt_f3v4] n=1024 clu=0.6372 floor=0.0996 feataddr=0.6375 conf=0.731
+[17:34:45]   [tgt_f4v2] n=1024 clu=0.6281 floor=0.0796 feataddr=0.6291 conf=0.778
+[17:34:49]   [tgt_f5v7] n=1024 clu=0.6172 floor=0.1159 feataddr=0.6209 conf=0.743
+[17:34:49] WROTE C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-deletion\runs\plc_churn_r1\eval.json (59.0 s)

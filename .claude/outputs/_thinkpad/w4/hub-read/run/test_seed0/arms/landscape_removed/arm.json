@@ -1,0 +1,84 @@
+{
+ "address_bytes": {
+  "address_bytes": 195584,
+  "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )",
+  "dtype": "float32",
+  "normalisation_bytes": 2560,
+  "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger.",
+  "per_factor_tables_bytes": 29184,
+  "per_well_maps_bytes": 163840,
+  "rank": 128
+ },
+ "arm": "landscape_removed",
+ "byte_ledger": {
+  "budget_bytes": 524288,
+  "deployed_bytes": 524288,
+  "what": "5 wells x 64 modes, float32"
+ },
+ "fit_seconds": 0.4170832633972168,
+ "head_bytes": {
+  "bytes_formula": "sum_k P * M_k * 4",
+  "dtype": "float32",
+  "head_bytes": 1766400,
+  "head_bytes_per_well": [
+   353280,
+   353280,
+   353280,
+   353280,
+   353280
+  ],
+  "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it. It is the same size for every arm on this hub."
+ },
+ "kind": "span",
+ "partition": "balanced",
+ "perturbation": {
+  "kind": "zero",
+  "when": "after the address book was fitted"
+ },
+ "read": "tensor",
+ "recon_mse": {
+  "feature_variance": 0.2218368649482727,
+  "mse": 0.0537693053483963,
+  "n": 32768,
+  "relative_mse": 0.24238219089930826
+ },
+ "request_only": {
+  "bitwise_stable_under_feature_perturbation": true,
+  "feature_argument_present": false,
+  "n_checked": 64,
+  "read_signature": [
+   "self",
+   "store",
+   "values",
+   "grid_values",
+   "basis"
+  ],
+  "statement": "the read's only inputs are the address book, the store and the request; no feature tensor enters launch, settle or read (charter B.3)"
+ },
+ "store_ledger": {
+  "bits_per_read": 30.0,
+  "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+  "dim": 2048,
+  "dtype": "float32",
+  "n_modes": 64,
+  "n_modes_per_well": [
+   64,
+   64,
+   64,
+   64,
+   64
+  ],
+  "n_wells": 5,
+  "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+  "store_bytes": 524288,
+  "store_bytes_per_well": [
+   104960,
+   104960,
+   104960,
+   104704,
+   104704
+  ],
+  "uniform_allocation": true
+ },
+ "zeroed": true
+}

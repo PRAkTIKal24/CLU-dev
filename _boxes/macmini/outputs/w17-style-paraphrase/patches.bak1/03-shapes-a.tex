@@ -1,0 +1,65 @@
+@@@ 302 309
+This section measures the three properties on Shapes3D, for one deletable object at one
+partition. The deletable object is the \emph{single design}: the store, read and ledger of
+\S\ref{sec:object} on the Shapes3D value hold-out, with the partition fixed on validation
+by a rule frozen before the sweep, $\Kstar=\max\{K : v(5)-\text{mean}_{\text{seeds}}\,v(K)\le
+0.02\}$, over $K\in\{5,8,10,12,16,20,24,28,32\}$. Every swept $K$ satisfied the rule; hence
+$\Kstar=32$, the finest partition swept, and the sweep range was not extended to manufacture a
+crossover. % SRC: w13-seeds-and-tables/TABLES.md
+The main text carries this one $K$. The $K=5$ endpoint of the sweep is reported in
+Appendix~\ref{app:k5}, labelled as the endpoint, with its sign stated as a property of $K=5$.
+@@@ 314 324
+Table~\ref{tab:t7} reports the scored result. Row 3 holds out 60 pair corners and row 4 holds
+out 49 six-factor corners; we compare the arm with each rival on all 109 corners, with the corner
+as the unit. % SRC: w12b-nr6-and-kstar/NR6-T7.md
+The control gate is checked before any margin, and it was measured, not assumed, on every seed:
+all four landscape controls read exactly 0.0000 on both rows on all three legs.
+% SRC: w12b-nr6-and-kstar/NR6-T7.md
+On every leg, every rival is beaten beyond the declared 1.0 margin on 109 of 109 corners; the
+smallest paired delta against any comparator on any $\Kstar$ leg is $+39.266$, against the
+table floor on seed 0. % SRC: w12b-nr6-and-kstar/NR6-T7.md
+The seed-0 row, scored first, lies inside the three-seed spread on both rows.
+% SRC: w12b-nr6-and-kstar/FINDINGS.md
+@@@ 360 363
+\noindent The rivals are matched on the read path (130,433 to 131,891 parameters). The deletable
+object itself is larger, and its four-part ledger (Table~\ref{tab:ledger-kstar}) is memory, not
+a matched quantity. Appendix~\ref{app:t7more} gives the rival pins, the geometry and the stress
+comparison. % SRC: w13-seeds-and-tables/TABLES.md
+@@@ 391 401
+The ladder tests whether the store keeps composing as more factors are pinned jointly. A rung
+$n$ holds out corners in which $n$ factors are jointly pinned to held-out values, with $n=2$ and
+$n=6$ as the two ends. Table~\ref{tab:ladder} reports the store at $\Kstar$ on every rung and
+seed, beside the read-path-matched rivals on the same corners. Because the rivals' features are
+a function of the request alone and not of the rung's fit pool, their scores do not depend on
+$K$; on rungs $n\ge3$ they are exactly constant by construction.
+% SRC: w12-composition-ladder/FINDINGS.md
+At $\Kstar$ the store's control gate collapses on all 15 legs by the pre-declared 1.0 margin:
+13 of 15 read exactly 0.0000, and two ($n=3$, seeds 0 and 1) read 0.0083 on
+\texttt{landscape\_shuffled}, one surviving novel tuple over 120 corners, which we print
+rather than round away. % SRC: w12b-nr6-and-kstar/FINDINGS.md
+@@@ 432 453
+\paragraph{The inference note, verbatim in substance.} \emph{We beat the naive fair rivals at
+every $n$; the store's own rise from 2-way to 6-way is not to be inferred, because rungs 3--6
+probe the same corners and differ in fit-pool coverage, not composition depth.} Concretely,
+rungs $n=3,4,5,6$ probe the identical 120 corners (the same 8,640 rows). What varies is how
+coarsely the hold-out is carved and, with it, the held-out row count (300,000 / 235,200 /
+213,600 / 200,640). Every arm fitted on the rung's own pool tracks that count at
+$r=-0.96$ to $-0.98$, and every arm not fitted on it is exactly constant.
+% SRC: w12-composition-ladder/FINDINGS.md; w13-seeds-and-tables/TABLES.md
+Only $n=2$ against $n=6$ is a genuine change of probe (60 corners of 36 rows against 120 of
+72, disjoint sets). % SRC: w12-composition-ladder/FINDINGS.md
+On every rung and every seed, the store's score in Table~\ref{tab:ladder} exceeds every
+rival's printed score. The paired estimand with a bootstrap interval against the read-path
+rivals has been computed at the $K=5$ endpoint (margins $+7.0833$ to $+9.6500$ at $n=2$,
+$+14.9917$ to $+22.4250$ at $n=6$, Appendix~\ref{app:k5}), but not on the $\Kstar$ legs.
+% SRC: w13-seeds-and-tables/TABLES.md
+\TODO{no artefact for the paired $\Kstar$ ladder margin (with CI) against the read-path-matched
+rivals; the $\Kstar$ replication pairs the store only against the $1\times$ opponent of
+Appendix~\ref{app:1x}.}
+Two caveats accompany the rival rows. First, the ladder's \texttt{rival\_transformer} and
+\texttt{rival\_lstm} columns are the earlier rival set's pre-repair numbers and were not
+re-fitted on the ladder's rungs. Second, nothing in this table is a composition-depth result.
+% SRC: w12b-nr6-and-kstar/FINDINGS.md
+@@@ 455 456
+\paragraph{The coverage control.} A direct test of the inference note refits $n=6$ with the
+fit pool restricted to the train index of $n=3$, holding depth at 6 and coverage at that of $n=3$.

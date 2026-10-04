@@ -1,0 +1,176 @@
+[leg] classifier root -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[leg] cache root -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-feature-bridge/runs (generation 1; DEV/val only)
+[leg] condition=val seed=0 leg=/c/chlu/outputs/w6-compose-physics/dev/val_seed0 arms=pca_settle_r4 pca_settle_r64
+  "pre_existing_unchanged": true
+ }
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[08:44:11] stage=prepare arm=None out=C:\chlu\outputs\w6-compose-physics\dev\val_seed0 seed=0 cond=val
+[08:44:11]   partitions: already on disk, skipping
+[08:44:11] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- pca_settle_r4 ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[08:44:19] stage=fit arm=pca_settle_r4 out=C:\chlu\outputs\w6-compose-physics\dev\val_seed0 seed=0 cond=val
+[08:44:19]   address book: reused the INCUMBENT's own address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[08:44:30]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 60) (131072, 60)
+[08:44:33]   coupling: rank 4, 10 pairs, 19,968 B, lambda_used=0.225000 (declared 1.0, lambda*=0.250000, clipped=True) in 13.8s
+[08:44:33]   arm pca_settle_r4: fitted in 14.0s; store 524,288 B + address 191,424 B + coupling 19,968 B
+[08:44:33] {"arm": "pca_settle_r4", "address_bytes": {"address_bytes": 191424, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 159744, "normalisation_bytes": 2496, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.97354, 0.957214, 0.960355, 1.0, 1.0]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[08:44:38] stage=run arm=pca_settle_r4 out=C:\chlu\outputs\w6-compose-physics\dev\val_seed0 seed=0 cond=val
+[08:44:38]   arm pca_settle_r4: already fitted, loading
+[08:44:38]   arm pca_settle_r4: already fitted, loading
+[08:44:38]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[08:45:24]   arm pca_settle_r4: VAL corners done in 41.7s
+[08:45:24]   arm pca_settle_r4: launch->settled relative displacement median=0.376328; C.4 NOT a lookup: the settled state sits strictly between atoms (min ratio 1.1188)
+[08:45:24] {"incomplete": false, "n_done": 24}
+[leg] ---- pca_settle_r64 ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[08:45:32] stage=fit arm=pca_settle_r64 out=C:\chlu\outputs\w6-compose-physics\dev\val_seed0 seed=0 cond=val
+[08:45:32]   address book: reused the INCUMBENT's own address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[08:45:45]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 60) (131072, 60)
+[08:45:47]   coupling: rank 64, 10 pairs, 319,488 B, lambda_used=0.225000 (declared 1.0, lambda*=0.250000, clipped=True) in 14.6s
+[08:45:47]   arm pca_settle_r64: fitted in 14.8s; store 524,288 B + address 191,424 B + coupling 319,488 B
+[08:45:47] {"arm": "pca_settle_r64", "address_bytes": {"address_bytes": 191424, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 159744, "normalisation_bytes": 2496, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.97354, 0.957214, 0.960355, 1.0, 1.0]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[08:45:55] stage=run arm=pca_settle_r64 out=C:\chlu\outputs\w6-compose-physics\dev\val_seed0 seed=0 cond=val
+[08:45:55]   arm pca_settle_r64: already fitted, loading
+[08:45:55]   arm pca_settle_r64: already fitted, loading
+[08:45:55]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[08:46:48]   arm pca_settle_r64: VAL corners done in 47.0s
+[08:46:48]   arm pca_settle_r64: launch->settled relative displacement median=0.419148; C.4 NOT a lookup: the settled state sits strictly between atoms (min ratio 1.4173)
+[08:46:48] {"incomplete": false, "n_done": 24}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[08:46:54] stage=table arm=None out=C:\chlu\outputs\w6-compose-physics\dev\val_seed0 seed=0 cond=val
+[08:46:59]   arms with rows: ['oracle_span', 'rival_mlp_180k', 'oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex', 'pca_settle', 'pca_settle_onestep', 'pca_settle_zerostep', 'pca_settle_lookup', 'pca_settle_kernel', 'pca_settle_f01_conv', 'pca_settle_f05_conv', 'pca_settle_f10_conv', 'pca_settle_f25_conv', 'pca_settle_f50_conv', 'pca_settle_f100_s3', 'pca_settle_f100_s10', 'pca_settle_f25_s3', 'pca_settle_r4', 'pca_settle_r64']
+[08:46:59]   declared NOT-RUN: []
+C:\chlu\worktrees\CHLU-w6-compose-physics\chlu\experiments\exp_gen_factor_wells.py:1158: RuntimeWarning: Mean of empty slice
+  boot = np.array([d[rng.integers(0, n, n)].mean() for _ in range(10_000)])
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\numpy\_core\_methods.py:142: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+C:\chlu\worktrees\CHLU-w6-compose-physics\chlu\experiments\exp_gen_factor_wells.py:1171: RuntimeWarning: Mean of empty slice
+  "arm_mean": float(a.mean()), "control_mean": float(b.mean()),
+C:\chlu\worktrees\CHLU-w6-compose-physics\chlu\experiments\exp_gen_factor_wells.py:1172: RuntimeWarning: Mean of empty slice
+  "mean_paired_delta": float(d.mean()),
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\numpy\_core\fromnumeric.py:3824: RuntimeWarning: Mean of empty slice
+  return _methods._mean(a, axis=axis, dtype=dtype,
+C:\chlu\worktrees\CHLU-w6-compose-physics\chlu\experiments\exp_gen_factor_wells.py:1180: RuntimeWarning: Mean of empty slice
+  "beats_beyond_margin": bool(d.mean() > float(margin)
+[08:47:06]   table written -> C:\chlu\outputs\w6-compose-physics\dev\val_seed0\READ-TABLE.json
+[08:47:06]     oracle_span              NOT AN ARM (ceiling)                           r4= 36.375 r3=    nan
+[08:47:06]     rival_mlp_180k           RIVAL                                          r4= 47.500 r3=    nan
+[08:47:06]     oracle_span_field        NOT AN ARM (ceiling, FIELD store)              r4= 39.125 r3=    nan
+[08:47:06]     field_lookup_argmax      FLOOR (charter C.1/C.4, matched-bytes lookup, FIELD atoms) r4=  0.708 r3=    nan
+[08:47:06]     oracle_content_pool      NOT AN ARM (ceiling, BEST REALISABLE content @524,288 B) r4= 68.083 r3=    nan
+[08:47:06]     oracle_content_oracle    NOT AN ARM (ceiling, ABSOLUTE content @524,288 B, K=5) r4= 71.042 r3=    nan
+[08:47:06]     oracle_content_fine      NOT AN ARM (ceiling, ABSOLUTE content @524,288 B, fine K) r4= 71.250 r3=    nan
+[08:47:06]     oracle_true_feature      NOT AN ARM (ceiling of EVERY store, any budget) r4= 71.250 r3=    nan
+[08:47:06]     oracle_content_items     NOT AN ARM (ceiling, 64 REAL ITEMS @524,288 B) r4= 47.250 r3=    nan
+[08:47:06]     pca_tensor               ARM                                            r4= 64.375 r3=    nan
+[08:47:06]     pca_tensor_sum           ABLATION (same rank, address summed not multiplied) r4= 10.333 r3=    nan
+[08:47:06]     pca_landscape_removed    CONTROL (charter C.2, atoms zeroed)            r4=  0.000 r3=    nan
+[08:47:06]     pca_landscape_shuffled   CONTROL (charter C.2, atom values permuted)    r4=  0.000 r3=    nan
+[08:47:06]     pca_random_refit         CONTROL (random atoms, address book REFIT)     r4=  0.500 r3=    nan
+[08:47:06]     pca_span_rotated         CONTROL (predicted NO-OP: the span is unchanged) r4= 64.375 r3=    nan
+[08:47:06]     pca_lookup_argmax        FLOOR (charter C.1/C.4, matched-bytes lookup)  r4=  0.000 r3=    nan
+[08:47:06]     pca_lookup_convex        FLOOR (charter C.1, the mixture)               r4=  0.000 r3=    nan
+[08:47:06]     pca_settle               ARM (the PHYSICS read: settled state, cross-well relaxation) r4= 22.458 r3=    nan
+[08:47:06]     pca_settle_onestep       ABLATION (ONE settle step; identical beta, lambda, W) r4= 62.375 r3=    nan
+[08:47:06]     pca_settle_zerostep      ABLATION (ZERO settle steps; asserted identical to pca_tensor) r4= 64.375 r3=    nan
+[08:47:06]     pca_settle_lookup        FLOOR (charter C.1/C.4, nearest atom to the settled state) r4=  0.000 r3=    nan
+[08:47:06]     pca_settle_kernel        VAL-ONLY (the BANKED density-over-atoms null, charter E.4) r4=  0.000 r3=    nan
+[08:47:06]     pca_settle_f01_conv      VAL-ONLY SELECTION (lambda = 0.01 x certified-safe, steps = converge) r4= 64.375 r3=    nan
+[08:47:06]     pca_settle_f05_conv      VAL-ONLY SELECTION (lambda = 0.05 x certified-safe, steps = converge) r4= 64.125 r3=    nan
+[08:47:06]     pca_settle_f10_conv      VAL-ONLY SELECTION (lambda = 0.1 x certified-safe, steps = converge) r4= 63.917 r3=    nan
+[08:47:06]     pca_settle_f25_conv      VAL-ONLY SELECTION (lambda = 0.25 x certified-safe, steps = converge) r4= 61.625 r3=    nan
+[08:47:06]     pca_settle_f50_conv      VAL-ONLY SELECTION (lambda = 0.5 x certified-safe, steps = converge) r4= 53.583 r3=    nan
+[08:47:06]     pca_settle_f100_s3       VAL-ONLY SELECTION (lambda = 1 x certified-safe, steps = 3) r4= 54.875 r3=    nan
+[08:47:06]     pca_settle_f100_s10      VAL-ONLY SELECTION (lambda = 1 x certified-safe, steps = 10) r4= 34.708 r3=    nan
+[08:47:06]     pca_settle_f25_s3        VAL-ONLY SELECTION (lambda = 0.25 x certified-safe, steps = 3) r4= 63.625 r3=    nan
+[08:47:06]     pca_settle_r4            VAL-ONLY SELECTION (coupling rank 4, lambda = certified-safe, converged) r4= 22.208 r3=    nan
+[08:47:06]     pca_settle_r64           VAL-ONLY SELECTION (coupling rank 64, lambda = certified-safe, converged) r4= 22.750 r3=    nan
+[leg] done: /c/chlu/outputs/w6-compose-physics/dev/val_seed0

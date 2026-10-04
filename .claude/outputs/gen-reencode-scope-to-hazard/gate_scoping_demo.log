@@ -1,0 +1,24 @@
+==============================================================================
+(A) ENFORCED — a run that WILL extend the cache, encoder disagrees
+==============================================================================
+  ⭐ cache re-encode check: 8 rows, 512/512 elements differ (100.000%), max |delta| = 0.03125 = 8.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⭐ ENFORCED (enforced=true): this run will extend the cache
+  ⛔ ABORTED: re-encoding 8 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.03125 = 8.000 ULP of the cache dtype (bound 1); 512/512 element…
+
+==============================================================================
+(B) NOT ENFORCED — the SAME disagreement, on a fully covered run
+==============================================================================
+  ⭐ cache re-encode check: 8 rows, 512/512 elements differ (100.000%), max |delta| = 0.03125 = 8.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): cache-coverage gate: 33864/33864 rows cached, 0 shortfall (seed 0, scope='full') ⇒ this run encodes nothing new and cannot extend the cache
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp, fraction) and was NOT enforced, because: cache-coverage gate: 33864/33864 rows cached, 0 shortfall (seed 0, scope='full') ⇒ this run encodes nothing new and cannot extend the cache. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 8 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.03125 = 8.000 ULP of the cache dtype (bound 1); 512/512 elements (100.000%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 8, 'n_elements': 512, 'max_abs_delta': 0.03125, 'max_ulp_delta': 8.0, 'n_differing': 512, 'frac_differing': 1.0, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': "cache-coverage gate: 33864/33864 rows cached, 0 shortfall (seed 0, scope='full') ⇒ this run encodes nothing new and cannot extend the cache"}
+  returned: {'max_abs_delta': 0.03125, 'max_ulp_delta': 8.0, 'n_differing': 512, 'frac_differing': 1.0, 'n_checked': 8, 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'would_have_failed': True, 'would_have_failed_why': ['ulp', 'fraction']}
+
+==============================================================================
+(C) THE EXTENSION PATH — (B) passed, then the run asks for an uncached row
+==============================================================================
+  _REENCODE_VERIFIED after the unenforced pass: set()
+    ⭐ cache extension requested — re-encode check runs ENFORCED here
+  ⭐ cache re-encode check: 8 rows, 512/512 elements differ (100.000%), max |delta| = 0.03125 = 8.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⭐ ENFORCED (enforced=true): gather_features is about to EXTEND the cache (point of extension)
+  ⛔ ABORTED AT THE POINT OF EXTENSION: re-encoding 8 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.03125 = 8.000 ULP of the cache dtype (bound 1); 512/512 element…

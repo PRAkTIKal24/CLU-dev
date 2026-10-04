@@ -1,0 +1,66 @@
+[    4.0s] chlu.__file__ = C:\Users\PratikJawahar\chlu\CHLU-hub-composition-2\chlu\__init__.py
+[    5.3s] context: store (32768, 2048) B (72, 2048)  K=32 M=26
+[   10.1s] partition: balanced_correlation (dendrogram leaf order, equal blocks) linkage=ward dead=61 well sizes [64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64] in-block |corr|^2=0.1266
+[   10.2s]   (for reference, the RAGGED shipped grouping at K=32 scores in-block |corr|^2=0.1364 and is REFUSED by mode_basis)
+[   48.9s] k-means done: mean Lloyd iters 65.8
+[   49.1s] store_bytes = 212992  (K=32 M=26 D=2048)
+[   49.1s] pairs = ((0, 3), (2, 3))  ([('floor_hue', 'scale'), ('object_hue', 'scale')])
+[   49.7s] head bytes = 256512  (n_add=58 n_pair=160 rank=16)
+[   49.7s] OBJECT BYTES = 212992 + 256512 = 469504
+[   50.0s] assert_request_only_factored: {"signature_ok": true, "coefficients_re_derived_from_requests_bit_identical": true, "read_is_pure_weighted_mode_sum": true, "max_abs_delta_vs_independent_sum": 2.86102294921875e-06, "no_feature_argument_on_the_path": true, "n_checked": 72}
+[   50.0s] clu_linear features (72, 128, 4, 4)  mean|.|=0.4062
+[   50.1s] store_removed_zero features  max|.| = 0 (expect 0)
+[   51.6s] knn_proto bytes = 475136  (57 prototypes, D=2048)
+[   51.6s] knn_proto features (72, 2048)
+[   51.6s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[   51.6s]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[   51.6s] store was fitted on 32768 distinct factor tuples (32768 rows)
+[   51.6s] === SCORING ===
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[   53.4s]   [R1 clu_linear] exact_match=0.347222  aggregate=0.8657  n_valid=25  n_novel=72  HEADLINE=25  72*exact_match=25.0000  identity_holds=True
+[   54.7s]   [R2 knn_proto] exact_match=0.166667  aggregate=0.8565  n_valid=12  n_novel=72  HEADLINE=12  72*exact_match=12.0000  identity_holds=True
+[   56.0s]   [R3 store_removed_zero] exact_match=0.000000  aggregate=0.0556  n_valid=0  n_novel=72  HEADLINE=0  72*exact_match=0.0000  identity_holds=True
+[   57.4s]   [R4 decoder_ceiling] exact_match=0.930556  aggregate=0.9861  n_valid=67  n_novel=72  HEADLINE=67  72*exact_match=67.0000  identity_holds=True
+[   57.4s] paired Delta (R1-R2) = +0.1806 aggregate = +13.00 tuples; CI95 [+0.0538,+0.3073] = [+3.88,+22.12] tuples
+[   57.4s] written -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-composition\iter2r\replication\RESULTS_main.json

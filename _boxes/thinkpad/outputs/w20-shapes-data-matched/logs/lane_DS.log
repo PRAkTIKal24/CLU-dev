@@ -1,0 +1,165 @@
+[20:47:16Z] START bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 9 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_delete_store.py --seed 0
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[22:50:09] seed 0  FastJudge identical True
+[22:50:18] ===== value: 11044 rows deleted =====
+[22:52:24]   (a) store max|mode dev| 5.960e-08 ranks agree True
+[22:52:34]   (b1) stat dev count 0 moment 0.000e+00  (0.97 GB statistic)
+[00:22:54]   (b2) book E rel dev 3.002e-12  W rel dev 1.886e-10  rendered rel dev 1.850e-09  (2591s / 2823s)
+[00:26:32]   (d) survivors 89: before 50.921 after 50.865  delta -0.056  | vs refit-without +0.000
+[00:26:39] ===== conjunction_live: 5511 rows deleted =====
+[00:27:30]   (a) store max|mode dev| 5.383e-07 ranks agree True
+[00:27:39]   (b1) stat dev count 0 moment 0.000e+00  (0.97 GB statistic)
+[03:05:55]   (b2) book E rel dev 1.853e-11  W rel dev 2.898e-09  rendered rel dev 3.286e-08  (3671s / 5809s)
+[03:13:01]   (d) survivors 109: before 47.495 after 41.367  delta -6.128  | vs refit-without +0.000
+[03:13:27] ===== item: 1311 rows deleted =====
+[03:17:14]   (a) store max|mode dev| 2.338e-07 ranks agree True
+[03:17:48]   (b1) stat dev count 0 moment 0.000e+00  (0.97 GB statistic)
+[05:53:26]   (b2) book E rel dev 2.496e-13  W rel dev 1.553e-11  rendered rel dev 5.829e-10  (5427s / 3904s)
+[05:57:41]   (d) survivors 109: before 47.495 after 47.477  delta -0.018  | vs refit-without +0.000
+[03:57:56Z] END rc=0 bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 9 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_delete_store.py --seed 0
+[03:57:56Z] START bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 9 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_delete_store.py --seed 1
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[05:59:51] seed 1  FastJudge identical True
+[06:00:10] ===== value: 11044 rows deleted =====
+[06:03:27]   (a) store max|mode dev| 4.821e-08 ranks agree True
+[06:03:39]   (b1) stat dev count 0 moment 0.000e+00  (0.97 GB statistic)
+[08:20:06]   (b2) book E rel dev 2.234e-12  W rel dev 3.425e-10  rendered rel dev 1.415e-09  (4391s / 3792s)
+[08:22:56]   (d) survivors 89: before 50.528 after 50.854  delta +0.326  | vs refit-without +0.000
+[08:23:03] ===== conjunction_live: 5511 rows deleted =====
+[08:24:59]   (a) store max|mode dev| 1.074e-08 ranks agree True
+[08:25:08]   (b1) stat dev count 0 moment 0.000e+00  (0.97 GB statistic)
+[11:01:45]   (b2) book E rel dev 1.052e-10  W rel dev 5.503e-08  rendered rel dev 7.813e-08  (4463s / 4928s)
+[11:04:30]   (d) survivors 109: before 47.404 after 40.972  delta -6.431  | vs refit-without +0.000
+[11:04:30] item already on disk
+[09:04:33Z] END rc=0 bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 9 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_delete_store.py --seed 1
+[09:04:33Z] START bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 9 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_delete_store.py --seed 2
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[11:05:31] seed 2  FastJudge identical True
+[11:05:32] value already on disk
+[11:05:32] conjunction_live already on disk
+[11:05:32] item already on disk
+[09:05:34Z] END rc=0 bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 9 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_delete_store.py --seed 2
+[09:05:34Z] LANE DONE

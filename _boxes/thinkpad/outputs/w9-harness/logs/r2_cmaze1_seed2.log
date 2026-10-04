@@ -1,0 +1,79 @@
+
+==============================================================================
+w9 HARNESS  seed=2  scale=std  tier=cmaze1 (env-scout adopted defaults)
+==============================================================================
+instances: 500 train / 200 eval  (CMAZE-1 adopted defaults)  [47.1s]
+  eval opt_len mean 43.7 max 128 ; budget mean 48.5 max 141
+
+JUDGE AUDIT  (25 instances, 250 judged routes)
+  A source   : no float machinery in judge/_pocket ....... PASS
+  B types    : integer-only comparisons under tracing .... PASS
+  C redundant: judge == independently written replay ..... PASS (0/250 disagree)
+  D oracle   : optimum / truncation / budget / mutants ... PASS (0 bad)
+  verdict classes exercised: {'into-wall': 132, 'over-budget': 9, 'pickup-on-empty-cell': 70, 'goal': 25, 'no-goal': 5, 'locked-door-c2': 6, 'locked-door-c1': 2, 'locked-door-c4': 1}
+  JUDGE EXACT: True    tolerance used: None
+STEPPER AUDIT: 250 routes, 0 disagreements with the exact judge -> PASS
+
+ENCODER (reconstruction only): 500 imgs, 15912 params, BCE 0.00381 -> pixel acc 0.99889, on-pixel recall 0.9818  [30.5s]
+  encoder linear probe r=0, AUC / balanced-acc (features at a cell -> that cell's planes):
+    floor 0.783/0.702  start 0.902/0.868  goal 0.886/0.832  door1 0.810/0.805  door2 0.914/0.863
+    door3 0.880/0.832  door4 0.906/0.845  tint1 0.863/0.787  tint2 0.682/0.662  tint3 0.795/0.753
+    tint4 0.701/0.691  key1 0.658/0.661  key2 0.928/0.872  key3 0.648/0.643  key4 0.674/0.639
+    (threshold-free; every arm reads these same arrays)
+  shared observation: 431 dims (200 local patch + 200 global pool + 31 agent state), rollout horizon 142
+  supervision: 21175 of 21245 train steps kept (horizon 104; 5 of 500 routes run past it), 8691 eval steps  [0.3s]
+
+MATCHED PARAMETERS (target 60000, obs_dim 431, n_out 5)
+  mlp          width 105  params   60047  (+0.078% of target)
+  lstm         width  62  params   59965  (-0.058% of target)
+  transformer  width  56  params   59949  (-0.085% of target)  n_layers=1 heads=2
+
+TRAINING (behaviour cloning on exact oracle routes)
+  TRAIN mlp          params   60047  loss 0.7266  val-acc 0.5779  [29.9s]
+  TRAIN lstm         params   59965  loss 0.4076  val-acc 0.7641  [72.3s]
+  TRAIN transformer  params   59949  loss 0.0781  val-acc 0.7772  [69.6s]
+  shared action head: identical shape across arms = True (HEAD_KEY (single PRNGKey, used by every arm))
+
+EVALUATION -- exact judge, 200 instances
+  arm / column                           validity    score   goal*  legal*   top failure modes
+  MLP (matched, 60047 params)              0.0100   0.0100  0.0100  0.4853   pickup-on-empty-cell x80, locked-door-c1 x23, into-wall x21
+       teacher-forced per-step action accuracy 0.5779 ; validity by optimal length {'opt_len 0-20': 0.0952, 'opt_len 21-40': 0.0, 'opt_len 41-inf': 0.0}
+  LSTM (matched, 59965 params)             0.0050   0.0050  0.0050  0.3136   pickup-on-empty-cell x38, into-wall x38, locked-door-c3 x29
+       teacher-forced per-step action accuracy 0.7641 ; validity by optimal length {'opt_len 0-20': 0.0476, 'opt_len 21-40': 0.0, 'opt_len 41-inf': 0.0}
+  TRANSFORMER (matched, 59949 params)      0.0000   0.0000  0.0000  0.2551   pickup-on-empty-cell x69, into-wall x42, locked-door-c1 x23
+       teacher-forced per-step action accuracy 0.7772 ; validity by optimal length {'opt_len 0-20': 0.0, 'opt_len 21-40': 0.0, 'opt_len 41-inf': 0.0}
+  TABLE FLOOR (raw state, 15884 keys)      0.0000   0.0000  0.0000  0.1372   into-wall x164, no-goal x19, locked-door-c3 x6
+  TABLE-ENC (encoder bits, 19597 keys)     0.0000   0.0000  0.0000  0.0543   into-wall x187, locked-door-c1 x4, no-goal x3
+
+REPORTED COLUMNS (never abort conditions)
+  arm / column                           validity    score   goal*  legal*   top failure modes
+  oracle (full composition)                1.0000   1.0000  1.0000  1.0000   
+  blind-A (rule B dropped)                 0.1750   0.1750  0.1750  0.3834   forbidden-tint-c4 x49, forbidden-tint-c2 x44, forbidden-tint-c1 x41
+  blind-B (rule A dropped)                 0.0000   0.0000  0.0000  0.2024   locked-door-c4 x54, locked-door-c2 x50, locked-door-c1 x48
+  blind-colour (colours collapsed)         0.1050   0.1050  0.1100  0.3052   no-goal x80, locked-door-c2 x25, locked-door-c3 x24
+  blind-factor (A x B local only)          0.2700   0.2700  0.2700  0.4748   forbidden-tint-c4 x39, forbidden-tint-c2 x38, forbidden-tint-c1 x37
+  blind-sequential (key order from A)      0.5100   0.5100  0.5200  0.5200   no-goal x96, over-budget x2
+  fragment-lookup r=1                      0.0000   0.0000  0.0000  0.3272   into-wall x125, no-goal x55, locked-door-c1 x7
+       10401 signatures, train coverage 1.0000
+  fragment-lookup r=2                      0.0000   0.0000  0.0000  0.0432   into-wall x190, locked-door-c4 x5, locked-door-c1 x3
+       21066 signatures, train coverage 1.0000
+   * goal  = reached the goal legally with the budget lifted (exact judge, declared variant);  legal = mean legal prefix / optimal length.  Both are DIAGNOSTICS -- the scored column is validity.
+  headline composition-blind = blind-sequential (key order from A) (score 0.5100); fragment-lookup = 0.0000
+
+SUPERVISED REFUSER (the ONLY comparator for DISPLAY rows)
+  impossible set: 250 train / 200 eval, certification failures 0, families {'budget': 290, 'legality': 160}  [45.3s]
+  no impossible example in any non-refuser arm's data: True
+  class balance: 21175 action-steps vs 1100 refuse-steps -> refuse weight x19.2 (equal total weight)
+  refuser: transformer width 56, 59982 params (matched to the same target)
+  TRAIN refuser      params   59982  loss 0.2151  [68.6s]
+                                         validity  refusal   note
+  REFUSER on POSSIBLE [decision at t=0]    0.0000   0.5600   false refusals on solvable mazes
+  REFUSER on IMPOSSIBLE [decision at t=0]   0.0000   0.6750   correct refusals (the DISPLAY comparator)
+  REFUSER on POSSIBLE [any step]           0.0000   0.6300   alternative reading
+  REFUSER on IMPOSSIBLE [any step]         0.0000   0.7350   alternative reading
+  refusal separation (impossible - possible) = +0.1150
+  MLP on IMPOSSIBLE (cannot refuse)        0.0000        -   no refuse token by construction
+  LSTM on IMPOSSIBLE (cannot refuse)       0.0000        -   no refuse token by construction
+  TRANSFORMER on IMPOSSIBLE (cannot refuse)   0.0000        -   no refuse token by construction
+
+seed 2 done in 913.3s

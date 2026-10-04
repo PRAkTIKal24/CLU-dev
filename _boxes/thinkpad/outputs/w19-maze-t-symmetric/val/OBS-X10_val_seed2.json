@@ -1,0 +1,776 @@
+{
+ "seed_index": 2,
+ "leg": "val",
+ "condition": "OBS",
+ "config": {
+  "latent": 128,
+  "K": 2,
+  "n_atoms": 6,
+  "ridge": 1.0
+ },
+ "tolerance_used": null,
+ "k_colours": 4,
+ "scored_run": false,
+ "smoke": false,
+ "input_per_arm": "rivals: w9 obs (conv-AE patch+global, 29 dynamics scalars, action) and obs + extractor one-hots; CLU reads the EXTRACTED words (request-only)",
+ "rival_steps_matched": 8000,
+ "rival_steps_10x_diagnostic": 80000,
+ "persist_dir": "C:/chlu/outputs/w19-maze-t-symmetric/val\\persist\\OBS-X10_seed2\\val",
+ "banks": {
+  "train": {
+   "generator_seeds_tried": 90,
+   "seed0": 2800000,
+   "n_mazes": 90,
+   "n_rows": 36717,
+   "n_natural_rows": 13500,
+   "per_tuple": 2,
+   "door_tint": {
+    "p_door_tint": 1.0,
+    "self_tint_prob": 0.6,
+    "door_cells": 360,
+    "tinted": 354,
+    "self_tinted": 215,
+    "reverted_to_preserve_the_oracle": 6,
+    "opt_len_mean_before": 40.044444444444444,
+    "opt_len_mean_after": 40.1
+   },
+   "seed_block": [
+    2800000,
+    3000000
+   ]
+  },
+  "val": {
+   "generator_seeds_tried": 45,
+   "seed0": 3000000,
+   "n_mazes": 45,
+   "n_rows": 18055,
+   "n_natural_rows": 6750,
+   "per_tuple": 2,
+   "door_tint": {
+    "p_door_tint": 1.0,
+    "self_tint_prob": 0.6,
+    "door_cells": 180,
+    "tinted": 178,
+    "self_tinted": 102,
+    "reverted_to_preserve_the_oracle": 2,
+    "opt_len_mean_before": 44.06666666666667,
+    "opt_len_mean_after": 44.06666666666667
+   },
+   "seed_block": [
+    3000000,
+    3100000
+   ]
+  }
+ },
+ "ACCEPT_1_independent_replay": {
+  "transitions_replayed": 54772,
+  "disagreements": 0,
+  "detail": [],
+  "pass": true,
+  "drivers": [
+   "step_ref (rules-written, set-based state, no array of trits)",
+   "judge_ref (the w9 second replay, driven from inst.start over prefix+action; it never sees s_t)"
+  ]
+ },
+ "ACCEPT_2_no_impossible_example": {
+  "rows_checked": 54772,
+  "rows_with_no_accepting_emission": 0,
+  "pass": true,
+  "definition": "an example is IMPOSSIBLE iff no emission exists that the exact transition judge accepts; this audit constructs the accepting emission for every row and checks the judge takes it"
+ },
+ "holdout": {
+  "value_colour": 4,
+  "pairs": [
+   [
+    0,
+    1,
+    3,
+    1
+   ],
+   [
+    0,
+    2,
+    3,
+    3
+   ],
+   [
+    0,
+    1,
+    2,
+    3
+   ],
+   [
+    0,
+    3,
+    3,
+    1
+   ],
+   [
+    0,
+    1,
+    3,
+    3
+   ],
+   [
+    0,
+    2,
+    2,
+    1
+   ],
+   [
+    0,
+    2,
+    3,
+    2
+   ],
+   [
+    0,
+    1,
+    2,
+    1
+   ]
+  ],
+  "nway": [
+   [
+    2,
+    2,
+    2,
+    1
+   ],
+   [
+    2,
+    2,
+    2,
+    3
+   ],
+   [
+    2,
+    2,
+    2,
+    2
+   ],
+   [
+    1,
+    1,
+    1,
+    0
+   ],
+   [
+    3,
+    0,
+    3,
+    2
+   ],
+   [
+    2,
+    0,
+    2,
+    2
+   ],
+   [
+    3,
+    0,
+    3,
+    3
+   ],
+   [
+    3,
+    0,
+    3,
+    0
+   ],
+   [
+    1,
+    2,
+    0,
+    2
+   ],
+   [
+    1,
+    3,
+    0,
+    3
+   ],
+   [
+    3,
+    1,
+    0,
+    1
+   ],
+   [
+    2,
+    3,
+    0,
+    0
+   ],
+   [
+    3,
+    5,
+    3,
+    0
+   ],
+   [
+    3,
+    5,
+    3,
+    1
+   ],
+   [
+    1,
+    5,
+    1,
+    2
+   ],
+   [
+    2,
+    5,
+    2,
+    2
+   ],
+   [
+    1,
+    0,
+    2,
+    2
+   ],
+   [
+    1,
+    0,
+    2,
+    1
+   ],
+   [
+    1,
+    0,
+    2,
+    0
+   ],
+   [
+    3,
+    0,
+    1,
+    0
+   ]
+  ],
+  "n_train_rows": 17618,
+  "n_eval_rows_scored": {
+   "seen": 4000,
+   "value": 4000,
+   "pair": 2129,
+   "nway": 707
+  }
+ },
+ "ACCEPT_3_holdout_disjointness": {
+  "value_holdout_colour": 4,
+  "n_train_rows": 17618,
+  "train_rows_mentioning_the_held_out_colour": 0,
+  "n_nway_combos_held_out": 20,
+  "nway_combos_present_in_train": 0,
+  "n_pair_combos_held_out": 8,
+  "pair_combos_present_in_train": 0,
+  "pair_leak_detail": [],
+  "rows_misclassified_into_their_own_split": {
+   "value": 0,
+   "pair": 0,
+   "nway": 0
+  },
+  "distinct_word_tuples_in_train": 342,
+  "pass": true
+ },
+ "frozen_codec": {
+  "steps": 2500,
+  "latent": 128,
+  "code_dim": 21,
+  "final_loss": 7.956796616781503e-05,
+  "params": 28949,
+  "seconds": 12.282814025878906,
+  "objective": "per-block softmax cross-entropy on the next-state code; no request, no arm, no judge enters the loss"
+ },
+ "frozen_state_encoder": {
+  "feat_dim": 12,
+  "width": 32,
+  "steps": 1500,
+  "params_encoder": 17068,
+  "params_decoder": 17071,
+  "final_bce": 7.70539409131743e-05,
+  "pixel_accuracy": 0.9999999403953552,
+  "on_pixel_recall": 1.0,
+  "n_images": 90,
+  "seconds": 112.71968626976013,
+  "restarts_run": 1,
+  "restart_bce": [
+   7.70539409131743e-05
+  ],
+  "accept_bce": 0.01
+ },
+ "word_extractor": {
+  "steps": 60000,
+  "batch": 256,
+  "lr": 0.003,
+  "hidden": 32,
+  "final_loss": 0.19555962085723877,
+  "floats": 21275,
+  "seconds": 85.17889642715454,
+  "n_train_rows": 17618,
+  "trained_on": "TRAIN (seen) rows only",
+  "accuracy_on_TRAIN_rows": {
+   "n": 17618,
+   "per_word": {
+    "w_agent": 1.0,
+    "w_key": 0.9994891588148485,
+    "w_door": 0.9703144511295266,
+    "w_tint": 0.9481212396412759,
+    "w_dir": 0.9998297196049495
+   },
+   "whole_tuple": 0.921841298671813
+  }
+ },
+ "clu_ledger": {
+  "read_floats": 4584,
+  "store_atom_floats": 768,
+  "head_floats": 3816,
+  "deployed_bytes_float32": 18336,
+  "statistic_floats_float64": 4290,
+  "statistic_bytes_float64": 34320,
+  "byte_convention": "deployed bytes = 4 x (atom floats + address-book floats), the object that produces a read; the float64 sufficient statistic is what buys EXACT deletion and is declared beside it, never netted in",
+  "K": 2,
+  "n_atoms": 6,
+  "dim": 128,
+  "design_width": 318,
+  "dead_channels": 0,
+  "well_widths": [
+   64,
+   64
+  ],
+  "span_fraction_n_atoms_over_d_k": [
+   0.09375,
+   0.09375
+  ],
+  "deployed_rank_per_well": [
+   5,
+   5
+  ]
+ },
+ "clu_design": "[bias|main|pair] 318",
+ "rank_over_width_printed": {
+  "per_well": [
+   0.09375,
+   0.09375
+  ],
+  "cap": 0.3
+ },
+ "clu_request_only": true,
+ "across_wells_derangement": [
+  1,
+  0
+ ],
+ "across_wells_is_derangement": true,
+ "matched_target": {
+  "clu_read_floats": 4584,
+  "extractor_floats_added": 21275,
+  "target_floats": 25859
+ },
+ "matched_parameters": {
+  "mlp +extractor": {
+   "input_dim": 663,
+   "width": 34,
+   "params": 25579,
+   "residual_pct": -1.0827951583587918
+  },
+  "lstm +extractor": {
+   "input_dim": 663,
+   "width": 27,
+   "params": 25457,
+   "residual_pct": -1.5545844773579798
+  },
+  "transformer +extractor": {
+   "input_dim": 663,
+   "width": 28,
+   "params": 26961,
+   "residual_pct": 4.2615723732549595
+  }
+ },
+ "capacity_diagnostic": {
+  "mlp +extractor": {
+   "width": 267,
+   "params": 258113
+  },
+  "lstm +extractor": {
+   "width": 141,
+   "params": 258473
+  },
+  "transformer +extractor": {
+   "width": 140,
+   "params": 257345
+  }
+ },
+ "rival_input_dims": {
+  "+extractor": 663
+ },
+ "rival_training": {
+  "rival: mlp +extractor": {
+   "kind": "mlp",
+   "width": 34,
+   "extra": {},
+   "params": 25579,
+   "steps": 8000,
+   "final_loss": 0.01769150421023369,
+   "seconds": 90.77530074119568,
+   "examples_seen": 1920000
+  },
+  "rival@10x-steps: mlp +extractor": {
+   "kind": "mlp",
+   "width": 34,
+   "extra": {},
+   "params": 25579,
+   "steps": 80000,
+   "final_loss": 1.696862091193907e-05,
+   "seconds": 969.3774127960205,
+   "examples_seen": 19200000
+  },
+  "rival: lstm +extractor": {
+   "kind": "lstm",
+   "width": 27,
+   "extra": {},
+   "params": 25457,
+   "steps": 8000,
+   "final_loss": 0.014539016410708427,
+   "seconds": 125.90790581703186,
+   "examples_seen": 1920000
+  },
+  "rival@10x-steps: lstm +extractor": {
+   "kind": "lstm",
+   "width": 27,
+   "extra": {},
+   "params": 25457,
+   "steps": 80000,
+   "final_loss": 5.6927539844764397e-05,
+   "seconds": 1196.2480020523071,
+   "examples_seen": 19200000
+  },
+  "rival: transformer +extractor": {
+   "kind": "transformer",
+   "width": 28,
+   "extra": {
+    "n_layers": 1,
+    "heads": 2
+   },
+   "params": 26961,
+   "steps": 8000,
+   "final_loss": 0.0004407950327731669,
+   "seconds": 156.27579307556152,
+   "examples_seen": 1920000
+  },
+  "rival@10x-steps: transformer +extractor": {
+   "kind": "transformer",
+   "width": 28,
+   "extra": {
+    "n_layers": 1,
+    "heads": 2
+   },
+   "params": 26961,
+   "steps": 80000,
+   "final_loss": 4.0152735891751945e-06,
+   "seconds": 1162.0539467334747,
+   "examples_seen": 19200000
+  }
+ },
+ "words_floor_name": "floor: lookup cross-maze WORDS (extracted words)",
+ "ROWS": {
+  "seen": {
+   "n": 4000,
+   "word_extractor_accuracy": {
+    "n": 4000,
+    "per_word": {
+     "w_agent": 0.999,
+     "w_key": 0.87125,
+     "w_door": 0.85975,
+     "w_tint": 0.89025,
+     "w_dir": 0.996
+    },
+    "whole_tuple": 0.67225
+   },
+   "CLU": 0.85275,
+   "control: landscape_removed": 0.0,
+   "control: landscape_shuffled": 0.2855,
+   "control: landscape_shuffled_across_wells": 0.179,
+   "control: random_atoms": 0.3425,
+   "arm: BLIND-COLOUR (learned: colour identity removed from the request)": 0.497,
+   "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": 0.82775,
+   "rival: mlp +extractor": 0.87075,
+   "rival@10x-steps: mlp +extractor": 0.87325,
+   "rival: lstm +extractor": 0.86625,
+   "rival@10x-steps: lstm +extractor": 0.8755,
+   "rival: transformer +extractor": 0.88325,
+   "rival@10x-steps: transformer +extractor": 0.889,
+   "floor: lookup cross-maze WORDS (extracted words)": 0.87675,
+   "floor: lookup cross-maze WORDS (extracted words) :coverage": 0.9955,
+   "floor: lookup cross-maze raw r1": 0.3955,
+   "floor: lookup cross-maze raw r1 :coverage": 0.27549999999999997,
+   "floor: fragment cross-maze r1": 0.302,
+   "floor: fragment cross-maze r1 :coverage": 0.30600000000000005,
+   "floor: lookup WITHIN-maze raw r1 (NOT transfer)": 0.31575,
+   "floor: lookup WITHIN-maze raw r1 (NOT transfer) :coverage": 0.19299999999999995,
+   "column: ORACLE (planner)": 1.0,
+   "column: BLIND-A (planner)": 0.99075,
+   "column: BLIND-B (planner)": 0.91775,
+   "column: BLIND-COLOUR (planner)": 0.87825,
+   "column: BLIND-SEQUENTIAL (planner)": 0.99275,
+   "column: BLIND-FACTOR (planner)": 0.99175
+  },
+  "pair": {
+   "n": 2129,
+   "word_extractor_accuracy": {
+    "n": 2129,
+    "per_word": {
+     "w_agent": 0.9859088774072334,
+     "w_key": 0.9657116016909347,
+     "w_door": 0.6618130577736027,
+     "w_tint": 0.10756223579145138,
+     "w_dir": 0.9934241427900423
+    },
+    "whole_tuple": 0.038985439173320806
+   },
+   "CLU": 0.45937059652418977,
+   "control: landscape_removed": 0.0,
+   "control: landscape_shuffled": 0.2677313292625646,
+   "control: landscape_shuffled_across_wells": 0.09347111319868483,
+   "control: random_atoms": 0.14983560356975106,
+   "arm: BLIND-COLOUR (learned: colour identity removed from the request)": 0.13339596054485675,
+   "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": 0.47346171911695634,
+   "rival: mlp +extractor": 0.47440112728980743,
+   "rival@10x-steps: mlp +extractor": 0.4852043212775951,
+   "rival: lstm +extractor": 0.45937059652418977,
+   "rival@10x-steps: lstm +extractor": 0.4687646782527008,
+   "rival: transformer +extractor": 0.44997651479567874,
+   "rival@10x-steps: transformer +extractor": 0.49271958666040394,
+   "floor: lookup cross-maze WORDS (extracted words)": 0.42930953499295443,
+   "floor: lookup cross-maze WORDS (extracted words) :coverage": 0.8628464067637388,
+   "floor: lookup cross-maze raw r1": 0.02724283701268201,
+   "floor: lookup cross-maze raw r1 :coverage": 0.03193987787693753,
+   "floor: fragment cross-maze r1": 0.0615312353217473,
+   "floor: fragment cross-maze r1 :coverage": 0.22029121653358386,
+   "floor: lookup WITHIN-maze raw r1 (NOT transfer)": 0.09065288868013152,
+   "floor: lookup WITHIN-maze raw r1 (NOT transfer) :coverage": 0.09253170502583374,
+   "column: ORACLE (planner)": 1.0,
+   "column: BLIND-A (planner)": 0.742132456552372,
+   "column: BLIND-B (planner)": 0.8083607327383748,
+   "column: BLIND-COLOUR (planner)": 0.31986848285580083,
+   "column: BLIND-SEQUENTIAL (planner)": 0.9788633161108502,
+   "column: BLIND-FACTOR (planner)": 0.7759511507750118
+  },
+  "nway": {
+   "n": 707,
+   "word_extractor_accuracy": {
+    "n": 707,
+    "per_word": {
+     "w_agent": 0.9943422913719944,
+     "w_key": 0.9603960396039604,
+     "w_door": 0.7906647807637907,
+     "w_tint": 0.42857142857142855,
+     "w_dir": 0.9957567185289957
+    },
+    "whole_tuple": 0.32814710042432815
+   },
+   "CLU": 0.5742574257425742,
+   "control: landscape_removed": 0.0,
+   "control: landscape_shuffled": 0.173974540311174,
+   "control: landscape_shuffled_across_wells": 0.09476661951909476,
+   "control: random_atoms": 0.1867043847241867,
+   "arm: BLIND-COLOUR (learned: colour identity removed from the request)": 0.05799151343705799,
+   "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": 0.4625176803394625,
+   "rival: mlp +extractor": 0.521923620933522,
+   "rival@10x-steps: mlp +extractor": 0.4809052333804809,
+   "rival: lstm +extractor": 0.4512022630834512,
+   "rival@10x-steps: lstm +extractor": 0.4893917963224894,
+   "rival: transformer +extractor": 0.49222065063649223,
+   "rival@10x-steps: transformer +extractor": 0.49787835926449786,
+   "floor: lookup cross-maze WORDS (extracted words)": 0.5388967468175389,
+   "floor: lookup cross-maze WORDS (extracted words) :coverage": 0.9575671852899575,
+   "floor: lookup cross-maze raw r1": 0.0014144271570014145,
+   "floor: lookup cross-maze raw r1 :coverage": 0.007072135785007094,
+   "floor: fragment cross-maze r1": 0.005657708628005658,
+   "floor: fragment cross-maze r1 :coverage": 0.11032531824611036,
+   "floor: lookup WITHIN-maze raw r1 (NOT transfer)": 0.10183875530410184,
+   "floor: lookup WITHIN-maze raw r1 (NOT transfer) :coverage": 0.1018387553041018,
+   "column: ORACLE (planner)": 1.0,
+   "column: BLIND-A (planner)": 0.521923620933522,
+   "column: BLIND-B (planner)": 0.9236209335219236,
+   "column: BLIND-COLOUR (planner)": 0.5544554455445545,
+   "column: BLIND-SEQUENTIAL (planner)": 0.9236209335219236,
+   "column: BLIND-FACTOR (planner)": 0.5841584158415841
+  },
+  "value": {
+   "n": 4000,
+   "word_extractor_accuracy": {
+    "n": 4000,
+    "per_word": {
+     "w_agent": 0.54775,
+     "w_key": 0.74275,
+     "w_door": 0.779,
+     "w_tint": 0.4885,
+     "w_dir": 0.994
+    },
+    "whole_tuple": 0.0
+   },
+   "CLU": 0.43325,
+   "control: landscape_removed": 0.0,
+   "control: landscape_shuffled": 0.1075,
+   "control: landscape_shuffled_across_wells": 0.08825,
+   "control: random_atoms": 0.17975,
+   "arm: BLIND-COLOUR (learned: colour identity removed from the request)": 0.229,
+   "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": 0.4195,
+   "rival: mlp +extractor": 0.62425,
+   "rival@10x-steps: mlp +extractor": 0.571,
+   "rival: lstm +extractor": 0.43525,
+   "rival@10x-steps: lstm +extractor": 0.4365,
+   "rival: transformer +extractor": 0.66,
+   "rival@10x-steps: transformer +extractor": 0.70175,
+   "floor: lookup cross-maze WORDS (extracted words)": 0.43075,
+   "floor: lookup cross-maze WORDS (extracted words) :coverage": 0.98525,
+   "floor: lookup cross-maze raw r1": 0.07375,
+   "floor: lookup cross-maze raw r1 :coverage": 0.016750000000000043,
+   "floor: fragment cross-maze r1": 0.11425,
+   "floor: fragment cross-maze r1 :coverage": 0.22299999999999998,
+   "floor: lookup WITHIN-maze raw r1 (NOT transfer)": 0.16425,
+   "floor: lookup WITHIN-maze raw r1 (NOT transfer) :coverage": 0.10975000000000001,
+   "column: ORACLE (planner)": 1.0,
+   "column: BLIND-A (planner)": 0.9555,
+   "column: BLIND-B (planner)": 0.8755,
+   "column: BLIND-COLOUR (planner)": 0.549,
+   "column: BLIND-SEQUENTIAL (planner)": 0.99325,
+   "column: BLIND-FACTOR (planner)": 0.95925
+  }
+ },
+ "ROLLOUT": {
+  "n_rollouts": 45,
+  "mean_route_len": 44.06666666666667,
+  "arms": {
+   "CLU": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.8796791443850267,
+    "steps_attempted": 374,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 7.311111111111111
+   },
+   "control: landscape_removed": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.0,
+    "steps_attempted": 45,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 0.0
+   },
+   "control: landscape_shuffled": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.0,
+    "steps_attempted": 45,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 0.0
+   },
+   "control: landscape_shuffled_across_wells": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.26229508196721313,
+    "steps_attempted": 61,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 0.35555555555555557
+   },
+   "control: random_atoms": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.697986577181208,
+    "steps_attempted": 149,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 2.311111111111111
+   },
+   "rival: mlp +extractor": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.8926014319809069,
+    "steps_attempted": 419,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 8.311111111111112
+   },
+   "rival@10x-steps: mlp +extractor": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.9006622516556292,
+    "steps_attempted": 453,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 9.066666666666666
+   },
+   "rival: lstm +extractor": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.8780487804878049,
+    "steps_attempted": 369,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 7.2
+   },
+   "rival@10x-steps: lstm +extractor": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.022222222222222223,
+    "goal_reached_rate": 0.022222222222222223,
+    "all_steps_exact_rate": 0.022222222222222223,
+    "per_step_exactness": 0.9004524886877828,
+    "steps_attempted": 442,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 8.636363636363637
+   },
+   "rival: transformer +extractor": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.022222222222222223,
+    "goal_reached_rate": 0.022222222222222223,
+    "all_steps_exact_rate": 0.022222222222222223,
+    "per_step_exactness": 0.9100204498977505,
+    "steps_attempted": 489,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 9.704545454545455
+   },
+   "rival@10x-steps: transformer +extractor": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.9098196392785571,
+    "steps_attempted": 499,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 10.088888888888889
+   }
+  }
+ },
+ "DELETION": {
+  "DECLARED_NOT_RUN": "deletion rows run on scored TEST runs only"
+ },
+ "seconds_total": 4545.911061048508
+}

@@ -1,0 +1,251 @@
+{
+  "condition": "test",
+  "content_sha256": "2cc6d5a14862a7bf4e8c22be137ddee1feb31467ac4b50a137bc816d220764a6",
+  "count_ledger": {
+    "dtype": "int64",
+    "n_pairs": 1322,
+    "n_terms": 57,
+    "pair_count_bytes": 10576,
+    "request_count_bytes": 456,
+    "term_count_bytes": 456,
+    "total_count_bytes": 11488,
+    "what": "term_n = rows held carrying each (factor, value); request_n = times each value was ASKED for; pair_n = rows held carrying each conjunction. \u26d4 Held apart on purpose: asked-for and written-down are different facts."
+  },
+  "coupling_layout_check": {
+    "layout_equals_gen_field": true,
+    "n_indices_checked": 60,
+    "n_pairs": 1322
+  },
+  "coupling_ledger": {
+    "bytes_per_hole": 1,
+    "coupling_bytes": 5288,
+    "coupling_hole_bytes": 1322,
+    "n_holes": 1,
+    "n_pairs": 1322,
+    "value_and_hole_in_different_arrays": true,
+    "what": "coupling = add-alpha PMI, a function of the COUNTS alone, so it downdates exactly with them; coupling_hole = w5's mechanism, ONE byte per pair, 0 bytes outside, and the value is left untouched so an unseen pair still gets its prior"
+  },
+  "covariance_ledger": {
+    "bytes_formula": "8 * sum_k d_k^2  (+ 8 * sum_k d_k for the first moment)",
+    "count_bytes": 40,
+    "covariance_bytes": 12310672,
+    "covariance_bytes_per_well": [
+      4829832,
+      7053768,
+      373248,
+      26912,
+      26912
+    ],
+    "d_k_squared_per_well": [
+      603729,
+      881721,
+      46656,
+      3364,
+      3364
+    ],
+    "dtype": "float64",
+    "first_moment_bytes": 16384,
+    "if_full_square_float32": 6155336,
+    "if_symmetric_triangle_float32": 3081764,
+    "if_symmetric_triangle_float64": 6163528,
+    "note": "\u26d4 EXTRA to the store's 524,288 B and reported BESIDE it, never netted into it and never netted against the address book -- the same rule w5 stated for address_bytes and w6 for coupling_bytes",
+    "sum_d_k_squared": 1538834,
+    "total_statistics_bytes": 12327096,
+    "why_float64": "MEASURED: the downdate residual on S runs to 5e-10 absolute on entries of order 1e+9; a float32 accumulator (eps ~ 1e-7 relative) would bury the exactness this object exists to have"
+  },
+  "dead_per_well": [
+    0,
+    0,
+    0,
+    46,
+    18
+  ],
+  "effective_well_sizes": [
+    777,
+    939,
+    216,
+    12,
+    40
+  ],
+  "feature_cache": {
+    "encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+    "features_sha256": "d6728f01d102b0d0301198dc617f40bfb8ddb6c5b4a12b21a1ec08e1d974f2e2",
+    "generation": 1,
+    "n_rows": 480000,
+    "root": "C:\\Users\\PratikJawahar\\chlu\\chlu-bundle-v2\\.claude\\outputs\\gen-feature-bridge\\runs",
+    "scope": "full"
+  },
+  "fit_seconds": 34.29979586601257,
+  "hole": {
+    "coupling_index": 921,
+    "coupling_value_unchanged": true,
+    "n_holes_after": 1,
+    "op": "punch_hole",
+    "pair": [
+      [
+        2,
+        0
+      ],
+      [
+        4,
+        1
+      ]
+    ],
+    "permitted_bytes": 1,
+    "refit": false
+  },
+  "honest_ledger": {
+    "budget_bytes": 524288,
+    "count_bytes": 11488,
+    "coupling_bytes": 6610,
+    "covariance_bytes": 12310672,
+    "honest_total_bytes": 12869482,
+    "honest_total_bytes_symmetric_triangle": 6722338,
+    "over_budget": true,
+    "store_bytes": 524288,
+    "times_over_budget": 24.5466,
+    "times_over_budget_symmetric_triangle": 12.8218,
+    "verdict": "\u26d4 THE HONEST LEDGER IS OVER THE PIN. The content alone is at 524,288 B exactly, but exact deletion is paid for in sufficient statistics and they are not free. Printed, not netted (task section 3)."
+  },
+  "n_pool_rows": 131072,
+  "pins": {
+    "content_from": "exp_w5_compose_field.build_pca_content's partition and fit pool",
+    "delete_factor": 2,
+    "delete_value_index": 0,
+    "eig_rel_tol": 1e-12,
+    "halfsize_frac": 0.5,
+    "n_directions": 64,
+    "partition": "factor (K=5, the incumbent's own inherited label-MI wells)",
+    "small_delete_n": 64,
+    "store_bytes": 524288
+  },
+  "rank_report": {
+    "cut_is_marginal": false,
+    "eig_rel_tol": 1e-12,
+    "marginality_scored_over": "only the wells where the eigenvalue tolerance is what binds the rank; a well limited by the atom budget drops a large eigenvalue by design and says nothing about the cut",
+    "max_largest_dropped_over_threshold": 0.00027916263064252134,
+    "min_smallest_kept_over_threshold": 118.39796628302685,
+    "n_wells_limited_by_atom_budget": 3,
+    "n_wells_limited_by_tolerance": 2,
+    "per_well": [
+      {
+        "d_k": 777,
+        "eig_threshold": 7.194586198349572e-06,
+        "lambda_largest_dropped": 8762.008184800772,
+        "lambda_max": 7194586.198349572,
+        "lambda_smallest_kept": 9017.418344487745,
+        "largest_dropped_over_threshold": 1217861311.7194655,
+        "n_rows": 131072,
+        "n_zero_rows": 0,
+        "rank_kept": 63,
+        "rank_limited_by": "atom budget A-1",
+        "rank_over_d": 0.08108108108108109,
+        "saturated": false,
+        "smallest_kept_over_threshold": 1253361638.304692,
+        "variance_explained": 0.9733313801918095
+      },
+      {
+        "d_k": 939,
+        "eig_threshold": 8.12159124216304e-06,
+        "lambda_largest_dropped": 23514.433874877875,
+        "lambda_max": 8121591.242163042,
+        "lambda_smallest_kept": 23833.611971392194,
+        "largest_dropped_over_threshold": 2895298861.2383337,
+        "n_rows": 131072,
+        "n_zero_rows": 0,
+        "rank_kept": 63,
+        "rank_limited_by": "atom budget A-1",
+        "rank_over_d": 0.0670926517571885,
+        "saturated": false,
+        "smallest_kept_over_threshold": 2934598807.1476173,
+        "variance_explained": 0.9572670536995149
+      },
+      {
+        "d_k": 216,
+        "eig_threshold": 2.344162359546081e-06,
+        "lambda_largest_dropped": 7514.604101722595,
+        "lambda_max": 2344162.359546081,
+        "lambda_smallest_kept": 7632.788927993089,
+        "largest_dropped_over_threshold": 3205667078.101923,
+        "n_rows": 131072,
+        "n_zero_rows": 0,
+        "rank_kept": 63,
+        "rank_limited_by": "atom budget A-1",
+        "rank_over_d": 0.2916666666666667,
+        "saturated": false,
+        "smallest_kept_over_threshold": 3256083733.667273,
+        "variance_explained": 0.9604913394581767
+      },
+      {
+        "d_k": 58,
+        "eig_threshold": 1.3038873765986354e-07,
+        "lambda_largest_dropped": 3.63996630112851e-11,
+        "lambda_max": 130388.73765986353,
+        "lambda_smallest_kept": 1.5437761365138956e-05,
+        "largest_dropped_over_threshold": 0.00027916263064252134,
+        "n_rows": 131072,
+        "n_zero_rows": 50,
+        "rank_kept": 13,
+        "rank_limited_by": "eigenvalue tolerance",
+        "rank_over_d": 0.22413793103448276,
+        "saturated": true,
+        "smallest_kept_over_threshold": 118.39796628302685,
+        "variance_explained": 0.9999999999999998
+      },
+      {
+        "d_k": 58,
+        "eig_threshold": 3.9607458382472663e-07,
+        "lambda_largest_dropped": 1.4124019113817453e-11,
+        "lambda_max": 396074.58382472664,
+        "lambda_smallest_kept": 186.0921881082717,
+        "largest_dropped_over_threshold": 3.565999862305657e-05,
+        "n_rows": 131072,
+        "n_zero_rows": 23,
+        "rank_kept": 40,
+        "rank_limited_by": "eigenvalue tolerance",
+        "rank_over_d": 0.6896551724137931,
+        "saturated": true,
+        "smallest_kept_over_threshold": 469841276.6384989,
+        "variance_explained": 1.0
+      }
+    ],
+    "what": "a direction below the threshold is written as a ZERO row: it costs the same bytes and buys no span, which is PCASpanStore's own stated convention for an atom a well cannot use"
+  },
+  "store_ledger": {
+    "any_well_saturated": true,
+    "budget_bytes": 524288,
+    "deployed_bytes": 524288,
+    "matches_budget": true,
+    "note": "\u26d4 the running covariance is NOT in this number; it is declared separately in covariance_ledger() and never netted into it",
+    "param_count": 131072,
+    "rank_kept_per_well": [
+      63,
+      63,
+      63,
+      13,
+      40
+    ],
+    "rank_over_d_per_well": [
+      0.0811,
+      0.0671,
+      0.2917,
+      0.2241,
+      0.6897
+    ],
+    "variance_explained_per_well": [
+      0.973331,
+      0.957267,
+      0.960491,
+      1.0,
+      1.0
+    ],
+    "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block pca_tensor deploys"
+  },
+  "well_sizes": [
+    777,
+    939,
+    216,
+    58,
+    58
+  ]
+}

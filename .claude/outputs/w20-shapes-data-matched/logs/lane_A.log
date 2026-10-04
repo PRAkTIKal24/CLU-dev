@@ -1,0 +1,150 @@
+[17:49:52Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_store.py --where val --seed 0 --K 32 --npool 16384
+[19:50:19] cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+[19:50:19] where=val seed=0 K=32 npool=16384 (of 131072) from C:/chlu/outputs/hub-factor-wells/run-val/partitions.npz
+[19:50:46] store built 27.1s  A=63 wells 64..64 RANK/WIDTH 0.9531..0.9688
+[20:00:44] address book 598.4s 1059304 B; four-part total 2142618 B
+[20:00:45] wrote C:\chlu\outputs\w20-shapes-data-matched\stores\val\seed0\K32_n16384
+[18:00:47Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_store.py --where val --seed 0 --K 32 --npool 16384
+[18:00:47Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_store.py --where val --seed 0 --K 5 --npool 16384
+[20:01:44] cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+[20:01:44] where=val seed=0 K=5 npool=16384 (of 131072) from C:/chlu/outputs/hub-factor-wells/run-val/partitions.npz
+[20:02:07] store built 22.7s  A=64 wells 409..410 RANK/WIDTH 0.1561..0.1565
+[20:09:28] address book 440.6s 195584 B; four-part total 4118034 B
+[20:09:28] wrote C:\chlu\outputs\w20-shapes-data-matched\stores\val\seed0\K5_n16384
+[18:09:32Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_store.py --where val --seed 0 --K 5 --npool 16384
+[18:09:32Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_fit_rival.py --where val --seed 0 --family mlp
+[20:11:03] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+[20:11:04] where=val seed=0 family=mlp  pool 131072 rows from C:/chlu/outputs/hub-factor-wells/run-val/partitions.npz
+[20:11:04] cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+[20:11:15] gathered (131072, 2048) in 10s
+[20:11:39]     [mlp] matched width=61, params=130514 vs target 131072 (-0.426%), kind=onehot
+[20:13:19]   short 1/6 lr=0.0003 wd=0 val 0.04569
+[20:14:59]   short 2/6 lr=0.0003 wd=0.0001 val 0.04564
+[20:16:35]   short 3/6 lr=0.001 wd=0 val 0.02687
+[20:18:28]   short 4/6 lr=0.001 wd=0.0001 val 0.02684
+[20:20:15]   short 5/6 lr=0.003 wd=0 val 0.01954
+[20:22:02]   short 6/6 lr=0.003 wd=0.0001 val 0.01946
+[20:22:17]       epoch 1/20 train 0.17068 val 0.04634  (15s)
+[20:22:32]       epoch 2/20 train 0.03731 val 0.02953  (30s)
+[20:23:02]       epoch 4/20 train 0.02160 val 0.02072  (60s)
+[20:23:30]       epoch 6/20 train 0.01943 val 0.01921  (88s)
+[20:23:58]       epoch 8/20 train 0.01862 val 0.01847  (117s)
+[20:24:27]       epoch 10/20 train 0.01813 val 0.01803  (145s)
+[20:24:55]       epoch 12/20 train 0.01781 val 0.01775  (174s)
+[20:25:23]       epoch 14/20 train 0.01759 val 0.01756  (201s)
+[20:25:49]       epoch 16/20 train 0.01745 val 0.01744  (227s)
+[20:26:15]       epoch 18/20 train 0.01737 val 0.01737  (253s)
+[20:26:40]       epoch 20/20 train 0.01734 val 0.01735  (279s)
+[20:26:40]   full epochs=20 val 0.01735
+[20:26:53]       epoch 1/40 train 0.20077 val 0.05543  (13s)
+[20:27:32]       epoch 4/40 train 0.02271 val 0.02141  (51s)
+[20:28:22]       epoch 8/40 train 0.01878 val 0.01863  (102s)
+[20:29:11]       epoch 12/40 train 0.01787 val 0.01780  (151s)
+[20:30:00]       epoch 16/40 train 0.01737 val 0.01732  (200s)
+[20:30:49]       epoch 20/40 train 0.01704 val 0.01703  (248s)
+[20:31:36]       epoch 24/40 train 0.01681 val 0.01681  (296s)
+[20:32:23]       epoch 28/40 train 0.01665 val 0.01667  (343s)
+[20:33:12]       epoch 32/40 train 0.01654 val 0.01656  (392s)
+[20:34:03]       epoch 36/40 train 0.01647 val 0.01650  (443s)
+[20:34:50]       epoch 40/40 train 0.01645 val 0.01649  (490s)
+[20:34:50]   full epochs=40 val 0.01649
+[20:34:50] SELECTED {'lr': 0.003, 'weight_decay': 0.0001, 'epochs': 40, 'heldout_mse': 0.016488246619701385}
+[20:34:50] declared: 40 epochs on ALL 131072 rows (lr=0.003 wd=0.0001)
+[20:35:06]       epoch 1/40 train 0.18948  (16s)
+[20:35:45]       epoch 4/40 train 0.02183  (55s)
+[20:36:37]       epoch 8/40 train 0.01839  (106s)
+[20:37:28]       epoch 12/40 train 0.01733  (158s)
+[20:38:18]       epoch 16/40 train 0.01685  (208s)
+[20:39:06]       epoch 20/40 train 0.01659  (256s)
+[20:39:56]       epoch 24/40 train 0.01642  (305s)
+[20:40:43]       epoch 28/40 train 0.01629  (353s)
+[20:41:31]       epoch 32/40 train 0.01621  (401s)
+[20:42:18]       epoch 36/40 train 0.01616  (447s)
+[20:43:02]       epoch 40/40 train 0.01614  (492s)
+[20:43:03] declared done: final train mse 0.01614 in 492s
+[20:43:03] tenx: 400 epochs on ALL 131072 rows (lr=0.003 wd=0.0001)
+[20:43:13]       epoch 1/400 train 0.25434  (11s)
+[20:50:07]       epoch 40/400 train 0.01654  (425s)
+[20:56:53]       epoch 80/400 train 0.01601  (831s)
+[21:02:54]       epoch 120/400 train 0.01564  (1192s)
+[21:09:06]       epoch 160/400 train 0.01546  (1564s)
+[21:15:49]       epoch 200/400 train 0.01537  (1967s)
+[21:22:56]       epoch 240/400 train 0.01531  (2394s)
+[21:30:09]       epoch 280/400 train 0.01525  (2826s)
+[21:36:56]       epoch 320/400 train 0.01520  (3234s)
+[21:44:00]       epoch 360/400 train 0.01518  (3658s)
+[21:51:25]       epoch 400/400 train 0.01516  (4103s)
+[21:51:25] tenx done: final train mse 0.01516 in 4103s
+[19:51:32Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_fit_rival.py --where val --seed 0 --family mlp
+[19:51:33Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_fit_rival.py --where val --seed 0 --family cont_mlp
+[21:52:51] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+[21:52:52] where=val seed=0 family=cont_mlp  pool 131072 rows from C:/chlu/outputs/hub-factor-wells/run-val/partitions.npz
+[21:52:52] cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+[21:52:59] gathered (131072, 2048) in 7s
+[21:53:28]     [cont_mlp] matched width=63, params=131891 vs target 131072 (+0.625%), kind=continuous
+[21:55:20]   short 1/6 lr=0.0003 wd=0 val 0.16592
+[21:56:47]   short 2/6 lr=0.0003 wd=0.0001 val 0.16593
+[21:58:16]   short 3/6 lr=0.001 wd=0 val 0.10067
+[21:59:47]   short 4/6 lr=0.001 wd=0.0001 val 0.10057
+[22:01:20]   short 5/6 lr=0.003 wd=0 val 0.05666
+[22:02:49]   short 6/6 lr=0.003 wd=0.0001 val 0.05677
+[22:03:03]       epoch 1/20 train 0.22219 val 0.16596  (14s)
+[22:03:16]       epoch 2/20 train 0.12483 val 0.09793  (28s)
+[22:03:44]       epoch 4/20 train 0.06591 val 0.06111  (55s)
+[22:04:08]       epoch 6/20 train 0.05217 val 0.04992  (80s)
+[22:04:34]       epoch 8/20 train 0.04582 val 0.04486  (106s)
+[22:05:02]       epoch 10/20 train 0.04241 val 0.04189  (133s)
+[22:05:27]       epoch 12/20 train 0.04006 val 0.03967  (158s)
+[22:05:52]       epoch 14/20 train 0.03871 val 0.03857  (183s)
+[22:06:16]       epoch 16/20 train 0.03802 val 0.03799  (208s)
+[22:06:41]       epoch 18/20 train 0.03770 val 0.03773  (232s)
+[22:07:03]       epoch 20/20 train 0.03759 val 0.03766  (254s)
+[22:07:03]   full epochs=20 val 0.03766
+[22:07:15]       epoch 1/40 train 0.23382 val 0.16948  (12s)
+[22:07:46]       epoch 4/40 train 0.07098 val 0.06366  (44s)
+[22:08:32]       epoch 8/40 train 0.04337 val 0.04196  (89s)
+[22:09:26]       epoch 12/40 train 0.03870 val 0.03832  (143s)
+[22:10:23]       epoch 16/40 train 0.03620 val 0.03602  (200s)
+[22:11:15]       epoch 20/40 train 0.03444 val 0.03435  (252s)
+[22:12:12]       epoch 24/40 train 0.03320 val 0.03314  (309s)
+[22:13:10]       epoch 28/40 train 0.03233 val 0.03234  (367s)
+[22:14:11]       epoch 32/40 train 0.03179 val 0.03183  (429s)
+[22:15:13]       epoch 36/40 train 0.03152 val 0.03159  (490s)
+[22:16:15]       epoch 40/40 train 0.03143 val 0.03152  (552s)
+[22:16:15]   full epochs=40 val 0.03152
+[22:16:15] SELECTED {'lr': 0.003, 'weight_decay': 0.0, 'epochs': 40, 'heldout_mse': 0.031515128910541534}
+[22:16:15] declared: 40 epochs on ALL 131072 rows (lr=0.003 wd=0)
+[22:16:33]       epoch 1/40 train 0.22912  (18s)
+[22:17:18]       epoch 4/40 train 0.06533  (63s)
+[22:18:18]       epoch 8/40 train 0.04258  (123s)
+[22:19:19]       epoch 12/40 train 0.03809  (184s)
+[22:20:16]       epoch 16/40 train 0.03513  (241s)
+[22:21:12]       epoch 20/40 train 0.03293  (297s)
+[22:22:08]       epoch 24/40 train 0.03136  (352s)
+[22:23:03]       epoch 28/40 train 0.03046  (408s)
+[22:23:56]       epoch 32/40 train 0.02996  (461s)
+[22:24:52]       epoch 36/40 train 0.02972  (517s)
+[22:25:49]       epoch 40/40 train 0.02964  (574s)
+[22:25:49] declared done: final train mse 0.02964 in 574s
+[22:25:49] tenx: 400 epochs on ALL 131072 rows (lr=0.003 wd=0)
+[22:26:05]       epoch 1/400 train 0.25098  (15s)
+[22:34:58]       epoch 40/400 train 0.02697  (548s)
+[22:43:51]       epoch 80/400 train 0.02329  (1082s)
+[22:52:49]       epoch 120/400 train 0.02203  (1619s)
+[23:01:34]       epoch 160/400 train 0.02142  (2144s)
+[23:10:19]       epoch 200/400 train 0.02103  (2669s)
+[23:18:29]       epoch 240/400 train 0.02075  (3159s)
+[23:27:02]       epoch 280/400 train 0.02053  (3672s)
+[23:34:28]       epoch 320/400 train 0.02039  (4118s)
+[23:41:05]       epoch 360/400 train 0.02030  (4515s)
+[23:48:10]       epoch 400/400 train 0.02026  (4941s)
+[23:48:10] tenx done: final train mse 0.02026 in 4941s
+[21:48:20Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_fit_rival.py --where val --seed 0 --family cont_mlp
+[21:48:20Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_fit_rival.py --where val --seed 0 --family lstm
+[23:48:58] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+[23:48:58] where=val seed=0 family=lstm  pool 131072 rows from C:/chlu/outputs/hub-factor-wells/run-val/partitions.npz
+[23:48:58] cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+[23:49:05] gathered (131072, 2048) in 7s
+[23:49:52]     [lstm] matched width=51, params=130721 vs target 131072 (-0.268%), kind=tokens
+[21:50:46Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_fit_rival.py --where val --seed 0 --family lstm
+[21:50:46Z] LANE DONE

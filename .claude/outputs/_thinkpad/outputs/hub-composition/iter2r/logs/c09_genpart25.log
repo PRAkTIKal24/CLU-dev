@@ -1,0 +1,97 @@
+[15:54:21] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[15:54:22]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[15:54:22]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[15:54:22] C09 variant=genpart_25 {'partition': 'genpart', 'iters': 25} spec=all -> 64 corners; bytes 469,504
+[15:54:26]   partition: gen_partition.balanced_correlation_partition — dead into smallest well; well sizes [64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64]; dead=71; well sizes min 64 max 64
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:55:17] [c0] genpart_25     tuples_valid_novel= 29  agg=0.8796  distinct= 58  (55s)
+[15:56:08] [c1] genpart_25     tuples_valid_novel= 27  agg=0.8796  distinct= 57  (51s)
+[15:56:48] [c2] genpart_25     tuples_valid_novel= 30  agg=0.8819  distinct= 57  (40s)
+[15:57:34] [c3] genpart_25     tuples_valid_novel=  0  agg=0.8171  distinct= 46  (46s)
+[15:58:22] [c4] genpart_25     tuples_valid_novel= 33  agg=0.8935  distinct= 63  (48s)
+[15:59:10] [c5] genpart_25     tuples_valid_novel=  4  agg=0.6759  distinct= 64  (47s)
+[15:59:58] [c6] genpart_25     tuples_valid_novel= 35  agg=0.8889  distinct= 50  (49s)
+[16:00:48] [c7] genpart_25     tuples_valid_novel= 21  agg=0.8519  distinct= 46  (50s)
+[16:01:48] [c10] genpart_25     tuples_valid_novel=  0  agg=0.8310  distinct= 37  (59s)
+[16:03:01] [c11] genpart_25     tuples_valid_novel= 15  agg=0.8287  distinct= 59  (73s)
+[16:03:57] [c12] genpart_25     tuples_valid_novel=  7  agg=0.7731  distinct= 46  (56s)
+[16:04:56] [c13] genpart_25     tuples_valid_novel=  2  agg=0.6736  distinct= 42  (59s)
+[16:05:53] [c14] genpart_25     tuples_valid_novel=  0  agg=0.6528  distinct= 48  (57s)
+[16:06:51] [c15] genpart_25     tuples_valid_novel=  6  agg=0.8056  distinct= 59  (57s)
+[16:07:42] [c16] genpart_25     tuples_valid_novel= 20  agg=0.8403  distinct= 34  (51s)
+[16:08:26] [c17] genpart_25     tuples_valid_novel= 11  agg=0.7755  distinct= 43  (43s)
+[16:09:10] [c18] genpart_25     tuples_valid_novel= 12  agg=0.8171  distinct= 46  (45s)
+[16:10:08] [c19] genpart_25     tuples_valid_novel= 33  agg=0.8981  distinct= 56  (58s)
+[16:10:55] [c20] genpart_25     tuples_valid_novel= 49  agg=0.9468  distinct= 53  (47s)
+[16:11:39] [c21] genpart_25     tuples_valid_novel= 17  agg=0.8310  distinct= 45  (44s)
+[16:12:27] [c22] genpart_25     tuples_valid_novel=  0  agg=0.8241  distinct= 46  (48s)
+[16:13:14] [c24] genpart_25     tuples_valid_novel= 15  agg=0.8009  distinct= 51  (47s)
+[16:14:01] [c25] genpart_25     tuples_valid_novel=  8  agg=0.7431  distinct= 45  (47s)
+[16:14:48] [c30] genpart_25     tuples_valid_novel= 11  agg=0.7616  distinct= 48  (46s)
+[16:15:28] [c31] genpart_25     tuples_valid_novel=  2  agg=0.8125  distinct= 46  (40s)
+[16:16:07] [c33] genpart_25     tuples_valid_novel= 59  agg=0.9699  distinct= 61  (39s)
+[16:16:54] [c37] genpart_25     tuples_valid_novel= 29  agg=0.8819  distinct= 59  (47s)
+[16:17:44] [c38] genpart_25     tuples_valid_novel= 15  agg=0.7917  distinct= 45  (50s)
+[16:18:49] [c40] genpart_25     tuples_valid_novel= 19  agg=0.8542  distinct= 66  (64s)
+[16:20:02] [c43] genpart_25     tuples_valid_novel=  1  agg=0.7315  distinct= 55  (73s)
+[16:21:02] [c44] genpart_25     tuples_valid_novel= 28  agg=0.8380  distinct= 53  (60s)
+[16:22:00] [c45] genpart_25     tuples_valid_novel= 10  agg=0.7662  distinct= 37  (57s)
+[16:22:51] [c46] genpart_25     tuples_valid_novel=  0  agg=0.8264  distinct= 48  (51s)
+[16:23:44] [c47] genpart_25     tuples_valid_novel= 23  agg=0.8773  distinct= 46  (52s)
+[16:24:42] [c49] genpart_25     tuples_valid_novel= 12  agg=0.8032  distinct= 47  (58s)
+[16:25:41] [c50] genpart_25     tuples_valid_novel=  0  agg=0.7894  distinct= 28  (59s)
+[16:26:43] [c51] genpart_25     tuples_valid_novel=  3  agg=0.7199  distinct= 52  (62s)
+[16:27:42] [c52] genpart_25     tuples_valid_novel= 25  agg=0.8495  distinct= 59  (59s)
+[16:28:35] [c53] genpart_25     tuples_valid_novel=  1  agg=0.7083  distinct= 55  (53s)
+[16:29:31] [c54] genpart_25     tuples_valid_novel= 15  agg=0.7824  distinct= 55  (56s)
+[16:30:39] [c55] genpart_25     tuples_valid_novel= 33  agg=0.8796  distinct= 57  (68s)
+[16:31:38] [c56] genpart_25     tuples_valid_novel=  7  agg=0.7593  distinct= 53  (59s)
+[16:32:35] [c57] genpart_25     tuples_valid_novel=  0  agg=0.8056  distinct= 56  (57s)
+[16:33:25] [c58] genpart_25     tuples_valid_novel= 27  agg=0.8819  distinct= 49  (50s)
+[16:34:28] [c59] genpart_25     tuples_valid_novel= 17  agg=0.8333  distinct= 45  (62s)
+[16:35:44] [c60] genpart_25     tuples_valid_novel=  9  agg=0.8519  distinct= 58  (76s)
+[16:36:51] [c61] genpart_25     tuples_valid_novel= 15  agg=0.8125  distinct= 54  (67s)
+[16:38:02] [c62] genpart_25     tuples_valid_novel=  0  agg=0.8333  distinct= 39  (70s)
+[16:39:22] [c63] genpart_25     tuples_valid_novel=  0  agg=0.7523  distinct= 64  (79s)
+[16:39:22] C09 genpart_25 done: 49 corners, 15 refused/skipped [8, 9, 23, 26, 27, 28, 29, 32, 34, 35, 36, 39, 41, 42, 48], 2703.0s

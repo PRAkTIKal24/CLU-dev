@@ -1,0 +1,25 @@
+{
+ "caption_markdown": "**Ladder rivals, three column sets \u2014 pool AND optimiser steps named for each.** Store: K\\*=32, content fitted on the rung's first **32,768** rows (`n_store_train`, read from w12b `kstar_ladder/*/LEG.json` `n_fit_rows` and `partitions.json`), from a 131,072-row rung pool. **Set A** (the draft's ladder rivals, spoke-A `@ref`): **32,256** Montero combination-split rows (\u26a0 this pool holds the value-holdout's held-out values), 117,878\u2013119,858 params, **5,040** steps. **Set B** (w20 data-matched): the rung's **131,072**-row pool, 130,433\u2013131,891 params; DECLARED **20,480** steps, TENX **204,800** steps (mlp and cont_mlp carried at TENX, lstm and transformer at DECLARED). **Set C** (w21, this table): the store's own **32,768** content rows, the same four families at the same read-path float match (mlp 130,514 / lstm 130,721 / transformer 130,433 / cont_mlp 131,891 params, as set B), spoke-A selection re-run on these rows (lr 3e-3, 40 epochs on all 60 legs); DECLARED **5,120** steps, TENX **51,200** steps, and a step-matched column at set B's carried budget (mlp and cont_mlp **204,800**, lstm and transformer **20,480**). `learned_ref_ownpool`: the same **32,768** rows, 130,514 params, **2,560** steps. Margin = store \u2212 the strongest rival per seed (max over families of max(DECLARED, TENX); w20's convention), paired per corner, bootstrap CI95. Seeds = 3 in every cell. Rungs n = 3\u20136 probe the same 120 corners (ceiling 72); n = 2 has 60 corners (ceiling 36).",
+ "pools": {
+  "store_content": 32768,
+  "set_A_spokeA": 32256,
+  "set_B_w20": 131072,
+  "set_C_w21": 32768,
+  "learned_ref_ownpool": 32768
+ },
+ "steps": {
+  "set_A_spokeA": 5040,
+  "set_B_declared": 20480,
+  "set_B_tenx": 204800,
+  "set_C_declared": 5120,
+  "set_C_tenx": 51200,
+  "set_C_stepmatched": {
+   "mlp": 204800,
+   "cont_mlp": 204800,
+   "lstm": 20480,
+   "transformer": 20480
+  },
+  "learned_ref_ownpool": 2560
+ },
+ "source_json": "C:\\chlu\\outputs\\w21-ladder-rivals-32k\\LADDER-RIVALS-32K.json"
+}

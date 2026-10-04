@@ -1,0 +1,23 @@
+== preflight: l4 x1 spot in us-central1
+[quota] us-central1 l4 x1 (spot) OK
+metric                                   need    limit     used     free  ok
+PREEMPTIBLE_NVIDIA_L4_GPUS                  1        8        1        7  yes
+CPUS                                        8      200        0      200  yes
+== plan
+   job           gencell3          vm chlu-gencell3
+   card          l4 (nvidia-l4) x1 on g2-standard-8 [8 vCPU]
+   provisioning  SPOT -- expect pre-emption; the job resumes
+   zone          us-central1-a preferred; falls back across us-central1 on a stockout
+   boot image    common-cu129-ubuntu-2204-nvidia-580-v20260909 (deeplearning-platform-release)
+   run image     us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:496b765cf512e0a28440727cf92b8eb3962f4626daa18ac45e32d13f7b386186
+   experiment    gen_cell -> chlu.experiments.exp_gen_cell (out_mode sweep, artefacts 1)
+   units         0
+   exp args      --dataset shapes3d --pretext recon --stage cell --quick
+   artefacts     gs://chlu-cloud-forgisprova/artefacts   dec_recipe v1_capacity_schedule
+   payload       --steps 400 --size 4096 --seed 0 --ckpt-every-s 20 --step-sleep-s 0   (smoke only)
+   checkpoints   gs://chlu-cloud-forgisprova/jobs/gencell3/ckpt   every 20s
+   sync-back     gs://chlu-cloud-forgisprova/jobs/gencell3/out    every 15s (DURING the run, not only at exit)
+   determinism   default (XLA may autotune; last-bit variation expected across VMs)
+   watchdog      1 h, then the VM deletes itself
+   est. cost     $0.343/h x 1 h ceiling = $0.34
+                 (2026-09-15 (public list price, us-central1; estimate, not an invoice))

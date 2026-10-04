@@ -1,0 +1,68 @@
+
+seed 1  leg test  mazes 96  train requests 1201  165s
+  ledger: read floats 410688 (atoms 7936 + address book 402752) = 1642752 B deployed; float64 statistic 35904 B  [K=8 A=31 D=256 design width 1624]
+  matched parameters: mlp 410920(OK)  lstm 409846(OK)  transformer 405776(OK)
+  CEILINGS  representation {'seen': 1.0, 'unseen_pair': 1.0, 'nway': 1.0, 'budget_interp': 1.0}
+            pipeline(train) 1.0000   pipeline(rows) {'seen': 1.0, 'unseen_pair': 0.5871, 'nway': 0.5409, 'budget_interp': 0.5485}
+            store-span(rows) {'seen': 1.0, 'unseen_pair': 0.5871, 'nway': 0.536, 'budget_interp': 0.544}   [encoder items {'eval_bank_train': 529, 'pool': 4860, 'pool_sites': 270}]
+  ENV COLUMNS on THIS split (unseen_pair rows): BLIND-SEQUENTIAL validity 0.8905 score 0.8905 | bends 0.473 | FRAG r1 0.0960 r2 0.5349 | published CMAZE-1: 0.4980 / 0.0000 / 0.816
+  ROW seen           arm                     valid    score vld|bend   vld|no      n
+                     clu                    1.0000   1.0000   1.0000   1.0000   1201
+                     clu_lowrank            0.0067   0.0067   0.0040   0.0086   1201
+                     landscape_removed      0.0000   0.0000   0.0000   0.0000   1201
+                     landscape_shuffled     0.9725   0.9725   0.9723   0.9727   1201
+                     random_atoms           0.9825   0.9825   0.9584   1.0000   1201
+                     clu_nopair             0.0158   0.0158   0.0139   0.0172   1201
+                     lookup_matched         1.0000   1.0000   1.0000   1.0000   1201
+                     lookup_full            1.0000   1.0000   1.0000   1.0000   1201
+                     mlp                    0.9192   0.9192   0.9030   0.9310   1201
+                     lstm                   0.7344   0.7344   0.6673   0.7830   1201
+                     transformer            0.9867   0.9867   0.9842   0.9885   1201
+  ROW unseen_pair    arm                     valid    score vld|bend   vld|no      n
+                     clu                    0.0597   0.0597   0.0421   0.0755    201
+                     clu_lowrank            0.0000   0.0000   0.0000   0.0000    201
+                     landscape_removed      0.0000   0.0000   0.0000   0.0000    201
+                     landscape_shuffled     0.1045   0.1045   0.0421   0.1604    201
+                     random_atoms           0.0945   0.0945   0.0105   0.1698    201
+                     clu_nopair             0.0199   0.0199   0.0000   0.0377    201
+                     lookup_matched         0.1592   0.1592   0.0842   0.2264    201
+                     lookup_full            0.1592   0.1592   0.0842   0.2264    201
+                     mlp                    0.1095   0.1095   0.0632   0.1509    201
+                     lstm                   0.0846   0.0846   0.0211   0.1415    201
+                     transformer            0.1741   0.1741   0.0947   0.2453    201
+  ROW nway           arm                     valid    score vld|bend   vld|no      n
+                     clu                    0.0469   0.0469   0.0681   0.0849    192
+                     clu_lowrank            0.0000   0.0000   0.0000   0.0000    192
+                     landscape_removed      0.0000   0.0000   0.0000   0.0000    192
+                     landscape_shuffled     0.0469   0.0469   0.1099   0.0943    192
+                     random_atoms           0.0312   0.0312   0.0838   0.0708    192
+                     clu_nopair             0.0000   0.0000   0.0000   0.0425    192
+                     lookup_matched         0.0052   0.0052   0.0576   0.1179    192
+                     lookup_full            0.0052   0.0052   0.0576   0.1179    192
+                     mlp                    0.0156   0.0156   0.0785   0.1462    192
+                     lstm                   0.0677   0.0677   0.0890   0.1368    192
+                     transformer            0.0417   0.0417   0.1047   0.1698    192
+  ROW budget_interp  arm                     valid    score vld|bend   vld|no      n
+                     clu                    0.0722   0.0722   0.0651   0.0789    443
+                     clu_lowrank            0.0000   0.0000   0.0000   0.0000    443
+                     landscape_removed      0.0000   0.0000   0.0000   0.0000    443
+                     landscape_shuffled     0.1016   0.1016   0.0884   0.1140    443
+                     random_atoms           0.0813   0.0813   0.0605   0.1009    443
+                     clu_nopair             0.0181   0.0181   0.0000   0.0351    443
+                     lookup_matched         0.1129   0.1129   0.0744   0.1491    443
+                     lookup_full            0.1129   0.1129   0.0744   0.1491    443
+                     mlp                    0.1151   0.1151   0.0791   0.1491    443
+                     lstm                   0.1084   0.1084   0.0837   0.1316    443
+                     transformer            0.1445   0.1445   0.0977   0.1886    443
+  DISPLAY ROWS -- inductive bias.  NEVER a RESULT row.
+  refusal condition       refusal    valid  sup.ref      n
+  budget_infeasible        0.9692   0.0000   0.5702    260
+  walled                   0.9846   0.0000   0.3050    846
+  mt_unseen                0.9794   0.0000   0.2545    534
+  grounded_possible        0.8560   0.0414   0.2412    604
+  delete move-left (INTERFACE deletion, no atom touched):
+    refusal before 0.8560 | after, routes needing it 0.9844 (n=577) | after, routes not needing it 0.8889 (n=27), validity 0.0000
+  delete the green target (CONTENT deletion, exact rank-m downdate):
+    downdate vs refit: statistic 8.826e-16, subspace projector 0.000e+00; rows removed 226, refit False, passes 0, items kept False
+    green requests: refusal 0.8134 -> 0.9851, validity 0.0224 -> 0.0000
+    OTHER targets, no retraining: validity 0.0702 -> 0.0000 (delta -0.0702), score 0.0702 -> 0.0000 (delta -0.0702)

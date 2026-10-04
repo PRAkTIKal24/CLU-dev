@@ -1,0 +1,150 @@
+# gen-cloud-runner — REFUSAL TRANSCRIPT (every gate, demonstrated firing)
+# generated 2026-09-15T20:35:34Z · branch agent/experiment-engineer/gen-cloud-runner
+
+############################################################
+## A. THE FIVE CHLU_* ARTEFACT ROOTS (startup.sh --check roots)
+############################################################
+--- A0: all five present (positive control, real .claude tree) ---
+[artefacts] all five roots present: CHLU_CLAUDE_ROOT=/Users/user/Desktop/CHLU/.claude
+rc=0
+--- A: CHLU_CLAUDE_ROOT removed ---
+FATAL[startup]: gen artefact root(s) MISSING, by name:
+    CHLU_CLAUDE_ROOT -> /nonexistent/chlu-root
+    CHLU_GEN_DATA_ROOT -> /nonexistent/chlu-root/data/gen
+    CHLU_GEN_BRIDGE_ROOT -> /nonexistent/chlu-root/outputs/gen-feature-bridge/runs
+    CHLU_GEN_STORE_RUNS -> /nonexistent/chlu-root/outputs/gen-store-grouping/runs
+    CHLU_GEN_DECLIFT_DIR -> /nonexistent/chlu-root/outputs/gen-decoder-lift/winner
+       Stage them with scripts/cloud/stage_gcs.sh and pass --artefacts
+       gs://<bucket>/artefacts (⛔ do not improvise a staging path), or
+       set CHLU_SKIP_ARTEFACT_CHECK=1 if this run genuinely needs none.
+rc=2
+--- A: CHLU_GEN_DATA_ROOT removed ---
+FATAL[startup]: gen artefact root(s) MISSING, by name:
+    CHLU_GEN_DATA_ROOT -> /nonexistent/chlu-root
+       Stage them with scripts/cloud/stage_gcs.sh and pass --artefacts
+       gs://<bucket>/artefacts (⛔ do not improvise a staging path), or
+       set CHLU_SKIP_ARTEFACT_CHECK=1 if this run genuinely needs none.
+rc=2
+--- A: CHLU_GEN_BRIDGE_ROOT removed ---
+FATAL[startup]: gen artefact root(s) MISSING, by name:
+    CHLU_GEN_BRIDGE_ROOT -> /nonexistent/chlu-root
+       Stage them with scripts/cloud/stage_gcs.sh and pass --artefacts
+       gs://<bucket>/artefacts (⛔ do not improvise a staging path), or
+       set CHLU_SKIP_ARTEFACT_CHECK=1 if this run genuinely needs none.
+rc=2
+--- A: CHLU_GEN_STORE_RUNS removed ---
+FATAL[startup]: gen artefact root(s) MISSING, by name:
+    CHLU_GEN_STORE_RUNS -> /nonexistent/chlu-root
+       Stage them with scripts/cloud/stage_gcs.sh and pass --artefacts
+       gs://<bucket>/artefacts (⛔ do not improvise a staging path), or
+       set CHLU_SKIP_ARTEFACT_CHECK=1 if this run genuinely needs none.
+rc=2
+--- A: CHLU_GEN_DECLIFT_DIR removed ---
+FATAL[startup]: gen artefact root(s) MISSING, by name:
+    CHLU_GEN_DECLIFT_DIR -> /nonexistent/chlu-root
+       Stage them with scripts/cloud/stage_gcs.sh and pass --artefacts
+       gs://<bucket>/artefacts (⛔ do not improvise a staging path), or
+       set CHLU_SKIP_ARTEFACT_CHECK=1 if this run genuinely needs none.
+rc=2
+
+############################################################
+## B. THE DECODER RECIPE, BY NAME AND BY HASH (--check recipe)
+############################################################
+--- B0: positive control, the REAL staged winner, seeds 0 1 2 ---
+[decoder] seed_0: recipe v1_capacity_schedule · pkl sha256 bcf39c42bc7885d8… OK (param_hash 01ef91f75eeaae7b…, 1516227 params)
+[decoder] seed_1: recipe v1_capacity_schedule · pkl sha256 7a31fa49ada6ce04… OK (param_hash 001011bc603a7cb9…, 1516227 params)
+[decoder] seed_2: recipe v1_capacity_schedule · pkl sha256 55957abd50e87453… OK (param_hash 2d7eea75add77044…, 1516227 params)
+[decoder] recipe 'v1_capacity_schedule' asserted by name and by hash for seed(s): 0 1 2
+rc=0
+--- B1: NAME — dec_recipe=baseline, the recipe that failed the gate ---
+[decoder] seed_0: recipe v1_capacity_schedule · pkl sha256 bcf39c42bc7885d8… OK (param_hash 01ef91f75eeaae7b…, 1516227 params)
+FATAL[startup]: DECODER RECIPE ASSERTION FAILED -- refusing to run.
+    - dec_recipe is 'baseline', not 'v1_capacity_schedule'. 'baseline' is the SUPERSEDED decoder that FAILED the gate (0.7191 balanced accuracy, 0/3 seeds); a run through it looks entirely normal in the logs and is VOID.
+    ⛔ Every number this job would produce is void. Nothing was run.
+rc=5
+--- B2: NAME — dec_recipe=v2_object_weighted (it also LOST; 'not baseline' is not enough) ---
+[decoder] seed_0: recipe v1_capacity_schedule · pkl sha256 bcf39c42bc7885d8… OK (param_hash 01ef91f75eeaae7b…, 1516227 params)
+FATAL[startup]: DECODER RECIPE ASSERTION FAILED -- refusing to run.
+    - dec_recipe is 'v2_object_weighted', not 'v1_capacity_schedule'. 'baseline' is the SUPERSEDED decoder that FAILED the gate (0.7191 balanced accuracy, 0/3 seeds); a run through it looks entirely normal in the logs and is VOID.
+    ⛔ Every number this job would produce is void. Nothing was run.
+rc=5
+--- B3: HASH — one flipped bit in decoder_v1_s0.pkl (copy of the real artefact) ---
+[decoder] seed_1: recipe v1_capacity_schedule · pkl sha256 7a31fa49ada6ce04… OK (param_hash 001011bc603a7cb9…, 1516227 params)
+FATAL[startup]: DECODER RECIPE ASSERTION FAILED -- refusing to run.
+    - seed_0: decoder_v1_s0.pkl sha256 97d88b910bba4cafb5470e623f95304d1b7966ef2e97c86284f5ba554df7f377 != winner_hashes bcf39c42bc7885d81b21847a4ae13324ee5d49991f96ca5fc9cc79a6e5295153
+    ⛔ Every number this job would produce is void. Nothing was run.
+rc=5
+
+############################################################
+## C. THE EXP REGISTRY
+############################################################
+smoke            -> :smoke: sweep 0
+cluformer        -> chlu.experiments.exp_cluformer_pilot sweep 0
+gen_cell         -> chlu.experiments.exp_gen_cell        sweep 1
+gen_baselines    -> chlu.experiments.exp_gen_baselines   unit  1
+--- C: unknown EXP ---
+unknown EXP 'exp_new_thing'. Known: smoke cluformer gen_encoder gen_store gen_cell gen_dream gen_certificate gen_atom_mean gen_baselines
+rc=6
+
+############################################################
+## D. launch.sh — refuses on the laptop, before the quota preflight
+############################################################
+--- launch.sh --job t --exp exp_new_thing --dry-run ---
+unknown EXP 'exp_new_thing'. Known: smoke cluformer gen_encoder gen_store gen_cell gen_dream gen_certificate gen_atom_mean gen_baselines
+FATAL: --exp 'exp_new_thing' is not in startup.sh's registry (see the list above).
+       ⛔ Do not write a second launcher for a new experiment -- add a row to
+       exp_row() in scripts/cloud/startup.sh.
+
+--- launch.sh --job t --exp gen_cell --units 0 --dry-run ---
+FATAL: --exp 'gen_cell' needs the gen artefact set but no --artefacts gs://... was given.
+       Stage it with scripts/cloud/stage_gcs.sh (⛔ do not improvise a staging
+       path), or pass --skip-artefact-check if this run genuinely needs none.
+
+--- launch.sh --job t --exp gen_cell --artefacts gs://b/artefacts --dec-recipe baseline --dry-run ---
+FATAL: --dec-recipe 'baseline' is not 'v1_capacity_schedule'. 'baseline' is
+       the SUPERSEDED decoder that failed the gate (0.7191, 0/3 seeds); a run
+       through it looks entirely normal in the logs and is VOID.
+
+--- launch.sh --job t --exp cluformer --units '0 x' --dry-run ---
+FATAL: --units '0 x': unit 'x' is not a non-negative integer
+
+############################################################
+## E. run_until_done.sh — BOTH CAPS, DEMONSTRATED REFUSING LIVE
+##    (production launch.sh, real GCP calls, nothing stubbed, $0 spent)
+############################################################
+--- E1: SPEND CAP: l4 spot ceiling 1h x $0.343 = $0.343 > cap $0.10 ---
+[supervisor 2026-09-15T20:35:40Z] job=spendlive card=l4 spot rate=$0.343/h
+[supervisor 2026-09-15T20:35:40Z] caps: <= 10 attempts AND <= $0.10 estimated. Sentinel: gs://chlu-cloud-forgisprova/jobs/spendlive/out/result.json
+[supervisor 2026-09-15T20:35:41Z] ⛔ REFUSING to relaunch: spend cap would be exceeded.
+[supervisor 2026-09-15T20:35:41Z]    spent so far $0 + next attempt ceiling (1h x $0.343/h) = $0.343 > cap $0.10
+[supervisor 2026-09-15T20:35:41Z]    The job is NOT complete. Raise --max-usd deliberately.
+[supervisor 2026-09-15T20:35:41Z] === SUPERVISOR FINISHED: spend_cap
+[supervisor 2026-09-15T20:35:41Z]     attempts used: 0 of 10   (stockouts 0, incomplete 0)
+[supervisor 2026-09-15T20:35:41Z]     estimated spend: $0 of $0.10   (2026-09-15 (public list price, us-central1; estimate, not an invoice))
+[supervisor 2026-09-15T20:35:41Z]     state: /Users/user/Desktop/CHLU-runner/scripts/cloud/../../.claude/outputs/gen-cloud-runner/supervisor/spendlive.json
+rc=0
+
+--- E2: ATTEMPT CAP: tag-pinned image, so launch.sh refuses and NO VM is ever created ---
+[supervisor 2026-09-15T20:35:45Z] === attempt 1/3 (spent so far $0 of $100)
+FATAL: image 'us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:latest' is pinned by TAG. Refusing: a tag is a mutable pointer, so a
+[supervisor 2026-09-15T20:35:47Z] attempt 1: the launcher created NO VM after 2s -- $0.00. See /Users/user/Desktop/CHLU-runner/scripts/cloud/../../.claude/outputs/gen-cloud-runner/supervisor/attemptlive2.attempt1.log.
+[supervisor 2026-09-15T20:35:49Z] backing off 1s before the next attempt (nothing was created, so nothing was spent)
+[supervisor 2026-09-15T20:35:52Z] === attempt 2/3 (spent so far $0 of $100)
+FATAL: image 'us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:latest' is pinned by TAG. Refusing: a tag is a mutable pointer, so a
+[supervisor 2026-09-15T20:35:54Z] attempt 2: the launcher created NO VM after 2s -- $0.00. See /Users/user/Desktop/CHLU-runner/scripts/cloud/../../.claude/outputs/gen-cloud-runner/supervisor/attemptlive2.attempt2.log.
+[supervisor 2026-09-15T20:35:56Z] backing off 2s before the next attempt (nothing was created, so nothing was spent)
+[supervisor 2026-09-15T20:36:00Z] === attempt 3/3 (spent so far $0 of $100)
+FATAL: image 'us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:latest' is pinned by TAG. Refusing: a tag is a mutable pointer, so a
+[supervisor 2026-09-15T20:36:02Z] attempt 3: the launcher created NO VM after 2s -- $0.00. See /Users/user/Desktop/CHLU-runner/scripts/cloud/../../.claude/outputs/gen-cloud-runner/supervisor/attemptlive2.attempt3.log.
+[supervisor 2026-09-15T20:36:04Z] backing off 2s before the next attempt (nothing was created, so nothing was spent)
+[supervisor 2026-09-15T20:36:06Z] ⛔ REFUSING to relaunch: attempt cap reached (3 of 3 used).
+[supervisor 2026-09-15T20:36:06Z] === SUPERVISOR FINISHED: attempt_cap
+[supervisor 2026-09-15T20:36:06Z]     attempts used: 3 of 3   (stockouts 0, incomplete 0)
+[supervisor 2026-09-15T20:36:06Z]     estimated spend: $0 of $100   (2026-09-15 (public list price, us-central1; estimate, not an invoice))
+
+--- E3: a QUOTA refusal is not transient, so the loop STOPS instead of burning attempts ---
+[quota] us-central1: REFUSING TO LAUNCH.
+[supervisor 2026-09-15T20:36:11Z] ⛔ STOPPING: the quota preflight refused this card/region, and that does not
+[supervisor 2026-09-15T20:36:11Z] === SUPERVISOR FINISHED: quota_refused
+[supervisor 2026-09-15T20:36:11Z]     attempts used: 1 of 9   (stockouts 0, incomplete 0)
+[supervisor 2026-09-15T20:36:11Z]     estimated spend: $0 of $100   (2026-09-15 (public list price, us-central1; estimate, not an invoice))

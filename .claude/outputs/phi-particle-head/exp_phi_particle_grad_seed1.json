@@ -1,0 +1,193 @@
+{
+  "part": "grad",
+  "seed": 1,
+  "quick": 0,
+  "GRAD": {
+    "seed": 1,
+    "batch": 16,
+    "quick": 0,
+    "store": {
+      "stage": "S0_baseline",
+      "n_live": 8,
+      "admitted": 10,
+      "refused": 1,
+      "evicted": 2,
+      "deleted": 0,
+      "sep": 1.0141542633155163,
+      "sigma_q": 0.15,
+      "sep_over_sigma_q": 6.7610284221034425,
+      "n_bytes": 57472
+    },
+    "psi": {
+      "family": "deepsets",
+      "params_point": 3553,
+      "params_trajectory": 3553,
+      "matched": 1,
+      "bit_identical_params": 1
+    },
+    "arms_unrolled": {
+      "settled_point": {
+        "loss": 0.38633617758750916,
+        "grad_log_mass_norm": 3.978918172720114e-08,
+        "grad_friction_norm": 1.6166555383279047e-07,
+        "grad_log_mass_max_abs": 1.9662927286390186e-08,
+        "grad_friction_max_abs": 1.4803092085458047e-07,
+        "wall_s": 3.478322744369507,
+        "grad_psi_norm": 0.5654059583827062
+      },
+      "trajectory": {
+        "loss": 0.3958269953727722,
+        "grad_log_mass_norm": 0.011735442094504833,
+        "grad_friction_norm": 0.041373517364263535,
+        "grad_log_mass_max_abs": 0.008748950436711311,
+        "grad_friction_max_abs": 0.02088642492890358,
+        "wall_s": 1.9270668029785156,
+        "grad_psi_norm": 0.5523479251420504
+      }
+    },
+    "model_log_mass_grad": {
+      "implicit_settle": 0.0,
+      "implicit_settle_exact_zero": 1,
+      "full_unroll": 3.2705173680369626e-08,
+      "note": "implicit: theta_bar = -VJP_theta[grad V(.,q*)] and grad V has no M in it => exactly 0. unroll: the geometric-death remnant."
+    },
+    "mass_gauge": {
+      "point_grad_log_mass": 3.978918172720114e-08,
+      "traj_grad_log_mass": 0.011735442094504833,
+      "ratio_log_mass": 294940.52365701494,
+      "point_grad_friction": 1.6166555383279047e-07,
+      "traj_grad_friction": 0.041373517364263535,
+      "ratio_friction": 255920.42573927573,
+      "numerically_zero_bar": 1e-10,
+      "traj_mass_numerically_zero": 0,
+      "traj_friction_numerically_zero": 0,
+      "verdict": "A2.2 SUPPORTED (mass gauge dissolves under the trajectory read)"
+    },
+    "finite_differences": {
+      "settled_point": {
+        "ad_dL_dlogmass_sum": -2.5422595140156545e-09,
+        "fd_dL_dlogmass_sum": 0.0,
+        "rel_err_mass": 1.0,
+        "ad_dL_dfriction_dir": 1.1190698145924216e-08,
+        "fd_dL_dfriction_dir": 0.0,
+        "rel_err_friction": 1.0,
+        "h_logmass": 0.01,
+        "h_friction_rel": 0.01
+      },
+      "trajectory": {
+        "ad_dL_dlogmass_sum": 0.0009128049714490771,
+        "fd_dL_dlogmass_sum": 0.00016391277313232422,
+        "rel_err_mass": 0.820429578870377,
+        "ad_dL_dfriction_dir": -0.0014127612812444568,
+        "fd_dL_dfriction_dir": -0.001965463161468506,
+        "rel_err_friction": 0.3912209993022965,
+        "h_logmass": 0.01,
+        "h_friction_rel": 0.01
+      },
+      "_note": "float32 (the store's own precision). The FD NOISE FLOOR on a loss of order 0.5 is eps_f32*L/(2h) ~ 3e-6 at h=1e-2, which is 400x the point arm's true gradient => FD cannot resolve the point arm at this precision. See finite_differences_float64."
+    },
+    "finite_differences_float64": {
+      "settled_point": {
+        "grad_log_mass_norm": 4.108629867509605e-08,
+        "grad_friction_norm": 1.7546864762656698e-07,
+        "ad_dL_dlogmass_sum": -3.4527544812476297e-09,
+        "ad_dL_dfriction_dir": 1.086106445966325e-08,
+        "fd_by_h": [
+          {
+            "h": 0.01,
+            "fd_mass": -3.5210251381201374e-09,
+            "fd_friction": 1.0864611987848605e-08,
+            "rel_err_mass": 0.019772809576613325,
+            "rel_err_friction": 0.00032662803894865667
+          },
+          {
+            "h": 0.001,
+            "fd_mass": -3.453459740399012e-09,
+            "fd_friction": 1.0861089805302981e-08,
+            "rel_err_mass": 0.0002042598612825218,
+            "rel_err_friction": 2.333623911871673e-06
+          },
+          {
+            "h": 0.0001,
+            "fd_mass": -3.452793606584237e-09,
+            "fd_friction": 1.086103429415175e-08,
+            "rel_err_mass": 1.1331630099865874e-05,
+            "rel_err_friction": 2.7773991777545685e-06
+          }
+        ],
+        "best_rel_err_mass": 1.1331630099865874e-05,
+        "best_rel_err_friction": 2.333623911871673e-06
+      },
+      "trajectory": {
+        "grad_log_mass_norm": 0.01173536267160445,
+        "grad_friction_norm": 0.04137361013497677,
+        "ad_dL_dlogmass_sum": 0.0009128330610853493,
+        "ad_dL_dfriction_dir": -0.0014127421569002433,
+        "fd_by_h": [
+          {
+            "h": 0.01,
+            "fd_mass": 0.00016319121257935,
+            "fd_friction": -0.001964127424766704,
+            "rel_err_mass": 0.821225567372289,
+            "rel_err_friction": 0.3902943401054006
+          },
+          {
+            "h": 0.001,
+            "fd_mass": 0.0008647104428605168,
+            "fd_friction": -0.0014335138873999842,
+            "rel_err_mass": 0.05271787392057775,
+            "rel_err_friction": 0.014703129228703033
+          },
+          {
+            "h": 0.0001,
+            "fd_mass": 0.0009128330338836754,
+            "fd_friction": -0.0014127421996135148,
+            "rel_err_mass": 2.9799176887565705e-08,
+            "rel_err_friction": 3.023430092758292e-08
+          }
+        ],
+        "best_rel_err_mass": 2.9799176887565705e-08,
+        "best_rel_err_friction": 3.023430092758292e-08
+      },
+      "ratio_log_mass": 285627.15674161457,
+      "ratio_friction": 235789.18909222027,
+      "dtype": "float64 (store upcast; dynamics otherwise identical)"
+    },
+    "toy_float64": {
+      "endpoint": {
+        "loss": 0.4874003667952936,
+        "ad_dlogmass": -1.2680173823941837e-16,
+        "fd_dlogmass": 0.0,
+        "rel_err_mass": 1.0,
+        "ad_dfriction": 3.0408648888944787e-15,
+        "fd_dfriction": 0.0,
+        "rel_err_friction": 1.0,
+        "grad_logmass_norm": 1.2599271514387391e-16,
+        "grad_friction_abs": 3.0408648888944787e-15
+      },
+      "trajectory": {
+        "loss": 0.9775040079965663,
+        "ad_dlogmass": 0.0006039454169887398,
+        "fd_dlogmass": 0.0006039454186756998,
+        "rel_err_mass": 2.793232610127718e-09,
+        "ad_dfriction": 0.012667401985353554,
+        "fd_dfriction": 0.012667379200026474,
+        "rel_err_friction": 1.798737192229055e-06,
+        "grad_logmass_norm": 0.0005567743845678422,
+        "grad_friction_abs": 0.012667401985353554
+      },
+      "ratio_traj_over_endpoint_mass": 4419099818049.393,
+      "dtype": "float64",
+      "settle": {
+        "N": 1500,
+        "dt": 0.05,
+        "gamma": 0.05
+      }
+    },
+    "budget_s": 30.0,
+    "falsifier_s": 300.0,
+    "budget_met": 1,
+    "wall_s": 98.79071998596191
+  },
+  "wall_s": 98.84069085121155
+}

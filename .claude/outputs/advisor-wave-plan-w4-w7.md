@@ -1,0 +1,41 @@
+# ADVISOR WAVE PLAN — waves 4 to 7 (Head-ruled 2026-09-19). The Hub executes back to back without further approval.
+
+## 0. Standing authority and rules (binding for every wave below)
+- **The Hub is AUTHORISED to launch every autonomous hub and spoke in this plan** without Head sign-off. The Head reads each wave's report afterwards. Do not wait on small decisions: apply the defaults here, log the choice, move on.
+- Scored-run budget: **3 per TARGET**, targets as named per wave below; replications of the same PREREG do not count; a hub reports all its scored runs. All hubs run on the ThinkPad.
+- **Every result row is scored against the FULL RIVAL SET** (§1). Wins over an earlier CLU configuration are **ABLATIONS**, labelled so in every table. Wins over rivals are **RESULTS**.
+- **Seeds:** produce bridge seeds 1 and 2 as a declared **cache generation 2** on the ThinkPad (re-encode from pixels, hashed). Every arm and rival in waves 4+ is scored on generation 2; generation-1 (wave 2/3) numbers are never mixed with it. Three seeds before any number is called a result.
+- Labels: used once at fit time to align wells (declared in every table caption) and at the address book. Zero-supervision structure is BANKED for later, not claimed.
+- Like-for-like ablation on every row: the correlation-split store + linear head. Landscape-removed and shuffled controls on every arm.
+- The Head's taxonomy is the scoreboard: 1 seen · 2 unseen-valid · 3 two-way · 4 many-way · 5 compositional refusal · 6 invalid-request refusal · 7 deletion (incl. refuse-after-deletion and the red-cylinder conjunction). Row 2 uses the declared second judge (oracle-referenced readout) and only row 2.
+- Declared NOT-RUN is never a null. Every hub keeps LOG.md in dated bullets. Every wave ends with `.claude/outputs/w<N>-advisor-report.md`.
+- Dreaming: BANKED. Admission gate as built: retired. Earlier-layer content: retired.
+
+## 1. The rival set (built in wave 4, reused forever)
+Specialists: prototype table (per-value means) · LACE (selection repaired on the stratified split) · product-of-experts EBM at its own budget (byte multiple printed; run twice; if it wins everything outright it goes to the appendix with its numbers, never hidden).
+Generic learners at matched total parameters (±10 %, count printed), same split/labels/decoder/judge, 3 seeds: **MLP** (request one-hots → 2048 features) · **transformer** (6 factor tokens, 2 layers → features) · **LSTM** (6 tokens → features) · **continuous-input MLP** (hue as a number) for row 2. Rows they cannot enter (5–7) get a dash and a footnote, not a claimed win. **Retrain-from-scratch without the value** is the gold-standard deletion comparator with its cost line.
+
+## 2. Wave 4 — rivals, the read, unseen-valid, placement, and the field store built
+Spoke A (engineer, first, ~1 day): build §1; repair LACE; cache generation 2 (seeds 1–2); score every existing arm on it. Blocks the hubs' scored runs, not their DEV work.
+- **hub/read** — TARGET rows 1, 3, 4 on factor-aligned wells. Addressing inside each well by the per-value average of that well's content (the mechanism that reads orientation at 0.93), then a continuous per-well coordinate; scored vs the full rival set. Bar: beats the MLP and the table on row 4 and does not lose row 3, in expectation over ≥49 corners. Known: the current address-book read gets 0.18 on orientation from content per-value means read at 0.93.
+- **hub/unseen-valid** — TARGET row 2. Continuous request coordinate; overlapping kernels so bracketing atoms form one valley; settle with friction to the requested point. Second judge only. Rivals: continuous-input MLP, table interpolation. Known: top-1 judge cannot separate a perfect arm from a perfect lookup; 48 corners in the frozen row-2 file — regenerate ≥49.
+- **hub/placement** — TARGET: beat the label-MI partition (ablation) while holding row 4 vs rivals. Try in order, report all: (a) two-stage: MI-partition init then refine; (b) **swap loss** (swap one well between two images, decode, judge validity); (c) between-well independence penalty + within-well variance floor; (d) swap loss with encoder in the loop (last). Known: reconstruction-only placement was a null; unfreezing alone made it worse.
+- **hub/field-store (build only, no scored run)** — deliver the object for wave 5: factor-aligned wells; atoms = training items written into every well with a per-item lifetime; kernel width per well set from within-value spread; basins per value with gaps; **coupling table between wells with smoothed prior for unseen pairs and HOLES for deleted pairs**; term→coordinate map (count table or small MLP); deletion = evict/decay, never refit. Acceptance: smoke on rows 1, 3, 4 within spread of the wave-3 aligned store; a deletion changes zero bytes outside the evicted atoms and the hole.
+
+## 3. Wave 5 — refusal and deletion on the field store; the first gym instrument
+- **hub/refuse** — TARGET rows 5, 6 + refuse-after-deletion. Refusal = request coordinate in a gap, beyond the last basin, or a value with no basin; threshold-free where possible, else set on valid data only and written before any invalid row is scored. Rivals: table (refuses by absence), LACE energy, kNN density. Report the pair (reject-invalid, accept-unseen-valid).
+- **hub/delete** — TARGET row 7. Delete red by lifetime/eviction: green and blue compose on every shape, red refused everywhere, no refit; **delete red cylinder only** via the coupling hole: red cube and green cylinder survive, red sphere (never seen) stays allowed, red cylinder refused. Rivals: table row-removal; retrain-from-scratch with cost line; MLP/transformer/LSTM get a dash. Churn reported as a cost line only, one definition, never as a claim.
+- **hub/compose-field** — TARGET rows 3, 4 on the field store vs the full rival set: does the redesign keep wave 3's many-way win and fix two-way?
+- **spoke/gym-1** (engineer, instrument only): one agent on a line with a speed limit, held-out start–goal pairs, an obstacle no valid path can cross; matched-bytes trajectory-lookup tripwire; persistence-at-one-step rule; LSTM and transformer baselines trained with the rules visible. No claim; readiness for wave 7.
+
+## 4. Wave 6 — the physics wave (the Head's vision on the field store)
+Precondition spoke: extract the experiment list from the three shorts' final PDFs on the Head's desktop into `.claude/outputs/shorts-experiments-inventory.md` (Advisor reviews the mapping in the wave report).
+- **hub/potentials** — Mexican-hat kernels: does width/separation set the interpolation floor and the refusal gap as predicted; friction and mass: settle-time laws vs measured; pre-registered from the shorts' derivations.
+- **hub/retention** — lifetimes as deletion-by-decay: the exact-decay law from the shorts reproduced on the field store; refuse-after-decay measured vs time.
+- **hub/compose-physics** — rows 3, 4 with the physics read (settle) vs the per-value-mean read: a tie means the dynamics are decoration on composition and the paper says so; the physics then carries rows 2, 5, 6, 7.
+
+## 5. Wave 7 — the world-model gym (maze)
+Grid maze; agents R, G, B; targets R, G, B; rules: max speed, no wall crossing, no teleport; an obstacle class no valid composition may cross. Train on some agent–target pairs, hold out others so paths must be new. Rows: seen · unseen-valid (a speed limit between trained values) · composition (held-out pairs, valid paths) · refusal (yellow target; through-obstacle; unreachable under the speed limit) · deletion (red target removed: red agent refuses, G/B unchanged, no retraining). Baselines: LSTM, transformer trained with the rules visible, matched parameters; trajectory-lookup tripwire; persistence-at-one-step. The physical-validity claim is "obeys learned rules on held-out compositions and after deletion", measured, never "the transformer cheats" unless measured.
+
+## 6. Hub deliverable per wave
+Task files + launch lines (self-authorised) · LOG per hub · `w<N>-advisor-report.md` with: scoreboard by taxonomy row × arm (results vs ablations labelled), seeds, budget ledger, cost lines, and every hub's own disclosures. Nothing is re-derived by the Advisor unless a number reaches a paper.

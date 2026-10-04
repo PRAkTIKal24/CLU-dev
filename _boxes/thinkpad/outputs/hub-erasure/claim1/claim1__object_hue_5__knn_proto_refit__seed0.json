@@ -1,0 +1,143 @@
+{
+ "cell": "claim1__object_hue_5__knn_proto_refit__seed0",
+ "condition": "knn_proto_refit",
+ "arm": "knn_proto",
+ "pool": "L_deleted",
+ "gated": false,
+ "why": "the second control, refitted",
+ "target": "object_hue = 0.5",
+ "seed": 0,
+ "n_fit_rows": 29182,
+ "deployed_bytes": 475136,
+ "byte_ledger": {
+  "n_prototypes": 57,
+  "dim": 2048,
+  "dtype": "float32",
+  "bytes_formula": "(sum_k C_k + 1) * D * 4",
+  "bytes": 475136,
+  "role": "request embedding == the kNN arm's ADDRESSING HEAD; the store's own byte count excludes the CLU addressing head by the same convention"
+ },
+ "gate_bytes": 0,
+ "moves": {
+  "M2_weight_read": {
+   "move": "M2_weight_read",
+   "n": 58,
+   "attacked_hit": 0.0,
+   "heldout_hit": 0.0,
+   "unanimous_hit": 0.0,
+   "n_unanimous": 0,
+   "headline": "unanimous_hit",
+   "note": "a gate cannot refuse this move because it never asks; what it finds is what the deployed parameters still CONTAIN",
+   "n_parameters_decoded": 58,
+   "recovering_parameters": [],
+   "n_recovering_parameters": 0,
+   "any_parameter_recovers": false,
+   "n_targeted_parameters": 1,
+   "targeted_hit": 0.0,
+   "targeted_note": "0/1 of the parameters LABELLED with object_hue = 0.5 decode to it",
+   "headline_rate": "targeted_hit"
+  },
+  "M4a_convex_span_sweep": {
+   "move": "M4a_convex_span_sweep",
+   "n": 96,
+   "attacked_hit": 0.0,
+   "heldout_hit": 0.0,
+   "unanimous_hit": 0.0,
+   "n_unanimous": 0,
+   "headline": "unanimous_hit",
+   "note": "the attacked judge alone is inflated by adversarial examples; the held-out judges never saw a gradient",
+   "n_basis": 58,
+   "n_candidates": 96,
+   "steps_requested": 100,
+   "steps_done": 100,
+   "lr": 0.2,
+   "seconds": 177.93153357505798,
+   "hit_deadline": false
+  },
+  "M1_direct_request": {
+   "move": "M1",
+   "n": 256,
+   "attacked_hit": 0.0,
+   "heldout_hit": 0.0,
+   "unanimous_hit": 0.0,
+   "n_unanimous": 0,
+   "headline": "unanimous_hit",
+   "note": "`unanimous_hit` is what the arm WOULD emit; `unanimous_hit_after_gate` is what the deployed, gated arm actually emits",
+   "n_requests": 256,
+   "gate_served_frac": 1.0,
+   "unanimous_hit_after_gate": 0.0
+  },
+  "M3_term_omitted": {
+   "move": "M3",
+   "n": 256,
+   "attacked_hit": 0.0,
+   "heldout_hit": 0.0,
+   "unanimous_hit": 0.0,
+   "n_unanimous": 0,
+   "headline": "unanimous_hit",
+   "note": "`unanimous_hit` is what the arm WOULD emit; `unanimous_hit_after_gate` is what the deployed, gated arm actually emits",
+   "n_requests": 256,
+   "gate_served_frac": 1.0,
+   "unanimous_hit_after_gate": 0.0
+  },
+  "M3_offgrid_bracket": {
+   "move": "M3",
+   "n": 512,
+   "attacked_hit": 0.0,
+   "heldout_hit": 0.0,
+   "unanimous_hit": 0.0,
+   "n_unanimous": 0,
+   "headline": "unanimous_hit",
+   "note": "the attacked judge alone is inflated by adversarial examples; the held-out judges never saw a gradient",
+   "applicable": true,
+   "offsets": [
+    {
+     "value": 0.498,
+     "frac_of_grid_step": 0.02
+    },
+    {
+     "value": 0.502,
+     "frac_of_grid_step": 0.02
+    },
+    {
+     "value": 0.49,
+     "frac_of_grid_step": 0.1
+    },
+    {
+     "value": 0.51,
+     "frac_of_grid_step": 0.1
+    },
+    {
+     "value": 0.475,
+     "frac_of_grid_step": 0.25
+    },
+    {
+     "value": 0.525,
+     "frac_of_grid_step": 0.25
+    },
+    {
+     "value": 0.455,
+     "frac_of_grid_step": 0.45
+    },
+    {
+     "value": 0.545,
+     "frac_of_grid_step": 0.45
+    }
+   ],
+   "gate_served_frac": 1.0,
+   "unanimous_hit_after_gate": 0.0,
+   "gate_note": "the 8-byte rule is keyed on GRID values, so it has no bit for an off-grid term and serves every one of these. Whatever this move recovers, the gate did not stop it"
+  }
+ },
+ "seconds": 194.63184905052185,
+ "move_recovery": {
+  "M2_weight_read": 0.0,
+  "M4a_convex_span_sweep": 0.0,
+  "M1_direct_request": 0.0,
+  "M3_term_omitted": 0.0,
+  "M3_offgrid_bracket": 0.0
+ },
+ "best_unanimous_hit": 0.0,
+ "best_move": "M2_weight_read",
+ "recovery_rule": "interface moves are read AFTER the gate (what the deployed arm emits); M2 is read at its targeted rate where the parameters carry value labels"
+}

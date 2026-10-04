@@ -1,0 +1,49 @@
+=== jaxlib 0.11.1 — 22 distribution files on PyPI ===
+     6  macosx_11_0_arm64
+     6  manylinux_2_27_aarch64
+     6  manylinux_2_27_x86_64
+     4  win_amd64
+   WINDOWS wheels: ['jaxlib-0.11.1-cp312-cp312-win_amd64.whl', 'jaxlib-0.11.1-cp313-cp313-win_amd64.whl', 'jaxlib-0.11.1-cp314-cp314-win_amd64.whl', 'jaxlib-0.11.1-cp315-cp315-win_amd64.whl']
+   requires_python: >=3.12
+   classifiers (OS): []
+
+=== jax 0.11.1 — 2 distribution files on PyPI ===
+     1  <sdist>
+     1  any
+   WINDOWS wheels: NONE
+   requires_python: >=3.12
+   classifiers (OS): []
+
+jaxlib 0.6.2: 18 files | platforms=['macosx_11_0_arm64', 'manylinux2014_aarch64', 'manylinux2014_x86_64', 'win_amd64'] | WINDOWS=['win_amd64'] | py=['cp310', 'cp311', 'cp312', 'cp313']
+jaxlib 0.9.0: 22 files | platforms=['macosx_11_0_arm64', 'manylinux_2_27_aarch64', 'manylinux_2_27_x86_64', 'win_amd64'] | WINDOWS=['win_amd64'] | py=['cp311', 'cp312', 'cp313', 'cp314']
+jaxlib 0.10.2: 22 files | platforms=['macosx_11_0_arm64', 'manylinux_2_27_aarch64', 'manylinux_2_27_x86_64', 'win_amd64'] | WINDOWS=['win_amd64'] | py=['cp311', 'cp312', 'cp313', 'cp314']
+jaxlib 0.11.0: 15 files | platforms=['macosx_11_0_arm64', 'manylinux_2_27_aarch64', 'manylinux_2_27_x86_64', 'win_amd64'] | WINDOWS=['win_amd64'] | py=['cp312', 'cp313', 'cp314']
+jaxlib 0.11.1: 22 files | platforms=['macosx_11_0_arm64', 'manylinux_2_27_aarch64', 'manylinux_2_27_x86_64', 'win_amd64'] | WINDOWS=['win_amd64'] | py=['cp312', 'cp313', 'cp314', 'cp315']
+=== POSIX-only constructs in chlu/ + scripts/ (a native-Windows hazard) ===
+chlu/training/train_cluformer.py
+scripts/csf3/stage_artefacts.sh
+scripts/csf3/job_gpu_single.sh
+scripts/bundle_hub_workspace.sh
+scripts/csf3/push_repo.sh
+scripts/verify_hub_workspace.sh
+scripts/csf3/job_gpu_cafe.sh
+scripts/csf3/job_gpu_wells.sh
+scripts/csf3/job_gpu_kt.sh
+scripts/csf3/job_cpu_gen.sh
+scripts/cloud/launch.sh
+scripts/csf3/job_gpu_eval.sh
+scripts/csf3/README.md
+scripts/csf3/setup_env_job.sh
+scripts/cloud/payload_smoke.py
+scripts/csf3/verify_artefacts.sh
+scripts/cloud/verify_gcs.sh
+scripts/csf3/job_gpu_gen.sh
+scripts/cloud/shutdown.sh
+scripts/cloud/build_image.sh
+
+=== shell tooling a hub must run (bash only; no .ps1/.cmd/.bat anywhere) ===
+      33
+(none listed above = no Windows-native entry point exists)
+
+=== pyproject: GPU extra is linux-gated ===
+62:cuda = ["jax[cuda12]; sys_platform == 'linux'"]

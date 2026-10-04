@@ -1,0 +1,262 @@
+### --stage curve --out /c/chlu/outputs/hub-placement/dev-val-gen2 --condition val --pairs 128 2026-09-19T17:30:51Z
+[19:31:00] stage=curve out=C:\chlu\outputs\hub-placement\dev-val-gen2 condition=val
+[19:31:00]   candidates: already on disk, skipping
+[19:31:00]   probe: 128 pinned pairs, all 6 factors differ in each
+[19:31:00]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:31:04]     top_rank[floor_hue  ] s=  32 own=0.000 leak_max=0.039
+[19:31:07]     top_rank[floor_hue  ] s=  64 own=0.000 leak_max=0.070
+[19:31:10]     top_rank[floor_hue  ] s= 128 own=0.086 leak_max=0.070
+[19:31:12]     top_rank[floor_hue  ] s= 256 own=0.742 leak_max=0.086
+[19:31:15]     top_rank[floor_hue  ] s= 400 own=1.000 leak_max=0.211
+[19:31:19]     top_rank[floor_hue  ] s= 800 own=1.000 leak_max=0.555
+[19:31:22]     top_rank[wall_hue   ] s=  32 own=0.000 leak_max=0.016
+[19:31:25]     top_rank[wall_hue   ] s=  64 own=0.000 leak_max=0.000
+[19:31:29]     top_rank[wall_hue   ] s= 128 own=0.000 leak_max=0.016
+[19:31:32]     top_rank[wall_hue   ] s= 256 own=0.078 leak_max=0.078
+[19:31:37]     top_rank[wall_hue   ] s= 400 own=0.453 leak_max=0.156
+[19:31:41]     top_rank[wall_hue   ] s= 800 own=1.000 leak_max=0.711
+[19:31:44]     top_rank[object_hue ] s=  32 own=0.000 leak_max=0.016
+[19:31:48]     top_rank[object_hue ] s=  64 own=0.117 leak_max=0.039
+[19:31:51]     top_rank[object_hue ] s= 128 own=0.500 leak_max=0.109
+[19:31:54]     top_rank[object_hue ] s= 256 own=0.758 leak_max=0.297
+[19:31:57]     top_rank[object_hue ] s= 400 own=0.867 leak_max=0.578
+[19:32:00]     top_rank[object_hue ] s= 800 own=0.984 leak_max=0.828
+[19:32:04]     top_rank[scale      ] s=  32 own=0.070 leak_max=0.000
+[19:32:07]     top_rank[scale      ] s=  64 own=0.102 leak_max=0.008
+[19:32:10]     top_rank[scale      ] s= 128 own=0.188 leak_max=0.016
+[19:32:13]     top_rank[scale      ] s= 256 own=0.195 leak_max=0.109
+[19:32:17]     top_rank[scale      ] s= 400 own=0.172 leak_max=0.336
+[19:32:22]     top_rank[scale      ] s= 800 own=0.422 leak_max=0.805
+[19:32:26]     top_rank[shape      ] s=  32 own=0.016 leak_max=0.008
+[19:32:30]     top_rank[shape      ] s=  64 own=0.039 leak_max=0.039
+[19:32:33]     top_rank[shape      ] s= 128 own=0.148 leak_max=0.047
+[19:32:37]     top_rank[shape      ] s= 256 own=0.414 leak_max=0.078
+[19:32:41]     top_rank[shape      ] s= 400 own=0.711 leak_max=0.297
+[19:32:45]     top_rank[shape      ] s= 800 own=0.852 leak_max=0.977
+[19:32:50]     top_rank[orientation] s=  32 own=0.016 leak_max=0.000
+[19:32:54]     top_rank[orientation] s=  64 own=0.070 leak_max=0.000
+[19:32:58]     top_rank[orientation] s= 128 own=0.141 leak_max=0.000
+[19:33:03]     top_rank[orientation] s= 256 own=0.344 leak_max=0.000
+[19:33:07]     top_rank[orientation] s= 400 own=0.531 leak_max=0.016
+[19:33:11]     top_rank[orientation] s= 800 own=0.688 leak_max=0.828
+[19:33:15]     RANDOM            s=  32 max_follow_j=0.008
+[19:33:19]     RANDOM            s=  64 max_follow_j=0.016
+[19:33:24]     RANDOM            s= 128 max_follow_j=0.031
+[19:33:29]     RANDOM            s= 256 max_follow_j=0.055
+[19:33:33]     RANDOM            s= 400 max_follow_j=0.047
+[19:33:38]     RANDOM            s= 800 max_follow_j=0.289
+### rc=0 2026-09-19T17:33:43Z
+### --stage ceiling --out /c/chlu/outputs/hub-placement/dev-val-gen2 --condition val --pairs 512 2026-09-19T17:33:43Z
+[19:34:03] stage=ceiling out=C:\chlu\outputs\hub-placement\dev-val-gen2 condition=val
+[19:34:03]   candidates: already on disk, skipping
+[19:34:03]   probe: 512 pinned pairs, all 6 factors differ in each
+[19:34:03]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:34:15]     relaxed oracle well for floor_hue  : exact=0.2383 transfer=1.0000
+[19:34:25]     relaxed oracle well for wall_hue   : exact=0.0859 transfer=0.5176
+[19:34:33]     relaxed oracle well for object_hue : exact=0.0820 transfer=0.8496
+[19:34:42]     relaxed oracle well for scale      : exact=0.0312 transfer=0.2402
+[19:34:51]     relaxed oracle well for shape      : exact=0.0156 transfer=0.7637
+[19:34:58]     relaxed oracle well for orientation: exact=0.2520 transfer=0.4688
+### rc=0 2026-09-19T17:35:09Z
+### --stage attribution --out /c/chlu/outputs/hub-placement/dev-val-gen2 --condition val 2026-09-19T17:35:09Z
+[19:35:18] stage=attribution out=C:\chlu\outputs\hub-placement\dev-val-gen2 condition=val
+[19:35:18]   attribution: {"floor_size_matched_random": 0.0137, "floor_candidate": "random_mi_balanced", "baseline": "mi_balanced", "baseline_exact": 0.1516, "reached": "norm_rank", "reached_exact": 0.2457, "relaxed_reference": 0.1379, "judge_ceiling": 0.9805, "gain_over_baseline": 0.0941, "headroom_baseline_to_relaxed_reference": -0.0137, "fraction_of_relaxed_headroom_taken": null, "reached_exceeds_relaxed_reference": true, "fraction_of_floor_to_ceiling_span_held_by_baseline": 1.1101, "fraction_of_floor_to_ceiling_span_held_by_reached": 1.8679}
+### rc=0 2026-09-19T17:35:20Z
+### --stage refine --out /c/chlu/outputs/hub-placement/dev-val-gen2 --condition val --pairs 256 --init mi_balanced --max-seconds 2400 2026-09-19T17:35:20Z
+[19:35:30] stage=refine out=C:\chlu\outputs\hub-placement\dev-val-gen2 condition=val
+[19:35:30]   candidates: already on disk, skipping
+[19:35:30]   probe: 256 pinned pairs, all 6 factors differ in each
+[19:35:30]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:35:55]   init mi_balanced: exact=0.1484 control=0.5133 leak=0.0375 own=[0, 1, 2, 3, 5] (ownership now FIXED)
+[19:36:19]   current per-well exact [0.2773, 0.125, 0.1758, 0.0469, 0.1172] mean=0.1484
+[19:36:19]   sweep 0: chunk size 41
+[19:37:09]     well 0 (own=0) base exact=0.2773; 10 chunks probed
+[19:38:02]     well 1 (own=1) base exact=0.1250; 10 chunks probed
+[19:38:48]     well 2 (own=2) base exact=0.1758; 10 chunks probed
+[19:39:37]     well 3 (own=3) base exact=0.0469; 10 chunks probed
+[19:40:30]     well 4 (own=5) base exact=0.1172; 10 chunks probed
+[19:40:40]     reject wells 3<->4 x41: paired gain -0.0098 lo=-0.0254 (margin +0.010)
+[19:40:51]     ACCEPT wells 3<->0 x41: paired gain +0.0293 lo=+0.0020  0.1621 -> 0.1914  mean=0.1602
+[19:41:02]     reject wells 3<->2 x41: paired gain +0.0078 lo=-0.0156 (margin +0.010)
+[19:41:13]     reject wells 3<->1 x41: paired gain -0.0117 lo=-0.0293 (margin +0.010)
+[19:41:23]     reject wells 4<->0 x41: paired gain -0.0195 lo=-0.0410 (margin +0.010)
+[19:41:35]     reject wells 4<->2 x41: paired gain +0.0020 lo=-0.0215 (margin +0.010)
+[19:41:47]     reject wells 4<->1 x41: paired gain -0.0117 lo=-0.0371 (margin +0.010)
+[19:41:58]     reject wells 0<->2 x41: paired gain -0.0195 lo=-0.0469 (margin +0.010)
+[19:42:08]     reject wells 0<->1 x41: paired gain -0.0332 lo=-0.0566 (margin +0.010)
+[19:42:18]     reject wells 2<->1 x41: paired gain -0.0254 lo=-0.0547 (margin +0.010)
+[19:42:18]   sweep 1: chunk size 41
+[19:43:02]     well 0 (own=0) base exact=0.3320; 10 chunks probed
+[19:43:39]     well 1 (own=1) base exact=0.1250; 10 chunks probed
+[19:44:13]     well 2 (own=2) base exact=0.1758; 10 chunks probed
+[19:44:52]     well 3 (own=3) base exact=0.0508; 10 chunks probed
+[19:45:33]     well 4 (own=5) base exact=0.1172; 10 chunks probed
+[19:45:40]     reject wells 3<->4 x40: paired gain -0.0098 lo=-0.0293 (margin +0.010)
+[19:45:47]     reject wells 3<->2 x40: paired gain +0.0039 lo=-0.0215 (margin +0.010)
+[19:45:55]     reject wells 3<->0 x40: paired gain -0.0020 lo=-0.0312 (margin +0.010)
+[19:46:02]     reject wells 3<->1 x40: paired gain -0.0078 lo=-0.0273 (margin +0.010)
+[19:46:10]     reject wells 4<->2 x41: paired gain -0.0020 lo=-0.0293 (margin +0.010)
+[19:46:18]     reject wells 4<->0 x41: paired gain -0.0117 lo=-0.0430 (margin +0.010)
+[19:46:26]     reject wells 4<->1 x41: paired gain -0.0117 lo=-0.0332 (margin +0.010)
+[19:46:34]     reject wells 2<->0 x41: paired gain -0.0176 lo=-0.0469 (margin +0.010)
+[19:46:42]     reject wells 2<->1 x41: paired gain -0.0176 lo=-0.0430 (margin +0.010)
+[19:46:51]     reject wells 0<->1 x41: paired gain -0.0273 lo=-0.0586 (margin +0.010)
+[19:46:51]   sweep 2: chunk size 20
+[19:48:35]     well 0 (own=0) base exact=0.3320; 21 chunks probed
+[19:50:11]     well 1 (own=1) base exact=0.1250; 21 chunks probed
+[19:51:32]     well 2 (own=2) base exact=0.1758; 21 chunks probed
+[19:53:02]     well 3 (own=3) base exact=0.0508; 21 chunks probed
+[19:54:55]     well 4 (own=5) base exact=0.1172; 21 chunks probed
+[19:55:05]     reject wells 3<->4 x9: paired gain +0.0059 lo=-0.0020 (margin +0.010)
+[19:55:16]     reject wells 3<->0 x10: paired gain +0.0020 lo=-0.0156 (margin +0.010)
+[19:55:26]     reject wells 3<->2 x20: paired gain +0.0039 lo=-0.0098 (margin +0.010)
+[19:55:35]     reject wells 3<->1 x20: paired gain -0.0039 lo=-0.0176 (margin +0.010)
+[19:55:44]     reject wells 4<->0 x9: paired gain +0.0020 lo=-0.0176 (margin +0.010)
+[19:55:53]     reject wells 4<->2 x9: paired gain +0.0020 lo=-0.0098 (margin +0.010)
+[19:56:01]     reject wells 4<->1 x9: paired gain +0.0078 lo=-0.0078 (margin +0.010)
+[19:56:10]     reject wells 0<->2 x10: paired gain -0.0117 lo=-0.0332 (margin +0.010)
+[19:56:19]     reject wells 0<->1 x10: paired gain -0.0039 lo=-0.0254 (margin +0.010)
+[19:56:28]     reject wells 2<->1 x20: paired gain -0.0059 lo=-0.0254 (margin +0.010)
+[19:56:28]   sweep 3: chunk size 20
+[19:58:01]     well 0 (own=0) base exact=0.3320; 21 chunks probed
+[19:59:25]     well 1 (own=1) base exact=0.1250; 21 chunks probed
+[20:00:58]     well 2 (own=2) base exact=0.1758; 21 chunks probed
+[20:02:14]     well 3 (own=3) base exact=0.0508; 21 chunks probed
+[20:03:29]     well 4 (own=5) base exact=0.1172; 21 chunks probed
+[20:03:38]     reject wells 3<->4 x20: paired gain +0.0059 lo=-0.0098 (margin +0.010)
+[20:03:46]     reject wells 3<->2 x20: paired gain -0.0059 lo=-0.0215 (margin +0.010)
+[20:03:56]     reject wells 3<->0 x20: paired gain +0.0234 lo=+0.0000 (margin +0.010)
+[20:04:06]     reject wells 3<->1 x10: paired gain +0.0039 lo=-0.0098 (margin +0.010)
+[20:04:17]     reject wells 4<->2 x20: paired gain +0.0137 lo=-0.0078 (margin +0.010)
+[20:04:28]     reject wells 4<->0 x20: paired gain -0.0039 lo=-0.0273 (margin +0.010)
+[20:04:40]     reject wells 4<->1 x10: paired gain -0.0078 lo=-0.0215 (margin +0.010)
+[20:04:52]     reject wells 2<->0 x20: paired gain -0.0156 lo=-0.0410 (margin +0.010)
+[20:05:04]     reject wells 2<->1 x10: paired gain +0.0000 lo=-0.0156 (margin +0.010)
+[20:05:16]     reject wells 0<->1 x10: paired gain -0.0020 lo=-0.0254 (margin +0.010)
+[20:05:16]   sweep 4: chunk size 10

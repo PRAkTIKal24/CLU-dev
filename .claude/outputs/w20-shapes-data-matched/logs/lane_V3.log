@@ -1,0 +1,54 @@
+[21:50:47Z] START bash -c 'until [ -f /c/chlu/outputs/w20-shapes-data-matched/rivals/val/seed0/transformer/tenx.json ]; do sleep 60; done'
+[22:14:51Z] END rc=0 bash -c 'until [ -f /c/chlu/outputs/w20-shapes-data-matched/rivals/val/seed0/transformer/tenx.json ]; do sleep 60; done'
+[22:14:52Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners val --seed 0 --arms rival:val:cont_mlp__declared,rival:val:cont_mlp__tenx,rival:val:transformer__tenx
+[00:15:44] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[00:16:31] FastJudge positive control: True
+[00:16:31] corners=val seed=0: 24 corners
+[00:17:24]   cont_mlp__declared@val                       novel/corner 29.458 (ceiling 72.00)  in 46s
+[00:18:04]   cont_mlp__tenx@val                           novel/corner 45.083 (ceiling 72.00)  in 39s
+[00:19:04]   transformer__tenx@val                        novel/corner 37.833 (ceiling 72.00)  in 44s
+[00:19:04] done
+[22:19:09Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners val --seed 0 --arms rival:val:cont_mlp__declared,rival:val:cont_mlp__tenx,rival:val:transformer__tenx
+[22:19:09Z] LANE DONE

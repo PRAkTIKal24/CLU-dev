@@ -1,0 +1,147 @@
+[score] cond=test seed=0 encoder-arm=loop_swap
+[score]   features  -> /c/chlu/outputs/w8-encoder-loop/run/seed_0/loop_swap/cache
+[score]   decoder   -> /c/chlu/outputs/w8-encoder-loop/run/seed_0/loop_swap/declift   (this arm's own refit; NOT the gated winner)
+[score]   rivals    -> /c/chlu/outputs/w8-encoder-loop/run/seed_0/loop_swap/rivals       (refit on THIS arm's features)
+[score]   judge     -> /c/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier   *** INVARIANT, does not move ***
+[score] scored run authorised by /c/chlu/outputs/w8-encoder-loop/PREREG-w8-encoder-loop-1.md + this hub's OWN ledger row
+[leg] classifier root -> /c/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier
+[leg] cache root -> /c/chlu/outputs/w8-encoder-loop/run/seed_0/loop_swap/cache (generation 2)
+[leg] scored run authorised by /c/chlu/outputs/w8-encoder-loop/PREREG-w8-encoder-loop-1.md + the ledger row
+[leg] condition=test seed=0 leg=/c/chlu/outputs/w8-encoder-loop/score/loop_swap/test_seed0 arms=pca_lookup_argmax pca_landscape_removed
+  "pre_existing_unchanged": true
+ }
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:46:56] stage=prepare arm=None out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed0 seed=0 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:46:56]   partitions: already on disk, skipping
+[01:46:56] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- pca_lookup_argmax ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:46:59] stage=fit arm=pca_lookup_argmax out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed0 seed=0 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:46:59]   address book: reused address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[01:46:59]   arm pca_lookup_argmax: fitted in 0.0s; store 524,288 B + address 195,064 B
+[01:46:59] {"arm": "pca_lookup_argmax", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.984109, 0.973484, 0.970103, 1.0, 0.998701]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:47:01] stage=run arm=pca_lookup_argmax out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed0 seed=0 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:47:01]   arm pca_lookup_argmax: already fitted, loading
+[01:47:01]   arm pca_lookup_argmax: already fitted, loading
+[01:47:01]   judge: decoder f9da19c0d15f (w8_v1_short) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:49:28]   arm pca_lookup_argmax: r1_seen accept=1.0000 valid=0.0000
+[01:49:34]   arm pca_lookup_argmax: r2_unseen_valid accept=1.0000 valid=0.0000
+[01:49:39]   arm pca_lookup_argmax: r5_comp_refusal accept=0.0000 valid=0.0000
+[01:49:45]   arm pca_lookup_argmax: r6_invalid_refusal accept=0.0000 valid=0.0000
+[01:50:31]   arm pca_lookup_argmax: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[01:50:31]   arm pca_lookup_argmax: all rows done in 201.3s
+[01:50:31] {"incomplete": false, "n_done": 109}
+[leg] ---- pca_landscape_removed ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:50:37] stage=fit arm=pca_landscape_removed out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed0 seed=0 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:50:37]   address book: reused address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[01:50:37]   arm pca_landscape_removed: fitted in 0.0s; store 524,288 B + address 195,064 B
+[01:50:37] {"arm": "pca_landscape_removed", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.984109, 0.973484, 0.970103, 1.0, 0.998701]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:50:39] stage=run arm=pca_landscape_removed out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed0 seed=0 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:50:39]   arm pca_landscape_removed: already fitted, loading
+[01:50:39]   arm pca_landscape_removed: already fitted, loading
+[01:50:39]   judge: decoder f9da19c0d15f (w8_v1_short) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:53:06]   arm pca_landscape_removed: r1_seen accept=1.0000 valid=0.0000
+[01:53:11]   arm pca_landscape_removed: r2_unseen_valid accept=1.0000 valid=0.0000
+[01:53:17]   arm pca_landscape_removed: r5_comp_refusal accept=0.0000 valid=0.0000
+[01:53:22]   arm pca_landscape_removed: r6_invalid_refusal accept=0.3672 valid=0.0000
+[01:54:07]   arm pca_landscape_removed: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[01:54:07]   arm pca_landscape_removed: all rows done in 199.6s
+[01:54:07] {"incomplete": false, "n_done": 109}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:54:13] stage=table arm=None out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed0 seed=0 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:54:21]   arms with rows: ['rival_mlp_180k', 'pca_tensor', 'pca_landscape_removed', 'pca_lookup_argmax']
+[01:54:21]   declared NOT-RUN: []
+[01:54:22]   table written -> C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed0\READ-TABLE.json
+[01:54:22]     rival_mlp_180k         RIVAL                                    r4=  0.000 r3=  0.000
+[01:54:22]     pca_tensor             ARM                                      r4= 32.796 r3= 10.683
+[01:54:22]     pca_landscape_removed  CONTROL (charter C.2, atoms zeroed)      r4=  0.000 r3=  0.000
+[01:54:22]     pca_lookup_argmax      FLOOR (charter C.1/C.4, matched-bytes lookup) r4=  0.000 r3=  0.000
+[leg] done: /c/chlu/outputs/w8-encoder-loop/score/loop_swap/test_seed0

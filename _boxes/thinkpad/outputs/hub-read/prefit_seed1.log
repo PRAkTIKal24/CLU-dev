@@ -1,0 +1,83 @@
+  "standardise_targets": false
+ }
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[20:19:37] stage=prepare arm=None out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[20:19:38]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+[20:19:45]   dead channels: 55
+[20:21:18]   channel-factor relevance: (2048, 6) in 93.1s; mean top-factor MI 0.5320 bits
+[20:21:47]   partitions written -> C:\chlu\outputs\hub-read\run\test_seed1\partitions.json
+[20:21:48] {"well_sizes": [410, 410, 410, 409, 409]}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[20:22:12] stage=fit arm=span_head out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[20:22:13]   partitions: already on disk, skipping
+[20:22:14]   arm factor_aligned_balanced: partition=balanced sizes=[410, 410, 410, 409, 409]
+[20:23:11]     step 1/1200  loss=39.55402  tau=1.000
+[20:23:25]     step 300/1200  loss=30.31998  tau=0.563
+[20:23:38]     step 600/1200  loss=27.40920  tau=0.317
+[20:23:53]     step 900/1200  loss=27.31114  tau=0.178
+[20:24:07]     step 1200/1200  loss=27.48290  tau=0.100
+[20:25:54]   gram: accumulated over 131072 rows -> gram_pair.npz
+[20:25:57]   arm factor_aligned_balanced: fitted in 223.7s; store 524,288 B + head 1,766,400 B
+[20:25:57]   arm span_head: fitted in 224.6s; store 524,288 B + address 1,766,400 B
+[20:25:57] {"arm": "span_head", "address_bytes": {"address_bytes": 1766400, "per_well": [353280, 353280, 353280, 353280, 353280], "dtype": "float32", "bytes_formula": "sum_k P * M_k * 4", "note": "the incumbent ridge head -- this read's address book"}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[20:26:18] stage=fit arm=corr_linear out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[20:26:19]   partitions: already on disk, skipping
+[20:26:20]   arm basis_head: partition=ward sizes=[338, 322, 321, 679, 388]
+[20:27:11]     step 1/1200  loss=40.97645  tau=1.000
+[20:27:22]     step 300/1200  loss=31.55852  tau=0.563
+[20:27:34]     step 600/1200  loss=28.71383  tau=0.317
+[20:27:46]     step 900/1200  loss=27.98217  tau=0.178
+[20:27:59]     step 1200/1200  loss=28.19769  tau=0.100
+[20:28:24]   gram: reused from gram_pair.npz
+[20:28:26]   arm basis_head: fitted in 127.6s; store 524,288 B + head 1,766,400 B
+[20:28:26]   arm corr_linear: fitted in 127.9s; store 524,288 B + address 1,766,400 B
+[20:28:26] {"arm": "corr_linear", "address_bytes": {"address_bytes": 1766400, "per_well": [353280, 353280, 353280, 353280, 353280], "dtype": "float32", "bytes_formula": "sum_k P * M_k * 4", "note": "the incumbent ridge head -- this read's address book"}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[20:28:45] stage=fit arm=tensor_addr out=C:\chlu\outputs\hub-read\run\test_seed1 seed=1 condition=test rank=128 sweeps=40
+[20:28:45]   arm factor_aligned_balanced: already fitted, loading
+[20:29:12]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 64) (131072, 64)
+[20:29:40]     als 1/40 train_mse=0.05086 val_mse=0.05104
+[20:30:05]     als 2/40 train_mse=0.02263 val_mse=0.02274
+[20:30:32]     als 3/40 train_mse=0.01727 val_mse=0.01737
+[20:31:00]     als 4/40 train_mse=0.01511 val_mse=0.01519
+[20:31:26]     als 5/40 train_mse=0.01390 val_mse=0.01397
+[20:31:52]     als 6/40 train_mse=0.01309 val_mse=0.01315
+[20:32:18]     als 7/40 train_mse=0.01251 val_mse=0.01256
+[20:32:45]     als 8/40 train_mse=0.01204 val_mse=0.01209
+[20:33:09]     als 9/40 train_mse=0.01167 val_mse=0.01171
+[20:33:34]     als 10/40 train_mse=0.01135 val_mse=0.01140
+[20:34:01]     als 11/40 train_mse=0.01109 val_mse=0.01113
+[20:34:30]     als 12/40 train_mse=0.01086 val_mse=0.01090
+[20:34:56]     als 13/40 train_mse=0.01066 val_mse=0.01070
+[20:35:22]     als 14/40 train_mse=0.01049 val_mse=0.01053
+[20:35:48]     als 15/40 train_mse=0.01033 val_mse=0.01037
+[20:36:15]     als 16/40 train_mse=0.01019 val_mse=0.01023
+[20:36:41]     als 17/40 train_mse=0.01006 val_mse=0.01010
+[20:37:09]     als 18/40 train_mse=0.00994 val_mse=0.00998
+[20:37:37]     als 19/40 train_mse=0.00983 val_mse=0.00987
+[20:38:02]     als 20/40 train_mse=0.00973 val_mse=0.00977
+[20:38:27]     als 21/40 train_mse=0.00963 val_mse=0.00967
+[20:38:56]     als 22/40 train_mse=0.00955 val_mse=0.00958
+[20:39:25]     als 23/40 train_mse=0.00946 val_mse=0.00950
+[20:39:54]     als 24/40 train_mse=0.00939 val_mse=0.00942
+[20:40:20]     als 25/40 train_mse=0.00931 val_mse=0.00934
+[20:40:47]     als 26/40 train_mse=0.00924 val_mse=0.00927
+[20:41:11]     als 27/40 train_mse=0.00917 val_mse=0.00921
+[20:41:38]     als 28/40 train_mse=0.00911 val_mse=0.00914
+[20:42:04]     als 29/40 train_mse=0.00905 val_mse=0.00908
+[20:42:27]     als 30/40 train_mse=0.00899 val_mse=0.00902
+[20:42:53]     als 31/40 train_mse=0.00894 val_mse=0.00896
+[20:43:18]     als 32/40 train_mse=0.00888 val_mse=0.00891
+[20:43:42]     als 33/40 train_mse=0.00883 val_mse=0.00886
+[20:44:06]     als 34/40 train_mse=0.00878 val_mse=0.00881
+[20:44:32]     als 35/40 train_mse=0.00873 val_mse=0.00876
+[20:45:00]     als 36/40 train_mse=0.00869 val_mse=0.00871
+[20:45:27]     als 37/40 train_mse=0.00864 val_mse=0.00867
+[20:45:52]     als 38/40 train_mse=0.00860 val_mse=0.00862
+[20:46:21]     als 39/40 train_mse=0.00856 val_mse=0.00858
+[20:46:50]     als 40/40 train_mse=0.00852 val_mse=0.00854
+[20:46:50]   arm tensor_addr: fitted in 1084.7s; store 524,288 B + address 195,584 B
+[20:46:50] {"arm": "tensor_addr", "address_bytes": {"address_bytes": 195584, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163840, "normalisation_bytes": 2560, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "what": "5 wells x 64 modes, float32"}}
+PREFIT DONE seed=1

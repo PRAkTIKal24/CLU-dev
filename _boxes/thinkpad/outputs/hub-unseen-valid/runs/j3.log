@@ -1,0 +1,67 @@
+judge c8741ac417d88ebf (978873 params), gate balacc on real = 1.0
+128 contexts, all 10 hues, one h5 call
+  bracket (0.0,0.2) f=0.5 vs real 0.1: MAE 0.00244  rot px 0.0984
+  bracket (0.1,0.3) f=0.5 vs real 0.2: MAE 0.00449  rot px 0.0989
+  bracket (0.2,0.4) f=0.5 vs real 0.3: MAE 0.00460  rot px 0.0974
+  bracket (0.3,0.5) f=0.5 vs real 0.4: MAE 0.00189  rot px 0.1073
+  bracket (0.4,0.6) f=0.5 vs real 0.5: MAE 0.00546  rot px 0.0989
+  bracket (0.5,0.7) f=0.5 vs real 0.6: MAE 0.00174  rot px 0.1070
+  bracket (0.6,0.8) f=0.5 vs real 0.7: MAE 0.00465  rot px 0.0974
+  bracket (0.7,0.9) f=0.5 vs real 0.8: MAE 0.00434  rot px 0.0990
+
+A1.1 (in-bracket, on-grid): mean 0.00370 worst 0.00546 -> PASS (registered <= 0.02, unchanged)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+A1.2 judge agreement: top-1 1.0000 (>=0.95), mean |dh| 0.00015 (<=0.01) -> PASS
+  bracket (0.0,0.1): rho 0.9805  mid cdist 0.02147 (0.215D)  top1-in-bracket 1.000
+  bracket (0.1,0.2): rho 0.9629  mid cdist 0.03664 (0.366D)  top1-in-bracket 1.000
+  bracket (0.2,0.3): rho 0.9731  mid cdist 0.03096 (0.310D)  top1-in-bracket 1.000
+  bracket (0.3,0.4): rho 0.9666  mid cdist 0.03830 (0.383D)  top1-in-bracket 1.000
+  bracket (0.6,0.7): rho 0.9703  mid cdist 0.02817 (0.282D)  top1-in-bracket 1.000
+  bracket (0.7,0.8): rho 0.9728  mid cdist 0.02767 (0.277D)  top1-in-bracket 1.000
+  bracket (0.8,0.9): rho 0.9617  mid cdist 0.03552 (0.355D)  top1-in-bracket 1.000
+
+s5.3: min rho 0.9617 (>=0.9) | midpoint cdist worst 0.03830 = 0.383D (<=0.25D) | min AUROC 0.9996 (>=0.9) -> FAIL
+
+==== JUDGE STOP RULE VERDICT (in-bracket construction): STOP ====
+wrote runs/j3_bracket.json

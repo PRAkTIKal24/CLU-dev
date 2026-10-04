@@ -1,0 +1,55 @@
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+decontaminate=0.0
+   r1: err=0.2085 exact=0.5840 [floor=1.000 wall_=1.000 objec=0.998 scale=0.707 shape=0.994 orien=0.818]
+   r3: err=0.3300 exact=0.1639 [floor=1.000 wall_=1.000 objec=0.956 scale=0.547 shape=0.453 orien=0.639]
+   r4: err=0.2347 exact=0.4294 [floor=1.000 wall_=1.000 objec=1.000 scale=0.536 shape=1.000 orien=0.794]
+decontaminate=0.5
+   r1: err=0.2109 exact=0.5781 [floor=1.000 wall_=1.000 objec=0.969 scale=0.730 shape=0.990 orien=0.803]
+   r3: err=0.3283 exact=0.1917 [floor=1.000 wall_=1.000 objec=0.949 scale=0.531 shape=0.568 orien=0.654]
+   r4: err=0.2342 exact=0.4306 [floor=1.000 wall_=1.000 objec=0.992 scale=0.532 shape=1.000 orien=0.799]
+decontaminate=1.0
+   r1: err=0.2195 exact=0.5215 [floor=1.000 wall_=1.000 objec=0.893 scale=0.719 shape=0.975 orien=0.801]
+   r3: err=0.3297 exact=0.1958 [floor=1.000 wall_=1.000 objec=0.939 scale=0.525 shape=0.629 orien=0.657]
+   r4: err=0.2368 exact=0.4225 [floor=1.000 wall_=1.000 objec=0.953 scale=0.529 shape=1.000 orien=0.806]
+[270s]

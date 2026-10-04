@@ -1,0 +1,9 @@
+| line | section | citing sentence | topics (allowed) | disallowed terms in the sentence | verdict |
+|---|---|---|---|---|---|
+| 212 | Introduction | The retention law is due to~\citep{jawahar2026chlu}. | — | retention | **VIOLATION: disallowed topic ['retention'] in the citing sentence** |
+| 276 | Methods | \citet{jawahar2026chlu} introduced the CHLU as a latent dynamics model (defined here as an algorithm that either enforces or extracts the dynamics of the latent space itself to either design or approximately understand semantic rules created by the encoder that produced this abstract space such that downstream tasks can be appropriately dealt with or downstream design choices can be better informed). | unit, dynamics | — | **OK: cited for the unit / dynamics** |
+| 280 | Methods | \citet{jawahar2026chlu} envision their unit (as the name suggests) as a step that provides a clue towards developing better latent dynamics models. | unit, dynamics | — | **OK: cited for the unit / dynamics** |
+| 1236 | Discussion | The n-CLU we evaluate is the zero-dynamics limit of the CLU~\citep{jawahar2026chlu}: the same content, wells and read, with the settling loop's step count set to zero. | unit, dynamics | — | **OK: cited for the unit / dynamics** |
+| 281 | Methods | We build on top of this idea and drop the complex physics design to construct our naive-CLU as a special case of the CHLU and test it as a factorized memory unit for compositional generation with additional properties such as deletion as a virtue of the design itself. | — | delet, memory | **no citation in this sentence; memory unit / deletion attributed to "we" (this paper), not to the cited work; the citation sits in the two preceding sentences (the unit), this sentence carries none** |
+
+citations of `jawahar2026chlu` in code: 4 (in 4 citing sentences); VIOLATION: 1

@@ -1,0 +1,260 @@
+{
+  "arm": "frozen",
+  "arm_class": "CONTROL -- the shipped configuration, encoder frozen at matched compute",
+  "channel": {
+    "declared_constant": "R20",
+    "design_bits": 30.0,
+    "formula": "K*log2(M)",
+    "k_wells": 5,
+    "n_modes": 64,
+    "widened": false
+  },
+  "checkpointing": {
+    "every_s": 300.0,
+    "fingerprint": "8c772cd4082083e9",
+    "mechanism": "scripts/cloud/ckpt.py (THE checkpointer; no second mechanism)",
+    "remote": null,
+    "resumed_from_step": 0,
+    "saves": 2
+  },
+  "classifier": {
+    "gate_balacc_on_real": 1.0,
+    "note": "ONE instrument for every arm and every column; hash-asserted, never fitted here",
+    "param_hash": "c8741ac417d88ebf8ee82163ba9d7090ed66856aa9ee951e621791f08794669e",
+    "path": "/var/chlu/artefacts/outputs/gen-external-classifier/seed_0/external_classifier.pkl",
+    "seed": 0
+  },
+  "compute": {
+    "arm": "frozen",
+    "arm_class": "CONTROL -- the shipped configuration, encoder frozen at matched compute",
+    "batch": 64,
+    "beta_codebook": 1.0,
+    "beta_commitment": 0.25,
+    "beta_swap": 0.0,
+    "beta_swap_basis": null,
+    "beta_swap_mode": "auto",
+    "checkpoint_saves": 2,
+    "classifier_param_hash_after": "c8741ac417d88ebf8ee82163ba9d7090ed66856aa9ee951e621791f08794669e",
+    "classifier_param_hash_before": "c8741ac417d88ebf8ee82163ba9d7090ed66856aa9ee951e621791f08794669e",
+    "classifier_unchanged": true,
+    "code_grad": "straight_through",
+    "encoder_changed": false,
+    "encoder_param_hash_after": "4d6db72476de0a8b9f652aa0f1ddf193651f29b9dc6a0eb6ae4b7af48629b116",
+    "encoder_param_hash_before": "4d6db72476de0a8b9f652aa0f1ddf193651f29b9dc6a0eb6ae4b7af48629b116",
+    "gradient_steps": 4000,
+    "history_first": {
+      "codebook": 0.1113353818655014,
+      "commitment": 0.1113353818655014,
+      "loss": 0.15707972645759583,
+      "recon": 0.017910495400428772,
+      "step": 0,
+      "swap": 0.0,
+      "swap_exact": 0.0,
+      "well": 0
+    },
+    "history_last": {
+      "codebook": 0.06579770147800446,
+      "commitment": 0.06579770147800446,
+      "loss": 0.0881962776184082,
+      "recon": 0.005949157290160656,
+      "step": 3999,
+      "swap": 0.0,
+      "swap_exact": 0.0,
+      "well": 0
+    },
+    "images_seen": 256000,
+    "lr": 0.001,
+    "n_params_optimised": 1647299,
+    "n_train_rows": 32768,
+    "own": [
+      1,
+      3,
+      5,
+      2,
+      0
+    ],
+    "resumed_from_step": 0,
+    "seconds_note": "train_seconds covers THIS process's steps only; a resumed arm's wall clock is the sum across attempts and the equal-SECONDS control must not be matched against a resumed arm's partial figure",
+    "seconds_per_step": 0.04435738903284073,
+    "steps": 4000,
+    "store": true,
+    "swap": false,
+    "train_seconds": 177.42955613136292,
+    "unfreeze": false,
+    "wallclock_match": false,
+    "well_sizes": [
+      328,
+      117,
+      353,
+      716,
+      534
+    ]
+  },
+  "decoder_refit": {
+    "loss_final": 0.0007868775865063071,
+    "loss_first": 0.15972508490085602,
+    "note": "identical recipe and identical steps for EVERY arm, fit downstream of that arm's own FROZEN features (R18's shape); the one difference between arms is the features",
+    "param_count": 1516227,
+    "param_hash": "4c4cddb42ca55034f2b2f6461c472fab031fff2b03a84f39a28a2eb52be4abbe",
+    "recipe": {
+      "batch": 128,
+      "blocks_per_stage": 2,
+      "channels": [
+        256,
+        128,
+        64
+      ],
+      "edge_blur": 5,
+      "edge_weight": 8.0,
+      "grad_weight": 1.0,
+      "groups": 8,
+      "loss": "mse",
+      "lr": 0.001,
+      "lr_schedule": "cosine",
+      "name": "w8_v1_short",
+      "steps": 1800,
+      "warmup_frac": 0.05
+    },
+    "seconds": 39.634925842285156,
+    "skipped": false,
+    "why_skipped": null
+  },
+  "n_train_rows": 32768,
+  "no_bypass_joint_path": {
+    "bypass_alpha": 0.0,
+    "code_grad": "straight_through",
+    "codes_match_shipped_address_codes": true,
+    "collision_test_feature_max_abs_difference": 3.8075332641601562,
+    "collision_test_n_rows": 32768,
+    "design_bits": 30.0,
+    "design_formula": "K*log2(M)",
+    "gather_matches_read_from_codes": true,
+    "jitter": 0.001,
+    "jitter_test_n_rows": 32746,
+    "max_abs_delta_decoder_input_vs_pure_gather": 0.0,
+    "max_abs_delta_same_codes_different_features": 0.0,
+    "max_abs_delta_under_jitter": 0.0,
+    "max_code_configs": 1073741824,
+    "n_checked": 32768,
+    "n_distinct_code_configs": 23575,
+    "n_modes": 64,
+    "n_requests": 32768,
+    "n_wells": 5,
+    "note": "design_bits is the DECLARED constant (R20) and is a property of the store, not of the run; realised_bits_used is how much of it this request set actually exercised.",
+    "realised_bits_used": 14.524970150449821
+  },
+  "no_bypass_shipped_read": {
+    "bits_per_read": 30.0,
+    "codes_changed_under_feature_replacement": true,
+    "max_abs_delta_vs_independent_gather": 0.0,
+    "n_checked": 32768,
+    "note": "The output path has no argument through which encoder information could travel except the K integer codes.",
+    "output_changed_when_codes_changed": 5.384604454040527,
+    "read_is_pure_codebook_gather": true,
+    "signature_ok": true
+  },
+  "param_hashes": {
+    "classifier": "c8741ac417d88ebf8ee82163ba9d7090ed66856aa9ee951e621791f08794669e",
+    "encoder": "4d6db72476de0a8b9f652aa0f1ddf193651f29b9dc6a0eb6ae4b7af48629b116",
+    "joint_decoder": "052a6d5bf15444d27af5c060ded1f3621539617803b1d1d36a31d1b04d4af210",
+    "render_decoder": "4c4cddb42ca55034f2b2f6461c472fab031fff2b03a84f39a28a2eb52be4abbe",
+    "store": "dd674fb16832a04c5178d4cfa562b50083ab742db73964fc2e5e2e2fc029cb4c"
+  },
+  "pins": {
+    "arms_without_render_decoder": [
+      "alone_wc"
+    ],
+    "beta_codebook": 1.0,
+    "beta_commitment": 0.25,
+    "beta_swap": "auto",
+    "cache_block": 8192,
+    "cache_dtype": "float16",
+    "code_grad": "straight_through",
+    "dataset": "shapes3d",
+    "dec_recipe": "w8_v1_short",
+    "dec_recipe_architecture_of": "v1_capacity_schedule",
+    "dec_refit_steps": 1800,
+    "eval_batch": 256,
+    "grouping_method": "auto",
+    "joint_batch": 64,
+    "joint_lr": 0.001,
+    "joint_steps": 4000,
+    "k_wells": 5,
+    "min_well_frac": 0.1,
+    "n_modes": 64,
+    "n_train": 32768,
+    "ownership_batch": 256,
+    "ownership_pairs": 256,
+    "pretext": "recon",
+    "probe_batch": 256,
+    "probe_lr": 0.001,
+    "probe_n_eval": 4096,
+    "probe_n_fit": 8192,
+    "probe_steps": 1500,
+    "rival_families": [
+      "mlp_180k",
+      "cont_mlp",
+      "transformer",
+      "lstm"
+    ],
+    "rival_val_rows": 512,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "swap_wells_per_step": 1,
+    "warm_batch": 128,
+    "warm_dec_steps": 200,
+    "warm_steps": 4000
+  },
+  "quick": false,
+  "schema": "chlu-w8-encoder-loop-arm/1",
+  "scoreable_on_rows_3_4": true,
+  "seed": 0,
+  "status": "ok",
+  "store_bytes": {
+    "bits_per_read": 30.0,
+    "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+    "dim": 2048,
+    "dtype": "float32",
+    "n_modes": 64,
+    "n_modes_per_well": [
+      64,
+      64,
+      64,
+      64,
+      64
+    ],
+    "n_wells": 5,
+    "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+    "store_bytes": 524288,
+    "store_bytes_per_well": [
+      83968,
+      29952,
+      90368,
+      183296,
+      136704
+    ],
+    "uniform_allocation": true
+  },
+  "void_as_a_reported_number": false,
+  "warm_start": {
+    "D": 2048,
+    "decoder_param_hash": "6b89e9f13a38f88a13e1dcca9217eb0669ff50163e6608dca2bc1ae8e9e6c696",
+    "encoder_param_hash": "4d6db72476de0a8b9f652aa0f1ddf193651f29b9dc6a0eb6ae4b7af48629b116",
+    "feat_shape": [
+      128,
+      4,
+      4
+    ],
+    "store_param_hash": "e1683d7248b6d0cf74bf174edc8e32f110ef3262866878e387c9ffa625e36d65",
+    "well_sizes": [
+      328,
+      117,
+      353,
+      716,
+      534
+    ]
+  }
+}

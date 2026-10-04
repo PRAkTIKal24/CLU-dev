@@ -1,0 +1,277 @@
+[score] cache generation 2 asserted: {"seed_0": {"encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d", "n_rows": 480000, "generation": 2, "matches_decoder": true}, "seed_1": {"encoder_param_hash": "fc05e2c5f39694b27b94d6cad5e1d59e11c27fa8e8f92e733acc599edf8944c5", "n_rows": 480000, "generation": 2, "matches_decoder": true}, "seed_2": {"encoder_param_hash": "154d498610648fac12e9a72be73a69303c1cc3a114ec0401b4cc308a3166b7e1", "n_rows": 480000, "generation": 2, "matches_decoder": true}}
+  arm factor_aligned_balanced: already fitted, loading
+  arm knn_proto: already fitted, loading
+  arm landscape_removed: already fitted, loading
+  arm landscape_shuffled: already fitted, loading
+  arm basis_head: already fitted, loading
+  cont_mlp: hidden=248 params=573,440 target=572,672 (100.1% of matched)
+    step 1/4000 mse=0.50741 (1s)
+    step 501/4000 mse=0.04684 (16s)
+    step 1001/4000 mse=0.02691 (32s)
+    step 1501/4000 mse=0.01902 (51s)
+    step 2001/4000 mse=0.01586 (67s)
+    step 2501/4000 mse=0.01379 (84s)
+    step 3001/4000 mse=0.01260 (101s)
+    step 3501/4000 mse=0.01168 (117s)
+    step 4000/4000 mse=0.01085 (132s)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  cont_mlp: hidden=55 params=118,153 target=118,784 (99.5% of matched)
+    step 1/4000 mse=0.51327 (1s)
+    step 501/4000 mse=0.14098 (10s)
+    step 1001/4000 mse=0.07683 (19s)
+    step 1501/4000 mse=0.05357 (28s)
+    step 2001/4000 mse=0.04604 (37s)
+    step 2501/4000 mse=0.04186 (47s)
+    step 3001/4000 mse=0.03835 (57s)
+    step 3501/4000 mse=0.03627 (67s)
+    step 4000/4000 mse=0.03413 (77s)
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+[score] seed 0 linear_span_ARM                          e=0.1821
+[score] seed 0 table_interp_knn_proto_RIVAL             e=0.2558
+[score] seed 0 correlation_split_linear_head_ABLATION   e=0.1848
+[score] seed 0 landscape_removed_CONTROL                e=0.2524
+[score] seed 0 landscape_shuffled_CONTROL               e=0.2787
+[score] seed 0 lookup_argmax_FLOOR                      e=0.4059
+[score] seed 0 cont_mlp_ARMMATCHED_RIVAL                e=0.1685
+[score] seed 0 cont_mlp_TABLEMATCHED_RIVAL              e=0.2365
+[score] seed 0 spokeA_table_RIVAL                       e=0.1581
+[score] seed 0 spokeA_cont_mlp_RIVAL                    e=0.3905
+[score] seed 0 valley_ARM                               e=0.1829
+  arm factor_aligned_balanced: already fitted, loading
+  arm knn_proto: already fitted, loading
+  arm landscape_removed: already fitted, loading
+  arm landscape_shuffled: already fitted, loading
+  arm basis_head: already fitted, loading
+  cont_mlp: hidden=248 params=573,440 target=572,672 (100.1% of matched)
+    step 1/4000 mse=0.52375 (1s)
+    step 501/4000 mse=0.05092 (16s)
+    step 1001/4000 mse=0.02868 (31s)
+    step 1501/4000 mse=0.02036 (48s)
+    step 2001/4000 mse=0.01724 (65s)
+    step 2501/4000 mse=0.01515 (84s)
+    step 3001/4000 mse=0.01356 (103s)
+    step 3501/4000 mse=0.01260 (122s)
+    step 4000/4000 mse=0.01188 (142s)
+  cont_mlp: hidden=55 params=118,153 target=118,784 (99.5% of matched)
+    step 1/4000 mse=0.52811 (1s)
+    step 501/4000 mse=0.15195 (13s)
+    step 1001/4000 mse=0.08519 (25s)
+    step 1501/4000 mse=0.05816 (38s)
+    step 2001/4000 mse=0.05176 (52s)
+    step 2501/4000 mse=0.04600 (66s)
+    step 3001/4000 mse=0.04028 (80s)
+    step 3501/4000 mse=0.03712 (95s)
+    step 4000/4000 mse=0.03497 (109s)
+  judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+[score] seed 1 linear_span_ARM                          e=0.1940
+[score] seed 1 table_interp_knn_proto_RIVAL             e=0.2523
+[score] seed 1 correlation_split_linear_head_ABLATION   e=0.1963
+[score] seed 1 landscape_removed_CONTROL                e=0.2546
+[score] seed 1 landscape_shuffled_CONTROL               e=0.2834
+[score] seed 1 lookup_argmax_FLOOR                      e=0.4266
+[score] seed 1 cont_mlp_ARMMATCHED_RIVAL                e=0.1753
+[score] seed 1 cont_mlp_TABLEMATCHED_RIVAL              e=0.2478
+[score] seed 1 spokeA_table_RIVAL                       e=0.1809
+[score] seed 1 spokeA_cont_mlp_RIVAL                    e=0.3607
+[score] seed 1 valley_ARM                               e=0.1965
+  arm factor_aligned_balanced: already fitted, loading
+  arm knn_proto: already fitted, loading
+  arm landscape_removed: already fitted, loading
+  arm landscape_shuffled: already fitted, loading
+  arm basis_head: already fitted, loading
+  cont_mlp: hidden=248 params=573,440 target=572,672 (100.1% of matched)
+    step 1/4000 mse=0.53948 (1s)
+    step 501/4000 mse=0.05309 (24s)
+    step 1001/4000 mse=0.03025 (48s)
+    step 1501/4000 mse=0.02268 (70s)
+    step 2001/4000 mse=0.01828 (93s)
+    step 2501/4000 mse=0.01610 (114s)
+    step 3001/4000 mse=0.01473 (133s)
+    step 3501/4000 mse=0.01364 (152s)
+    step 4000/4000 mse=0.01306 (171s)
+  cont_mlp: hidden=55 params=118,153 target=118,784 (99.5% of matched)
+    step 1/4000 mse=0.54430 (1s)
+    step 501/4000 mse=0.14498 (14s)
+    step 1001/4000 mse=0.08954 (27s)
+    step 1501/4000 mse=0.07226 (40s)
+    step 2001/4000 mse=0.06377 (52s)
+    step 2501/4000 mse=0.05619 (65s)
+    step 3001/4000 mse=0.05130 (74s)
+    step 3501/4000 mse=0.04692 (84s)
+    step 4000/4000 mse=0.04516 (94s)
+  judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+[score] cache generation 2 asserted: {"seed_0": {"encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d", "n_rows": 480000, "generation": 2, "matches_decoder": true}, "seed_1": {"encoder_param_hash": "fc05e2c5f39694b27b94d6cad5e1d59e11c27fa8e8f92e733acc599edf8944c5", "n_rows": 480000, "generation": 2, "matches_decoder": true}, "seed_2": {"encoder_param_hash": "154d498610648fac12e9a72be73a69303c1cc3a114ec0401b4cc308a3166b7e1", "n_rows": 480000, "generation": 2, "matches_decoder": true}}
+[score] seed 0: reusing score_run1_s0.json (resumable)
+[score] seed 1: reusing score_run1_s1.json (resumable)
+  arm factor_aligned_balanced: already fitted, loading
+  arm knn_proto: already fitted, loading
+  arm landscape_removed: already fitted, loading
+  arm landscape_shuffled: already fitted, loading
+  arm basis_head: already fitted, loading
+  cont_mlp: hidden=248 params=573,440 target=572,672 (100.1% of matched)
+    step 1/4000 mse=0.53948 (2s)
+    step 501/4000 mse=0.05309 (22s)
+    step 1001/4000 mse=0.03025 (36s)
+    step 1501/4000 mse=0.02268 (49s)
+    step 2001/4000 mse=0.01828 (62s)
+    step 2501/4000 mse=0.01610 (74s)
+    step 3001/4000 mse=0.01473 (86s)
+    step 3501/4000 mse=0.01364 (99s)
+    step 4000/4000 mse=0.01306 (109s)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  cont_mlp: hidden=55 params=118,153 target=118,784 (99.5% of matched)
+    step 1/4000 mse=0.54430 (1s)
+    step 501/4000 mse=0.14498 (10s)
+    step 1001/4000 mse=0.08954 (21s)
+    step 1501/4000 mse=0.07226 (34s)
+    step 2001/4000 mse=0.06377 (49s)
+    step 2501/4000 mse=0.05619 (66s)
+    step 3001/4000 mse=0.05130 (82s)
+    step 3501/4000 mse=0.04692 (97s)
+    step 4000/4000 mse=0.04516 (113s)
+  judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+[score] seed 2 linear_span_ARM                          e=0.1935
+[score] seed 2 table_interp_knn_proto_RIVAL             e=0.2392
+[score] seed 2 correlation_split_linear_head_ABLATION   e=0.1944
+[score] seed 2 landscape_removed_CONTROL                e=0.2471
+[score] seed 2 landscape_shuffled_CONTROL               e=0.2628
+[score] seed 2 lookup_argmax_FLOOR                      e=0.4121
+[score] seed 2 cont_mlp_ARMMATCHED_RIVAL                e=0.1724
+[score] seed 2 cont_mlp_TABLEMATCHED_RIVAL              e=0.2458
+[score] seed 2 spokeA_table_RIVAL                       e=0.1818
+[score] seed 2 spokeA_cont_mlp_RIVAL                    e=0.3334
+[score] seed 2 valley_ARM                               e=0.1952
+{
+ "spokeA_cont_mlp_RIVAL": {
+  "mean_delta_across_seeds": 0.1668301105988584,
+  "sd_delta_across_seeds": 0.026786197437939786,
+  "all_seeds_beat_margin": true
+ },
+ "spokeA_table_RIVAL": {
+  "mean_delta_across_seeds": -0.01915194663353151,
+  "sd_delta_across_seeds": 0.007916984755070878,
+  "all_seeds_beat_margin": false
+ },
+ "cont_mlp_ARMMATCHED_RIVAL": {
+  "mean_delta_across_seeds": -0.019224564135136613,
+  "sd_delta_across_seeds": 0.0028124624774332543,
+  "all_seeds_beat_margin": false
+ },
+ "cont_mlp_TABLEMATCHED_RIVAL": {
+  "mean_delta_across_seeds": 0.05200020095895617,
+  "sd_delta_across_seeds": 0.00221875918527723,
+  "all_seeds_beat_margin": true
+ },
+ "table_interp_knn_proto_RIVAL": {
+  "mean_delta_across_seeds": 0.054417024294626866,
+  "sd_delta_across_seeds": 0.012356997775985694,
+  "all_seeds_beat_margin": false
+ },
+ "lookup_argmax_FLOOR": {
+  "mean_delta_across_seeds": 0.2215168687446916,
+  "sd_delta_across_seeds": 0.008370625303466326,
+  "all_seeds_beat_margin": true
+ },
+ "correlation_split_linear_head_ABLATION": {
+  "mean_delta_across_seeds": 0.0013217334632107706,
+  "sd_delta_across_seeds": 0.0005930004036341963,
+  "all_seeds_beat_margin": false
+ },
+ "valley_ARM": {
+  "mean_delta_across_seeds": 0.001980243103486429,
+  "sd_delta_across_seeds": 0.0005490185829882061,
+  "all_seeds_beat_margin": false
+ },
+ "landscape_removed_CONTROL": {
+  "mean_delta_across_seeds": 0.050764308852340706,
+  "sd_delta_across_seeds": 0.011152276131778648,
+  "all_seeds_beat_margin": false
+ },
+ "landscape_shuffled_CONTROL": {
+  "mean_delta_across_seeds": 0.07626417403047059,
+  "sd_delta_across_seeds": 0.012997587035871831,
+  "all_seeds_beat_margin": true
+ }
+}

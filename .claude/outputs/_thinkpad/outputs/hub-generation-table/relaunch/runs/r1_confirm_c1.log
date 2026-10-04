@@ -1,0 +1,432 @@
+[15:08:12] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[15:08:12]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[15:08:12]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[15:08:12] table=confirm nvariants=10 corners[22:43] set=confirm
+[15:08:12]   ARM                K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=nmf          alloc=uniform   bytes_pred=454336
+[15:08:12]   ARM_KMEANS         K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=454336
+[15:08:12]   ADD_ONLY           K= 64 A= 1216 rank=   0 n_add=52 n_pair=0 method=kmeans       alloc=uniform   bytes_pred=408576
+[15:08:12]   CTRL_mean          K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=mean         alloc=uniform   bytes_pred=454336
+[15:08:12]   CTRL_atoms_medoid  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_medoid alloc=uniform   bytes_pred=454336
+[15:08:12]   CTRL_atoms_kpp     K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_kpp    alloc=uniform   bytes_pred=454336
+[15:08:12]   CTRL_atoms_random  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_random alloc=uniform   bytes_pred=454336
+[15:08:12]   CTRL_pca_affine    K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=pca_affine   alloc=uniform   bytes_pred=454336
+[15:08:12]   CTRL_random        K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=random       alloc=uniform   bytes_pred=454336
+[15:08:12]   ITER1              K= 32 A=  832 rank=  21 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474416
+[15:08:14] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:08:17] [c39 8a2a890367] knn_proto        agg=0.8750 tup=49 B=475136
+[15:11:05] [c39 8a2a890367] ARM                agg=0.8727 tup=59 B=454336 r=52 [162.1s]
+[15:11:40] [c39 8a2a890367] ARM_KMEANS         agg=0.8519 tup=53 B=454336 r=52 [35.3s]
+[15:12:14] [c39 8a2a890367] ADD_ONLY           agg=0.8819 tup=48 B=408576 r=0 [34.4s]
+[15:12:16] [c39 8a2a890367] CTRL_mean          agg=0.3472 tup= 7 B=454336 r=52 [1.9s]
+[15:12:46] [c39 8a2a890367] CTRL_atoms_medoid  agg=0.9352 tup=59 B=454336 r=52 [29.9s]
+[15:12:57] [c39 8a2a890367] CTRL_atoms_kpp     agg=0.9005 tup=61 B=454336 r=52 [11.1s]
+[15:12:59] [c39 8a2a890367] CTRL_atoms_random  agg=0.8866 tup=56 B=454336 r=52 [1.8s]
+[15:13:03] [c39 8a2a890367] CTRL_pca_affine    agg=0.8634 tup=58 B=454336 r=52 [4.1s]
+[15:13:05] [c39 8a2a890367] CTRL_random        agg=0.7060 tup=51 B=454336 r=52 [2.0s]
+[15:13:36] [c39 8a2a890367] ITER1              agg=0.8704 tup=49 B=474416 r=21 [29.9s]
+[15:13:36] [c39] corner done in 322.2s
+[15:13:38] [c40 81a33ffc12] knn_proto        agg=0.8727 tup=48 B=475136
+[15:27:43] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[15:27:43]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[15:27:43]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[15:27:43] table=confirm nvariants=10 corners[22:43] set=confirm
+[15:27:43]   ARM                K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=nmf          alloc=uniform   bytes_pred=454336
+[15:27:43]   ARM_KMEANS         K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=454336
+[15:27:43]   ADD_ONLY           K= 64 A= 1216 rank=   0 n_add=52 n_pair=0 method=kmeans       alloc=uniform   bytes_pred=408576
+[15:27:43]   CTRL_mean          K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=mean         alloc=uniform   bytes_pred=454336
+[15:27:43]   CTRL_atoms_medoid  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_medoid alloc=uniform   bytes_pred=454336
+[15:27:43]   CTRL_atoms_kpp     K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_kpp    alloc=uniform   bytes_pred=454336
+[15:27:43]   CTRL_atoms_random  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_random alloc=uniform   bytes_pred=454336
+[15:27:43]   CTRL_pca_affine    K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=pca_affine   alloc=uniform   bytes_pred=454336
+[15:27:43]   CTRL_random        K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=random       alloc=uniform   bytes_pred=454336
+[15:27:43]   ITER1              K= 32 A=  832 rank=  21 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474416
+[15:27:44] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+[15:27:44] [c39 8a2a890367] all 10 variants already in the ledger
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:30:27] [c40 81a33ffc12] ARM                agg=0.8773 tup=47 B=454336 r=52 [161.0s]
+[15:31:03] [c40 81a33ffc12] ARM_KMEANS         agg=0.8866 tup=47 B=454336 r=52 [36.4s]
+[15:31:40] [c40 81a33ffc12] ADD_ONLY           agg=0.8819 tup=49 B=408576 r=0 [36.5s]
+[15:31:42] [c40 81a33ffc12] CTRL_mean          agg=0.4236 tup=17 B=454336 r=52 [2.2s]
+[15:32:16] [c40 81a33ffc12] CTRL_atoms_medoid  agg=0.8264 tup=46 B=454336 r=52 [34.0s]
+[15:32:27] [c40 81a33ffc12] CTRL_atoms_kpp     agg=0.9074 tup=50 B=454336 r=52 [11.2s]
+[15:32:29] [c40 81a33ffc12] CTRL_atoms_random  agg=0.8495 tup=47 B=454336 r=52 [2.2s]
+[15:32:34] [c40 81a33ffc12] CTRL_pca_affine    agg=0.8889 tup=49 B=454336 r=52 [4.6s]
+[15:32:36] [c40 81a33ffc12] CTRL_random        agg=0.7801 tup=21 B=454336 r=52 [2.4s]
+[15:33:11] [c40 81a33ffc12] ITER1              agg=0.9051 tup=53 B=474416 r=21 [33.2s]
+[15:33:11] [c40] corner done in 326.2s
+[15:33:13] [c41 fe7b15e2ae] knn_proto        agg=0.8287 tup=56 B=475136
+[15:36:08] [c41 fe7b15e2ae] ARM                agg=0.8287 tup=57 B=454336 r=52 [169.7s]
+[15:36:45] [c41 fe7b15e2ae] ARM_KMEANS         agg=0.7824 tup=54 B=454336 r=52 [36.7s]
+[15:37:20] [c41 fe7b15e2ae] ADD_ONLY           agg=0.7407 tup=45 B=408576 r=0 [34.5s]
+[15:37:22] [c41 fe7b15e2ae] CTRL_mean          agg=0.4097 tup= 7 B=454336 r=52 [2.4s]
+[15:38:01] [c41 fe7b15e2ae] CTRL_atoms_medoid  agg=0.8032 tup=47 B=454336 r=52 [38.5s]
+[15:38:13] [c41 fe7b15e2ae] CTRL_atoms_kpp     agg=0.8565 tup=48 B=454336 r=52 [12.2s]
+[15:38:15] [c41 fe7b15e2ae] CTRL_atoms_random  agg=0.8218 tup=53 B=454336 r=52 [2.1s]
+[15:38:20] [c41 fe7b15e2ae] CTRL_pca_affine    agg=0.8681 tup=49 B=454336 r=52 [5.2s]
+[15:38:23] [c41 fe7b15e2ae] CTRL_random        agg=0.7755 tup=54 B=454336 r=52 [2.5s]
+[15:39:01] [c41 fe7b15e2ae] ITER1              agg=0.8218 tup=54 B=474416 r=21 [36.9s]
+[15:39:01] [c41] corner done in 350.2s
+[15:39:04] [c43 161682f38f] knn_proto        agg=0.9236 tup=48 B=475136
+[15:41:47] [c43 161682f38f] ARM                agg=0.8773 tup=51 B=454336 r=52 [156.4s]
+[15:42:20] [c43 161682f38f] ARM_KMEANS         agg=0.8542 tup=55 B=454336 r=52 [32.5s]
+[15:42:51] [c43 161682f38f] ADD_ONLY           agg=0.8704 tup=47 B=408576 r=0 [31.1s]
+[15:42:53] [c43 161682f38f] CTRL_mean          agg=0.3194 tup= 9 B=454336 r=52 [2.1s]
+[15:43:25] [c43 161682f38f] CTRL_atoms_medoid  agg=0.8588 tup=50 B=454336 r=52 [32.5s]
+[15:43:36] [c43 161682f38f] CTRL_atoms_kpp     agg=0.8472 tup=52 B=454336 r=52 [10.8s]
+[15:43:38] [c43 161682f38f] CTRL_atoms_random  agg=0.8819 tup=50 B=454336 r=52 [1.9s]
+[15:43:42] [c43 161682f38f] CTRL_pca_affine    agg=0.8912 tup=49 B=454336 r=52 [3.9s]
+[15:43:44] [c43 161682f38f] CTRL_random        agg=0.7755 tup=52 B=454336 r=52 [2.1s]
+[15:44:16] [c43 161682f38f] ITER1              agg=0.8866 tup=47 B=474416 r=21 [30.9s]
+[15:44:16] [c43] corner done in 315.4s
+[15:44:18] [c44 ea01b256d5] knn_proto        agg=0.8681 tup=48 B=475136
+[15:47:37] [c44 ea01b256d5] ARM                agg=0.8403 tup=43 B=454336 r=52 [193.4s]
+[15:48:15] [c44 ea01b256d5] ARM_KMEANS         agg=0.8102 tup=40 B=454336 r=52 [37.3s]
+[15:48:51] [c44 ea01b256d5] ADD_ONLY           agg=0.8079 tup=43 B=408576 r=0 [36.5s]
+[15:48:54] [c44 ea01b256d5] CTRL_mean          agg=0.5347 tup=10 B=454336 r=52 [2.4s]
+[15:49:31] [c44 ea01b256d5] CTRL_atoms_medoid  agg=0.8241 tup=44 B=454336 r=52 [37.8s]
+[15:49:45] [c44 ea01b256d5] CTRL_atoms_kpp     agg=0.8958 tup=55 B=454336 r=52 [13.2s]
+[15:49:47] [c44 ea01b256d5] CTRL_atoms_random  agg=0.8125 tup=44 B=454336 r=52 [2.5s]
+[15:49:52] [c44 ea01b256d5] CTRL_pca_affine    agg=0.8565 tup=48 B=454336 r=52 [4.8s]
+[15:49:55] [c44 ea01b256d5] CTRL_random        agg=0.6366 tup=16 B=454336 r=52 [2.6s]
+[15:50:33] [c44 ea01b256d5] ITER1              agg=0.8056 tup=49 B=474416 r=21 [36.9s]
+[15:50:33] [c44] corner done in 376.5s
+[15:50:35] [c45 62a703ad14] knn_proto        agg=0.8310 tup=65 B=475136
+[15:53:36] [c45 62a703ad14] ARM                agg=0.7477 tup=53 B=454336 r=52 [173.5s]
+[15:54:13] [c45 62a703ad14] ARM_KMEANS         agg=0.6968 tup=49 B=454336 r=52 [36.9s]
+[15:54:54] [c45 62a703ad14] ADD_ONLY           agg=0.7106 tup=45 B=408576 r=0 [41.1s]
+[15:54:57] [c45 62a703ad14] CTRL_mean          agg=0.5764 tup= 6 B=454336 r=52 [2.8s]
+[15:55:37] [c45 62a703ad14] CTRL_atoms_medoid  agg=0.7361 tup=56 B=454336 r=52 [40.1s]
+[15:55:49] [c45 62a703ad14] CTRL_atoms_kpp     agg=0.7315 tup=58 B=454336 r=52 [12.0s]
+[15:55:51] [c45 62a703ad14] CTRL_atoms_random  agg=0.7731 tup=60 B=454336 r=52 [2.5s]
+[15:55:57] [c45 62a703ad14] CTRL_pca_affine    agg=0.7917 tup=58 B=454336 r=52 [5.4s]
+[15:55:59] [c45 62a703ad14] CTRL_random        agg=0.5556 tup=30 B=454336 r=52 [2.8s]
+[15:56:37] [c45 62a703ad14] ITER1              agg=0.7431 tup=55 B=474416 r=21 [35.5s]
+[15:56:37] [c45] corner done in 363.9s
+[15:56:39] [c46 6de6eb5ddb] knn_proto        agg=0.7894 tup=45 B=475136
+[15:59:28] [c46 6de6eb5ddb] ARM                agg=0.7870 tup=44 B=454336 r=52 [163.2s]
+[16:00:06] [c46 6de6eb5ddb] ARM_KMEANS         agg=0.7755 tup=50 B=454336 r=52 [38.3s]
+[16:00:44] [c46 6de6eb5ddb] ADD_ONLY           agg=0.7824 tup=45 B=408576 r=0 [37.6s]
+[16:00:46] [c46 6de6eb5ddb] CTRL_mean          agg=0.4537 tup=11 B=454336 r=52 [2.6s]
+[16:01:29] [c46 6de6eb5ddb] CTRL_atoms_medoid  agg=0.7824 tup=42 B=454336 r=52 [42.9s]
+[16:01:49] [c46 6de6eb5ddb] CTRL_atoms_kpp     agg=0.7917 tup=34 B=454336 r=52 [20.0s]
+[16:01:53] [c46 6de6eb5ddb] CTRL_atoms_random  agg=0.7940 tup=47 B=454336 r=52 [3.7s]
+[16:02:01] [c46 6de6eb5ddb] CTRL_pca_affine    agg=0.7894 tup=46 B=454336 r=52 [7.8s]
+[16:02:05] [c46 6de6eb5ddb] CTRL_random        agg=0.5556 tup=30 B=454336 r=52 [3.9s]
+[16:03:00] [c46 6de6eb5ddb] ITER1              agg=0.7870 tup=52 B=474416 r=21 [53.4s]
+[16:03:00] [c46] corner done in 383.6s
+[16:03:04] [c47 42867c1118] knn_proto        agg=0.7917 tup=61 B=475136
+[16:06:56] [c47 42867c1118] ARM                agg=0.7477 tup=63 B=454336 r=52 [222.0s]
+[16:07:36] [c47 42867c1118] ARM_KMEANS         agg=0.7037 tup=60 B=454336 r=52 [40.2s]
+[16:16:24] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[16:16:24]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[16:16:24]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[16:16:26] table=confirm nvariants=10 corners[22:43] set=confirm
+[16:16:26]   ARM                K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=nmf          alloc=uniform   bytes_pred=454336
+[16:16:26]   ARM_KMEANS         K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=454336
+[16:16:26]   ADD_ONLY           K= 64 A= 1216 rank=   0 n_add=52 n_pair=0 method=kmeans       alloc=uniform   bytes_pred=408576
+[16:16:26]   CTRL_mean          K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=mean         alloc=uniform   bytes_pred=454336
+[16:16:26]   CTRL_atoms_medoid  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_medoid alloc=uniform   bytes_pred=454336
+[16:16:26]   CTRL_atoms_kpp     K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_kpp    alloc=uniform   bytes_pred=454336
+[16:16:26]   CTRL_atoms_random  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_random alloc=uniform   bytes_pred=454336
+[16:16:26]   CTRL_pca_affine    K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=pca_affine   alloc=uniform   bytes_pred=454336
+[16:16:26]   CTRL_random        K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=random       alloc=uniform   bytes_pred=454336
+[16:16:26]   ITER1              K= 32 A=  832 rank=  21 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474416
+[16:16:27] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+[16:16:27] [c39 8a2a890367] all 10 variants already in the ledger
+[16:16:27] [c40 81a33ffc12] all 10 variants already in the ledger
+[16:16:27] [c41 fe7b15e2ae] all 10 variants already in the ledger
+[16:16:27] [c43 161682f38f] all 10 variants already in the ledger
+[16:16:27] [c44 ea01b256d5] all 10 variants already in the ledger
+[16:16:27] [c45 62a703ad14] all 10 variants already in the ledger
+[16:16:27] [c46 6de6eb5ddb] all 10 variants already in the ledger
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[16:17:07] [c47 42867c1118] ADD_ONLY           agg=0.7685 tup=49 B=408576 r=0 [37.7s]
+[16:17:09] [c47 42867c1118] CTRL_mean          agg=0.4792 tup= 6 B=454336 r=52 [2.1s]
+[16:17:48] [c47 42867c1118] CTRL_atoms_medoid  agg=0.7153 tup=48 B=454336 r=52 [38.5s]
+[16:18:01] [c47 42867c1118] CTRL_atoms_kpp     agg=0.7083 tup=61 B=454336 r=52 [13.2s]
+[16:18:03] [c47 42867c1118] CTRL_atoms_random  agg=0.7199 tup=57 B=454336 r=52 [2.2s]
+[16:18:09] [c47 42867c1118] CTRL_pca_affine    agg=0.7338 tup=66 B=454336 r=52 [6.5s]
+[16:18:13] [c47 42867c1118] CTRL_random        agg=0.5000 tup=35 B=454336 r=52 [3.2s]
+[16:19:18] [c47 42867c1118] ITER1              agg=0.8194 tup=63 B=474416 r=21 [63.4s]
+[16:19:18] [c47] corner done in 170.6s
+[16:19:22] [c48 57989b6db5] knn_proto        agg=0.7685 tup=56 B=475136
+[16:23:27] [c48 57989b6db5] ARM                agg=0.7685 tup=50 B=454336 r=52 [235.9s]
+[16:24:12] [c48 57989b6db5] ARM_KMEANS         agg=0.7639 tup=53 B=454336 r=52 [45.4s]
+[16:24:53] [c48 57989b6db5] ADD_ONLY           agg=0.7222 tup=43 B=408576 r=0 [40.8s]
+[16:24:56] [c48 57989b6db5] CTRL_mean          agg=0.3657 tup= 4 B=454336 r=52 [3.0s]
+[16:25:41] [c48 57989b6db5] CTRL_atoms_medoid  agg=0.7870 tup=58 B=454336 r=52 [44.9s]
+[16:25:57] [c48 57989b6db5] CTRL_atoms_kpp     agg=0.8171 tup=52 B=454336 r=52 [16.0s]
+[16:26:00] [c48 57989b6db5] CTRL_atoms_random  agg=0.7292 tup=48 B=454336 r=52 [3.2s]
+[16:26:06] [c48 57989b6db5] CTRL_pca_affine    agg=0.7847 tup=54 B=454336 r=52 [6.0s]
+[16:26:09] [c48 57989b6db5] CTRL_random        agg=0.8171 tup=62 B=454336 r=52 [2.8s]
+[16:26:57] [c48 57989b6db5] ITER1              agg=0.7546 tup=38 B=474416 r=21 [46.2s]
+[16:26:57] [c48] corner done in 459.0s
+[16:27:00] [c49 f530873075] knn_proto        agg=0.7060 tup=56 B=475136
+[16:31:08] [c49 f530873075] ARM                agg=0.7199 tup=60 B=454336 r=52 [238.7s]
+[16:31:58] [c49 f530873075] ARM_KMEANS         agg=0.7338 tup=59 B=454336 r=52 [49.9s]
+[16:32:40] [c49 f530873075] ADD_ONLY           agg=0.6620 tup=51 B=408576 r=0 [42.1s]
+[16:32:43] [c49 f530873075] CTRL_mean          agg=0.2616 tup= 3 B=454336 r=52 [2.7s]
+[16:33:23] [c49 f530873075] CTRL_atoms_medoid  agg=0.6528 tup=63 B=454336 r=52 [40.6s]
+[16:33:37] [c49 f530873075] CTRL_atoms_kpp     agg=0.6782 tup=64 B=454336 r=52 [14.1s]
+[16:33:40] [c49 f530873075] CTRL_atoms_random  agg=0.7060 tup=57 B=454336 r=52 [2.6s]
+[16:33:45] [c49 f530873075] CTRL_pca_affine    agg=0.7662 tup=63 B=454336 r=52 [5.3s]
+[16:33:48] [c49 f530873075] CTRL_random        agg=0.7245 tup=51 B=454336 r=52 [2.8s]
+[16:34:46] [c49 f530873075] ITER1              agg=0.6273 tup=46 B=474416 r=21 [55.9s]
+[16:34:46] [c49] corner done in 468.7s
+[16:34:51] [c50 4f5db85c2e] knn_proto        agg=0.7940 tup=47 B=475136
+[16:39:18] [c50 4f5db85c2e] ARM                agg=0.7153 tup=48 B=454336 r=52 [255.6s]
+[16:40:28] [c50 4f5db85c2e] ARM_KMEANS         agg=0.7269 tup=45 B=454336 r=52 [70.5s]
+[16:41:21] [c50 4f5db85c2e] ADD_ONLY           agg=0.7685 tup=41 B=408576 r=0 [52.9s]
+[16:41:24] [c50 4f5db85c2e] CTRL_mean          agg=0.2431 tup= 7 B=454336 r=52 [2.8s]
+[16:42:17] [c50 4f5db85c2e] CTRL_atoms_medoid  agg=0.7106 tup=46 B=454336 r=52 [52.7s]
+[16:42:36] [c50 4f5db85c2e] CTRL_atoms_kpp     agg=0.6829 tup=48 B=454336 r=52 [19.9s]
+[16:42:41] [c50 4f5db85c2e] CTRL_atoms_random  agg=0.7060 tup=43 B=454336 r=52 [4.2s]
+[16:42:49] [c50 4f5db85c2e] CTRL_pca_affine    agg=0.7222 tup=48 B=454336 r=52 [8.1s]
+[16:42:53] [c50 4f5db85c2e] CTRL_random        agg=0.8704 tup=42 B=454336 r=52 [4.5s]
+[16:44:03] [c50 4f5db85c2e] ITER1              agg=0.6898 tup=41 B=474416 r=21 [66.8s]
+[16:44:03] [c50] corner done in 556.7s
+[16:44:07] [c51 b2974f1be3] knn_proto        agg=0.8519 tup=59 B=475136
+[16:49:36] [c51 b2974f1be3] ARM                agg=0.8125 tup=53 B=454336 r=52 [315.7s]
+[16:50:33] [c51 b2974f1be3] ARM_KMEANS         agg=0.8148 tup=59 B=454336 r=52 [57.1s]
+[16:51:34] [c51 b2974f1be3] ADD_ONLY           agg=0.7523 tup=47 B=408576 r=0 [61.2s]
+[16:51:39] [c51 b2974f1be3] CTRL_mean          agg=0.1690 tup= 4 B=454336 r=52 [4.7s]
+[16:52:40] [c51 b2974f1be3] CTRL_atoms_medoid  agg=0.7616 tup=51 B=454336 r=52 [61.1s]
+[16:53:01] [c51 b2974f1be3] CTRL_atoms_kpp     agg=0.8264 tup=59 B=454336 r=52 [21.3s]
+[16:53:05] [c51 b2974f1be3] CTRL_atoms_random  agg=0.7870 tup=50 B=454336 r=52 [3.4s]
+[16:53:13] [c51 b2974f1be3] CTRL_pca_affine    agg=0.8380 tup=60 B=454336 r=52 [8.2s]
+[16:53:18] [c51 b2974f1be3] CTRL_random        agg=0.8657 tup=55 B=454336 r=52 [4.9s]
+[16:54:30] [c51 b2974f1be3] ITER1              agg=0.7755 tup=57 B=474416 r=21 [69.1s]
+[16:54:30] [c51] corner done in 627.3s
+[16:54:34] [c52 c99913863c] knn_proto        agg=0.8194 tup=54 B=475136
+[16:59:12] [c52 c99913863c] ARM                agg=0.8218 tup=55 B=454336 r=52 [262.8s]
+[16:59:47] [c52 c99913863c] ARM_KMEANS         agg=0.7986 tup=57 B=454336 r=52 [34.8s]
+[17:00:25] [c52 c99913863c] ADD_ONLY           agg=0.7986 tup=44 B=408576 r=0 [37.9s]
+[17:00:28] [c52 c99913863c] CTRL_mean          agg=0.4954 tup=10 B=454336 r=52 [3.2s]
+[17:01:11] [c52 c99913863c] CTRL_atoms_medoid  agg=0.8056 tup=55 B=454336 r=52 [42.4s]
+[17:01:25] [c52 c99913863c] CTRL_atoms_kpp     agg=0.8356 tup=52 B=454336 r=52 [14.0s]
+[17:01:27] [c52 c99913863c] CTRL_atoms_random  agg=0.8356 tup=49 B=454336 r=52 [2.7s]
+[17:01:32] [c52 c99913863c] CTRL_pca_affine    agg=0.8171 tup=58 B=454336 r=52 [4.8s]
+[17:01:35] [c52 c99913863c] CTRL_random        agg=0.6412 tup=52 B=454336 r=52 [2.8s]
+[17:02:14] [c52 c99913863c] ITER1              agg=0.7894 tup=34 B=474416 r=21 [37.4s]
+[17:02:14] [c52] corner done in 464.0s
+[17:02:17] [c53 510d301269] knn_proto        agg=0.8056 tup=51 B=475136
+[17:05:53] [c53 510d301269] ARM                agg=0.7639 tup=58 B=454336 r=52 [208.5s]
+[17:06:35] [c53 510d301269] ARM_KMEANS         agg=0.7963 tup=58 B=454336 r=52 [42.3s]
+[17:07:13] [c53 510d301269] ADD_ONLY           agg=0.7801 tup=44 B=408576 r=0 [38.0s]
+[17:07:16] [c53 510d301269] CTRL_mean          agg=0.4792 tup= 4 B=454336 r=52 [2.6s]
+[17:07:54] [c53 510d301269] CTRL_atoms_medoid  agg=0.7870 tup=55 B=454336 r=52 [38.1s]
+[17:08:06] [c53 510d301269] CTRL_atoms_kpp     agg=0.7824 tup=55 B=454336 r=52 [11.6s]
+[17:08:08] [c53 510d301269] CTRL_atoms_random  agg=0.7870 tup=54 B=454336 r=52 [2.3s]
+[17:08:13] [c53 510d301269] CTRL_pca_affine    agg=0.8056 tup=59 B=454336 r=52 [4.8s]
+[17:08:15] [c53 510d301269] CTRL_random        agg=0.5231 tup=40 B=454336 r=52 [2.6s]
+[17:08:55] [c53 510d301269] ITER1              agg=0.7523 tup=44 B=474416 r=21 [37.8s]
+[17:08:55] [c53] corner done in 400.9s
+[17:08:57] [c54 4faafc298f] knn_proto        agg=0.8819 tup=47 B=475136
+[17:12:15] [c54 4faafc298f] ARM                agg=0.8773 tup=50 B=454336 r=52 [190.8s]
+[17:12:53] [c54 4faafc298f] ARM_KMEANS         agg=0.8681 tup=50 B=454336 r=52 [38.0s]
+[17:13:31] [c54 4faafc298f] ADD_ONLY           agg=0.8681 tup=37 B=408576 r=0 [37.7s]
+[17:13:33] [c54 4faafc298f] CTRL_mean          agg=0.5231 tup=18 B=454336 r=52 [2.5s]
+[17:14:12] [c54 4faafc298f] CTRL_atoms_medoid  agg=0.8681 tup=46 B=454336 r=52 [38.4s]
+[17:14:26] [c54 4faafc298f] CTRL_atoms_kpp     agg=0.8542 tup=50 B=454336 r=52 [14.0s]
+[17:14:28] [c54 4faafc298f] CTRL_atoms_random  agg=0.8843 tup=48 B=454336 r=52 [2.4s]
+[17:14:33] [c54 4faafc298f] CTRL_pca_affine    agg=0.8773 tup=50 B=454336 r=52 [5.2s]
+[17:14:36] [c54 4faafc298f] CTRL_random        agg=0.7477 tup=42 B=454336 r=52 [2.8s]
+[17:15:16] [c54 4faafc298f] ITER1              agg=0.8681 tup=49 B=474416 r=21 [38.9s]
+[17:15:16] [c54] corner done in 381.5s
+[17:15:19] [c55 35cb98b3cb] knn_proto        agg=0.9491 tup=60 B=475136
+[17:18:15] [c55 35cb98b3cb] ARM                agg=0.9259 tup=62 B=454336 r=52 [168.6s]
+[17:18:48] [c55 35cb98b3cb] ARM_KMEANS         agg=0.9259 tup=62 B=454336 r=52 [33.0s]
+[17:19:19] [c55 35cb98b3cb] ADD_ONLY           agg=0.9097 tup=46 B=408576 r=0 [31.3s]
+[17:19:21] [c55 35cb98b3cb] CTRL_mean          agg=0.4375 tup=14 B=454336 r=52 [2.1s]
+[17:19:52] [c55 35cb98b3cb] CTRL_atoms_medoid  agg=0.9097 tup=56 B=454336 r=52 [30.6s]
+[17:20:03] [c55 35cb98b3cb] CTRL_atoms_kpp     agg=0.9051 tup=56 B=454336 r=52 [11.0s]
+[17:20:05] [c55 35cb98b3cb] CTRL_atoms_random  agg=0.9097 tup=57 B=454336 r=52 [2.1s]
+[17:20:10] [c55 35cb98b3cb] CTRL_pca_affine    agg=0.9352 tup=63 B=454336 r=52 [4.7s]
+[17:20:12] [c55 35cb98b3cb] CTRL_random        agg=0.7245 tup=30 B=454336 r=52 [2.4s]
+[17:21:04] [c55 35cb98b3cb] ITER1              agg=0.8611 tup=55 B=474416 r=21 [51.0s]
+[17:21:04] [c55] corner done in 347.9s
+[17:21:08] [c56 b3dc39bc3e] knn_proto        agg=0.8588 tup=54 B=475136
+[17:24:26] [c56 b3dc39bc3e] ARM                agg=0.8935 tup=47 B=454336 r=52 [187.5s]
+[17:25:01] [c56 b3dc39bc3e] ARM_KMEANS         agg=0.8935 tup=44 B=454336 r=52 [34.8s]
+[17:25:35] [c56 b3dc39bc3e] ADD_ONLY           agg=0.8750 tup=43 B=408576 r=0 [34.0s]
+[17:25:37] [c56 b3dc39bc3e] CTRL_mean          agg=0.5255 tup=12 B=454336 r=52 [2.5s]
+[17:26:11] [c56 b3dc39bc3e] CTRL_atoms_medoid  agg=0.8819 tup=43 B=454336 r=52 [34.1s]
+[17:26:23] [c56 b3dc39bc3e] CTRL_atoms_kpp     agg=0.9583 tup=56 B=454336 r=52 [11.5s]
+[17:26:25] [c56 b3dc39bc3e] CTRL_atoms_random  agg=0.9213 tup=48 B=454336 r=52 [2.2s]
+[17:26:30] [c56 b3dc39bc3e] CTRL_pca_affine    agg=0.9167 tup=47 B=454336 r=52 [4.8s]
+[17:26:33] [c56 b3dc39bc3e] CTRL_random        agg=0.8542 tup=54 B=454336 r=52 [2.9s]
+[17:27:08] [c56 b3dc39bc3e] ITER1              agg=0.9282 tup=47 B=474416 r=21 [33.4s]
+[17:27:08] [c56] corner done in 363.7s
+[17:27:10] [c57 6408d3575a] knn_proto        agg=0.8495 tup=60 B=475136
+[17:30:07] [c57 6408d3575a] ARM                agg=0.8542 tup=45 B=454336 r=52 [169.6s]
+[17:30:40] [c57 6408d3575a] ARM_KMEANS         agg=0.7986 tup=43 B=454336 r=52 [33.3s]
+[17:31:13] [c57 6408d3575a] ADD_ONLY           agg=0.7569 tup=37 B=408576 r=0 [32.3s]
+[17:31:15] [c57 6408d3575a] CTRL_mean          agg=0.2199 tup= 6 B=454336 r=52 [2.4s]
+[17:31:46] [c57 6408d3575a] CTRL_atoms_medoid  agg=0.7593 tup=50 B=454336 r=52 [30.9s]
+[17:31:56] [c57 6408d3575a] CTRL_atoms_kpp     agg=0.8403 tup=50 B=454336 r=52 [10.1s]
+[17:31:58] [c57 6408d3575a] CTRL_atoms_random  agg=0.7384 tup=45 B=454336 r=52 [1.8s]
+[17:32:02] [c57 6408d3575a] CTRL_pca_affine    agg=0.8819 tup=48 B=454336 r=52 [4.0s]
+[17:32:04] [c57 6408d3575a] CTRL_random        agg=0.7454 tup=48 B=454336 r=52 [2.3s]
+[17:32:34] [c57 6408d3575a] ITER1              agg=0.8333 tup=45 B=474416 r=21 [29.0s]
+[17:32:34] [c57] corner done in 326.5s
+[17:32:37] [c58 12b60adea1] knn_proto        agg=0.8333 tup=48 B=475136
+[17:35:06] [c58 12b60adea1] ARM                agg=0.8333 tup=48 B=454336 r=52 [144.1s]
+[17:35:36] [c58 12b60adea1] ARM_KMEANS         agg=0.8403 tup=48 B=454336 r=52 [29.9s]
+[17:36:07] [c58 12b60adea1] ADD_ONLY           agg=0.8287 tup=47 B=408576 r=0 [30.5s]
+[17:36:09] [c58 12b60adea1] CTRL_mean          agg=0.6528 tup=12 B=454336 r=52 [2.2s]
+[17:36:40] [c58 12b60adea1] CTRL_atoms_medoid  agg=0.8403 tup=47 B=454336 r=52 [30.9s]
+[17:36:50] [c58 12b60adea1] CTRL_atoms_kpp     agg=0.8333 tup=48 B=454336 r=52 [10.4s]
+[17:36:52] [c58 12b60adea1] CTRL_atoms_random  agg=0.8287 tup=49 B=454336 r=52 [2.1s]
+[17:36:57] [c58 12b60adea1] CTRL_pca_affine    agg=0.8449 tup=47 B=454336 r=52 [4.3s]
+[17:36:59] [c58 12b60adea1] CTRL_random        agg=0.7894 tup=26 B=454336 r=52 [2.3s]
+[17:37:30] [c58 12b60adea1] ITER1              agg=0.8194 tup=42 B=474416 r=21 [29.7s]
+[17:37:30] [c58] corner done in 295.5s
+[17:37:32] [c60 3d79e55777] knn_proto        agg=0.8125 tup=58 B=475136
+[17:40:05] [c60 3d79e55777] ARM                agg=0.8056 tup=61 B=454336 r=52 [146.7s]
+[17:40:34] [c60 3d79e55777] ARM_KMEANS         agg=0.8125 tup=58 B=454336 r=52 [28.9s]
+[17:41:02] [c60 3d79e55777] ADD_ONLY           agg=0.8079 tup=49 B=408576 r=0 [28.3s]
+[17:41:04] [c60 3d79e55777] CTRL_mean          agg=0.2431 tup=12 B=454336 r=52 [2.2s]
+[17:41:35] [c60 3d79e55777] CTRL_atoms_medoid  agg=0.7963 tup=55 B=454336 r=52 [30.5s]
+[17:41:44] [c60 3d79e55777] CTRL_atoms_kpp     agg=0.8588 tup=54 B=454336 r=52 [9.9s]
+[17:41:47] [c60 3d79e55777] CTRL_atoms_random  agg=0.8148 tup=61 B=454336 r=52 [2.2s]
+[17:41:51] [c60 3d79e55777] CTRL_pca_affine    agg=0.8009 tup=62 B=454336 r=52 [4.6s]
+[17:41:54] [c60 3d79e55777] CTRL_random        agg=0.7245 tup=37 B=454336 r=52 [2.4s]
+[17:42:24] [c60 3d79e55777] ITER1              agg=0.7500 tup=48 B=474416 r=21 [29.5s]
+[17:42:24] [c60] corner done in 294.3s
+[17:42:27] [c61 99c1ba3192] knn_proto        agg=0.8495 tup=58 B=475136
+[17:44:52] [c61 99c1ba3192] ARM                agg=0.7477 tup=35 B=454336 r=52 [139.9s]
+[17:45:26] [c61 99c1ba3192] ARM_KMEANS         agg=0.7639 tup=37 B=454336 r=52 [33.9s]
+[17:46:00] [c61 99c1ba3192] ADD_ONLY           agg=0.7778 tup=39 B=408576 r=0 [34.0s]
+[17:46:02] [c61 99c1ba3192] CTRL_mean          agg=0.3194 tup=14 B=454336 r=52 [2.3s]
+[17:46:38] [c61 99c1ba3192] CTRL_atoms_medoid  agg=0.7269 tup=39 B=454336 r=52 [35.7s]
+[17:46:50] [c61 99c1ba3192] CTRL_atoms_kpp     agg=0.7292 tup=38 B=454336 r=52 [11.9s]
+[17:46:52] [c61 99c1ba3192] CTRL_atoms_random  agg=0.7222 tup=33 B=454336 r=52 [2.3s]
+[17:46:57] [c61 99c1ba3192] CTRL_pca_affine    agg=0.7755 tup=39 B=454336 r=52 [4.6s]
+[17:47:00] [c61 99c1ba3192] CTRL_random        agg=0.7824 tup=33 B=454336 r=52 [2.7s]
+[17:47:48] [c61 99c1ba3192] ITER1              agg=0.7593 tup=40 B=474416 r=21 [47.0s]
+[17:47:48] [c61] corner done in 324.0s
+[17:47:48] r1 confirm done in 5484.0s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table/relaunch\runs\r1_ledger_c1.jsonl

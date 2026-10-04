@@ -1,0 +1,82 @@
+[     0.1s] chlu.__file__ = C:\chlu\worktrees\CHLU-w15-coverage-control\chlu\__init__.py
+[     0.1s] seed=1 K=32 cache gen 2 scope full
+[    28.5s] val k=3: 6 cells (18000 rows), 60 corners, train 162000
+[    35.1s] val k=6: 60 cells (1440 rows), 60 corners, train 277920
+[    35.6s] pool recompute == w12 test pool: {'3': True, '6': True}
+[    36.3s]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[    72.1s] FastJudge positive control: True
+[   147.0s]   store K=32 A=63 built in 74.9s  wells 64..64  RANK/WIDTH 0.9688..0.9844
+[  6637.6s]   address book K=32 fitted in 6490.2s
+[  6672.3s]   A_store_pool3_est3                           novel 23.0500 judge_acc 0.9604 (35s)
+[  6702.9s]   A_store_pool3_est3__landscape_removed        novel 0.0000 judge_acc 0.0000 (31s)
+[  6734.9s]   A_store_pool3_est3__landscape_shuffled       novel 0.0000 judge_acc 0.0000 (32s)
+[  6770.9s]   A_store_pool3_est3__random_atoms             novel 0.0000 judge_acc 0.0000 (36s)
+[  6807.3s]   C_store_pool3_est6                           novel 23.0500 judge_acc 0.9604 (36s)
+[  6842.9s]   C_store_pool3_est6__landscape_removed        novel 0.0000 judge_acc 0.0000 (36s)
+[  6879.7s]   C_store_pool3_est6__landscape_shuffled       novel 0.0000 judge_acc 0.0000 (37s)
+[  6915.4s]   C_store_pool3_est6__random_atoms             novel 0.0000 judge_acc 0.0000 (36s)
+[  6969.8s]     matched width=254: 536972 params vs target 536434 (+0.10%)
+[  7029.8s]       epoch 10/20: train mse 0.01784
+[  7077.6s]       epoch 20/20: train mse 0.01460
+[  7077.6s]     learned_1x_pool3: width 254, 536972 params (0.10% of target), fitted in 93.0s
+[  7106.3s]   A_learned1x_pool3_est3                       novel 21.8000 judge_acc 0.9083 (29s)
+[  7136.0s]   C_learned1x_pool3_est6                       novel 21.8000 judge_acc 0.9083 (30s)
+[  7226.9s]   store K=32 A=63 built in 79.8s  wells 64..64  RANK/WIDTH 0.9688..0.9844
+[ 12769.0s]   address book K=32 fitted in 5541.6s
+[ 12804.4s]   D_store_pool6_est3                           novel 23.6167 judge_acc 0.9840 (35s)
+[ 12837.8s]   D_store_pool6_est3__landscape_removed        novel 0.0000 judge_acc 0.0000 (33s)
+[ 12871.0s]   D_store_pool6_est3__landscape_shuffled       novel 0.0000 judge_acc 0.0000 (33s)
+[ 12907.7s]   D_store_pool6_est3__random_atoms             novel 0.0000 judge_acc 0.0000 (37s)
+[ 12947.3s]   B_store_pool6_est6                           novel 23.6167 judge_acc 0.9840 (40s)
+[ 12987.1s]   B_store_pool6_est6__landscape_removed        novel 0.0000 judge_acc 0.0000 (40s)
+[ 13029.2s]   B_store_pool6_est6__landscape_shuffled       novel 0.0000 judge_acc 0.0000 (42s)
+[ 13071.8s]   B_store_pool6_est6__random_atoms             novel 0.0000 judge_acc 0.0000 (42s)
+[ 13073.5s]     matched width=254: 536972 params vs target 537084 (-0.02%)
+[ 13201.6s]       epoch 10/20: train mse 0.01831
+[ 13267.6s]       epoch 20/20: train mse 0.01535
+[ 13267.7s]     learned_1x_pool6: width 254, 536972 params (-0.02% of target), fitted in 148.0s
+[ 13305.2s]   D_learned1x_pool6_est3                       novel 22.7167 judge_acc 0.9465 (38s)
+[ 13343.9s]   B_learned1x_pool6_est6                       novel 22.7167 judge_acc 0.9465 (39s)
+[ 13343.9s] leg done -> C:\chlu\outputs\w15-coverage-control\val\seed1_K32 failed=[]

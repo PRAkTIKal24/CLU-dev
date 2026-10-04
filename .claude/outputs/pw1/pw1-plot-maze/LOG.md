@@ -1,0 +1,6 @@
+# pw1-plot-maze LOG
+- 10:56Z START. Read COMMON.md, plot-maze.md, PLAN.md (items 1, 8, 14-17 in full). dataviz skill loaded (static matplotlib; palette = pipeline's own, shared palettes not mine to edit).
+- Survey: base n-CLU per-item file covers seeds 0-2 only; ~/clu/stage/w19-persist holds BOTH_seed0..2 only -> base n-CLU seeds 3-5 have NO persisted objects: gap, printed in FINDINGS (no re-extraction, zero runs). n-CLU-REL per-item covers seeds 0-5.
+- 11:05Z code: fig_maze_conditions rewritten (item 1), cmazet_panels (item 16: no footer paragraph, names, door rows by rule, overlap/clip/vocab checks), cmazet_door_search.py new, tools/build_maze_only.py new; retired fig_maze_rel_tuples dispatch + fig_cmazet_deletion (status retired). Building twice.
+- 11:09Z two builds byte-identical (SHA256-build1/2.txt); staged-object hash gate 132/132 + 96/96 + 96/96 ALL MATCH; pure-read score gate 48 + 132 arms float==; ambiguity pixels+strip 0 (file identical to committed); full build.sh in scratch: exit 0, BYTE-IDENTICAL, my 5 figures cmp-equal to build/a. CAPTIONS.tex, TEXT-INSERTS.tex, CEILING-ROWS.md written. Choices logged in FINDINGS 'Decisions'.
+- 11:11Z committed 2b1791e, bundle created and verified; FINDINGS.md written. Done.

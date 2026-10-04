@@ -1,0 +1,23 @@
+gauged TEST days/basin = 3652   gauged TRAIN days = 3288
+Li PUB TEST days/basin = 1461       Li PUB TRAIN days = 6939
+period factor on eval = 0.4001
+
+INHERITED (Aug-13 gauged sweep, same machine):
+  regional wall = 6502 s, phase2 wall = 1045 s, TOTAL = 7547 s = 2.10 h
+  store-build time (sum of 'built N stores in Xs') = 801 s
+  eval time (remainder) = 6746 s
+
+PUB PROJECTION (10-fold, Li protocol), same arm grid:
+  same test period : 14756 s = 4.10 h  -> factor 1.96x
+  Li test period   : 10709 s = 2.97 h  -> factor 1.42x
+
+MEASURED fit (L=2761,W=30,D=177,531 basins): t = -0.70 + 0.02196 * n_testdays   (R2=1.00000)
+  per (L-unit x test-day x 531 basins): 7.9537 us
+
+PROJECTION (V100-h, from Li et al. 2025 published timings 5 h LSTM / 21 h dHBV):
+  10 folds x 3 seeds x 5 arms =  150 trainings ->    750 V100-h (LSTM 5h)  | period-adj x1.14 ->    855 V100-h
+  10 folds x 3 seeds x 1 arms =   30 trainings ->    150 V100-h (LSTM 5h)  | period-adj x1.14 ->    171 V100-h
+  10 folds x 5 seeds x 5 arms =  250 trainings ->   1250 V100-h (LSTM 5h)  | period-adj x1.14 ->   1425 V100-h
+  12 folds x 10 seeds x 5 arms =  600 trainings ->   3000 V100-h (LSTM 5h)  | period-adj x1.14 ->   3420 V100-h
+  Li's own published PUB row: 210 trainings = 120x5 + 90x21 = 2490 V100-h
+  tri-forcing ensemble parity (x3 forcings on our 5 arms): 450 trainings -> 2250 V100-h

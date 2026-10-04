@@ -1,0 +1,775 @@
+ 000 EXACTLY DELETABLE COMPOSITIONAL GENERATION
+ 001
+ 002 ONAFROZENENCODER
+ 003
+ 004
+ 005 Anonymousauthors
+ 006 Paper under double-blind review
+ 007
+ 008
+ 009 ABSTRACT
+ 010
+ 011 Aworldmodeltrusted with requests it has never seen needs three things at once:
+ 012 its outputs are valid under an exact judge, it composes held-out combinations of
+ 013 factors from factors it has seen, and it can forget specific training rows exactly.
+ 014 Compositional generation is extensively studied and exact unlearning established;
+ 015 their intersection, however, is empty: a mechanical screen of approximately 4,050
+ 016 works finds no generative model that deletes training rows exactly. We therefore
+ 017 study the simplest object with all three properties, the Naive CLU: a label-free
+ 018 store of per-well principal subspaces, computed on the latents of a frozen encoder,
+ 019 read through a request-indexed address book and rendered by a frozen decoder; its
+ content is derived from a retained sufficient statistic. Because deletion downdates
+ 020 the statistic rather than the truncated factors, the store after deletion equals the
+ 021 store fitted without the deleted rows. On a Shapes3D value hold-out, with the par-
+ 022 tition selected on validation (K⋆ = 32 wells), the store composes held-out pairs
+ 023 at 32.350 ± 0.815 and held-out six-factor corners at 67.177 ± 1.320 distinct valid
+ 024 novel tuples per corner over three seeds. It beats every read-path-matched learned
+ 025 rival on 109 of 109 corners on every seed, and all four landscape controls collapse
+ 026 to exactly 0.0000. Deletion is exact and store-scoped, but it is not free: across the
+ 027 three seeds, the object that forgets is 4.0768 to 4.0897 times the 524,288-byte ref-
+ 028 erence in its four-part ledger. We show that on this object deletion changes what
+ 029 the store holds but not what it answers. On a colour maze with an exact integer
+ −16 −16
+ 030 judge, deletion transfers (relative residual 7.522 × 10 to 8.826 × 10 , pro-
+ jector residual 0.000), whereas composition does not transfer through the store:
+ 031 moving the composition verb from latent space to plan space lifts held-out va-
+ 032 lidity by +0.4422 to +0.5354, but it lifts a matched-bytes lookup floor further,
+ 033 which places the composition operator in the interface. We conclude with what
+ 034 the naive unit cannot do and with the one measured clue toward a dynamical suc-
+ 035 cessor: the store is exactly the zero-dynamics limit of a settling unit, its zero-step
+ 036 armbit-identical to the static read.
+ 037
+ 038 1 INTRODUCTION: POSITIONING, AND WHY THE INTERSECTION MATTERS
+ 039
+ 040 1.1 POSITIONING: COMPOSITIONAL GENERATION IS CROWDED; WITH EXACT DELETION IT
+ 041 IS EMPTY
+ 042
+ 043 Generating held-out combinations of factors is a long-standing and active problem. The multilin-
+ 044 ear line (Tenenbaum and Freeman, 2000; TensorFaces, Vasilescu and Terzopoulos, 2002; Vlasic et
+ 045 al., 2005; MLC-VAE, 2020) factorises a data tensor indexed by every label combination and ren-
+ 046 ders linearly. The frozen-generator line (GANSpace, 2020; TCA, 2021; PandA, 2023, and its 2024
+ 047 journal version) identifies editable directions in a pretrained generator, without labels and without
+ 048 an address book. We claim neither half. Specifically, we do not claim multilinear or bilinear fac-
+ 049 tored generation, a request-indexed tensor head, tensor-product label conditioning, or the downdate
+ 050 primitive; the latter follows in one line from the summation form of Cao and Yang (2015), since a
+ 051 covariance is a summation.
+ 052 Exact unlearning is likewise established: for k-means (Ginart et al., 2019), for bilinear matrix com-
+ 053 pletion, and for ridge heads on frozen backbones, where the most recent work explicitly restricts
+ itself to ridge regression and excludes principal-component, eigendecomposition and generative
+ 1
+ 054 models. The closest generative attempts are approximate. Feature unlearning for pretrained GANs
+ 055 and VAEs unlearns a feature rather than rows and fine-tunes the generator; data redaction from pre-
+ 056 trained GANs is stated to be a task different from deletion; and GAN unlearning by substitution is
+ 057 approximate by construction.
+ 058 However, on a systematic screen the intersection of the two literatures is empty. A forward-citation
+ 059 crawl over every title and abstract citing the canonical works of either side screened approximately
+ 060 4,050 unique works: 3,038 citing the generation-side anchors, 759 citing the deletion-side anchors,
+ 061 254 from 21 orthogonal queries that cite neither, and about 100 from a final targeted sweep. Of the
+ 062 3,038 generation-side works, deletion language appears in 10 (0.3%), seven of them false positives
+ 063 and none exact; no work among the 3,038 combines frozen-decoder, tensor-head and label-index
+ 064 language (0 of 3,038); no single work reaches more than 4 of the 6 claim atoms; and none of
+ 065 the 759 deletion-side works combines principal-subspace, generative and frozen-model language.
+ 066 Theorthogonal query that poses the question directly, compositional ∧ generative ∧ exact deletion,
+ 067 returns zero works. We therefore state the position only in the form that the screen supports: the
+ 068 intersection of compositional generation with exact deletion is empty in the works we could screen.
+ 069 The residual risk is real, and §5 states it: abstract-level screening cannot see a match buried in a
+ 070 method section, and the indexing of preprints younger than about three months is incomplete.
+ 071 One distinction within this intersection is ours and merits a sentence. The decremental-PCA line
+ 072 (Hall, Marshall and Martin, 2002, and successors) subtracts deflated eigenspaces; its authors de-
+ 073 scribe the result as an approximation to the refit, report that the subtraction tends to instability, and
+ 074 give no rigorous error analysis. Our route is exact for the opposite reason: downdate the statistic,
+ 075 not the truncated factors. We downdate the full, untruncated second-moment statistic by subtraction
+ 076 and re-eigendecompose the content afterwards, so truncation error never enters the subtraction.
+ 077
+ 078 1.2 WHYTHEINTERSECTION MATTERS: WORLD MODELS NEED ALL THREE AT ONCE
+ 079
+ 080 Aworldmodelisusefultothe extent that it can be queried for states and transitions it has not seen,
+ 081 and its answers trusted. We name three properties and use them throughout:
+ 082 • Rulevalidity: an output is valid if an exact judge, integer arithmetic with no tolerance, accepts it;
+ 083 approximate similarity to a training item does not count.
+ 084 • Composition: the model produces valid outputs for held-out combinations of factor values that it
+ 085 has seen only separately.
+ 086 • Exactdeletion: after a set of training rows is deleted, the deletable object equals, to floating-point
+ 087 roundoff, the object fitted without those rows.
+ 088 The three properties, however, pull against each other: a lookup table deletes exactly but composes
+ 089 nothingithasnotstored;alearnedgeneratorcomposesbutcandeleteonlybyretraining;andapprox-
+ 090 imate unlearning misses the exact answer in either direction (§3.4). The object we study therefore
+ 091 makes the three properties properties of one store, and we measure, row by row, where each holds
+ 092 and where it does not.
+ 093
+ 094 1.3 WHATWESHOW,ANDATWHATTHICKNESS
+ 095
+ 096 Wesummarisethecontributions below, each at the thickness of its evidence.
+ 097
+ 098 1. Composition at a stated partition, against read-path-matched rivals. On a Shapes3D value hold-
+ 099 out at K⋆ = 32 wells and three scored seeds, the store beats every learned rival matched on
+ 100 read-path parameters, on both composition rows and on 109 of 109 corners per seed, while every
+ 101 charter control collapses (§3.1). The same holds on every rung of an n-way ladder (§3.2), read
+ 102 with the inference note that, for n ≥ 3, the rungs form a training-data axis and not a depth axis.
+ 103 2. Exact, store-scoped deletion, with its cost and its bound printed. Value, conjunction and item
+ 104 deletion are light and data-free for the store and cost the rivals a full retrain. The four-part byte
+ 105 ledger is printed beside every row, and a probe exposes the limit of the claim: at K⋆ the store
+ 106 forgets the deleted value but the object still answers it, because the value identity resides in
+ 107 the address book (§3.3). Refusal after deletion is a separate, structural mechanism: a hole in a
+ coupling table (§3.5).
+ 2
+ 108 3. The same properties on a maze, where only deletion transfers through the store. Deletion trans-
+ 109 fers exactly. Composition on routes is recovered by a plan-space verb, which we report as an
+ 110 interface result because it lifts a matched-bytes lookup floor more than it lifts the store (§4).
+ 111 4. Two ablations and a leaving note. A composition-only store composes but cannot forget, while
+ 112 an item store forgets but cannot compose (§3.6). The limitations of the naive unit, its measured
+ 113 zero-dynamics identity and the theory we carry close the paper (§5–§6).
+ 114
+ 115 Thickness, stated in the introduction. The positive composition claim rests on a single environment
+ 116 (Shapes3D) at three scored seeds. No row in this study can exceed three seeds: seeds 3 and 4 have
+ 117 verified caches but neither a frozen decoder nor an external classifier, so none of their corners can
+ 118 be judged. The one environment with an exact route judge and three scored seeds returns a negative
+ 119 for the store and a positive for the interface. Several rows await a later wave; each is a marked
+ 120 placeholder whose text names the row and states that it may land as a negative.
+ 121
+ 122 2 THE OBJECT, THE JUDGE AND THE LEDGER
+ 123
+ 124 Aclaimaboutanyofthethreeproperties is only as precise as the definitions of the object, its judge
+ 125 and its byte ledger; we therefore fix these here, before any result.
+ 126
+ 127 The store. Afrozen encoder maps each training item to a latent. The latent space is partitioned
+ 128 without labels into K wells by a balanced correlation partition, and in each well the store keeps the
+ 129 leading principal subspace of the fit pool, with the pool mean as the first atom. No label enters the
+ 130 content. We write n for the number of factors a request composes jointly and K for the number of
+ 131 wells, and never write either as k.
+ 132 The read. Arequest is a tuple of factor values. A tensor-product address book, fitted on the fit
+ 133 pool, maps the request to per-well coefficients; the read renders x = U c in each well’s or-
+ 134 k k k
+ thonormal basis and the frozen decoder renders the image. The read is request-only: no feature
+ 135 tensor enters it, as asserted on the deployed object (bitwise stable under feature perturbation over
+ 136 64 checks at K⋆). Labels thus touch the model only at the address book: this is the interface split
+ 137 of unsupervised content, a request-indexed head and a frozen renderer, with no Cartesian-product
+ 138 training requirement.
+ 139
+ 140 Theretainedstatisticandexactdeletion. Besidethecontent,thestorekeepsperwelltherunning
+ 141 covariance, mean and count of the fit rows. A deletion proceeds in three steps:
+ 142 • the contribution of the deleted rows is subtracted from the statistic;
+ 143 • the atoms are re-eigendecomposed from the downdated statistic;
+ 144 • the address book is carried across the basis change by a closed-form rotation formed at delete
+ 145 time.
+ 146 Norowofdataisread. Weuseonedefinition of exactness throughout, scoped before any table:
+ 147
+ 148 EXACT IS STORE-SCOPED. After deleting a set of rows, the store content equals, to float
+ 149 roundoff, the content fitted from the retained rows alone, holding the frozen encoder and
+ 150 decoder fixed. Neither is refit at any point. It is not retrain-equivalence of the generative
+ 151 modelanditis not a claim that the renderer forgets.
+ 152 Wedeclare the frozen encoder and decoder outside the deletable object. The choice is forced: the
+ 153 frozen autoencoder’s own training set contains evaluation-bank items (543 / 529 / 552 on the three
+ 154 mazeseeds),soweightsfittedwiththedeletedrowspresentareuntouchedbyanydeletion. Wecarry
+ 155 the scopingsentenceourdeletiontheorystatesforitsownstore: theguaranteeisstore-levelonly; the
+ 156 frozenencoderandanyresidueofpastwritesinalearnedlandscapeareseparatechannels,measured
+ 157 separately; and we do not claim certified (ε,δ) unlearning. We keep two senses of “exact” apart:
+ 158 an exact judge is integer arithmetic with no tolerance; exact deletion is the store-scoped definition
+ 159 above.
+ 160
+ 161 The four-part ledger, never netted. Every store row prints four byte counts separately: (1) the
+ atoms, (2) the covariance and count statistic, (3) the address book, and (4) the coupling and hole
+ 3
+ 162 table used for refusal. We never net them into a single number, and every byte figure names its
+ 163 convention (symmetric-triangle float64 for the statistic, unless marked otherwise). The 524,288-
+ 164 byte figure recurring below is a reference column: the store of the earlier composition-only design
+ 165 was pinned there, and read-path-matched rivals carry about 131,072 float32 parameters at it. It is
+ 166 not a budget that the deletable object meets.
+ 167
+ 168 Rivals: naive against naive. Learned rivals (MLP, LSTM, transformer, and a continuous-input
+ 169 MLP) are fitted from the same frozen features and matched to the read path of the store. At K⋆
+ 170 the fitted rivals carry 130,433 to 131,891 parameters. The ledger is memory, not a read-path pa-
+ 171 rameter: it is printed, never matched. A lookup table of written items is a printed floor, never
+ 172 a rival. Before any row is claimed for the store, the charter controls (landscape removed,
+ 173 landscape shuffled, landscape shuffled across wells, random atoms) must
+ 174 collapse; if they do not, the row is an interface row or nothing.
+ 175 The judge and the estimand. OnShapes3D an external classifier, hash-pinned per seed, judges
+ 176 each rendered image. The metric is a count, the number of distinct valid novel factor tuples per
+ 177 corner, with ceilings of 36 (pair corners) and 72 (six-factor corners). The estimand is paired over
+ 178 corners, with a margin of 1.0 tuple per corner declared before any number. Seed count is a column
+ 179 of every table.
+ 180
+ 181 3 THE NAIVE CLU ON SHAPES3D: THE SINGLE DESIGN AT K⋆
+ 182
+ 183 This section measures the three properties on Shapes3D. The deletable object is the single design:
+ 184 the store, read and ledger of §2 on the Shapes3D value hold-out, with the partition fixed on vali-
+ 185 dation by a rule frozen before the sweep, K⋆ = max{K : v(5) − mean v(K) ≤ 0.02}, over
+ 186 seeds
+ K∈{5,8,10,12,16,20,24,28,32}. Every swept K satisfied the rule; hence K⋆ = 32, the finest
+ 187 partition swept, and the sweep range was not extended to manufacture a crossover. The main text
+ 188 carries this one K. The K = 5 endpoint of the sweep is reported in Appendix C, labelled as the
+ 189 endpoint, with its sign stated as a property of K = 5.
+ 190
+ 191 3.1 COMPOSITION AT K⋆: ROWS 3 AND 4, THREE SCORED SEEDS
+ 192
+ 193 Table 1 reports the scored result. Row 3 holds out 60 pair corners and row 4 holds out 49 six-factor
+ 194 corners; we compare the arm with each rival on all 109 corners, with the corner as the unit. The
+ 195 control gate is checked before any margin, and it was measured, not assumed, on every seed: all
+ 196 four landscape controls read exactly 0.0000 on both rows on all three legs. On every leg, every rival
+ 197 is beaten beyond the declared 1.0 margin on 109 of 109 corners; the smallest paired delta against
+ any comparator on any K⋆ leg is +39.266, against the table floor on seed 0. The seed-0 row, scored
+ 198 first, lies inside the three-seed spread on both rows.
+ 199
+ 200 Therivals are matched on the read path (130,433 to 131,891 parameters). The deletable object itself
+ 201 is larger, and its four-part ledger (Table 2) is memory, not a matched quantity. Appendix B gives the
+ 202 rival pins, the geometry and the stress comparison.
+ 203
+ 204 3.2 THEn-WAYLADDERATK⋆,WITHITSINFERENCENOTE
+ 205 The ladder tests whether the store keeps composing as more factors are pinned jointly. A rung n
+ 206 holds out corners in which n factors are jointly pinned to held-out values, with n = 2 and n = 6 as
+ 207 the two ends. Table 3 reports the store at K⋆ on every rung and seed, beside the read-path-matched
+ 208 rivals on the same corners. Because the rivals’ features are a function of the request alone and not of
+ 209 the rung’s fit pool, their scores do not depend on K; on rungs n ≥ 3 they are exactly constant by con-
+ 210 struction. At K⋆ the store’s control gate collapses on all 15 legs by the pre-declared 1.0 margin: 13
+ 211 of 15 read exactly 0.0000, and two (n = 3, seeds 0 and 1) read 0.0083 on landscape shuffled,
+ 212 one surviving novel tuple over 120 corners, which we print rather than round away.
+ 213
+ 214 The inference note, verbatim in substance. Webeat the naive fair rivals at every n; the store’s
+ 215 own rise from 2-way to 6-way is not to be inferred, because rungs 3–6 probe the same corners
+ and differ in fit-pool coverage, not composition depth. Concretely, rungs n = 3,4,5,6 probe the
+ 4
+ 216
+ 217 Table 1: Composition at K⋆ = 32, Shapes3D value hold-out, TEST, n = 3 seeds (0, 1, 2).
+ 218 Distinct valid novel tuples per corner (ceiling 36 on row 3, 72 on row 4), per seed. Rivals are
+ 219 matched on read-path parameters (about 131k); the table is a floor, never a rival. “Paired ∆” is the
+ 220 armminusthecomparatoroverall109corners(CI95lowerboundinthesource);everycomparatoris
+ 221 beaten on 109/109 corners on every seed. The refit postfix rows re-fit the two token families
+ 222 from scratch inside the scoring process after a dtype repair; seed 0 predates them and is a declared
+ 223 not-run for those two rows.
+ arm/comparator seeds row3(60paircorners) row4(49six-factor corners) paired ∆, all 109 corners
+ 224 single design, K⋆ = 32 3 31.6000 / 32.2333 / 33.2167 66.9592 / 65.9796 / 68.5918 —
+ 225 mean±sd 3 32.350 ± 0.815 67.177 ± 1.320
+ 226 MLP(astrained) 3 2.9333 / 3.4333 / 5.2667 7.9592 / 3.0000 / 11.7347 +42.303 / +44.165 / +40.945
+ LSTM(astrained) 3 2.5000 / 2.7000 / 4.9167 7.5306 / 7.0000 / 14.8980 +42.734 / +42.771 / +39.716
+ 227 transformer (as trained) 3 0.6667 / 0.6667 / 1.7167 1.9184 / 0.6327 / 4.7347 +46.266 / +46.752 / +46.046
+ 228 continuous MLP (as trained) 3 0.0000 / 0.0000 / 0.0167 0.0612 / 0.0612 / 0.1020 +47.468 / +47.376 / +49.064
+ transformer (refit post-fix) 2 n/r / 0.3000 / 1.7333 n/r / 1.1429 / 3.1633 n/r / +46.725 / +46.743
+ 229 LSTM(refit post-fix) 2 n/r / 3.0833 / 4.3667 n/r / 5.0204 / 8.0612 n/r / +43.450 / +43.092
+ table (floor) 3 5.8333 / 3.4833 / 6.1833 11.1633 / 7.0204 / 14.1224 +39.266 / +42.330 / +39.367
+ 230 four landscape controls 3 0.0000 (all) 0.0000 (all) +47.495 / +47.404 / +49.119
+ 231 LACE,PoE 3 [PLACEHOLDER:w15lace-poe-rows:LACEandPoEattheirownbudgets;maybeatthestore]
+ 232
+ 233
+ 234 Table 2: The four-part ledger of the K⋆ = 32 object, per seed, never netted. Covariance priced
+ 235 on the symmetric-triangle float64 convention. Parts 1, 2 and 4 are arithmetic on the partition shape
+ 236 and are constant across seeds; only the address book varies. The 524,288-byte figure is a reference
+ 237 column, not a budget the object met.
+ 238 part (bytes) seed 0 seed 1 seed 2
+ 239 1. atoms 516,096 516,096 516,096
+ 240 2. covariance + count 560,608 560,608 560,608
+ 241 3. address book 1,060,864 1,054,104 1,058,264
+ 242 4. coupling / hole table 6,610 6,610 6,610
+ honest four-part total 2,144,178 2,137,418 2,141,578
+ 243 ×the524,288Breference 4.0897 4.0768 4.0847
+ 244
+ 245
+ 246 identical 120 corners (the same 8,640 rows). What varies is how coarsely the hold-out is carved
+ 247 and, with it, the held-out row count (300,000 / 235,200 / 213,600 / 200,640). Every arm fitted on
+ 248 the rung’s own pool tracks that count at r = −0.96 to −0.98, and every arm not fitted on it is
+ 249 exactly constant. Only n = 2 against n = 6 is a genuine change of probe (60 corners of 36 rows
+ 250 against 120 of 72, disjoint sets). On every rung and every seed, the store’s score in Table 3 exceeds
+ 251 every rival’s printed score. The paired estimand with a bootstrap interval against the read-path rivals
+ 252 has been computed at the K = 5 endpoint (margins +7.0833 to +9.6500 at n = 2, +14.9917
+ to +22.4250 at n = 6, Appendix C), but not on the K⋆ legs. [TODO: no artefact for the paired
+ 253 K⋆ladder margin (with CI) against the read-path-matched rivals; the K⋆ replication pairs the store
+ 254 only against the 1× opponent of Appendix D.] Two caveats accompany the rival rows: the ladder’s
+ 255 rival transformer and rival lstm columns are the earlier rival set’s pre-repair numbers
+ 256 and were not re-fitted on the ladder’s rungs; and nothing in this table is a composition-depth result.
+ 257
+ 258 Thecoveragecontrol. Adirecttest of the inference note refits n = 6 with the fit pool restricted to
+ 259 the train index of n = 3, holding depth at 6 and coverage at that of n = 3. [PLACEHOLDER: w15
+ 260 coverage-control(onescoredrun): then = 6storescoreatK⋆ withthe fit pool restricted to
+ 261 n=3’strainindex, 3 seeds, beside the n = 6 and n = 3 rows of Table 3. It may land showing that
+ 262 the 2-way→6-wayriseisacoverageeffect,thatitisnot,orneither; theladdertableanditsinference
+ 263 note stand unchanged in every case.]
+ 264
+ 265 3.3 EXACT DELETION ON THE SINGLE DESIGN: VALUE, CONJUNCTION, ITEM
+ 266
+ 267 Werunthree deletions on the K⋆ object on TEST. Value: every fit row carrying red. Conjunction:
+ 268 every fit row carrying red and sphere, which we call the red sphere everywhere; the conjunction
+ 269 the task first named, red ∧ cube, deletes zero rows, because cube is the shape held out of the split
+ entirely, and it is printed as vacuous, never as a deletion result. Item: a random 1% of fit rows.
+ 5
+ 270
+ 271 Table3: TheladderatK⋆ = 32,n = 3seeds,distinctvalidnoveltuplespercorner,perseed(0/
+ 272 1/2). Store rows from the K⋆ replication (a free replication, no scored budget; every row held out).
+ 273 Rival rows are the read-path-matched rivals scored on the same corners; a rival does not depend on
+ 274 K. n = 2: 60 corners; n ≥ 3: the identical 120 corners (see the inference note). Inference note: for
+ 275 n≥3therungsdifferinfit-pool coverage, not in composition depth.
+ 276 arm n=2 n=3 n=4 n=5 n=6
+ store, K⋆ 31.800 / 32.500 / 33.633 60.150 / 62.783 / 61.908 65.242 / 65.817 / 67.200 65.642 / 66.817 / 67.283 65.908 / 66.250 / 67.650
+ 277 3-seed mean 32.644 61.614 66.086 66.581 66.603
+ 278 MLP 17.0167 / 22.0000 / 23.3333 35.2083 / 41.5667 / 49.7500 (identical on n = 3–6)
+ LSTM 19.4167 / 19.3333 / 23.7500 44.4333 / 39.4000 / 46.6750 (identical)
+ 279 transformer 12.7500 / 15.7833 / 24.2500 28.8000 / 33.9000 / 51.9917 (identical)
+ 280 continuous MLP 3.8833 / 4.5667 / 6.5333 6.3333 / 9.1167 / 12.6667 (identical)
+ table (floor) 5.8333 / 3.4833 / 6.1833 8.4333 / 7.9167 / 12.2333 (identical)
+ 281
+ 282
+ PLACEHOLDER · w≤14 evidence · wave 18 regenerates
+ 283
+ (a) Composition vs n, K* = 32 (b) Margin vs learned 1×
+ 284 80
+ 285 ner ner)17.5
+ 70
+ 286 15.0
+ 60
+ 287 12.5
+ 288 50
+ 10.0
+ 289 40
+ 7.5
+ 290 30
+ 291 5.0
+ 20
+ 292 2.5
+ declared +1.0
+ 10 U − opponent (tuples / cor
+ 293
+ distinct valid novel tuples / cor CL 0.0
+ 294 0
+ 2 3 4 5 6 2 3 4 5 6
+ 295
+ n, factors jointly composed n, factors jointly composed
+ 296 (n ≥ 3: the same 120 corners)
+ 297
+ CLU MLP (524,288 B) Transformer (524,288 B) Lookup table (floor)
+ 298 Learned 1× (four-part total) LSTM (524,288 B) Continuous MLP (524,288 B) per-corner ceiling
+ 299
+ 300 Figure 1: The ladder at K⋆ (placeholder figure; wave 18 regenerates). (a) Score against n
+ 301 per arm, 3 seeds, with the read-path rivals and the table floor. (b) Margin of the store over a learner
+ 302 matchedtotheobject’sownfour-parttotal,i.e.thestresscomparisonofAppendixD,not thepaper’s
+ 303 read-path matching rule. For n ≥ 3 the horizontal axis is a training-data axis, not a depth axis.
+ 304
+ 305 Table 4 gives each deletion with its cost. Post-deletion adaptation of the store is light and data-free:
+ 306 the covariance and count are downdated by subtraction, the atoms are re-eigendecomposed from the
+ 307 downdatedstatistic and the address book is carried across the basis change, with no row of data read.
+ 308 Thereference, in contrast, can delete only by refitting from scratch without the deleted rows.
+ 309 Eachrowrewrites2,081,024bytesofthestoreandaddressbook,reads0datarowsandrefitsnothing,
+ 310 whereas the reference reads 120,028 to 131,072 rows. On every scope the ranks of the downdated
+ 311 and refit stores agree, and the basis did move (cos well below 1). [PLACEHOLDER: w15
+ 312 min
+ 313 single-design-seeds (single-design scored runs 2/3 and 3/3): the value, red-sphere
+ and1%itemdeletionrowsofTable4atseeds1and2,withtheretrain-withoutrivalcost,sothatthe
+ 314 table prints n = 3. Any of them may land as a negative: exactness above floating-point roundoff, a
+ 315 survivor composition change beyond the declared margin, or a refused leg; Table 4 then prints it as
+ 316 such.]
+ 317
+ 318 The probe that bounds the claim. The store-scoping of exactness is measurable, not only defi-
+ 319 nitional. Deleting all 11,044 red rows leaves the 20 red-requesting corners at 32.2500 novel valid
+ 320 tuples per corner before and after, and judge accuracy at 0.8958 before and after. The store itself
+ 321 has changed. Without the address-book carry, the read moves by 0.610083 relative RMS on the 720
+ 322 red-requesting requests, but also by 0.614277 on the 4,968 requests that do not ask for red; the basis
+ −08
+ 323 change is therefore generic, not targeted. With the carry, the read moves by 6.194 × 10 and
+ 6.163 × 10−08, respectively. The carry rewrites 1,015,808 of the address book’s 1,060,864 bytes
+ 6
+ 324
+ 325 Table 4: Exact (store-scoped) deletion on the single design, K⋆ = 32, TEST, seed 0 (n = 1).
+ 326 “Exactness”isthestore’smaximumabsolutemodedeviationagainstthestorerefitwithouttherows.
+ 327 Survivor ∆ is the paired composition change on corners that do not request the deleted scope. Seeds
+ 328 1 and 2 are a placeholder row below.
+ scope seeds rows del. store s store rows read ref. refit s ref. rows read exactness survivor ∆ cos
+ 329 min
+ −08
+ 330 value: red 1 11,044 0.8998 0 9.259 120,028 5.960×10 +0.0000 (89) 0.006538
+ conj.: red ∧ cube 1 0 vacuous: cube is held out of the split; printed, never a result
+ −07
+ 331 conj.: red sphere 1 5,511 0.3916 0 9.262 125,561 5.383×10 +0.0000 (109) 0.066688
+ −07
+ 332 item: random 1% 1 1,311 0.1055 0 9.788 129,761 2.338×10 +0.0000 (109) 0.079602
+ seeds 1, 2 2 [PLACEHOLDER:w15single-design-seeds: thethreedeletionrowsatseeds1–2;anymaylandasanegative]
+ 333
+ 334
+ 335 and touches 0 data rows. “The store has forgotten red” and “the object no longer answers red”
+ 336 are different statements, and at K⋆ only the first is demonstrated. At K⋆ the value identity resides
+ 337 in the address book, which the deletion carries rather than refits. The trade-off moved rather than
+ vanished: at K = 5 (rank/width 0.156), the same red deletion was concentrated, with cos 0.1999
+ 338 min
+ 339 against 0.9976 for a size-matched random deletion of the same number of rows. The targeting of a
+ 340 deletion is thus a function of rank/width, and it disappears where the ledger is cheapest. This is why
+ 341 refusal needs its own mechanism (§3.5).
+ 342 3.4 WHATTHERIVALSCANDOINSTEAD: RETRAIN WITHOUT, OR APPROXIMATE
+ 343
+ 344 Theonlyexactdeletion route for a learned rival is to retrain from scratch without the rows. We built
+ 345 that route for every rival family at matched compute, together with two approximate unlearners,
+ 346 measured on the fit pool (16,384 rows; no held-out corner and no scored run). Retraining without
+ 347 the red rows costs each rival 8.86 to 34.62 s and reads 15,032 data rows (Table 13). The approximate
+ 348 unlearners are appendix rows (Appendix H), both because a ruling drops them from paper rows and
+ 349 because they miss the exact answer.
+ 350 Against that exact reference, NegGrad+ over-forgets by 9.4 to 20.8 times and fine-tuning on the
+ 351 retained rows under-forgets on three of four arms, although both received every gradient row-visit
+ 352 that the exact retrain received (296,960, asserted equal across all eight arm and method combinations
+ 353 onallthreeseeds). Ontherivalsthemselves,theconjunctionrowconfirmsthatcompositionsurvives
+ 354 a conjunction deletion: retraining a learned rival without the red sphere rows leaves red-sphere
+ 355 reconstruction essentially unchanged (3-seed means −0.00289, +0.01907, −0.00179, −0.00026),
+ 356 since red and sphere each survive separately and the rival composes them. This is composition
+ 357 working, not deletion failing, and it is a property of compositional generation rather than of our
+ 358 store. It is also the reason why the conjunction row cannot carry a refusal claim; the hole carries it.
+ 359
+ 360 3.5 REFUSAL AFTER DELETION: THE HOLE, A SEPARATE MECHANISM
+ 361 Refusal is a second exact mechanism on the same object: a coupling table with holes. Punching
+ 362 a hole for a deleted value or conjunction marks the request slot as refused. On the K⋆ object, two
+ 363 holes cost 2 bytes, read 0 data rows, take 0.0000 s and refit nothing, in a 1,322-byte coupling table
+ 364 whose layout is asserted equal to the field store’s over 1,322 pair slots. One hole (red ∧ cube) is
+ 365 refusable although no red cube was ever written: refusal does not require a deleted row to have
+ 366 existed. Because the downdate does not stop the object answering red (the probe above), the hole is
+ 367 the only mechanismonthisobjectthatcan. Anitemdeletion,incontrast,makesnothingimpossible:
+ 368 0 of 164 requests built from the deleted rows are certifiably impossible, on all three seeds, so the
+ 369 item row has no refusal row at all.
+ 370 Thecomparatorservestopricethealternative to a hole, not to lose. For a value deletion the task is a
+ 371 one-token lookup, which a free 8-byte value-presence bitmap already scores at 1.0000 with 0 rows
+ 372 read. For a conjunction the free bitmap cannot express the question at all, and the transformer learns
+ 373 the conjunction hole at AUROC1.0000for130,479parameters,4,096datarowsread,521,916bytes
+ 374 rewritten and 10.48 s, whereas the coupling hole costs one byte and no row. The hole, not deletion in
+ 375 general, is the operation that is both exact on bytes and free on behaviour. On the earlier item store,
+ 376 evicting red refuses at 1.0000 on all three seeds but costs −2.0899 / −0.9101 / −6.7416 composition
+ 377 against a declared ±1.0 bar, while punching a hole refuses at 1.0000 at a cost of exactly +0.0000.
+ Theclaimis exactness, never cost-free erasure.
+ 7
+ 378
+ 379 Table 5: Refusal DISPLAY rows. A display is never a result. Our side is a cost line on the
+ 380 K⋆object (seed 0). The comparator is the refuse-token transformer (130,479 parameters, 3 seeds),
+ 381 measured at the feature level on its own fit pool: first on its primary request set, then with off-grid
+ 382 requests included, which a closed-vocabulary input cannot represent. The two sides are not the same
+ 383 quantity and are not differenced; the head-to-head on the same post-deletion requests is a declared
+ 384 not-run.
+ row seeds bytes rewritten rows read AUROC refuse on impossible false refusal
+ 385 ours: 2 holes, K⋆ 1 2 0 — — —
+ 386 comparator, value (red), primary set 3 521,916 4,096 1.0000 (3/3) 1.0000 (3/3) 0.0000 (3/3)
+ 387 comparator, red sphere, primary set 3 521,916 4,096 1.0000 (3/3) 1.0000 (3/3) 0.0000 (3/3)
+ comparator, value, off-grid included 3 521,916 4,096 0.8692 / 0.8747 / 0.8755 0.6709 / 0.7109 / 0.6846 0.0947 / 0.1270 / 0.1094
+ 388 comparator, red sphere, off-grid incl. 3 521,916 4,096 0.8269 / 0.8340 / 0.8133 0.5591 / 0.5709 / 0.5556 0.0781 / 0.0859 / 0.1055
+ 389
+ 390 3.6 TWOABLATIONS, EACH KEEPING ONE PROPERTY
+ 391
+ 392 Composition-onlystore(composes,cannotforget). Droppingthestatisticandkeepingtheatoms
+ 393 and address book gives the earlier pca tensor store. It keeps no sufficient statistic, which is the
+ 394 price it does not pay and the reason it has no exact deletion. At the K = 5 endpoint of the ladder
+ 395 it is bit-identical to the single design at every rung and every seed, at 712,072 to 719,352 bytes,
+ 396 1.358 to 1.372 times the reference. The two reads are equal because the statistic is not consulted
+ 397 at generation time. Whether the equality survives at K⋆ is not measured: pca tensor was not
+ run at K⋆ (a declared not-run, Appendix X). [TODO: no artefact for the “∼1/7×” byte ratio of the
+ 398 composition-only store named in the task spine; the artefacts give the two totals printed here and
+ 399 in Table 2, and this spoke does not divide them.] On its own scored TEST legs (three seeds), the
+ 400 composition-only store beats a parameter-matched learner on both rows beyond a margin declared
+ 401 in advance, at total deployed bytes matched to within ±0.5% (713,632 / 719,352 / 719,352 against
+ 402 the rival’s 715,808) and parameters within −0.304% to +0.495%, the arm carrying more parameters
+ 403 ontwoofthreeseeds.
+ 404
+ 405 Itemstore (forgets, loses composition). Anitemstore of 64 whole written rows at the same byte
+ 406 pin, read by an oracle handed the true feature, deletes by construction but composes poorly: on row
+ 407 4 it sits −21.0816 / −16.5306 / −18.0816 below the learned reference. This 3-seed mean of 18.56
+ 408 tuples per corner is a lower bound on what an item store costs, because this store is a ceiling and not
+ 409 an arm.
+ 410 Table 12 (Appendix G) prints both ablations per seed. Together they show the join that the single
+ 411 design exists for: one ablation composes but cannot forget, the other forgets but cannot compose,
+ 412 and the single design does both on one object, at the cost printed in Table 2.
+ 413
+ 414 3.7 THE ENCODER: FROZEN BY DESIGN, LIGHTLY ADAPTED, AND NOT SHAPED BY THE
+ 415 STORE
+ 416
+ 417 The frozen encoder is the primary object. Light adaptation at K⋆, with equal steps and images,
+ 418 grows the store’s margin over a 180k-parameter learner on all three seeds under an anchored full
+ 419 unfreeze (+0.5688 → +1.3303, −0.0275 → −0.0092, +1.1009 → +1.3028) and on two of three
+ 420 under a low-rank adapter. Training the encoder through the store, in contrast, is a wash of two real
+ 421 effects: unfreezing hurts and a swap loss repairs. The store’s margin over a matched learner does
+ not grow, so the store does not shape the representation. Appendix T reports both results, with the
+ 422 pending scored BAR D row of the longer leg.
+ 423 [PLACEHOLDER: w15 lace-poe-rows: LACE and PoE rows (at their own declared bud-
+ 424 gets) added beside the learned rivals on rows 3–4 (Table 1) and on every ladder rung, 3 seeds, plus
+ 425 generation-tablerun3ontheK⋆ single design. LACE or PoE may beat the store on some
+ 426 or all rows; they are added and never replace the read-path rival columns.]
+ 427
+ 428 4 THE SAME PROPERTIES ON A MAZE
+ 429
+ 430
+ 431 §3 tests the three properties on images; a route task with an exact integer judge is, however, the
+ harder test: one wrong action is a zero. We therefore use a colour maze whose engine, solver
+ 8
+ 432
+ 433 Table 6: Exact deletion on the maze, CMAZE-2, TEST, 3 of 3 scored seeds. Delete the green
+ 434 target; store-scoped. Matched on parameters, not on the Shapes reference pin: the read is 410,688
+ 435 floats against rivals of 410,920 (MLP) / 409,846 (LSTM) / 405,776 (transformer).
+ 436 property seed 0 / seed 1 / seed 2
+ 437 −16 −16 −16
+ 438 statistic, max relative residual (downdate vs refit) 7.522×10 / 8.826 × 10 / 7.818 × 10
+ subspace, max projector residual 0.000 / 0.000 / 0.000
+ 439 rows removed / kept 216/992 · 226/975 · 193/1084
+ 440 refit · passes over retained data · items kept False · 0 · False (every seed)
+ 441 ledger: atoms · statistic (float64) · address book 31,744 · 35,904 · 1,611,008 B
+ 442 statistic as a share of the 1,642,752 B deployed read 2.19%
+ coupling / hole table declared not present
+ 443
+ 444
+ 445 and judge (legal moves, reaching the target, staying within budget, key and door pickup rules) are
+ 446 imported unmodified in every environment below, and whose judge’s file hash is re-checked before
+ 447 any number. Environment names are part of every result, and no two environments ever share a
+ 448 table. The environments are:
+ 449 • CMAZE-1: thegenerator at its own defaults;
+ 450 • CMAZE-2: a request layer over it that places named agents and targets across two door-free
+ 451 components and seals one target per maze;
+ 452 • CMAZE-2b: CMAZE-2withoneacceptanceruleadded,keepapairiffitsoptimalroutepicksup
+ 453 at least two keys;
+ 454 • CMAZE-TandCMAZE-O:thetransitionandobservationinstruments,whoserowsarepending
+ 455 (§4.4).
+ 456
+ 457 4.1 DELETION TRANSFERS (CMAZE-2, BANKED)
+ 458
+ 459 Weranthestore’sexactdeletioninside the three pre-registered scored runs on CMAZE-2: the green
+ 460 target is deleted from the store, and the downdated statistic and subspace are compared with the store
+ 461 refit without those rows. Table 6 reports the result. It is the only deletion leg in the study that sits
+ 462 inside scored runs, and it replicates from a clean checkout, with the encoder retrained from scratch,
+ 463 with zero numeric differences.
+ 464 Exactness is not free here either. As pre-registered, composition on the surviving targets falls from
+ 465 0.1024 (0.1569 / 0.0702 / 0.0802) to 0.0000 after the deletion, because the basis-change carry was
+ 466 stated for a read in the orthonormal basis, whereas this read is expressed in the deployed modes.
+ 467 With the repaired mechanism, one measurement on validation seed 0 gives 0.0944 to 0.0823, a
+ 468 change of −0.0120 inside the pre-registered ±0.05. One validation measurement is not three
+ 469 TEST measurements; it is therefore a declared not-run and not a row. [PLACEHOLDER: w15
+ 470 maze-deletion-2b(freereplication): theexact-deletionrowsofTable6re-runonCMAZE-2b,
+ 471 the environment on which the verb result of §4.3 is measured, downdate against refit-without and
+ 472 the projector residual, replicated from a clean checkout, 3 seeds, printed in its own table. It may land
+ 473 as a negative: a residual above roundoff, a failed replication, or a changed ledger; it is then printed
+ 474 as such and Table 6 stays the CMAZE-2 result.]
+ 475 4.2 FIXING THE REQUEST LAYER (CMAZE-2B)
+ 476
+ 477 OnCMAZE-2,theblind-sequential planner, which ignores key order, was valid on 0.9077 / 0.8905
+ 478 / 0.9128 of held-out unseen-pair routes, against the published 0.4980 of CMAZE-1. Of the 1,449
+ 479 optimal routes, 1,242 picked up exactly one key, so there was no key order for the second rule to
+ 480 trap. The cause was the layer’s own acceptance test. A maze whose door cut needs two keys cannot
+ 481 supply the reverse direction at all, because the key that opens the cut door lies on one side of the
+ 482 cut; since the layer required pairs in both directions, the symmetry requirement selected single-key
+ 483 cuts. CMAZE-2b therefore adds one integer rule, keep a pair iff its optimal route takes at least two
+ 484 keys, and changes nothing else. The fraction of routes needing at least two keys goes from 0.1428
+ 485 to 1.0000, blind-sequential on held-out unseen pairs falls from 0.9077 to 0.1818–0.2344, and the
+ oracle stays at 1.0000 (Table 19, Appendix M).
+ 9
+ 486
+ 487 Table 7: The read verb on CMAZE-2b, TEST, n = 3 scored seeds. Validity under the exact
+ 488 judge, per seed. Upper block: the store. Lower block: the MERGE−AVG gain of every arm on
+ 489 the unseen-pair row (3-seed mean). The single-decode pipeline ceiling on unseen pairs is 0.6432 /
+ 490 0.6869 / 0.7067. BLIND-SEQUENTIAL on this split: 0.1759 / 0.1566 / 0.1202 (unseen pair).
+ 491 row verb seed 0 / seed 1 / seed 2
+ 492 unseen pair FULL(theearlier read) 0.2261 / 0.2929 / 0.3173
+ 493 unseen pair AVG(ablation) 0.0704 / 0.1313 / 0.1298
+ 494 unseen pair MERGE(theverb) 0.5126 / 0.6667 / 0.5769
+ 495 unseen pair MERGE−AVG +0.4422 / +0.5354 / +0.4471
+ n-way(conjunction) AVG → MERGE 0.0000 / 0.0160 / 0.0000 → 0.4891 / 0.4652 / 0.3915
+ 496 budget interpolation AVG→MERGE 0.0802 / 0.0875 / 0.0924 → 0.5142 / 0.5650 / 0.4988
+ 497 gain, lookup floor (matched bytes) +0.8299
+ 498 gain, store +0.4749
+ 499 gain, random atoms/landscape shuffled(controls) +0.3557 / +0.3541
+ 500 gain, transformer / MLP / LSTM +0.2757 / +0.1829 / +0.1380
+ gain, landscape removed 0.0000
+ 501 lookup floor under MERGE, unseen pair 0.9648 / 0.9646 / 0.9808
+ 502
+ 503
+ 504 The fix lands in the multi-key band of CMAZE-1 itself rather than at its mixture value of 0.4980,
+ 505 and its costs are declared (Appendix M).
+ 506
+ 507 4.3 COMPOSITION ON ROUTES: THE VERB IS THE LEVER, AND IT BELONGS TO THE
+ 508 INTERFACE
+ 509 The store’s read is linear in the request design, so composing two half-addresses averages their
+ 510 latents. An exact-judge route task, however, composes by union: the two decoded half-plans are
+ 511 overlaid, with the target’s plan winning conflicts. We therefore hold everything fixed but the verb:
+ 512 thesamestoreandcontrols,thesamerequest-onlyread,thesamefrozenencoderandshareddecoder,
+ 513 the same judge and split, and rivals at matched parameters, on CMAZE-2b, TEST, three scored
+ 514 seeds. AVG decodes the average of the two half-latents (the earlier read on the identical two latents),
+ 515 whereas MERGE decodes each half and overlays the plans. Nothing in the verb is fitted, and the
+ 516 address book is never refit for the halves.
+ 517
+ 518 The verb claim. Moving the composition of two half-addresses from latent space to plan space,
+ 519 on identical latents and through the identical frozen decoder, lifts the store’s held-out unseen-pair
+ 520 validity by +0.4422 / +0.5354 / +0.4471 on three of three seeds; it also lifts the n-way conjunction
+ 521 row from 0.0000 / 0.0160 / 0.0000 to 0.4891 / 0.4652 / 0.3915. The merge rule is load-bearing: on
+ 522 the identical two decoded plans, letting the agent’s plan win reads 0.2714 / 0.4848 / 0.4423, the agent
+ 523 half alone 0.1960 / 0.2424 / 0.2404, and the target half alone 0.0704 / 0.1010 / 0.1202. The geometry
+ explains why averaging cannot work. The two half-latents are nearly parallel, cos(Z ,Z ) =
+ 524 A B
+ 525 0.9668 / 0.9589 / 0.9630, and their average is aligned with the full read at 0.9971 / 0.9964 / 0.9966;
+ 526 averaging thus returns a slightly shrunk copy of what the linear read already gives. The latent space
+ 527 has no room for a union, whereas the same two halves, decoded, are complementary in plan space.
+ 528 Whyit is an interface claim and not a store claim. The same fixed merge lifts every arm that
+ 529 reads anything. It lifts the matched-bytes lookup floor by +0.8299, against the store’s +0.4749, car-
+ 530 rying that floor to 0.9648 / 0.9646 / 0.9808 on unseen pairs, past the store and past the single-decode
+ 531 pipeline ceiling. The charter controls do not collapse: on the seen row, landscape shuffled
+ 532 reads 0.5111 / 0.5552 / 0.5727 and random atoms 0.5395 / 0.5650 / 0.5858, against a collapse
+ 533 bar of half the store’s score, 0.3606 / 0.3455 / 0.3508. Consequently, no row is claimed for the store
+ 534 under either verb. The verb claim survives because MERGE and AVG consume the same two latents:
+ 535 a verb claim is not a store claim, and only the verb claim is made. The composition operator is part
+ 536 of the interface, and it is task-shaped: images compose by mixing latents, whereas routes compose
+ 537 byoverlaying constraints.
+ 538
+ 539 Thelookup floor, printed honestly. The floor reaches about 0.97 because it is not a compressed
+ rival. At this configuration the store’s read budget buys more latents than the split has training
+ 10
+ 540 items, so the matched-bytes lookup is the whole training set of routes through the evaluation mazes
+ 541 (369,152 / 366,080 / 371,456 floats). It is the within-maze floor and cannot transfer across mazes:
+ 542 a fragment table built from other mazes’ routes, the published tripwire, reads exactly 0.0000 at
+ 543 r = 1 and r = 2 on every CMAZE-2b bank, while the same-maze fragment table reaches 0.4829 to
+ 544 0.5692 at r = 2. The single-decode pipeline ceiling, which bounds an arm that emits one latent and
+ 545 decodesonce,doesnotboundthetwo-decodemerge. Thelookupexceedsitby+0.2740to+0.3216
+ 546 onunseenpairs, with no leak, both halves reading training latents only. The store’s differentiator on
+ 547 the maze is therefore deletion, which transferred (Table 6); the composition result on routes belongs
+ 548 to the verb.
+ 549
+ 550 4.4 WORLD-MODELROWS: TRANSITION AND OBSERVATION GENERATION (PENDING)
+ 551 The two instruments below are the maze counterpart of §3. They ask the store to generate a world
+ 552 model’s states and transitions under the exact judge, on random mazes never seen at test, so that the
+ 553 within-maze lookup floor cannot transfer and the cross-maze fragment lookup is the floor. Every
+ 554 rival is matched on parameters on the same frozen encoder; charter controls and blind columns are
+ 555 printed; bars are pre-registered before any number; three seeds. The tables are written as they will be
+ 556 filled. Every cell is pending, and each table may be filled either by a result or by a declared negative
+ 557 with its failing link (content, factorisation, read or interface).
+ 558 Table 21 (Appendix S) lays out as placeholders the pending rows, the harness smokes, the configu-
+ 559 ration ladder, the fallback and the declared negatives. If no maze world-model row lands, the maze
+ 560 section of this paper is Table 6 (deletion transfers), Table 7 (the verb, an interface result) and those
+ 561 negatives, still a complete answer to whether the store’s properties transfer to a route world.
+ 562
+ 563
+ 564 5 LIMITATIONS OF THE NAIVE UNIT, AND A LEAVING NOTE
+ 565
+ 566 This section turns from what the naive unit does to what it does not: its measured limitations, the
+ 567 one measured clue toward a dynamical successor, the theory we carry, and a leaving note.
+ 568
+ 569 5.1 WHATTHENAIVEUNITDOESNOTDO(MEASURED,NOTHEDGED)
+ 570
+ 571 1. No store row on the maze. On CMAZE-2 a matched-parameter transformer beats the store on
+ 572 every composition row (−0.0560 / −0.0209 / −0.0434), and the charter controls do not collapse
+ 573 (landscape shuffled0.9509andrandom atoms0.9601against1.0000ontheseenrow);
+ 574 norowistherefore claimed for the store (Appendix K). On CMAZE-2b the controls again fail to
+ 575 collapse (§4.3).
+ 576 2. The value identity is not in the store at K⋆. Exact deletion of every red row leaves the red-
+ 577 requesting corners at 32.2500 and judge accuracy at 0.8958 (§3.3); there, only the store-scoped
+ 578 claim is demonstrated.
+ 579 3. Exactnessisexpensiveinbytes. AtK⋆ thedeletableobjectis4.0768to4.0897timesthereference
+ 580 (Table 2). Across nine swept partitions the honest four-part total is U-shaped in K, with its
+ 581 minimumof3.9942 times the reference at K = 24, so K⋆ is not the cheapest point; and on the
+ 582 one configuration at K ≥ 36 whose composition was measured (K = 40, 7 atoms per well,
+ 583 0.991 times the pin), composition collapses to 0.0648. On no swept partition does an object with
+ 584 a float64 sufficient statistic compose and forget inside 524,288 bytes at rank 64 (the validation
+ 585 sweep labels itself a smoke, not a claim).
+ 586 4. Thestore does not shape the representation. When the encoder was trained through the store, the
+ 587 pre-declared falsifier fired on row 3 (§3.7).
+ 588 5. Post-deletion composition on the maze fails, as pre-registered (0.1024 to 0.0000 on CMAZE-2);
+ 589 the repaired mechanism rests on one validation measurement only.
+ 590 6. Refusal on the maze was novelty detection, and the maze refusal displays are retired. The store
+ 591 refused the reachable-but-unwritten pair (0.9781) as often as the walled one (0.9801), at a false-
+ 592 refusal rate of 0.8182 on grounded-possible requests against a pre-registered 0.20. A ridge probe
+ 593 onthesameobservationatt = 0scoresAUC0.48–0.55acrossallsixseedandtierruns: deciding
+ solvability within budget is close to solving the maze, which is a property of the task rather than a
+ 11
+ 594 defect of the model. The Shapes3D coupling hole is a different object in a different environment
+ 595 and is unaffected.
+ 596 7. At most three seeds. Seeds 3 and 4 cannot be judged (they have neither a decoder nor an external
+ 597 classifier), so no row can exceed three seeds.
+ 598 8. Further limitations (an unseen-valid row that belongs to a generic learner, an exhausted place-
+ 599 mentdial, and comparators not run) are listed in Appendix V.
+ 600
+ 601 9. Residual novelty risk. Abstract-level screening cannot catch a match buried in a method section,
+ 602 and very recent preprints and non-indexed workshop papers are incompletely covered; we judge
+ 603 the risk low, not zero.
+ 604
+ 605 5.2 THE CLUE: THE STORE IS THE ZERO-DYNAMICS LIMIT OF A SETTLING UNIT
+ 606 The store we evaluate is the zero-dynamics limit of the CLU: the same content, wells and read,
+ 607 with the settling loop’s step count set to zero. Inside a well this is an algebraic identity: the store’s
+ 608 energyisthedistancetotheatomspan,therequest’sbasinsitsatanaddressinsidethatspan, soboth
+ 609 minimacoincideandanin-wellsettlehasnowheretogo(derivationinAppendixO).Weassertedthis
+ 610 in code: the zero-step arm was required to be bit-identical to the static read by np.array equal
+ 611 over 256 requests, and it was, on all three scored seeds, returning the static read’s held-out scores to
+ 612 every printed digit (row 4: 63.612 / 64.327 / 67.653; row 3: 29.717 / 31.617 / 31.450). Dynamics
+ 613 can act only across wells. With a bilinear low-rank coupling λW, the settled state is z⋆ = (βI −
+ 614 λW)−1βz ,whichreturns z exactly at λ = 0. Switching the dynamics on costs composition at
+ req req
+ 615 everystrengthatwhichtheymovethestate: −0.531/−0.510/−0.388six-factortuplespercornerat
+ 616 the gentlest setting that moves it (median displacement 0.009), and −39.959 / −46.918 / −39.061 at
+ 617 full strength (median displacement 0.39), while paying 81,312 to 84,216 bytes of read-side coupling
+ 618 that the static read does not. The identity holds under four named conditions (Appendix O).
+ 619
+ 620 5.3 THE THEORY WE CARRY: THE LATENT DYNAMICS MODEL CLASS
+ 621 Wecall the class of objects of which this store is the static corner a Latent Dynamics Model: a
+ 622 store whose content is read by relaxing a latent state under a designed energy. The Naive CLU
+ 623 is the member of this class with the relaxation switched off. (The phrase is used in reduced-order
+ 624 modelling and in model-based reinforcement learning for a learned surrogate of an environment’s
+ 625 dynamics; here the dynamics are the read, not a model of the data.) Its laws are this paper’s own
+ 626 theory, each with a status label and rider (further laws in Appendix Q).
+ 627
+ 628 Twolawsmeasuredonthisstudy’sownstore(CONFIRMED [THIS STUDY]). Switchedon,the
+ 629 field store’s relaxation obeys a curvature–retention relationship whose prediction is a time, not a
+ 630 score. With nothing fitted, it predicts the settle half-life to a median factor of 1.105 on 49 held-out
+ 631 corners and three seeds (bar 0.10 on the log error; 0.0433 / 0.0435 / 0.0431), and beats a one-
+ 632 parameter form fitted with sight of the held-out measurements on 49 of 49 corners on every seed.
+ 633 One of six pre-registered bars (the V-curve argmin) misses on all three seeds, and the law predicts
+ 634 where its simplest form stops. Deletion commutes with scheduled decay on a learned store, 0 bytes
+ 635 differing in a 2,054,866-byte image. The stronger claim, that the post-delete store equals the never-
+ 636 inserted one, is REFUTED (65.17% to 65.39% of the image differs, 83.5% of it because the address
+ 637 book and coupling table are fitted on the pool). These are dynamics results about our own store.
+ They occupy no row of the evaluation, they beat no model, and we make no capability claim from
+ 638 them; no arm of ours fails the retention law, so it distinguishes nothing. Full statements, bars and
+ 639 misses: Appendix P.
+ 640
+ 641 5.4 LEAVING NOTE
+ 642
+ 643 The naive unit buys exact deletion by subtraction and, at a stated partition, composition that beats
+ 644 read-path-matched learners on Shapes3D. However, it does not buy composition on an exact-judge
+ 645 route task, where the operator is task-shaped and belongs to the interface; it does not stop the object
+ 646 answering a deleted value; and it pays for exactness in bytes. Switched on, the dynamics cost
+ 647 composition at every strength that moves the state, while a law that no arm of ours fails predicts
+ their relaxation: so far, a law about the store, not a lever on the task. The experiment that would
+ 12
+ 648 make the law a claim about a class, a comparator predicted in advance to be mispredicted in the
+ 649 ⋆
+ 650 h/h ∈[0.5,2]bucket, is named but not run.
+ 651 6 FOLLOW-UP: A FULL EVALUATION OF THE PHYSICS CLU
+ 652
+ 653 The naive unit is the zero-dynamics limit of a settling unit (§5.2), and the leaving note states what
+ 654 it does not buy. The follow-up is therefore a full evaluation of the settling (physics) CLU on the
+ 655 three properties of §1.2, with the same judges, ledger and matching, and with this paper’s store as
+ 656 its zero-dynamics ablation. The negatives of this study fix what it must contain (Appendix R).
+ 657
+ 658 AI USE STATEMENT
+ 659
+ 660 [TODO: AI use statement — the Head to confirm which of the venue’s required disclosure cate-
+ 661 gories apply. This draft, the evidence pipeline and most of the code were produced with substantial
+ 662 LLM-agent assistance (implementing methods, designing and critiquing experiments, interpreting
+ 663 results, drafting the paper); the statement must say so accurately.]
+ 664 ETHICS STATEMENT
+ 665
+ 666 This study uses a public synthetic image dataset (Shapes3D) and procedurally generated mazes;
+ 667 it involves no human subjects and no personal data. Exact deletion is relevant to data-protection
+ 668 requests. We claim store-scoped exactness only, and no certified unlearning, and §3.3 states a case
+ 669 in which the exact deletion of a value does not change what the model answers.
+ 670
+ 671 REPRODUCIBILITY STATEMENT
+ 672 Every number in this paper is read from a recorded artefact of a pre-registered or declared run, and
+ 673 the provenance of each is kept beside it in the source. §2 defines the object, judge, estimand and
+ 674 ledger; every table states its seeds, condition and pins; and Appendices X–Y give the declared not-
+ 675 runs, corrections and per-cell provenance conventions. An anonymisedcodearchivewillaccompany
+ 676 the submission as supplementary material. [TODO: anonymised code archive not yet built.]
+ 677
+ 678
+ 679
+ 680
+ 681
+ 682
+ 683
+ 684
+ 685
+ 686
+ 687
+ 688
+ 689
+ 690
+ 691
+ 692
+ 693
+ 694
+ 695
+ 696
+ 697
+ 698
+ 699
+ 700
+ 701
+ 13

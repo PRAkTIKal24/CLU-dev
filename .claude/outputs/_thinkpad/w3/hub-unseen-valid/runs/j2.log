@@ -1,0 +1,62 @@
+judge c8741ac417d88ebf (978873 params), gate balacc on real = 1.0
+mask: object 0.1702 of pixels; interior 0.1681; 0.0124 of object pixels left unrotated (boundary/desaturated)
+
+A1.1 pixel MAE over 27 pairs: mean 0.01889 worst 0.02934 -> FAIL (registered <= 0.02)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+A1.2 judge agreement: top-1 0.9996 (>=0.95), mean |dh_hat| 0.00010 (<=0.01) -> PASS
+     worst per-pair top-1 agreement 0.9896; worst |dh_hat| 0.00113
+  bracket (0.0,0.1): spearman 0.6025  midpoint cdist 0.02279 (0.228 Delta)
+  bracket (0.1,0.2): spearman 0.9669  midpoint cdist 0.04260 (0.426 Delta)
+  bracket (0.2,0.3): spearman 0.9665  midpoint cdist 0.02800 (0.280 Delta)
+  bracket (0.3,0.4): spearman 0.9581  midpoint cdist 0.04572 (0.457 Delta)
+  bracket (0.6,0.7): spearman 0.9631  midpoint cdist 0.03021 (0.302 Delta)
+  bracket (0.7,0.8): spearman 0.9644  midpoint cdist 0.03077 (0.308 Delta)
+  bracket (0.8,0.9): spearman 0.9614  midpoint cdist 0.03420 (0.342 Delta)
+
+s5.3 resolution: min spearman 0.6025 (>=0.9) -> FAIL
+     midpoint cdist mean 0.03347 worst 0.04572 (0.457 Delta, registered <= 0.25) -> FAIL
+     min AUROC vs real brackets 0.0000 (>=0.9) -> FAIL
+
+==== JUDGE STOP RULE VERDICT: STOP ====
+wrote runs/j2_resolution.json

@@ -1,0 +1,89 @@
+[19:11:54] ===== stage postdelete_refit =====
+[19:11:58] stage postdelete_refit: deleted 11,024 rows, now refitting the address book ON the downdated store
+[19:12:17]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 16) (131072, 41)
+[19:12:36]     als 1/40 train_mse=0.05791 val_mse=0.05785
+[19:12:52]     als 2/40 train_mse=0.02557 val_mse=0.02557
+[19:13:09]     als 3/40 train_mse=0.01908 val_mse=0.01909
+[19:13:26]     als 4/40 train_mse=0.01643 val_mse=0.01643
+[19:13:43]     als 5/40 train_mse=0.01492 val_mse=0.01492
+[19:14:02]     als 6/40 train_mse=0.01392 val_mse=0.01391
+[19:14:20]     als 7/40 train_mse=0.01319 val_mse=0.01317
+[19:14:38]     als 8/40 train_mse=0.01262 val_mse=0.01261
+[19:14:56]     als 9/40 train_mse=0.01216 val_mse=0.01215
+[19:15:13]     als 10/40 train_mse=0.01178 val_mse=0.01177
+[19:15:31]     als 11/40 train_mse=0.01146 val_mse=0.01145
+[19:15:50]     als 12/40 train_mse=0.01118 val_mse=0.01117
+[19:16:08]     als 13/40 train_mse=0.01094 val_mse=0.01093
+[19:16:30]     als 14/40 train_mse=0.01073 val_mse=0.01072
+[19:16:52]     als 15/40 train_mse=0.01053 val_mse=0.01053
+[19:17:14]     als 16/40 train_mse=0.01036 val_mse=0.01035
+[19:17:37]     als 17/40 train_mse=0.01021 val_mse=0.01020
+[19:17:59]     als 18/40 train_mse=0.01006 val_mse=0.01005
+[19:18:19]     als 19/40 train_mse=0.00993 val_mse=0.00992
+[19:18:36]     als 20/40 train_mse=0.00981 val_mse=0.00980
+[19:18:54]     als 21/40 train_mse=0.00970 val_mse=0.00969
+[19:19:11]     als 22/40 train_mse=0.00959 val_mse=0.00958
+[19:19:27]     als 23/40 train_mse=0.00949 val_mse=0.00949
+[19:19:45]     als 24/40 train_mse=0.00940 val_mse=0.00939
+[19:20:03]     als 25/40 train_mse=0.00931 val_mse=0.00931
+[19:20:21]     als 26/40 train_mse=0.00923 val_mse=0.00922
+[19:20:38]     als 27/40 train_mse=0.00915 val_mse=0.00914
+[19:20:56]     als 28/40 train_mse=0.00907 val_mse=0.00907
+[19:21:13]     als 29/40 train_mse=0.00900 val_mse=0.00900
+[19:21:30]     als 30/40 train_mse=0.00893 val_mse=0.00893
+[19:21:47]     als 31/40 train_mse=0.00887 val_mse=0.00887
+[19:22:06]     als 32/40 train_mse=0.00881 val_mse=0.00881
+[19:22:23]     als 33/40 train_mse=0.00875 val_mse=0.00875
+[19:22:40]     als 34/40 train_mse=0.00869 val_mse=0.00869
+[19:22:57]     als 35/40 train_mse=0.00864 val_mse=0.00864
+[19:23:17]     als 36/40 train_mse=0.00859 val_mse=0.00858
+[19:23:37]     als 37/40 train_mse=0.00854 val_mse=0.00853
+[19:23:55]     als 38/40 train_mse=0.00849 val_mse=0.00849
+[19:24:16]     als 39/40 train_mse=0.00844 val_mse=0.00844
+[19:24:38]     als 40/40 train_mse=0.00840 val_mse=0.00840
+[19:24:38]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:26:08]   after delete, book REFIT on the downdated store   valid mean 0.9005  sd 0.0908  min 0.6944  max 1.0000
+[19:26:08]   DOWNDATE-READY.json -> status='ready'
+[19:26:08] done

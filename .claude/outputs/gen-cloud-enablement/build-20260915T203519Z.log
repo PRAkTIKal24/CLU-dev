@@ -1,0 +1,1036 @@
+++ curl -s -H 'Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/zone
+++ awk -F/ '{print $NF}'
++ ZONE=us-central1-a
++ trap finish EXIT
++ export DEBIAN_FRONTEND=noninteractive
++ DEBIAN_FRONTEND=noninteractive
++ for i in 1 2 3
++ apt-get update -y
+Get:1 file:/etc/apt/mirrors/debian.list Mirrorlist [30 B]
+Get:4 file:/etc/apt/mirrors/debian-security.list Mirrorlist [39 B]
+Hit:7 https://packages.cloud.google.com/apt google-compute-engine-bookworm-stable InRelease
+Get:8 https://packages.cloud.google.com/apt cloud-sdk-bookworm InRelease [1478 B]
+Hit:2 https://deb.debian.org/debian bookworm InRelease
+Get:3 https://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+Get:5 https://deb.debian.org/debian bookworm-backports InRelease [59.4 kB]
+Get:6 https://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+Get:9 https://packages.cloud.google.com/apt cloud-sdk-bookworm/main amd64 Packages [968 kB]
+Get:10 https://packages.cloud.google.com/apt cloud-sdk-bookworm/main all Packages [304 kB]
+Get:11 https://deb.debian.org/debian bookworm-backports/main Sources.diff/Index [63.3 kB]
+Get:15 https://deb.debian.org/debian bookworm-backports/main Sources T-2026-09-14-1401.50-F-2026-09-14-1401.50.pdiff [299 B]
+Get:15 https://deb.debian.org/debian bookworm-backports/main Sources T-2026-09-14-1401.50-F-2026-09-14-1401.50.pdiff [299 B]
+Get:12 https://deb.debian.org/debian-security bookworm-security/main Sources [249 kB]
+Get:13 https://deb.debian.org/debian-security bookworm-security/main amd64 Packages [338 kB]
+Get:14 https://deb.debian.org/debian-security bookworm-security/main Translation-en [211 kB]
+Fetched 2285 kB in 1s (2174 kB/s)
+Reading package lists...
++ apt-get install -y docker.io
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  binutils binutils-common binutils-x86-64-linux-gnu cgroupfs-mount containerd
+  criu git git-man libbinutils libctf-nobfd0 libctf0 liberror-perl
+  libgdbm-compat4 libgprofng0 libintl-perl libintl-xs-perl libjansson4
+  libmodule-find-perl libnet1 libnftables1 libnl-3-200 libperl5.36
+  libproc-processtable-perl libprotobuf32 libsort-naturally-perl
+  libterm-readkey-perl needrestart patch perl perl-modules-5.36
+  python3-protobuf runc tini
+Suggested packages:
+  binutils-doc containernetworking-plugins docker-doc aufs-tools btrfs-progs
+  debootstrap rinse rootlesskit xfsprogs zfs-fuse | zfsutils-linux
+  git-daemon-run | git-daemon-sysvinit git-doc git-email git-gui gitk gitweb
+  git-cvs git-mediawiki git-svn needrestart-session | libnotify-bin
+  iucode-tool ed diffutils-doc perl-doc libterm-readline-gnu-perl
+  | libterm-readline-perl-perl make libtap-harness-archive-perl
+The following NEW packages will be installed:
+  binutils binutils-common binutils-x86-64-linux-gnu cgroupfs-mount containerd
+  criu docker.io git git-man libbinutils libctf-nobfd0 libctf0 liberror-perl
+  libgdbm-compat4 libgprofng0 libintl-perl libintl-xs-perl libjansson4
+  libmodule-find-perl libnet1 libnftables1 libnl-3-200 libperl5.36
+  libproc-processtable-perl libprotobuf32 libsort-naturally-perl
+  libterm-readkey-perl needrestart patch perl perl-modules-5.36
+  python3-protobuf runc tini
+0 upgraded, 34 newly installed, 0 to remove and 1 not upgraded.
+Need to get 91.5 MB of archives.
+After this operation, 406 MB of additional disk space will be used.
+Get:1 file:/etc/apt/mirrors/debian.list Mirrorlist [30 B]
+Get:2 https://deb.debian.org/debian bookworm/main amd64 perl-modules-5.36 all 5.36.0-7+deb12u3 [2815 kB]
+Get:3 https://deb.debian.org/debian bookworm/main amd64 libgdbm-compat4 amd64 1.23-3 [48.2 kB]
+Get:4 https://deb.debian.org/debian bookworm/main amd64 libperl5.36 amd64 5.36.0-7+deb12u3 [4196 kB]
+Get:5 https://deb.debian.org/debian bookworm/main amd64 perl amd64 5.36.0-7+deb12u3 [239 kB]
+Get:6 https://deb.debian.org/debian bookworm/main amd64 runc amd64 1.1.5+ds1-1+deb12u1 [2710 kB]
+Get:7 https://deb.debian.org/debian bookworm/main amd64 containerd amd64 1.6.20~ds1-1+deb12u3 [25.9 MB]
+Get:8 https://deb.debian.org/debian bookworm/main amd64 tini amd64 0.19.0-1+b3 [267 kB]
+Get:9 https://deb.debian.org/debian bookworm/main amd64 docker.io amd64 20.10.24+dfsg1-1+deb12u1+b6 [36.3 MB]
+Get:10 https://deb.debian.org/debian bookworm/main amd64 binutils-common amd64 2.40-2 [2487 kB]
+Get:11 https://deb.debian.org/debian bookworm/main amd64 libbinutils amd64 2.40-2 [572 kB]
+Get:12 https://deb.debian.org/debian bookworm/main amd64 libctf-nobfd0 amd64 2.40-2 [153 kB]
+Get:13 https://deb.debian.org/debian bookworm/main amd64 libctf0 amd64 2.40-2 [89.8 kB]
+Get:14 https://deb.debian.org/debian bookworm/main amd64 libgprofng0 amd64 2.40-2 [812 kB]
+Get:15 https://deb.debian.org/debian bookworm/main amd64 libjansson4 amd64 2.14-2 [40.8 kB]
+Get:16 https://deb.debian.org/debian bookworm/main amd64 binutils-x86-64-linux-gnu amd64 2.40-2 [2246 kB]
+Get:17 https://deb.debian.org/debian bookworm/main amd64 binutils amd64 2.40-2 [65.0 kB]
+Get:18 https://deb.debian.org/debian bookworm/main amd64 cgroupfs-mount all 1.4 [6276 B]
+Get:19 https://deb.debian.org/debian bookworm/main amd64 libprotobuf32 amd64 3.21.12-3+deb12u1 [932 kB]
+Get:20 https://deb.debian.org/debian bookworm/main amd64 python3-protobuf amd64 3.21.12-3+deb12u1 [246 kB]
+Get:21 https://deb.debian.org/debian bookworm/main amd64 libnet1 amd64 1.1.6+dfsg-3.2 [60.3 kB]
+Get:22 https://deb.debian.org/debian bookworm/main amd64 libnftables1 amd64 1.0.6-2+deb12u2 [299 kB]
+Get:23 https://deb.debian.org/debian bookworm/main amd64 libnl-3-200 amd64 3.7.0-0.2+b1 [63.1 kB]
+Get:24 https://deb.debian.org/debian bookworm/main amd64 criu amd64 3.17.1-2+deb12u2 [666 kB]
+Get:25 https://deb.debian.org/debian bookworm/main amd64 liberror-perl all 0.17029-2 [29.0 kB]
+Get:26 https://deb.debian.org/debian bookworm/main amd64 git-man all 1:2.39.5-0+deb12u3 [2053 kB]
+Get:27 https://deb.debian.org/debian bookworm/main amd64 git amd64 1:2.39.5-0+deb12u3 [7264 kB]
+Get:28 https://deb.debian.org/debian bookworm/main amd64 libintl-perl all 1.33-1 [720 kB]
+Get:29 https://deb.debian.org/debian bookworm/main amd64 libintl-xs-perl amd64 1.33-1 [15.6 kB]
+Get:30 https://deb.debian.org/debian bookworm/main amd64 libmodule-find-perl all 0.16-2 [10.6 kB]
+Get:31 https://deb.debian.org/debian bookworm/main amd64 libproc-processtable-perl amd64 0.634-1+b2 [43.1 kB]
+Get:32 https://deb.debian.org/debian bookworm/main amd64 libsort-naturally-perl all 1.03-4 [13.1 kB]
+Get:33 https://deb.debian.org/debian bookworm/main amd64 libterm-readkey-perl amd64 2.38-2+b1 [24.5 kB]
+Get:34 https://deb.debian.org/debian bookworm/main amd64 needrestart all 3.6-4+deb12u3 [60.5 kB]
+Get:35 https://deb.debian.org/debian bookworm/main amd64 patch amd64 2.7.6-7 [128 kB]
+Fetched 91.5 MB in 2s (50.8 MB/s)
+Selecting previously unselected package perl-modules-5.36.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 58105 files and directories currently installed.)
+Preparing to unpack .../00-perl-modules-5.36_5.36.0-7+deb12u3_all.deb ...
+Unpacking perl-modules-5.36 (5.36.0-7+deb12u3) ...
+Selecting previously unselected package libgdbm-compat4:amd64.
+Preparing to unpack .../01-libgdbm-compat4_1.23-3_amd64.deb ...
+Unpacking libgdbm-compat4:amd64 (1.23-3) ...
+Selecting previously unselected package libperl5.36:amd64.
+Preparing to unpack .../02-libperl5.36_5.36.0-7+deb12u3_amd64.deb ...
+Unpacking libperl5.36:amd64 (5.36.0-7+deb12u3) ...
+Selecting previously unselected package perl.
+Preparing to unpack .../03-perl_5.36.0-7+deb12u3_amd64.deb ...
+Unpacking perl (5.36.0-7+deb12u3) ...
+Selecting previously unselected package runc.
+Preparing to unpack .../04-runc_1.1.5+ds1-1+deb12u1_amd64.deb ...
+Unpacking runc (1.1.5+ds1-1+deb12u1) ...
+Selecting previously unselected package containerd.
+Preparing to unpack .../05-containerd_1.6.20~ds1-1+deb12u3_amd64.deb ...
+Unpacking containerd (1.6.20~ds1-1+deb12u3) ...
+Selecting previously unselected package tini.
+Preparing to unpack .../06-tini_0.19.0-1+b3_amd64.deb ...
+Unpacking tini (0.19.0-1+b3) ...
+Selecting previously unselected package docker.io.
+Preparing to unpack .../07-docker.io_20.10.24+dfsg1-1+deb12u1+b6_amd64.deb ...
+Unpacking docker.io (20.10.24+dfsg1-1+deb12u1+b6) ...
+Selecting previously unselected package binutils-common:amd64.
+Preparing to unpack .../08-binutils-common_2.40-2_amd64.deb ...
+Unpacking binutils-common:amd64 (2.40-2) ...
+Selecting previously unselected package libbinutils:amd64.
+Preparing to unpack .../09-libbinutils_2.40-2_amd64.deb ...
+Unpacking libbinutils:amd64 (2.40-2) ...
+Selecting previously unselected package libctf-nobfd0:amd64.
+Preparing to unpack .../10-libctf-nobfd0_2.40-2_amd64.deb ...
+Unpacking libctf-nobfd0:amd64 (2.40-2) ...
+Selecting previously unselected package libctf0:amd64.
+Preparing to unpack .../11-libctf0_2.40-2_amd64.deb ...
+Unpacking libctf0:amd64 (2.40-2) ...
+Selecting previously unselected package libgprofng0:amd64.
+Preparing to unpack .../12-libgprofng0_2.40-2_amd64.deb ...
+Unpacking libgprofng0:amd64 (2.40-2) ...
+Selecting previously unselected package libjansson4:amd64.
+Preparing to unpack .../13-libjansson4_2.14-2_amd64.deb ...
+Unpacking libjansson4:amd64 (2.14-2) ...
+Selecting previously unselected package binutils-x86-64-linux-gnu.
+Preparing to unpack .../14-binutils-x86-64-linux-gnu_2.40-2_amd64.deb ...
+Unpacking binutils-x86-64-linux-gnu (2.40-2) ...
+Selecting previously unselected package binutils.
+Preparing to unpack .../15-binutils_2.40-2_amd64.deb ...
+Unpacking binutils (2.40-2) ...
+Selecting previously unselected package cgroupfs-mount.
+Preparing to unpack .../16-cgroupfs-mount_1.4_all.deb ...
+Unpacking cgroupfs-mount (1.4) ...
+Selecting previously unselected package libprotobuf32:amd64.
+Preparing to unpack .../17-libprotobuf32_3.21.12-3+deb12u1_amd64.deb ...
+Unpacking libprotobuf32:amd64 (3.21.12-3+deb12u1) ...
+Selecting previously unselected package python3-protobuf.
+Preparing to unpack .../18-python3-protobuf_3.21.12-3+deb12u1_amd64.deb ...
+Unpacking python3-protobuf (3.21.12-3+deb12u1) ...
+Selecting previously unselected package libnet1:amd64.
+Preparing to unpack .../19-libnet1_1.1.6+dfsg-3.2_amd64.deb ...
+Unpacking libnet1:amd64 (1.1.6+dfsg-3.2) ...
+Selecting previously unselected package libnftables1:amd64.
+Preparing to unpack .../20-libnftables1_1.0.6-2+deb12u2_amd64.deb ...
+Unpacking libnftables1:amd64 (1.0.6-2+deb12u2) ...
+Selecting previously unselected package libnl-3-200:amd64.
+Preparing to unpack .../21-libnl-3-200_3.7.0-0.2+b1_amd64.deb ...
+Unpacking libnl-3-200:amd64 (3.7.0-0.2+b1) ...
+Selecting previously unselected package criu.
+Preparing to unpack .../22-criu_3.17.1-2+deb12u2_amd64.deb ...
+Unpacking criu (3.17.1-2+deb12u2) ...
+Selecting previously unselected package liberror-perl.
+Preparing to unpack .../23-liberror-perl_0.17029-2_all.deb ...
+Unpacking liberror-perl (0.17029-2) ...
+Selecting previously unselected package git-man.
+Preparing to unpack .../24-git-man_1%3a2.39.5-0+deb12u3_all.deb ...
+Unpacking git-man (1:2.39.5-0+deb12u3) ...
+Selecting previously unselected package git.
+Preparing to unpack .../25-git_1%3a2.39.5-0+deb12u3_amd64.deb ...
+Unpacking git (1:2.39.5-0+deb12u3) ...
+Selecting previously unselected package libintl-perl.
+Preparing to unpack .../26-libintl-perl_1.33-1_all.deb ...
+Unpacking libintl-perl (1.33-1) ...
+Selecting previously unselected package libintl-xs-perl.
+Preparing to unpack .../27-libintl-xs-perl_1.33-1_amd64.deb ...
+Unpacking libintl-xs-perl (1.33-1) ...
+Selecting previously unselected package libmodule-find-perl.
+Preparing to unpack .../28-libmodule-find-perl_0.16-2_all.deb ...
+Unpacking libmodule-find-perl (0.16-2) ...
+Selecting previously unselected package libproc-processtable-perl:amd64.
+Preparing to unpack .../29-libproc-processtable-perl_0.634-1+b2_amd64.deb ...
+Unpacking libproc-processtable-perl:amd64 (0.634-1+b2) ...
+Selecting previously unselected package libsort-naturally-perl.
+Preparing to unpack .../30-libsort-naturally-perl_1.03-4_all.deb ...
+Unpacking libsort-naturally-perl (1.03-4) ...
+Selecting previously unselected package libterm-readkey-perl.
+Preparing to unpack .../31-libterm-readkey-perl_2.38-2+b1_amd64.deb ...
+Unpacking libterm-readkey-perl (2.38-2+b1) ...
+Selecting previously unselected package needrestart.
+Preparing to unpack .../32-needrestart_3.6-4+deb12u3_all.deb ...
+Unpacking needrestart (3.6-4+deb12u3) ...
+Selecting previously unselected package patch.
+Preparing to unpack .../33-patch_2.7.6-7_amd64.deb ...
+Unpacking patch (2.7.6-7) ...
+Setting up binutils-common:amd64 (2.40-2) ...
+Setting up libctf-nobfd0:amd64 (2.40-2) ...
+Setting up libnet1:amd64 (1.1.6+dfsg-3.2) ...
+Setting up runc (1.1.5+ds1-1+deb12u1) ...
+Setting up libjansson4:amd64 (2.14-2) ...
+Setting up perl-modules-5.36 (5.36.0-7+deb12u3) ...
+Setting up tini (0.19.0-1+b3) ...
+Setting up patch (2.7.6-7) ...
+Setting up libgdbm-compat4:amd64 (1.23-3) ...
+Setting up libprotobuf32:amd64 (3.21.12-3+deb12u1) ...
+Setting up libnl-3-200:amd64 (3.7.0-0.2+b1) ...
+Setting up git-man (1:2.39.5-0+deb12u3) ...
+Setting up cgroupfs-mount (1.4) ...
+Setting up libbinutils:amd64 (2.40-2) ...
+Setting up python3-protobuf (3.21.12-3+deb12u1) ...
+Setting up containerd (1.6.20~ds1-1+deb12u3) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/containerd.service → /lib/systemd/system/containerd.service.
+Setting up libperl5.36:amd64 (5.36.0-7+deb12u3) ...
+Setting up libctf0:amd64 (2.40-2) ...
+Setting up libnftables1:amd64 (1.0.6-2+deb12u2) ...
+Setting up docker.io (20.10.24+dfsg1-1+deb12u1+b6) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /lib/systemd/system/docker.service.
+Created symlink /etc/systemd/system/sockets.target.wants/docker.socket → /lib/systemd/system/docker.socket.
+Setting up perl (5.36.0-7+deb12u3) ...
+Setting up libgprofng0:amd64 (2.40-2) ...
+Setting up libmodule-find-perl (0.16-2) ...
+Setting up libproc-processtable-perl:amd64 (0.634-1+b2) ...
+Setting up criu (3.17.1-2+deb12u2) ...
+Setting up libintl-perl (1.33-1) ...
+Setting up libterm-readkey-perl (2.38-2+b1) ...
+Setting up libsort-naturally-perl (1.03-4) ...
+Setting up binutils-x86-64-linux-gnu (2.40-2) ...
+Setting up binutils (2.40-2) ...
+Setting up libintl-xs-perl (1.33-1) ...
+Setting up liberror-perl (0.17029-2) ...
+Setting up git (1:2.39.5-0+deb12u3) ...
+Setting up needrestart (3.6-4+deb12u3) ...
+Processing triggers for man-db (2.11.2-2) ...
+Processing triggers for libc-bin (2.36-9+deb12u14) ...
++ break
++ systemctl enable --now docker
+Synchronizing state of docker.service with SysV service script with /lib/systemd/systemd-sysv-install.
+Executing: /lib/systemd/systemd-sysv-install enable docker
++ gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+Adding credentials for: us-central1-docker.pkg.dev
+Docker configuration file updated.
++ mkdir -p /build
++ cd /build
++ gcloud storage cp gs://chlu-cloud-forgisprova/build/20260915T203519Z/context.tar.gz . -q
+Copying gs://chlu-cloud-forgisprova/build/20260915T203519Z/context.tar.gz to file://./context.tar.gz
+  
+.
+
+Average throughput: 154.1MiB/s
++ tar -xzf context.tar.gz
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.decmpfs'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
++ docker build -f scripts/cloud/Dockerfile --build-arg GIT_COMMIT=6c148a9 --build-arg BUILD_ID=20260915T203519Z -t us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:20260915T203519Z -t us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:latest .
+Sending build context to Docker daemon  13.53MB
+Step 1/21 : FROM python:3.11-slim-bookworm@sha256:528257d48c1da0dcecc2e725d1ae34498d60c965f1241e39cd6a85a8859bdf84
+docker.io/library/python:3.11-slim-bookworm@sha256:528257d48c1da0dcecc2e725d1ae34498d60c965f1241e39cd6a85a8859bdf84: Pulling from library/python
+a8ac7f6c67ab: Pulling fs layer
+5916320cd9ac: Pulling fs layer
+882a85d46148: Pulling fs layer
+6128e8861235: Pulling fs layer
+6128e8861235: Waiting
+5916320cd9ac: Verifying Checksum
+5916320cd9ac: Download complete
+a8ac7f6c67ab: Verifying Checksum
+a8ac7f6c67ab: Download complete
+882a85d46148: Verifying Checksum
+882a85d46148: Download complete
+6128e8861235: Verifying Checksum
+6128e8861235: Download complete
+a8ac7f6c67ab: Pull complete
+5916320cd9ac: Pull complete
+882a85d46148: Pull complete
+6128e8861235: Pull complete
+Digest: sha256:528257d48c1da0dcecc2e725d1ae34498d60c965f1241e39cd6a85a8859bdf84
+Status: Downloaded newer image for python:3.11-slim-bookworm@sha256:528257d48c1da0dcecc2e725d1ae34498d60c965f1241e39cd6a85a8859bdf84
+ ---> 9356cb064a7c
+Step 2/21 : COPY --from=ghcr.io/astral-sh/uv:0.9.7@sha256:ba4857bf2a068e9bc0e64eed8563b065908a4cd6bfb66b531a9c424c8e25e142 /uv /uvx /usr/local/bin/
+ghcr.io/astral-sh/uv:0.9.7@sha256:ba4857bf2a068e9bc0e64eed8563b065908a4cd6bfb66b531a9c424c8e25e142: Pulling from astral-sh/uv
+0624929136dd: Pulling fs layer
+104644e8b943: Pulling fs layer
+104644e8b943: Verifying Checksum
+104644e8b943: Download complete
+0624929136dd: Verifying Checksum
+0624929136dd: Download complete
+0624929136dd: Pull complete
+104644e8b943: Pull complete
+Digest: sha256:ba4857bf2a068e9bc0e64eed8563b065908a4cd6bfb66b531a9c424c8e25e142
+Status: Downloaded newer image for ghcr.io/astral-sh/uv:0.9.7@sha256:ba4857bf2a068e9bc0e64eed8563b065908a4cd6bfb66b531a9c424c8e25e142
+ ---> 07078310ed49
+Step 3/21 : ENV UV_LINK_MODE=copy     UV_PYTHON_DOWNLOADS=never     UV_PROJECT_ENVIRONMENT=/opt/venv     PYTHONUNBUFFERED=1     MPLBACKEND=Agg
+ ---> Running in e11625ec0d27
+Removing intermediate container e11625ec0d27
+ ---> c0bee436e297
+Step 4/21 : ARG GCLOUD_VERSION=585.0.0
+ ---> Running in 20ed4c410302
+Removing intermediate container 20ed4c410302
+ ---> abfb6ac4254d
+Step 5/21 : ARG GCLOUD_SHA256=7b97198ef306f5400b67f057f7415a46bd9a34367eeabd87516ee3f74bc76a36
+ ---> Running in 671068630d66
+Removing intermediate container 671068630d66
+ ---> 8021df7b6a94
+Step 6/21 : RUN set -eux;     apt-get update;     apt-get install -y --no-install-recommends curl ca-certificates;     curl -fsSL -o /tmp/gcloud.tgz       "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${GCLOUD_VERSION}-linux-x86_64.tar.gz";     echo "${GCLOUD_SHA256}  /tmp/gcloud.tgz" | sha256sum -c -;     tar -xzf /tmp/gcloud.tgz -C /opt;     rm -rf /tmp/gcloud.tgz            /opt/google-cloud-sdk/platform/bundledpythonunix            /opt/google-cloud-sdk/bin/anthoscli            /opt/google-cloud-sdk/platform/gsutil_py2            /opt/google-cloud-sdk/.install/.backup;     apt-get purge -y curl; apt-get autoremove -y; rm -rf /var/lib/apt/lists/*
+ ---> Running in 2e71612f6305
+[91m+ apt-get update
+[0mGet:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8790 kB]
+Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [338 kB]
+Fetched 9377 kB in 1s (7883 kB/s)
+Reading package lists...
+[91m+ apt-get install -y --no-install-recommends curl ca-certificates
+[0mReading package lists...
+Building dependency tree...
+Reading state information...
+ca-certificates is already the newest version (20250419~deb12u1).
+The following additional packages will be installed:
+  libbrotli1 libcurl4 libldap-2.5-0 libnghttp2-14 libpsl5 librtmp1 libsasl2-2
+  libsasl2-modules-db libssh2-1
+Recommended packages:
+  libldap-common publicsuffix libsasl2-modules
+The following NEW packages will be installed:
+  curl libbrotli1 libcurl4 libldap-2.5-0 libnghttp2-14 libpsl5 librtmp1
+  libsasl2-2 libsasl2-modules-db libssh2-1
+0 upgraded, 10 newly installed, 0 to remove and 1 not upgraded.
+Need to get 1614 kB of archives.
+After this operation, 3813 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian bookworm/main amd64 libbrotli1 amd64 1.0.9-2+b6 [275 kB]
+Get:2 http://deb.debian.org/debian bookworm/main amd64 libsasl2-modules-db amd64 2.1.28+dfsg-10 [20.3 kB]
+Get:3 http://deb.debian.org/debian bookworm/main amd64 libsasl2-2 amd64 2.1.28+dfsg-10 [59.7 kB]
+Get:4 http://deb.debian.org/debian bookworm/main amd64 libldap-2.5-0 amd64 2.5.13+dfsg-5 [183 kB]
+Get:5 http://deb.debian.org/debian bookworm/main amd64 libnghttp2-14 amd64 1.52.0-1+deb12u3 [72.4 kB]
+Get:6 http://deb.debian.org/debian bookworm/main amd64 libpsl5 amd64 0.21.2-1 [58.7 kB]
+Get:7 http://deb.debian.org/debian bookworm/main amd64 librtmp1 amd64 2.4+20151223.gitfa8646d.1-2+b2 [60.8 kB]
+Get:8 http://deb.debian.org/debian-security bookworm-security/main amd64 libssh2-1 amd64 1.10.0-3+deb12u1 [176 kB]
+Get:9 http://deb.debian.org/debian bookworm/main amd64 libcurl4 amd64 7.88.1-10+deb12u15 [392 kB]
+Get:10 http://deb.debian.org/debian bookworm/main amd64 curl amd64 7.88.1-10+deb12u15 [316 kB]
+[91mdebconf: delaying package configuration, since apt-utils is not installed
+[0mFetched 1614 kB in 0s (7249 kB/s)
+Selecting previously unselected package libbrotli1:amd64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 6703 files and directories currently installed.)
+Preparing to unpack .../0-libbrotli1_1.0.9-2+b6_amd64.deb ...
+Unpacking libbrotli1:amd64 (1.0.9-2+b6) ...
+Selecting previously unselected package libsasl2-modules-db:amd64.
+Preparing to unpack .../1-libsasl2-modules-db_2.1.28+dfsg-10_amd64.deb ...
+Unpacking libsasl2-modules-db:amd64 (2.1.28+dfsg-10) ...
+Selecting previously unselected package libsasl2-2:amd64.
+Preparing to unpack .../2-libsasl2-2_2.1.28+dfsg-10_amd64.deb ...
+Unpacking libsasl2-2:amd64 (2.1.28+dfsg-10) ...
+Selecting previously unselected package libldap-2.5-0:amd64.
+Preparing to unpack .../3-libldap-2.5-0_2.5.13+dfsg-5_amd64.deb ...
+Unpacking libldap-2.5-0:amd64 (2.5.13+dfsg-5) ...
+Selecting previously unselected package libnghttp2-14:amd64.
+Preparing to unpack .../4-libnghttp2-14_1.52.0-1+deb12u3_amd64.deb ...
+Unpacking libnghttp2-14:amd64 (1.52.0-1+deb12u3) ...
+Selecting previously unselected package libpsl5:amd64.
+Preparing to unpack .../5-libpsl5_0.21.2-1_amd64.deb ...
+Unpacking libpsl5:amd64 (0.21.2-1) ...
+Selecting previously unselected package librtmp1:amd64.
+Preparing to unpack .../6-librtmp1_2.4+20151223.gitfa8646d.1-2+b2_amd64.deb ...
+Unpacking librtmp1:amd64 (2.4+20151223.gitfa8646d.1-2+b2) ...
+Selecting previously unselected package libssh2-1:amd64.
+Preparing to unpack .../7-libssh2-1_1.10.0-3+deb12u1_amd64.deb ...
+Unpacking libssh2-1:amd64 (1.10.0-3+deb12u1) ...
+Selecting previously unselected package libcurl4:amd64.
+Preparing to unpack .../8-libcurl4_7.88.1-10+deb12u15_amd64.deb ...
+Unpacking libcurl4:amd64 (7.88.1-10+deb12u15) ...
+Selecting previously unselected package curl.
+Preparing to unpack .../9-curl_7.88.1-10+deb12u15_amd64.deb ...
+Unpacking curl (7.88.1-10+deb12u15) ...
+Setting up libpsl5:amd64 (0.21.2-1) ...
+Setting up libbrotli1:amd64 (1.0.9-2+b6) ...
+Setting up libnghttp2-14:amd64 (1.52.0-1+deb12u3) ...
+Setting up libsasl2-modules-db:amd64 (2.1.28+dfsg-10) ...
+Setting up librtmp1:amd64 (2.4+20151223.gitfa8646d.1-2+b2) ...
+Setting up libsasl2-2:amd64 (2.1.28+dfsg-10) ...
+Setting up libssh2-1:amd64 (1.10.0-3+deb12u1) ...
+Setting up libldap-2.5-0:amd64 (2.5.13+dfsg-5) ...
+Setting up libcurl4:amd64 (7.88.1-10+deb12u15) ...
+Setting up curl (7.88.1-10+deb12u15) ...
+Processing triggers for libc-bin (2.36-9+deb12u14) ...
+[91m+ curl -fsSL -o /tmp/gcloud.tgz https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-585.0.0-linux-x86_64.tar.gz
+[0m[91m+ echo 7b97198ef306f5400b67f057f7415a46bd9a34367eeabd87516ee3f74bc76a36  /tmp/gcloud.tgz
+[0m[91m+ sha256sum -c -
+[0m/tmp/gcloud.tgz: OK
+[91m+ tar -xzf /tmp/gcloud.tgz -C /opt
+[0m[91m+ rm -rf /tmp/gcloud.tgz /opt/google-cloud-sdk/platform/bundledpythonunix /opt/google-cloud-sdk/bin/anthoscli /opt/google-cloud-sdk/platform/gsutil_py2 /opt/google-cloud-sdk/.install/.backup
+[0m[91m+ apt-get purge -y curl
+[0mReading package lists...
+Building dependency tree...
+Reading state information...
+The following packages were automatically installed and are no longer required:
+  libbrotli1 libcurl4 libldap-2.5-0 libnghttp2-14 libpsl5 librtmp1 libsasl2-2
+  libsasl2-modules-db libssh2-1
+Use 'apt autoremove' to remove them.
+The following packages will be REMOVED:
+  curl*
+0 upgraded, 0 newly installed, 1 to remove and 1 not upgraded.
+After this operation, 501 kB disk space will be freed.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 6783 files and directories currently installed.)
+Removing curl (7.88.1-10+deb12u15) ...
+[91m+ apt-get autoremove -y
+[0mReading package lists...
+Building dependency tree...
+Reading state information...
+The following packages will be REMOVED:
+  libbrotli1 libcurl4 libldap-2.5-0 libnghttp2-14 libpsl5 librtmp1 libsasl2-2
+  libsasl2-modules-db libssh2-1
+0 upgraded, 0 newly installed, 9 to remove and 1 not upgraded.
+After this operation, 3313 kB disk space will be freed.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 6774 files and directories currently installed.)
+Removing libcurl4:amd64 (7.88.1-10+deb12u15) ...
+Removing libbrotli1:amd64 (1.0.9-2+b6) ...
+Removing libldap-2.5-0:amd64 (2.5.13+dfsg-5) ...
+Removing libnghttp2-14:amd64 (1.52.0-1+deb12u3) ...
+Removing libpsl5:amd64 (0.21.2-1) ...
+Removing librtmp1:amd64 (2.4+20151223.gitfa8646d.1-2+b2) ...
+Removing libsasl2-2:amd64 (2.1.28+dfsg-10) ...
+Removing libsasl2-modules-db:amd64 (2.1.28+dfsg-10) ...
+Removing libssh2-1:amd64 (1.10.0-3+deb12u1) ...
+Processing triggers for libc-bin (2.36-9+deb12u14) ...
+[91m+ rm -rf /var/lib/apt/lists/auxfiles /var/lib/apt/lists/deb.debian.org_debian-security_dists_bookworm-security_InRelease /var/lib/apt/lists/deb.debian.org_debian-security_dists_bookworm-security_main_binary-amd64_Packages.lz4 /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm-updates_InRelease /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm-updates_main_binary-amd64_Packages.lz4 /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm_InRelease /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm_main_binary-amd64_Packages.lz4 /var/lib/apt/lists/lock /var/lib/apt/lists/partial
+[0mRemoving intermediate container 2e71612f6305
+ ---> e7cd738a2e03
+Step 7/21 : ENV CLOUDSDK_PYTHON=/usr/local/bin/python3     CLOUDSDK_CORE_DISABLE_PROMPTS=1     PATH="/opt/google-cloud-sdk/bin:${PATH}"
+ ---> Running in 3ef6fd0539f7
+Removing intermediate container 3ef6fd0539f7
+ ---> 02735154a802
+Step 8/21 : WORKDIR /opt/chlu
+ ---> Running in 36d8573810df
+Removing intermediate container 36d8573810df
+ ---> 25569ac8e4fe
+Step 9/21 : COPY pyproject.toml uv.lock README.md ./
+ ---> 23dae3a34933
+Step 10/21 : RUN uv sync --frozen --no-dev --extra cuda --no-install-project
+ ---> Running in 3964031254d0
+[91mwarning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[0m[91mUsing CPython 3.11.16 interpreter at: /usr/local/bin/python3
+Creating virtual environment at: /opt/venv
+[0m[91mDownloading scikit-learn (8.7MiB)
+[0m[91mDownloading nvidia-nvjitlink-cu12 (37.9MiB)
+[0m[91mDownloading kiwisolver (1.4MiB)
+[0m[91mDownloading nvidia-nvshmem-cu12 (219.4MiB)
+[0m[91mDownloading nvidia-cuda-runtime-cu12 (3.3MiB)
+[0m[91mDownloading scipy (33.5MiB)
+[0m[91mDownloading pygments (1.2MiB)
+[0m[91mDownloading nvidia-cuda-nvcc-cu12 (38.7MiB)
+[0m[91mDownloading nvidia-cuda-nvrtc-cu12 (85.4MiB)
+[0m[91mDownloading nvidia-nccl-cu12 (289.3MiB)
+[0m[91mDownloading fonttools (4.8MiB)
+[0m[91mDownloading jaxlib (76.6MiB)
+[0m[91mDownloading nvidia-cusparse-cu12 (349.5MiB)
+[0m[91mDownloading jax-cuda12-plugin (5.4MiB)
+[0m[91mDownloading jax-cuda12-pjrt (147.7MiB)
+[0m[91mDownloading numpy (15.9MiB)
+[0m[91mDownloading nvidia-cuda-cccl-cu12 (3.0MiB)
+[0m[91mDownloading nvidia-cufft-cu12 (191.6MiB)
+[0m[91mDownloading ml-dtypes (4.8MiB)
+[0m[91mDownloading nvidia-cublas-cu12 (554.3MiB)[0m[91m
+[0m[91mDownloading jax (2.8MiB)
+[0m[91mDownloading nvidia-cudnn-cu12 (762.1MiB)
+[0m[91mDownloading pillow (6.7MiB)
+[0m[91mDownloading nvidia-cuda-cupti-cu12 (10.3MiB)
+[0m[91mDownloading matplotlib (8.3MiB)
+[0m[91mDownloading nvidia-cusolver-cu12 (322.5MiB)
+[0m[91m Downloading kiwisolver
+[0m[91m Downloading pygments
+[0m[91m Downloading nvidia-cuda-runtime-cu12
+[0m[91m Downloading jax
+[0m[91m Downloading ml-dtypes
+[0m[91m Downloading fonttools
+[0m[91m Downloading jax-cuda12-plugin
+[0m[91m Downloading pillow
+[0m[91m Downloading matplotlib
+[0m[91m Downloading scikit-learn
+[0m[91m Downloading nvidia-cuda-cupti-cu12
+[0m[91m Downloading nvidia-cuda-cccl-cu12
+[0m[91m Downloading numpy
+[0m[91m Downloading scipy
+[0m[91m Downloading nvidia-nvjitlink-cu12
+[0m[91m Downloading nvidia-cuda-nvcc-cu12
+[0m[91m Downloading jaxlib
+[0m[91m Downloading nvidia-cuda-nvrtc-cu12
+[0m[91m Downloading jax-cuda12-pjrt
+[0m[91m Downloading nvidia-cufft-cu12
+[0m[91m Downloading nvidia-nvshmem-cu12
+[0m[91m Downloading nvidia-nccl-cu12
+[0m[91m Downloading nvidia-cusolver-cu12
+[0m[91m Downloading nvidia-cusparse-cu12
+[0m[91m Downloading nvidia-cublas-cu12
+[0m[91m Downloading nvidia-cudnn-cu12
+[0m[91mPrepared 52 packages in 35.52s
+[0m[91mInstalled 52 packages in 15.08s
+[0m[91m + absl-py==2.4.0
+ + art==6.5
+ + chex==0.1.91
+ + contourpy==1.[0m[91m3.3
+ + cycler==0.12.1
+ + diffrax==0.[0m[91m7.0
+ [0m[91m+ equinox[0m[91m==0.13.4
+ [0m[91m+ fonttools==4.61.1
+ + jax==0.9.0
+ + jax-cuda12-pjrt==0.9.0
+ + jax-cuda12-plugin==0.9.0
+ + jaxlib==0.9.0
+ + jaxtyping==0.3.6
+ + joblib==1.5.3
+ + kiwisolver==1.4.9
+ + lineax[0m[91m==0.1.0
+ + markdown-it-py==4.0.0
+ + [0m[91mmatplotlib==3.10.8
+ + mdurl==0.1.2
+ + ml-dtypes==0.5.4
+ + numpy==2.4.1
+ + nvidia-cublas-cu12==12.9.2.10
+ + [0m[91mnvidia-cuda-cccl-cu12==12.9.27
+ +[0m[91m nvidia-cuda-cupti-cu12==12.9.79[0m[91m
+ + nvidia-cuda-nvcc-cu12==12.9.86
+ + nvidia-cuda-nvrtc-cu12==12.9.86
+ + nvidia-cuda-runtime-cu12==12.9.79
+ + nvidia-cudnn-cu12==9.24.0.43
+ + nvidia-cufft-cu12==11.4.1.4
+ + nvidia-cusolver-cu12==11.7.[0m[91m5.82
+ + [0m[91mnvidia-cusparse-cu12[0m[91m==12.5.10.65
+ + nvidia-nccl-cu12==2.30.7
+ + nvidia-nvjitlink-cu12==12.9.86
+[0m[91m + nvidia-nvshmem-cu12==3.7.1
+ +[0m[91m opt-einsum==[0m[91m3.4.0[0m[91m
+ +[0m[91m optax[0m[91m==0.[0m[91m2.6[0m[91m
+ +[0m[91m optimistix[0m[91m==0.0[0m[91m.11
+[0m[91m + [0m[91mpackaging==26.0
+ [0m[91m+ [0m[91mpillow==[0m[91m12.1[0m[91m.0
+[0m[91m + pygments==2.19.[0m[91m2
+ + pyparsing==3.3.2
+ + python-dateutil==2.9.0.post0
+ + pyyaml==6.0.3
+ +[0m[91m rich==14[0m[91m.3.[0m[91m1
+ + scikit-learn==1[0m[91m.8.0[0m[91m
+ + scipy==[0m[91m1.17.[0m[91m0
+ [0m[91m+ [0m[91msix==1[0m[91m.17.0[0m[91m
+ [0m[91m+ threadpoolctl[0m[91m==3[0m[91m.6.0[0m[91m
+ [0m[91m+ toolz[0m[91m==1.[0m[91m1.0[0m[91m
+ + [0m[91mtqdm==[0m[91m4.67.[0m[91m1
+ [0m[91m+ typing-extensions[0m[91m==4[0m[91m.15.0
+ [0m[91m+ [0m[91mwadler-lindig==[0m[91m0.1.[0m[91m7
+[0mRemoving intermediate container 3964031254d0
+ ---> b354daaef697
+Step 11/21 : COPY chlu ./chlu
+ ---> 71814e5044ca
+Step 12/21 : COPY scripts/cloud ./scripts/cloud
+ ---> 930e6b414f3c
+Step 13/21 : RUN uv sync --frozen --no-dev --extra cuda
+ ---> Running in df848c6de648
+[91mwarning: The `tool.uv.dev-dependencies` field (used in `pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[0m[91m   Building chlu @ file:///opt/chlu
+[0m[91m      Built chlu @ file:///opt/chlu
+[0m[91mPrepared 1 package in 956ms
+[0m[91mInstalled 1 package in 1ms
+ + chlu==0.2.4 (from file:///opt/chlu)
+[0mRemoving intermediate container df848c6de648
+ ---> 79674eeb9938
+Step 14/21 : ENV PATH="/opt/venv/bin:${PATH}"     VIRTUAL_ENV=/opt/venv
+ ---> Running in 075e9e80f9a0
+Removing intermediate container 075e9e80f9a0
+ ---> 500cf373e045
+Step 15/21 : ENV JAX_COMPILATION_CACHE_DIR=/var/chlu/jax_cache     JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS=1
+ ---> Running in 83adeee20fa0
+Removing intermediate container 83adeee20fa0
+ ---> 4444f0af5ea6
+Step 16/21 : ARG GIT_COMMIT=unknown
+ ---> Running in b410ad6afb3e
+Removing intermediate container b410ad6afb3e
+ ---> 302c552bb7b2
+Step 17/21 : ARG BUILD_ID=unknown
+ ---> Running in 3cc2c4c37e69
+Removing intermediate container 3cc2c4c37e69
+ ---> 78f56344c374
+Step 18/21 : ENV CHLU_IMAGE_GIT_COMMIT=${GIT_COMMIT}     CHLU_IMAGE_BUILD_ID=${BUILD_ID}
+ ---> Running in 9da7ef5bb480
+Removing intermediate container 9da7ef5bb480
+ ---> 3155d4aa608b
+Step 19/21 : LABEL org.opencontainers.image.revision=${GIT_COMMIT}       org.opencontainers.image.source="https://github.com/forgis/CHLU"       org.opencontainers.image.description="CHLU CUDA runtime (uv --frozen --extra cuda, bundled CUDA wheels)"
+ ---> Running in 56d8a39d5660
+Removing intermediate container 56d8a39d5660
+ ---> 272691e31b76
+Step 20/21 : RUN python -c "import jax, chlu; print('image OK: jax', jax.__version__, '| chlu', chlu.__version__ if hasattr(chlu,'__version__') else '?')"  && gcloud --version | head -2
+ ---> Running in 68226d4388b8
+[91mERROR:2026-09-15 20:39:59,486:jax._src.xla_bridge:491: Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/opt/venv/lib/python3.11/site-packages/jax/_src/xla_bridge.py", line 489, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/opt/venv/lib/python3.11/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/opt/venv/lib/python3.11/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: Unknown CUDA error 303; cuGetErrorName failed. This probably means that JAX was unable to load the CUDA libraries.
+[0mimage OK: jax 0.9.0 | chlu 0.2.4
+Google Cloud SDK 585.0.0
+bq 2.1.38
+Removing intermediate container 68226d4388b8
+ ---> 503714cf10fe
+Step 21/21 : CMD ["python", "/opt/chlu/scripts/cloud/payload_smoke.py", "--help"]
+ ---> Running in 083db704466a
+Removing intermediate container 083db704466a
+ ---> e26809343b83
+Successfully built e26809343b83
+Successfully tagged us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:20260915T203519Z
+Successfully tagged us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:latest
++ docker push us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:20260915T203519Z
+The push refers to repository [us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda]
+cd2d45801063: Preparing
+4dc2479327b1: Preparing
+89461f8b5974: Preparing
+730b9be99562: Preparing
+da95aa374cf8: Preparing
+be2dc43f3291: Preparing
+58f376e2ca49: Preparing
+9809b1fedd07: Preparing
+84b7427fa429: Preparing
+c5a2bd506e3a: Preparing
+abe239c61612: Preparing
+52b622427b58: Preparing
+1d69a5fd3193: Preparing
+be2dc43f3291: Waiting
+abe239c61612: Waiting
+58f376e2ca49: Waiting
+52b622427b58: Waiting
+9809b1fedd07: Waiting
+1d69a5fd3193: Waiting
+c5a2bd506e3a: Waiting
+84b7427fa429: Waiting
+89461f8b5974: Pushed
+4dc2479327b1: Pushed
+be2dc43f3291: Pushed
+58f376e2ca49: Pushed
+730b9be99562: Pushed
+c5a2bd506e3a: Layer already exists
+abe239c61612: Layer already exists
+52b622427b58: Layer already exists
+cd2d45801063: Pushed
+84b7427fa429: Pushed
+1d69a5fd3193: Pushed
+9809b1fedd07: Pushed
+da95aa374cf8: Pushed
+20260915T203519Z: digest: sha256:1633420403b2dc5dab2bc1a40cf98b82c6c71653f446b2d0230481aab5412676 size: 3057
++ docker push us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:latest
+The push refers to repository [us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda]
+cd2d45801063: Preparing
+4dc2479327b1: Preparing
+89461f8b5974: Preparing
+730b9be99562: Preparing
+da95aa374cf8: Preparing
+be2dc43f3291: Preparing
+58f376e2ca49: Preparing
+9809b1fedd07: Preparing
+84b7427fa429: Preparing
+c5a2bd506e3a: Preparing
+abe239c61612: Preparing
+52b622427b58: Preparing
+1d69a5fd3193: Preparing
+be2dc43f3291: Waiting
+c5a2bd506e3a: Waiting
+84b7427fa429: Waiting
+9809b1fedd07: Waiting
+52b622427b58: Waiting
+1d69a5fd3193: Waiting
+58f376e2ca49: Waiting
+abe239c61612: Waiting
+4dc2479327b1: Layer already exists
+cd2d45801063: Layer already exists
+730b9be99562: Layer already exists
+89461f8b5974: Layer already exists
+da95aa374cf8: Layer already exists
+be2dc43f3291: Layer already exists
+c5a2bd506e3a: Layer already exists
+84b7427fa429: Layer already exists
+58f376e2ca49: Layer already exists
+abe239c61612: Layer already exists
+52b622427b58: Layer already exists
+1d69a5fd3193: Layer already exists
+9809b1fedd07: Layer already exists
+latest: digest: sha256:1633420403b2dc5dab2bc1a40cf98b82c6c71653f446b2d0230481aab5412676 size: 3057
+++ docker inspect '--format={{index .RepoDigests 0}}' us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:20260915T203519Z
+++ awk -F@ '{print $2}'
++ DIGEST=sha256:1633420403b2dc5dab2bc1a40cf98b82c6c71653f446b2d0230481aab5412676
++ echo sha256:1633420403b2dc5dab2bc1a40cf98b82c6c71653f446b2d0230481aab5412676
++ gcloud storage cp /tmp/DIGEST gs://chlu-cloud-forgisprova/build/20260915T203519Z/DIGEST -q
+Copying file:///tmp/DIGEST to gs://chlu-cloud-forgisprova/build/20260915T203519Z/DIGEST
+  
+.
++ echo 'BUILD OK sha256:1633420403b2dc5dab2bc1a40cf98b82c6c71653f446b2d0230481aab5412676'
+BUILD OK sha256:1633420403b2dc5dab2bc1a40cf98b82c6c71653f446b2d0230481aab5412676
++ finish
++ rc=0
++ gcloud storage cp /var/log/chlu-build.log gs://chlu-cloud-forgisprova/build/20260915T203519Z/build.log -q
+Copying file:///var/log/chlu-build.log to gs://chlu-cloud-forgisprova/build/20260915T203519Z/build.log
+  

@@ -1,0 +1,95 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+[   38.4s] land K=5 N=64 dim=2048 sigma=[4.6343, 5.0714, 9.1827, 6.3054, 5.1006] cert_radius=[13.3657, 14.6262, 26.4835, 18.1852, 14.7104]
+[   40.0s] SELF-CHECK identity_E_le_0_on_live_store: holds (max over wells -30.3937)
+[   40.0s] 192 val rows (of 512); features read from the cache at their pool positions -- ⛔ nothing re-encoded
+[   40.4s] kNN calibrated on 4096 fit_rows CACHED FEATURES: whole=[21.16] factored=[6.5996, 7.0452, 11.2302, 8.1455, 7.5483]
+[   41.9s] kNN calibrated on the R8 embeddings of the same corners: whole=[18.773] factored=[5.3384, 5.7898, 9.6462, 7.0806, 6.581]
+[   41.9s]   ⭐ decoder: v1_capacity_schedule (gen-decoder-lift winner) param_hash=01ef91f75eeaae7b… params=1516227 — asserted
+[   42.0s]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[   42.1s] settle: steps=1000 {'steps': 1000, 'step_size': 0.2, 'sigma_scale_start': 4.0, 'sigma_scale_end': 1.0, 'temp_start': 0.0, 'temp_end': 0.0, 'metropolis': True, 'trace_every': 1}
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[   67.0s]   t=   0.0  min d/sig= 0.812  maxE=    -37.40  refuse=0.000 cert=0.000  knnW=0.057 knnF=0.167  acc_plain=0.9931  acc_clu=0.1198  (CLU moved 29.39 -> d/sig 0.821)
+[   86.4s]   t=   2.0  min d/sig= 0.827  maxE=    -37.05  refuse=0.000 cert=0.000  knnW=0.057 knnF=0.208  acc_plain=0.9931  acc_clu=0.1198  (CLU moved 29.46 -> d/sig 0.821)
+[  105.2s]   t=   4.0  min d/sig= 0.869  maxE=    -36.05  refuse=0.000 cert=0.000  knnW=0.078 knnF=0.266  acc_plain=0.9939  acc_clu=0.1198  (CLU moved 29.67 -> d/sig 0.821)
+[  122.5s]   t=   6.0  min d/sig= 0.931  maxE=    -34.39  refuse=0.000 cert=0.000  knnW=0.120 knnF=0.349  acc_plain=0.9852  acc_clu=0.1198  (CLU moved 30.02 -> d/sig 0.821)
+[  138.9s]   t=   8.0  min d/sig= 1.006  maxE=    -32.06  refuse=0.000 cert=0.000  knnW=0.172 knnF=0.510  acc_plain=0.9740  acc_clu=0.1198  (CLU moved 30.50 -> d/sig 0.821)
+[  155.5s]   t=  10.0  min d/sig= 1.087  maxE=    -29.06  refuse=0.005 cert=0.000  knnW=0.276 knnF=0.714  acc_plain=0.9609  acc_clu=0.1198  (CLU moved 31.11 -> d/sig 0.821)
+[  171.8s]   t=  13.0  min d/sig= 1.212  maxE=    -23.26  refuse=0.005 cert=0.000  knnW=0.536 knnF=0.969  acc_plain=0.9436  acc_clu=0.1198  (CLU moved 32.23 -> d/sig 0.821)
+[  188.5s]   t=  16.0  min d/sig= 1.336  maxE=    -15.90  refuse=0.016 cert=0.000  knnW=0.859 knnF=0.995  acc_plain=0.9210  acc_clu=0.1198  (CLU moved 33.59 -> d/sig 0.821)
+[  205.4s]   t=  19.0  min d/sig= 1.464  maxE=     -6.95  refuse=0.193 cert=0.000  knnW=0.979 knnF=1.000  acc_plain=0.8958  acc_clu=0.1198  (CLU moved 35.15 -> d/sig 0.821)
+[  222.5s]   t=  22.0  min d/sig= 1.599  maxE=      3.60  refuse=0.651 cert=0.000  knnW=1.000 knnF=1.000  acc_plain=0.8707  acc_clu=0.1198  (CLU moved 36.89 -> d/sig 0.821)
+[  239.6s]   t=  25.0  min d/sig= 1.740  maxE=     15.78  refuse=0.974 cert=0.000  knnW=1.000 knnF=1.000  acc_plain=0.8455  acc_clu=0.1198  (CLU moved 38.78 -> d/sig 0.821)
+[  256.5s]   t=  28.0  min d/sig= 1.886  maxE=     29.59  refuse=1.000 cert=0.021  knnW=1.000 knnF=1.000  acc_plain=0.8281  acc_clu=0.1198  (CLU moved 40.81 -> d/sig 0.821)
+[  273.6s]   t=  32.0  min d/sig= 2.087  maxE=     50.64  refuse=1.000 cert=0.573  knnW=1.000 knnF=1.000  acc_plain=0.7960  acc_clu=0.1198  (CLU moved 43.67 -> d/sig 0.821)
+[  291.3s]   t=  36.0  min d/sig= 2.293  maxE=     75.19  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.7656  acc_clu=0.1198  (CLU moved 46.70 -> d/sig 0.821)
+[  308.7s]   t=  40.0  min d/sig= 2.504  maxE=    104.65  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.7326  acc_clu=0.1198  (CLU moved 49.87 -> d/sig 0.821)
+[  325.4s]   t=  45.0  min d/sig= 2.771  maxE=    149.47  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.7005  acc_clu=0.1198  (CLU moved 53.98 -> d/sig 0.821)
+[  344.0s]   t=  50.0  min d/sig= 3.042  maxE=    203.69  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.6684  acc_clu=0.1198  (CLU moved 58.22 -> d/sig 0.821)
+[  367.4s]   t=  56.0  min d/sig= 3.371  maxE=    279.44  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.6311  acc_clu=0.1198  (CLU moved 63.46 -> d/sig 0.821)
+[  388.8s]   t=  63.0  min d/sig= 3.759  maxE=    381.29  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.6033  acc_clu=0.1198  (CLU moved 69.73 -> d/sig 0.821)
+[  410.4s]   t=  70.0  min d/sig= 4.150  maxE=    499.49  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.5486  acc_clu=0.1198  (CLU moved 76.12 -> d/sig 0.821)
+[  430.3s]   t=  78.0  min d/sig= 4.600  maxE=    655.10  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.5130  acc_clu=0.1198  (CLU moved 83.54 -> d/sig 0.821)
+[  450.3s]   t=  86.0  min d/sig= 5.051  maxE=    832.44  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.4670  acc_clu=0.1198  (CLU moved 91.06 -> d/sig 0.821)
+[  450.3s] wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-admission\CERTIFIED_ACCESS_FIGURE_seed0_A.json
+[  450.3s] 
+[  450.3s] === CROSSINGS (units: mean min_k d_k/sigma_k) ===
+[  450.3s]   zero_level_set_x           1.5548
+[  450.3s]   zero_level_set_x_by_meanE  1.5532
+[  450.3s]   certificate_flip_x         2.0603
+[  450.3s]   certified_refusal_x        2.0603
+[  450.3s]   knn_whole_x                1.1948
+[  450.3s]   knn_factored_x             1.0009
+[  450.3s]   knn_whole_r8_x             1.0084
+[  450.3s]   knn_factored_r8_x          never crosses in range
+[  450.3s]   decode_collapse_x          4.0809
+[  450.3s]   decode_below_half_x        4.7277
+[  450.3s]   clu_read_collapse_x        never crosses in range
+[  450.3s]   clu_read_below_half_x      never crosses in range
+[  451.2s] figure -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-admission\certified_access_seed0_A.png
+[  451.2s] U6 DONE

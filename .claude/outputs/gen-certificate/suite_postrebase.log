@@ -1,0 +1,60 @@
+........................................................................ [ 24%]
+........................................................................ [ 49%]
+........................................................................ [ 74%]
+........................................................................ [ 99%]
+..                                                                       [100%]
+=============================== warnings summary ===============================
+tests/test_gen_bridge.py::test_feature_cache_roundtrips_with_a_checksum
+tests/test_gen_bridge.py::test_feature_cache_load_detects_corruption
+tests/test_gen_bridge.py::test_features_for_rows_refuses_a_row_the_cache_does_not_hold
+tests/test_gen_bridge.py::test_recon_pretext_trains_and_the_shared_decoder_is_fit_on_frozen_features
+tests/test_gen_bridge.py::test_measure_ceiling_runs_end_to_end_on_tiny_tensors
+tests/test_gen_bridge_wide.py::test_factor_probs_argmax_is_the_predict_factors_column
+tests/test_gen_bridge_wide.py::test_factor_probs_on_an_empty_batch
+tests/test_gen_bridge_wide.py::test_factor_probs_reads_a_float32_input_under_x64[False]
+tests/test_gen_bridge_wide.py::test_factor_probs_reads_a_float32_input_under_x64[True]
+  /Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+  Possibly assigning a JAX-transformed callable as an attribute on
+  equinox._jit._JitWrapper. This will not have any of its parameters updated.
+  
+  For example, the following code is buggy:
+  ```python
+  class MyModule(eqx.Module):
+      vmap_linear: Callable
+  
+      def __init__(self, ...):
+          self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+  
+      def __call__(self, ...):
+          ... = self.vmap_linear(...)
+  ```
+  This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+  the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+  
+  You can most easily fix this either by applying the wrapper at `__call__` time:
+  ```python
+  class MyModule(eqx.Module):
+      linear: Callable
+  
+      def __init__(self, ...):
+          self.linear = eqx.nn.Linear(...)
+  
+      def __call__(self, ...):
+          ... = jax.vmap(self.linear)(...)
+  ```
+  or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+  ```python
+  class MyModule(eqx.Module):
+      vmap_linear: Callable
+  
+      def __init__(self, ...):
+          self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+  
+      def __call__(self, ...):
+          ... = self.vmap_linear(...)
+  ```
+  
+    jit_wrapper = _JitWrapper(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+290 passed, 9 warnings in 303.44s (0:05:03)

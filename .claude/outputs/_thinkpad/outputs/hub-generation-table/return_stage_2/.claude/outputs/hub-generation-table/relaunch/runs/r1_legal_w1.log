@@ -1,0 +1,59 @@
+[14:44:46] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[14:44:46]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[14:44:46]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[14:44:46] table=legal nvariants=2 corners[3:6] set=select
+[14:44:46]   NMF_P2_K64         K= 64 A= 1280 rank=   0 n_add=52 n_pair=160 method=nmf          alloc=uniform   bytes_pred=463360
+[14:44:46]   NMF_P3_K64         K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=nmf          alloc=uniform   bytes_pred=454336
+[14:44:48] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:47:27] [c6 0188999d1c] NMF_P2_K64         agg=0.8773 tup=41 B=463360 r=52 [157.6s]
+[14:50:41] [c6 0188999d1c] NMF_P3_K64         agg=0.8773 tup=41 B=454336 r=52 [193.5s]
+[14:50:41] [c6] corner done in 352.9s
+[14:54:18] [c8 18792b5479] NMF_P2_K64         agg=0.9931 tup=69 B=463360 r=52 [215.1s]
+[14:57:18] [c8 18792b5479] NMF_P3_K64         agg=0.9907 tup=68 B=454336 r=52 [180.5s]
+[14:57:18] [c8] corner done in 397.6s
+[15:00:18] [c12 ff22c5a995] NMF_P2_K64         agg=0.9699 tup=66 B=463360 r=52 [177.7s]
+[15:02:39] [c12 ff22c5a995] NMF_P3_K64         agg=0.9815 tup=68 B=454336 r=52 [141.1s]
+[15:02:39] [c12] corner done in 320.9s
+[15:02:39] r1 legal done in 1073.6s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table/relaunch\runs\r1_ledger_w1.jsonl

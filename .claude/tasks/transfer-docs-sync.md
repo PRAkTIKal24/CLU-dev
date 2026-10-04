@@ -1,0 +1,12 @@
+# Task: transfer-docs-sync — bring all transfer documents current through wave-5 (Head directive 2026-07-07; standing per-wave task)
+
+- **Agent:** `doc-curator` · **Output:** `.claude/outputs/transfer-docs-sync.md` (edit list per doc + gaps flagged)
+- **Read first:** protocol · your agent def's per-doc protocols · `.claude/handover_context.md` §10 (w4 + w5 review entries = source of truth) · the w4/w5 outputs: `mass-lr-doctrine-test.md`, `minus-the-physics.md`, `v2-prefreeze-baselines.md`, `f5-arxiv-note.md`, `v1-hopfield-stress.md`, `v1-wormhole-routing.md`, `seed-sweeps.md`, `sleep-erosion-study.md` · `.claude/claims_matrix.md` · `.claude/brainstorm_log.md` Thread 8.
+
+## Items
+1. **`HEP_primers.md` — audit + update through w5.** Known staleness candidates (verify, don't assume): the mass-narrowness story (§2.x) needs the CM-5 sharpening (ordering inducible / magnitude designed / budget-artifact re-scope); the symplecticity sections should gain the measured attribution table (volume→BIBO/protection/CD-survival; leapfrog→latch; cost=fit) — it's the best pedagogy the program has produced; Thread-8's "two forbidden cheats / paid access" frame as a new subsection ([design hypothesis] + one measured leg); adaptive-K/compact-gate status tags. Dated update-blockquotes per your protocol.
+2. **Create `.claude/negative_results.md`** — sweep ALL outputs w1→w5. Seed list (verify + complete from the reports; do not treat as exhaustive): squeeze retries null at single-unit scale · abstention-vs-Hopfield unwinnable at laptop scale · Hopfield dominant 26/26 + CLU fragile-basin degradation · isotropization NO (×3) · curriculum (slow-first) hurt · 100×-mass-lr ordering inversion · PCD-vs-CD null (dynamics path) · FDT-imbalance attribution refuted · locus discovery 2/6 pre-adaptive-K · learned-compact coverage drop · sleep erosion itself (as the discovery-negative that became a law) · silent knobs (Lyapunov-reg ≡0, sleep_temperature no-op at γ=0, --quick not wired). Each per your registry schema with prominence tier + owning vertical + source.
+3. **Ledger coverage check (w5 addendum already written by Hub):** verify it against the five w5 outputs; append a `(curator supplement)` block ONLY for genuine gaps.
+4. **Report:** per-doc edit list; a "docs debt" list (anything you saw that needs a bigger rewrite than your mandate allows).
+
+**Standing protocol from wave-6 on:** this task re-runs after every wave review (Hub will reference this file as the template; per-wave deltas go in the spawn prompt).

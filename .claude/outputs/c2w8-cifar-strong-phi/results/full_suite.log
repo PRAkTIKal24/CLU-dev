@@ -1,0 +1,310 @@
+........................................................................ [  5%]
+........................................................................ [ 10%]
+........................FF.............................................. [ 15%]
+........................................................................ [ 20%]
+........................................................................ [ 25%]
+........................................................................ [ 30%]
+........................................................................ [ 35%]
+........................................................................ [ 40%]
+........................................................................ [ 45%]
+........................................................................ [ 50%]
+........................................................................ [ 55%]
+........................................................................ [ 60%]
+........................................................................ [ 65%]
+........................................................................ [ 70%]
+........................................................................ [ 76%]
+........................................................................ [ 81%]
+........................................................................ [ 86%]
+........................................................................ [ 91%]
+........................................................................ [ 96%]
+....................................................                     [100%]
+=================================== FAILURES ===================================
+______ test_entry_runs_on_the_arm_and_ledgers_phi_on_every_row[randconv] _______
+
+arm = 'randconv'
+tmp_path = PosixPath('/private/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/pytest-of-x10719pj/pytest-27/test_entry_runs_on_the_arm_and0')
+
+    @pytest.mark.parametrize("arm", ["randconv", "pca"])
+    def test_entry_runs_on_the_arm_and_ledgers_phi_on_every_row(arm, tmp_path):
+        cfg_all = get_default_config()
+        cfg_all.experiment_cl_entry = _toy_cfg(arm=arm)
+>       res = cle.run_experiment_cl_entry(
+            config=cfg_all, save_dir=str(tmp_path / "plots"), seed=0, items=["entry"],
+            data=_toy_images(),
+        )
+
+tests/test_cifar_strong_phi.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+chlu/experiments/exp_cl_entry.py:1555: in run_experiment_cl_entry
+    A, diag = run_baseline_stream(
+chlu/experiments/cl_baselines.py:574: in run_baseline_stream
+    model, key, floss, _ = _train_task(
+chlu/experiments/cl_baselines.py:330: in _train_task
+    model, opt_state, loss, grads_last = step(
+chlu/experiments/cl_baselines.py:307: in step
+    loss, grads = loss_fn(m, xb, yb, xr, yr, xa, za, xc, yc)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+chlu/experiments/cl_baselines.py:294: in loss_fn
+    lg = jax.vmap(m)(xb)
+         ^^^^^^^^^^^^^^^
+chlu/experiments/cl_baselines.py:192: in __call__
+    return self.head(self.features(x))
+                     ^^^^^^^^^^^^^^^^
+chlu/experiments/cl_baselines.py:187: in features
+    h = jax.nn.relu(conv(h))
+                    ^^^^^^^
+../../.local/share/uv/python/cpython-3.11.13-macos-aarch64-none/lib/python3.11/contextlib.py:81: in inner
+    return func(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Conv2d(
+  num_spatial_dims=2,
+  weight=f64[4,3,3,3],
+  bias=f64[4,1,1],
+  in_channels=3,
+  out_channels=4,
+  kernel_si...,
+  stride=(1, 1),
+  padding=((1, 1), (1, 1)),
+  dilation=(1, 1),
+  groups=1,
+  use_bias=True,
+  padding_mode='ZEROS'
+)
+x = VmapTracer(aval=float32[1,3,32,32], batched=float32[13,1,3,32,32])
+
+    @named_scope("eqx.nn.Conv")
+    def __call__(self, x: Array, *, key: PRNGKeyArray | None = None) -> Array:
+        """**Arguments:**
+    
+        - `x`: The input. Should be a JAX array of shape
+            `(in_channels, dim_1, ..., dim_N)`, where `N = num_spatial_dims`.
+        - `key`: Ignored; provided for compatibility with the rest of the Equinox API.
+            (Keyword only argument.)
+    
+        **Returns:**
+    
+        A JAX array of shape `(out_channels, new_dim_1, ..., new_dim_N)`.
+        """
+        del key
+    
+        unbatched_rank = self.num_spatial_dims + 1
+        if x.ndim != unbatched_rank:
+            raise ValueError(
+                f"Input to `Conv` needs to have rank {unbatched_rank},",
+                f" but input has shape {x.shape}.",
+            )
+    
+        if self.padding_mode != "ZEROS":
+            x = self._nonzero_pad(x)
+            padding = "VALID"
+        else:
+            padding = self.padding
+    
+        x = jnp.expand_dims(x, axis=0)
+>       x = lax.conv_general_dilated(
+            lhs=x,
+            rhs=self.weight,
+            window_strides=self.stride,
+            padding=padding,
+            rhs_dilation=self.dilation,
+            feature_group_count=self.groups,
+        )
+E       TypeError: lax.conv_general_dilated requires arguments to have the same dtypes, got float32, float64.
+E       --------------------
+E       For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+
+../CHLU/.venv/lib/python3.11/site-packages/equinox/nn/_conv.py:239: TypeError
+_________ test_entry_runs_on_the_arm_and_ledgers_phi_on_every_row[pca] _________
+
+arm = 'pca'
+tmp_path = PosixPath('/private/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/pytest-of-x10719pj/pytest-27/test_entry_runs_on_the_arm_and1')
+
+    @pytest.mark.parametrize("arm", ["randconv", "pca"])
+    def test_entry_runs_on_the_arm_and_ledgers_phi_on_every_row(arm, tmp_path):
+        cfg_all = get_default_config()
+        cfg_all.experiment_cl_entry = _toy_cfg(arm=arm)
+>       res = cle.run_experiment_cl_entry(
+            config=cfg_all, save_dir=str(tmp_path / "plots"), seed=0, items=["entry"],
+            data=_toy_images(),
+        )
+
+tests/test_cifar_strong_phi.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+chlu/experiments/exp_cl_entry.py:1555: in run_experiment_cl_entry
+    A, diag = run_baseline_stream(
+chlu/experiments/cl_baselines.py:574: in run_baseline_stream
+    model, key, floss, _ = _train_task(
+chlu/experiments/cl_baselines.py:330: in _train_task
+    model, opt_state, loss, grads_last = step(
+chlu/experiments/cl_baselines.py:307: in step
+    loss, grads = loss_fn(m, xb, yb, xr, yr, xa, za, xc, yc)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+chlu/experiments/cl_baselines.py:294: in loss_fn
+    lg = jax.vmap(m)(xb)
+         ^^^^^^^^^^^^^^^
+chlu/experiments/cl_baselines.py:192: in __call__
+    return self.head(self.features(x))
+                     ^^^^^^^^^^^^^^^^
+chlu/experiments/cl_baselines.py:187: in features
+    h = jax.nn.relu(conv(h))
+                    ^^^^^^^
+../../.local/share/uv/python/cpython-3.11.13-macos-aarch64-none/lib/python3.11/contextlib.py:81: in inner
+    return func(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Conv2d(
+  num_spatial_dims=2,
+  weight=f64[4,3,3,3],
+  bias=f64[4,1,1],
+  in_channels=3,
+  out_channels=4,
+  kernel_si...,
+  stride=(1, 1),
+  padding=((1, 1), (1, 1)),
+  dilation=(1, 1),
+  groups=1,
+  use_bias=True,
+  padding_mode='ZEROS'
+)
+x = VmapTracer(aval=float32[1,3,32,32], batched=float32[13,1,3,32,32])
+
+    @named_scope("eqx.nn.Conv")
+    def __call__(self, x: Array, *, key: PRNGKeyArray | None = None) -> Array:
+        """**Arguments:**
+    
+        - `x`: The input. Should be a JAX array of shape
+            `(in_channels, dim_1, ..., dim_N)`, where `N = num_spatial_dims`.
+        - `key`: Ignored; provided for compatibility with the rest of the Equinox API.
+            (Keyword only argument.)
+    
+        **Returns:**
+    
+        A JAX array of shape `(out_channels, new_dim_1, ..., new_dim_N)`.
+        """
+        del key
+    
+        unbatched_rank = self.num_spatial_dims + 1
+        if x.ndim != unbatched_rank:
+            raise ValueError(
+                f"Input to `Conv` needs to have rank {unbatched_rank},",
+                f" but input has shape {x.shape}.",
+            )
+    
+        if self.padding_mode != "ZEROS":
+            x = self._nonzero_pad(x)
+            padding = "VALID"
+        else:
+            padding = self.padding
+    
+        x = jnp.expand_dims(x, axis=0)
+>       x = lax.conv_general_dilated(
+            lhs=x,
+            rhs=self.weight,
+            window_strides=self.stride,
+            padding=padding,
+            rhs_dilation=self.dilation,
+            feature_group_count=self.groups,
+        )
+E       TypeError: lax.conv_general_dilated requires arguments to have the same dtypes, got float32, float64.
+E       --------------------
+E       For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+
+../CHLU/.venv/lib/python3.11/site-packages/equinox/nn/_conv.py:239: TypeError
+=============================== warnings summary ===============================
+tests/test_cifar_strong_phi.py: 4 warnings
+tests/test_cl_entry.py: 5 warnings
+tests/test_phi_encoders.py: 10 warnings
+tests/test_phi_read_in.py: 1 warning
+tests/test_phi_stream.py: 1 warning
+  /Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+  Possibly assigning a JAX-transformed callable as an attribute on
+  equinox._jit._JitWrapper. This will not have any of its parameters updated.
+  
+  For example, the following code is buggy:
+  ```python
+  class MyModule(eqx.Module):
+      vmap_linear: Callable
+  
+      def __init__(self, ...):
+          self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+  
+      def __call__(self, ...):
+          ... = self.vmap_linear(...)
+  ```
+  This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+  the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+  
+  You can most easily fix this either by applying the wrapper at `__call__` time:
+  ```python
+  class MyModule(eqx.Module):
+      linear: Callable
+  
+      def __init__(self, ...):
+          self.linear = eqx.nn.Linear(...)
+  
+      def __call__(self, ...):
+          ... = jax.vmap(self.linear)(...)
+  ```
+  or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+  ```python
+  class MyModule(eqx.Module):
+      vmap_linear: Callable
+  
+      def __init__(self, ...):
+          self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+  
+      def __call__(self, ...):
+          ... = self.vmap_linear(...)
+  ```
+  
+    jit_wrapper = _JitWrapper(
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+tests/test_eval_metrics.py::test_fast_mode_is_subset_of_full
+tests/test_eval_metrics.py::test_point_metrics_keys_and_no_point_adjust
+  /Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/sklearn/metrics/_classification.py:1833: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+    _warn_prf(average, modifier, f"{metric.capitalize()} is", result.shape[0])
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w8-phi/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:126: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w8-phi/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:145: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w8-phi/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:178: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w8-phi/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:214: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w8-phi/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:245: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w8-phi/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:307: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w8-phi/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:423: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+  /Users/user/Desktop/CHLU-c2w8-phi/chlu/experiments/exp_v1_hopfield_gate.py:232: RuntimeWarning: Mean of empty slice
+    "within_model_auroc": float(np.nanmean(per_ep)) if per_ep else float("nan"),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_cifar_strong_phi.py::test_entry_runs_on_the_arm_and_ledgers_phi_on_every_row[randconv]
+FAILED tests/test_cifar_strong_phi.py::test_entry_runs_on_the_arm_and_ledgers_phi_on_every_row[pca]
+2 failed, 1418 passed, 35 warnings in 3270.26s (0:54:30)

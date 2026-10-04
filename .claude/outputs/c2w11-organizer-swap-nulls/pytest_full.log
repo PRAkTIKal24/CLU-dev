@@ -1,0 +1,988 @@
+........................................................................ [  4%]
+........................................................................ [  8%]
+...................F.................................................... [ 12%]
+........................................................................ [ 16%]
+........................................................................ [ 21%]
+........................................................................ [ 25%]
+........................................................................ [ 29%]
+........................................................................ [ 33%]
+........................................................................ [ 38%]
+......................F....F..........F................................. [ 42%]
+...F.FFFF.FF.....FF...................................FFFFFF............ [ 46%]
+........................................................................ [ 50%]
+........................................................................ [ 54%]
+........................................................................ [ 59%]
+........................................................................ [ 63%]
+........................................................................ [ 67%]
+........................................................................ [ 71%]
+........................................................................ [ 76%]
+........................................................................ [ 80%]
+........................................................................ [ 84%]
+........................................................................ [ 88%]
+........................................................................ [ 93%]
+........................................................................ [ 97%]
+...............................................<unknown>:126: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:145: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:178: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:214: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:245: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:307: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:423: DeprecationWarning: invalid escape sequence '\i'
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:126: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:145: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:178: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:214: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:245: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:307: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:423: DeprecationWarning: invalid escape sequence '\i'
+  """
+<unknown>:126: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:145: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:178: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:214: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:245: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:307: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:423: DeprecationWarning: invalid escape sequence '\i'
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:126: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:145: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:178: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:214: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:245: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:307: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:423: DeprecationWarning: invalid escape sequence '\i'
+  """
+                          [100%]
+=================================== FAILURES ===================================
+_________________ test_anytime_read_uses_the_frozen_split_rule _________________
+
+setup = {'anchors': array([[ 0.33971089,  1.05625762, -1.53059605, -0.65283388],
+       [ 1.38561454, -0.80712619, -0.99617363...its own construction and NOTHING here is verified against spoke A.', 'seed': 0, 'tol_measured': 0.24880047399467}, ...}
+small = CatTestConfig(n_wells=16, f_subset=3, n_items=12, n_unseen=24, atoms_per_well=6, addr_dim=4, payload_dim=6, ball_radiu...h_guard=True, launch_mode='feature_factored', n_channels=None, reach_radius_frac_s=2.0, coverage_trigger_threshold=0.2)
+
+    def test_anytime_read_uses_the_frozen_split_rule(setup, small):
+        """``address = round(b/3)``, ``read = b - round(b/3)`` — a budget of 0 is the launch."""
+        store, _ = instantiate_landscape(
+            small, np.asarray(setup["anchors"])[:, : small.addr_dim],
+            np.asarray(setup["family"].payloads), seed=0, width_frac=0.37)
+        z0 = anytime_read(store, setup["head"], small, setup["ind_u"],
+                          jax.random.fold_in(setup["key"], 1), budget=0)
+>       np.testing.assert_array_equal(np.asarray(z0), np.asarray(setup["q0_u"]))
+E       AssertionError: 
+E       Arrays are not equal
+E       
+E       Mismatched elements: 288 / 720 (40%)
+E       First 5 mismatches are at indices:
+E        [0, 0, 0]: 0.8335529565811157 (ACTUAL), 1.006838794317792 (DESIRED)
+E        [0, 0, 1]: -0.45878979563713074 (ACTUAL), -0.4263190423550775 (DESIRED)
+E        [0, 0, 2]: -1.6109888553619385 (ACTUAL), -1.4382846187991436 (DESIRED)
+E        [0, 0, 3]: -0.6443775296211243 (ACTUAL), -0.770195595393033 (DESIRED)
+E        [0, 1, 0]: -1.7513025999069214 (ACTUAL), -1.8705143510877933 (DESIRED)
+E       Max absolute difference among violations: 0.54977459
+E       Max relative difference among violations: 26.54849015
+E        ACTUAL: array([[[ 8.335530e-01, -4.587898e-01, -1.610989e+00, -6.443775e-01,
+E                 0.000000e+00,  0.000000e+00,  0.000000e+00,  0.000000e+00,
+E                 0.000000e+00,  0.000000e+00],...
+E        DESIRED: array([[[ 1.006839, -0.426319, -1.438285, -0.770196,  0.      ,
+E                 0.      ,  0.      ,  0.      ,  0.      ,  0.      ],
+E               [-1.870514,  0.082212, -1.169402,  0.074704,  0.      ,...
+
+tests/test_c2w11_nulls.py:334: AssertionError
+___________________ test_single_hole_reduces_to_thread1_form ___________________
+
+    def test_single_hole_reduces_to_thread1_form():
+        """K=1 must be exactly gamma_1 * sigmoid((r_1 - ||q - c_1||)/w)."""
+        field = _field_at([0.3, -0.7], radius=0.9, strength=0.2, width=0.15)
+        c, r, s = field.hole_params()
+>       assert abs(float(r[0]) - 0.9) < 1e-10  # inverse-softplus init is exact
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       assert 2.384185793236071e-08 < 1e-10
+E        +  where 2.384185793236071e-08 = abs((0.8999999761581421 - 0.9))
+E        +    where 0.8999999761581421 = float(Array(0.9, dtype=float32, weak_type=True))
+
+tests/test_friction_field.py:64: AssertionError
+___________________________ test_prop11_det_jacobian ___________________________
+
+    def test_prop11_det_jacobian():
+        """det J = (1 - gamma_phi(q_next))^d exactly (F5 Prop-11), and the
+        multiplicative composition ((1-gamma)(1-gamma_phi(q_next)))^d with a
+        scalar gamma."""
+        field = _field_at([0.0, 0.0], radius=0.8, strength=0.3)
+        model = CHLU(dim=2, hidden=16, friction_field=field, key=jax.random.PRNGKey(3))
+    
+        # Inside the horizon (gamma_phi large) and far outside (gamma_phi ~ 0)
+        states = [
+            (jnp.array([0.1, -0.2]), jnp.array([0.4, 0.3])),
+            (jnp.array([5.0, 5.0]), jnp.array([0.1, -0.1])),
+        ]
+        for q, p in states:
+            J, q_next = _step_jacobian_and_qnext(model, q, p, gamma=0.0)
+            det = float(jnp.linalg.det(J))
+            pred = float((1.0 - field(q_next)) ** 2)
+>           assert abs(det - pred) < 1e-12, f"det {det} vs Prop-11 {pred}"
+E           AssertionError: det 0.5283828377723694 vs Prop-11 0.5283828973770142
+E           assert 5.960464477539063e-08 < 1e-12
+E            +  where 5.960464477539063e-08 = abs((0.5283828377723694 - 0.5283828973770142))
+
+tests/test_friction_field.py:179: AssertionError
+______________________ test_add_and_prune_holes_roundtrip ______________________
+
+    def test_add_and_prune_holes_roundtrip():
+        from chlu.core.friction_field import add_hole, prune_holes
+    
+        field = _field_at([0.0, 0.0], radius=0.6, strength=0.3, gamma_max=0.5)
+        assert field.k == 1
+        grown = add_hole(field, jnp.array([2.0, -1.0]), radius=0.4, strength=0.2)
+        assert grown.k == 2
+        c, r, s = grown.hole_params()
+        # Exact inverse transforms on the appended hole.
+        assert np.allclose(np.asarray(c[1]), [2.0, -1.0], atol=1e-10)
+>       assert abs(float(r[1]) - 0.4) < 1e-10
+E       assert 2.384185793236071e-08 < 1e-10
+E        +  where 2.384185793236071e-08 = abs((0.3999999761581421 - 0.4))
+E        +    where 0.3999999761581421 = float(Array(0.39999998, dtype=float32))
+
+tests/test_friction_field.py:497: AssertionError
+__________________________ test_goldstone_latch_exact __________________________
+
+    def test_goldstone_latch_exact():
+        gamma = 0.05
+        inertia = 1.5
+        # One exactly flat direction (k=0) + one curved companion (k=1)
+        pot = QuadraticPotential(K=jnp.diag(jnp.array([0.0, 1.0])))
+        model = clu_with_potential(
+            pot, dim=2, kinetic_mode="newtonian_learned", inertia=(inertia, inertia)
+        )
+        m_eff = model.effective_inertia()
+        assert abs(float(m_eff[0]) - inertia) < 1e-12  # log_mass_for_inertia is exact
+    
+        q0 = jnp.array([0.3, 0.2])
+        p0 = jnp.array([0.5, -0.4])
+        steps = 4000
+        traj = rollout_from(model, q0, p0, steps=steps, dt=DT, gamma=gamma)
+    
+        # Exact latch: dissipation FREEZES the flat-direction displacement
+        q_inf_pred = float(q0[0]) + DT * float(p0[0]) / (float(m_eff[0]) * gamma)
+        latch_err = abs(float(traj[-1, 0]) - q_inf_pred)
+>       assert latch_err < 1e-11, f"latch error {latch_err:.3e} (F5 App-N: 1e-15)"
+E       AssertionError: latch error 5.563e-07 (F5 App-N: 1e-15)
+E       assert 5.56310017829631e-07 < 1e-11
+
+tests/test_goldstone.py:87: AssertionError
+______________ test_underdamped_saturation_and_mass_independence _______________
+
+    def test_underdamped_saturation_and_mass_independence():
+        gamma = 0.05  # h*(0.05) = 0.025643; mu=1 -> h=0.05 => underdamped
+        pot = QuadraticPotential(K=jnp.array([[1.0]]))
+        model = clu_with_potential(pot, dim=1, kinetic_mode="newtonian_identity")
+        probe = spectrum_probe(model, jnp.zeros(1))
+        assert classify_mode(float(probe.mu_sq[0]), DT, gamma) == "working_memory"
+    
+        res = perturb_and_track(
+            model,
+            probe,
+            mode_idx=0,
+            kick=0.1,
+            kick_type="position",
+            steps=600,
+            dt=DT,
+            gamma=gamma,
+        )
+    
+        # Saturated half-life = 2*ln2/(-ln(1-gamma)) = 27.03 steps. The raw
+        # first-crossing is phase-convention dependent (F5 App-N "known diagnostic
+        # artifacts"): friction only bites momentum, so log-amplitude ripples with
+        # amplitude gamma/(2h) = 0.5 in log E, i.e. a crossing jitter of
+        # +-(gamma/2h)/|ln sqrt(1-gamma)| ~ +-10 steps around 27 (F5's own kick
+        # phase measured 23–26; a position kick lags to ~37). The window below
+        # covers the ripple band while excluding the overdamped law, which would
+        # predict 14.2 steps for these parameters.
+        n_half = half_life_first_crossing(res["retention"])
+        n_sat = 2.0 * math.log(2.0) / (-math.log(1.0 - gamma))
+        assert 20 <= n_half <= 42, f"underdamped n_1/2 = {n_half}, expected {n_sat:.1f}±10"
+        assert abs(predicted_half_life(1.0, DT, gamma) - n_sat) < 1e-9
+    
+        # The LAW, asserted tightly: envelope decay rate ln|lambda| =
+        # 0.5*ln(1-gamma) (mass-independent saturation), fit over 4 periods
+        slope = fit_decay_rate(res["retention"], n_fit=504)
+        target = 0.5 * math.log(1.0 - gamma)
+        assert abs(slope - target) / abs(target) < 0.01, f"fit {slope} vs {target}"
+        # ... equivalently, the fit-derived half-life sits on the saturation value
+        assert abs(math.log(2.0) / (-slope) - n_sat) / n_sat < 0.05
+    
+        # Mass-independence at the eigenvalue level (F5's ground truth): the
+        # step-Jacobian eigen-moduli equal sqrt(1-gamma) for BOTH inertial masses
+        for inertia in (1.0, 0.25):
+            m = clu_with_potential(
+                pot, dim=1, kinetic_mode="newtonian_learned", inertia=(inertia,)
+            )
+            J = step_jacobian(m, jnp.zeros(1), jnp.zeros(1), DT, gamma)
+            mods = np.abs(np.linalg.eigvals(np.asarray(J)))
+>           assert np.max(np.abs(mods - math.sqrt(1.0 - gamma))) < 1e-9, (
+                f"inertia={inertia}: |lambda| = {mods}"
+            )
+E           AssertionError: inertia=1.0: |lambda| = [0.97467935 0.97467935]
+E           assert np.float32(5.9604645e-08) < 1e-09
+E            +  where np.float32(5.9604645e-08) = <function max at 0x1098914f0>(array([5.9604645e-08, 5.9604645e-08], dtype=float32))
+E            +    where <function max at 0x1098914f0> = np.max
+E            +    and   array([5.9604645e-08, 5.9604645e-08], dtype=float32) = <ufunc 'absolute'>((array([0.97467935, 0.97467935], dtype=float32) - 0.9746794344808963))
+E            +      where <ufunc 'absolute'> = np.abs
+E            +      and   0.9746794344808963 = <built-in function sqrt>((1.0 - 0.05))
+E            +        where <built-in function sqrt> = math.sqrt
+
+tests/test_goldstone.py:213: AssertionError
+_______________________ test_noether_charge_exact_decay ________________________
+
+    def test_noether_charge_exact_decay():
+        gamma = 0.05
+        hat = MexicanHatPotential(lam=1.0, f=1.0, k_spec=None)
+        model = clu_with_potential(
+            hat, dim=2, kinetic_mode="newtonian_learned", inertia=(1.0, 1.0)
+        )
+        q0 = jnp.array([1.0, 0.0])
+        p0 = jnp.array([0.15, 0.3])  # tangential + radial write
+        traj = rollout_from(model, q0, p0, steps=1000, dt=DT, gamma=gamma)
+        Q = np.asarray(noether_charge(traj, dim=2))
+        n = np.arange(len(Q))
+        Q_pred = (1.0 - gamma) ** n * Q[0]
+        err = np.max(np.abs(Q - Q_pred)) / abs(Q[0])
+>       assert err < 1e-9, f"Noether decay-law error {err:.3e} (F5 App-N: 9.3e-16)"
+E       AssertionError: Noether decay-law error 2.890e-07 (F5 App-N: 9.3e-16)
+E       assert np.float64(2.889726470970034e-07) < 1e-09
+
+tests/test_goldstone.py:236: AssertionError
+______________________ test_kinetic_isotropy_requirement _______________________
+
+    def test_kinetic_isotropy_requirement():
+        hat = MexicanHatPotential(lam=1.0, f=1.0, k_spec=None)
+        q0 = jnp.array([1.0, 0.0])
+        p0 = jnp.array([0.2, 0.3])
+        steps = 20000
+    
+        drifts = {}
+        for label, inertia in [("equal", (1.0, 1.0)), ("unequal", (1.0, 2.0))]:
+            model = clu_with_potential(
+                hat, dim=2, kinetic_mode="newtonian_learned", inertia=inertia
+            )
+            traj = rollout_from(model, q0, p0, steps=steps, dt=DT, gamma=0.0)
+            Q = np.asarray(noether_charge(traj, dim=2))
+            drifts[label] = np.max(np.abs(Q - Q[0])) / abs(Q[0])
+    
+>       assert drifts["equal"] < 1e-10, f"equal-mass drift {drifts['equal']:.3e}"
+E       AssertionError: equal-mass drift 5.662e-06
+E       assert np.float32(5.6624413e-06) < 1e-10
+
+tests/test_goldstone.py:260: AssertionError
+________________________ test_spectrum_probe_gmor_tilt _________________________
+
+    def test_spectrum_probe_gmor_tilt():
+        lam, f, inertia, delta, n_tilt = 0.7, 1.2, 1.3, 0.01, 2
+        hat = MexicanHatPotential(lam=lam, f=f, k_spec=None)
+        tilted = TiltedPotential(hat, tilt_delta=delta, tilt_n=n_tilt)
+        model = clu_with_potential(
+            tilted, dim=2, kinetic_mode="newtonian_learned", inertia=(inertia, inertia)
+        )
+    
+        # Analytic minimum of delta*cos(2*theta): theta = pi/2 -> q* = (0, f)
+        q_star = jnp.array([0.0, f])
+        probe = spectrum_probe(model, q_star)
+>       assert float(probe.grad_norm) < 1e-10
+E       assert 1.457046261421624e-09 < 1e-10
+E        +  where 1.457046261421624e-09 = float(Array(1.4570463e-09, dtype=float32))
+E        +    where Array(1.4570463e-09, dtype=float32) = SpectrumProbe(q_star=Array([0. , 1.2], dtype=float32), K=Array([[2.7777776e-02, 1.2142053e-09],\n       [1.2142052e-09,...ype=float32), eigvecs=Array([[1., 0.],\n       [0., 1.]], dtype=float32), grad_norm=Array(1.4570463e-09, dtype=float32)).grad_norm
+
+tests/test_goldstone.py:282: AssertionError
+________________________ test_linear_spurion_gmor_exact ________________________
+
+    def test_linear_spurion_gmor_exact():
+        """mu^2 * F^2 = delta * Sigma for every delta, to machine precision.
+    
+        Precision note: the angular curvature at the vacuum is K_ang = delta/r*,
+        which the autodiff Hessian reconstructs as a difference of O(||K||) terms
+        (the hat evaluates r^2 - f^2 explicitly). So the ABSOLUTE deviation sits at
+        the roundoff floor eps*||K||*F^2 for every delta, while the RELATIVE
+        deviation is floored at ~eps/delta. Both are asserted below; the law itself
+        is exact (a cancellation-free Hessian gives 2.2e-16 relative at all delta).
+        """
+        lam, f, inertia = 0.7, 1.2, 1.3
+        hat = MexicanHatPotential(lam=lam, f=f, k_spec=None)
+        eps = float(np.finfo(np.float64).eps)
+        k_scale = 8.0 * lam * f**2  # radial curvature ~ ||Hess V|| at the vacuum
+    
+        for delta in (1e-6, 1e-3, 1e-2, 0.1, 0.3):
+            u = channel_spurion_direction(2, 0.0)
+            spur = LinearSpurionPotential(hat, delta, u)
+            model = clu_with_potential(
+                spur, dim=2, kinetic_mode="newtonian_learned", inertia=(inertia, inertia)
+            )
+            r_star = _hat_spurion_vacuum(lam, f, delta)
+            q_star = jnp.asarray(r_star * np.asarray(u))
+            probe = spectrum_probe(model, q_star)
+>           assert float(probe.grad_norm) < 1e-12, f"not a vacuum: {probe.grad_norm}"
+E           AssertionError: not a vacuum: 2.01629745788523e-07
+E           assert 2.01629745788523e-07 < 1e-12
+E            +  where 2.01629745788523e-07 = float(Array(2.0162975e-07, dtype=float32))
+E            +    where Array(2.0162975e-07, dtype=float32) = SpectrumProbe(q_star=Array([1.2000002, 0.       ], dtype=float32), K=Array([[8.064003e+00, 0.000000e+00],\n       [0.00...ype=float32), eigvecs=Array([[0., 1.],\n       [1., 0.]], dtype=float32), grad_norm=Array(2.0162975e-07, dtype=float32)).grad_norm
+
+tests/test_goldstone.py:364: AssertionError
+__________________ test_linear_spurion_direction_independence __________________
+
+    def test_linear_spurion_direction_independence():
+        """V_base is channel-invariant => mu^2 is independent of the spurion angle."""
+        lam, f, inertia, delta = 0.7, 1.2, 1.3, 0.05
+        hat = MexicanHatPotential(lam=lam, f=f, k_spec=None)
+        r_star = _hat_spurion_vacuum(lam, f, delta)
+    
+        mus = []
+        for angle in (0.0, 0.9, -2.3):
+            u = channel_spurion_direction(2, angle)
+            model = clu_with_potential(
+                LinearSpurionPotential(hat, delta, u),
+                dim=2,
+                kinetic_mode="newtonian_learned",
+                inertia=(inertia, inertia),
+            )
+            q_star = jnp.asarray(r_star * np.asarray(u))
+            probe = spectrum_probe(model, q_star)
+>           assert float(probe.grad_norm) < 1e-12
+E           assert 1.30385160446167e-07 < 1e-12
+E            +  where 1.30385160446167e-07 = float(Array(1.3038516e-07, dtype=float32))
+E            +    where Array(1.3038516e-07, dtype=float32) = SpectrumProbe(q_star=Array([1.206153, 0.      ], dtype=float32), K=Array([[8.188363  , 0.        ],\n       [0.        ...ype=float32), eigvecs=Array([[0., 1.],\n       [1., 0.]], dtype=float32), grad_norm=Array(1.3038516e-07, dtype=float32)).grad_norm
+
+tests/test_goldstone.py:413: AssertionError
+__________________________ test_circle_vacuum_dataset __________________________
+
+    def test_circle_vacuum_dataset():
+        data = generate_circle_vacuum(
+            jax.random.PRNGKey(0), n_points=8, seq_len=5, dim=4, radius=1.5
+        )
+        assert data.shape == (8, 5, 8)
+        # Constant in time
+        assert jnp.max(jnp.abs(data - data[:, :1, :])) == 0.0
+        # On the circle, spectators and momenta zero
+        r = jnp.sqrt(data[:, 0, 0] ** 2 + data[:, 0, 1] ** 2)
+>       assert jnp.max(jnp.abs(r - 1.5)) < 1e-12
+E       assert Array(1.1920929e-07, dtype=float32) < 1e-12
+E        +  where Array(1.1920929e-07, dtype=float32) = <function max at 0x10d9bf6a0>(Array([0.0000000e+00, 1.1920929e-07, 0.0000000e+00, 1.1920929e-07,\n       1.1920929e-07, 1.1920929e-07, 0.0000000e+00, 0.0000000e+00],      dtype=float32))
+E        +    where <function max at 0x10d9bf6a0> = jnp.max
+E        +    and   Array([0.0000000e+00, 1.1920929e-07, 0.0000000e+00, 1.1920929e-07,\n       1.1920929e-07, 1.1920929e-07, 0.0000000e+00, 0.0000000e+00],      dtype=float32) = <PjitFunction of <function abs at 0x10da9f880>>((Array([1.5      , 1.5000001, 1.5      , 1.4999999, 1.4999999, 1.5000001,\n       1.5      , 1.5      ], dtype=float32) - 1.5))
+E        +      where <PjitFunction of <function abs at 0x10da9f880>> = jnp.abs
+
+tests/test_goldstone.py:537: AssertionError
+_______________________ test_mode_coordinates_roundtrip ________________________
+
+    def test_mode_coordinates_roundtrip():
+        # Canonical projections must recover a hand-planted mode displacement
+        pot = QuadraticPotential(K=jnp.diag(jnp.array([0.09, 0.25])))
+        model = clu_with_potential(
+            pot, dim=2, kinetic_mode="newtonian_learned", inertia=(0.5, 2.0)
+        )
+        probe = spectrum_probe(model, jnp.zeros(2))
+        res = perturb_and_track(
+            model,
+            probe,
+            mode_idx=1,
+            kick=0.2,
+            kick_type="position",
+            steps=1,
+            dt=DT,
+            gamma=0.0,
+        )
+        d, pc = mode_coordinates(probe, res["traj"])
+>       assert abs(float(d[0, 1]) - 0.2) < 1e-12  # kicked mode reads back the kick
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       assert 2.980232227667301e-09 < 1e-12
+E        +  where 2.980232227667301e-09 = abs((0.20000000298023224 - 0.2))
+E        +    where 0.20000000298023224 = float(Array(0.2, dtype=float32))
+
+tests/test_goldstone.py:560: AssertionError
+____ test_winding1d_msd_round_trip_exact[8-6.54966062238462e-05-1.39453125] ____
+
+N = 8, ref_rate = 6.54966062238462e-05, ref_msd = 1.39453125
+
+    @pytest.mark.parametrize(
+        "N,ref_rate,ref_msd", [(8, 6.54966062238462e-05, 1.39453125)]
+    )
+    def test_winding1d_msd_round_trip_exact(N, ref_rate, ref_msd):
+        """The real CLU-path (JAX) 1-D winding MSD reproduces the laptop exactly."""
+>       got = run_winding_msd(N=N, TJ=1.0, n_chunks=300, CH=100, seed=31)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_kt.py:72: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+chlu/experiments/kt/clu_path.py:298: in run_winding_msd
+    assert_kt_settings(noise_mode, "newtonian_learned")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+noise_mode = 'fdt', kinetic_mode = 'newtonian_learned', use_governor = False
+
+    def assert_kt_settings(noise_mode: str, kinetic_mode: str, use_governor: bool = False):
+        """Fail loudly on a misconfigured run rather than silently produce garbage.
+    
+        A KT run under ``legacy`` noise or a governor is not a KT run: T stops being
+        a temperature in energy units (§7.22) and the governor breaks detailed
+        balance, so neither ``rho_s`` nor ``T_KT`` means anything.
+        """
+        if not jax.config.read("jax_enable_x64"):
+>           raise RuntimeError(
+                "KT runs require float64: call jax.config.update('jax_enable_x64', True) "
+                "BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 "
+                "does not resolve the winding-slip rates this experiment measures."
+            )
+E           RuntimeError: KT runs require float64: call jax.config.update('jax_enable_x64', True) BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 does not resolve the winding-slip rates this experiment measures.
+
+chlu/experiments/kt/clu_path.py:57: RuntimeError
+_____________________ test_msd_fit_window_shortens_the_fit _____________________
+
+    def test_msd_fit_window_shortens_the_fit():
+        """The diffusive-window cut must actually restrict the fit, and the default
+        must remain the (bit-exact) full-range fit.
+    
+        Guards the saturation trap: at T/J=1.0 the winding decorrelates in ~1e3
+        steps, so a full-range fit measures saturation, not a slip rate.
+        """
+>       full = run_winding_msd(N=8, TJ=1.0, n_chunks=300, CH=100, seed=31)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_kt.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+chlu/experiments/kt/clu_path.py:298: in run_winding_msd
+    assert_kt_settings(noise_mode, "newtonian_learned")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+noise_mode = 'fdt', kinetic_mode = 'newtonian_learned', use_governor = False
+
+    def assert_kt_settings(noise_mode: str, kinetic_mode: str, use_governor: bool = False):
+        """Fail loudly on a misconfigured run rather than silently produce garbage.
+    
+        A KT run under ``legacy`` noise or a governor is not a KT run: T stops being
+        a temperature in energy units (§7.22) and the governor breaks detailed
+        balance, so neither ``rho_s`` nor ``T_KT`` means anything.
+        """
+        if not jax.config.read("jax_enable_x64"):
+>           raise RuntimeError(
+                "KT runs require float64: call jax.config.update('jax_enable_x64', True) "
+                "BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 "
+                "does not resolve the winding-slip rates this experiment measures."
+            )
+E           RuntimeError: KT runs require float64: call jax.config.update('jax_enable_x64', True) BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 does not resolve the winding-slip rates this experiment measures.
+
+chlu/experiments/kt/clu_path.py:57: RuntimeError
+_________ test_assert_kt_settings_accepts_the_validated_configuration __________
+
+    def test_assert_kt_settings_accepts_the_validated_configuration():
+>       assert_kt_settings("fdt", "newtonian_learned", use_governor=False)
+
+tests/test_kt.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+noise_mode = 'fdt', kinetic_mode = 'newtonian_learned', use_governor = False
+
+    def assert_kt_settings(noise_mode: str, kinetic_mode: str, use_governor: bool = False):
+        """Fail loudly on a misconfigured run rather than silently produce garbage.
+    
+        A KT run under ``legacy`` noise or a governor is not a KT run: T stops being
+        a temperature in energy units (§7.22) and the governor breaks detailed
+        balance, so neither ``rho_s`` nor ``T_KT`` means anything.
+        """
+        if not jax.config.read("jax_enable_x64"):
+>           raise RuntimeError(
+                "KT runs require float64: call jax.config.update('jax_enable_x64', True) "
+                "BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 "
+                "does not resolve the winding-slip rates this experiment measures."
+            )
+E           RuntimeError: KT runs require float64: call jax.config.update('jax_enable_x64', True) BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 does not resolve the winding-slip rates this experiment measures.
+
+chlu/experiments/kt/clu_path.py:57: RuntimeError
+_ test_assert_kt_settings_rejects_misconfiguration[legacy-newtonian_learned-False-fdt] _
+
+noise = 'legacy', kinetic = 'newtonian_learned', gov = False, needle = 'fdt'
+
+    @pytest.mark.parametrize(
+        "noise,kinetic,gov,needle",
+        [
+            ("legacy", "newtonian_learned", False, "fdt"),
+            ("fdt", "relativistic", False, "newtonian_learned"),
+            ("fdt", "newtonian_learned", True, "governor"),
+        ],
+    )
+    def test_assert_kt_settings_rejects_misconfiguration(noise, kinetic, gov, needle):
+        """A misconfigured CSF3 run must die loudly, not silently make garbage."""
+        with pytest.raises(RuntimeError, match=needle):
+>           assert_kt_settings(noise, kinetic, use_governor=gov)
+
+tests/test_kt.py:113: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+noise_mode = 'legacy', kinetic_mode = 'newtonian_learned', use_governor = False
+
+    def assert_kt_settings(noise_mode: str, kinetic_mode: str, use_governor: bool = False):
+        """Fail loudly on a misconfigured run rather than silently produce garbage.
+    
+        A KT run under ``legacy`` noise or a governor is not a KT run: T stops being
+        a temperature in energy units (§7.22) and the governor breaks detailed
+        balance, so neither ``rho_s`` nor ``T_KT`` means anything.
+        """
+        if not jax.config.read("jax_enable_x64"):
+>           raise RuntimeError(
+                "KT runs require float64: call jax.config.update('jax_enable_x64', True) "
+                "BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 "
+                "does not resolve the winding-slip rates this experiment measures."
+            )
+E           RuntimeError: KT runs require float64: call jax.config.update('jax_enable_x64', True) BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 does not resolve the winding-slip rates this experiment measures.
+
+chlu/experiments/kt/clu_path.py:57: RuntimeError
+
+During handling of the above exception, another exception occurred:
+
+noise = 'legacy', kinetic = 'newtonian_learned', gov = False, needle = 'fdt'
+
+    @pytest.mark.parametrize(
+        "noise,kinetic,gov,needle",
+        [
+            ("legacy", "newtonian_learned", False, "fdt"),
+            ("fdt", "relativistic", False, "newtonian_learned"),
+            ("fdt", "newtonian_learned", True, "governor"),
+        ],
+    )
+    def test_assert_kt_settings_rejects_misconfiguration(noise, kinetic, gov, needle):
+        """A misconfigured CSF3 run must die loudly, not silently make garbage."""
+>       with pytest.raises(RuntimeError, match=needle):
+E       AssertionError: Regex pattern did not match.
+E        Regex: 'fdt'
+E        Input: "KT runs require float64: call jax.config.update('jax_enable_x64', True) BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 does not resolve the winding-slip rates this experiment measures."
+
+tests/test_kt.py:112: AssertionError
+_ test_assert_kt_settings_rejects_misconfiguration[fdt-relativistic-False-newtonian_learned] _
+
+noise = 'fdt', kinetic = 'relativistic', gov = False
+needle = 'newtonian_learned'
+
+    @pytest.mark.parametrize(
+        "noise,kinetic,gov,needle",
+        [
+            ("legacy", "newtonian_learned", False, "fdt"),
+            ("fdt", "relativistic", False, "newtonian_learned"),
+            ("fdt", "newtonian_learned", True, "governor"),
+        ],
+    )
+    def test_assert_kt_settings_rejects_misconfiguration(noise, kinetic, gov, needle):
+        """A misconfigured CSF3 run must die loudly, not silently make garbage."""
+        with pytest.raises(RuntimeError, match=needle):
+>           assert_kt_settings(noise, kinetic, use_governor=gov)
+
+tests/test_kt.py:113: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+noise_mode = 'fdt', kinetic_mode = 'relativistic', use_governor = False
+
+    def assert_kt_settings(noise_mode: str, kinetic_mode: str, use_governor: bool = False):
+        """Fail loudly on a misconfigured run rather than silently produce garbage.
+    
+        A KT run under ``legacy`` noise or a governor is not a KT run: T stops being
+        a temperature in energy units (§7.22) and the governor breaks detailed
+        balance, so neither ``rho_s`` nor ``T_KT`` means anything.
+        """
+        if not jax.config.read("jax_enable_x64"):
+>           raise RuntimeError(
+                "KT runs require float64: call jax.config.update('jax_enable_x64', True) "
+                "BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 "
+                "does not resolve the winding-slip rates this experiment measures."
+            )
+E           RuntimeError: KT runs require float64: call jax.config.update('jax_enable_x64', True) BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 does not resolve the winding-slip rates this experiment measures.
+
+chlu/experiments/kt/clu_path.py:57: RuntimeError
+
+During handling of the above exception, another exception occurred:
+
+noise = 'fdt', kinetic = 'relativistic', gov = False
+needle = 'newtonian_learned'
+
+    @pytest.mark.parametrize(
+        "noise,kinetic,gov,needle",
+        [
+            ("legacy", "newtonian_learned", False, "fdt"),
+            ("fdt", "relativistic", False, "newtonian_learned"),
+            ("fdt", "newtonian_learned", True, "governor"),
+        ],
+    )
+    def test_assert_kt_settings_rejects_misconfiguration(noise, kinetic, gov, needle):
+        """A misconfigured CSF3 run must die loudly, not silently make garbage."""
+>       with pytest.raises(RuntimeError, match=needle):
+E       AssertionError: Regex pattern did not match.
+E        Regex: 'newtonian_learned'
+E        Input: "KT runs require float64: call jax.config.update('jax_enable_x64', True) BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 does not resolve the winding-slip rates this experiment measures."
+
+tests/test_kt.py:112: AssertionError
+_ test_assert_kt_settings_rejects_misconfiguration[fdt-newtonian_learned-True-governor] _
+
+noise = 'fdt', kinetic = 'newtonian_learned', gov = True, needle = 'governor'
+
+    @pytest.mark.parametrize(
+        "noise,kinetic,gov,needle",
+        [
+            ("legacy", "newtonian_learned", False, "fdt"),
+            ("fdt", "relativistic", False, "newtonian_learned"),
+            ("fdt", "newtonian_learned", True, "governor"),
+        ],
+    )
+    def test_assert_kt_settings_rejects_misconfiguration(noise, kinetic, gov, needle):
+        """A misconfigured CSF3 run must die loudly, not silently make garbage."""
+        with pytest.raises(RuntimeError, match=needle):
+>           assert_kt_settings(noise, kinetic, use_governor=gov)
+
+tests/test_kt.py:113: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+noise_mode = 'fdt', kinetic_mode = 'newtonian_learned', use_governor = True
+
+    def assert_kt_settings(noise_mode: str, kinetic_mode: str, use_governor: bool = False):
+        """Fail loudly on a misconfigured run rather than silently produce garbage.
+    
+        A KT run under ``legacy`` noise or a governor is not a KT run: T stops being
+        a temperature in energy units (§7.22) and the governor breaks detailed
+        balance, so neither ``rho_s`` nor ``T_KT`` means anything.
+        """
+        if not jax.config.read("jax_enable_x64"):
+>           raise RuntimeError(
+                "KT runs require float64: call jax.config.update('jax_enable_x64', True) "
+                "BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 "
+                "does not resolve the winding-slip rates this experiment measures."
+            )
+E           RuntimeError: KT runs require float64: call jax.config.update('jax_enable_x64', True) BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 does not resolve the winding-slip rates this experiment measures.
+
+chlu/experiments/kt/clu_path.py:57: RuntimeError
+
+During handling of the above exception, another exception occurred:
+
+noise = 'fdt', kinetic = 'newtonian_learned', gov = True, needle = 'governor'
+
+    @pytest.mark.parametrize(
+        "noise,kinetic,gov,needle",
+        [
+            ("legacy", "newtonian_learned", False, "fdt"),
+            ("fdt", "relativistic", False, "newtonian_learned"),
+            ("fdt", "newtonian_learned", True, "governor"),
+        ],
+    )
+    def test_assert_kt_settings_rejects_misconfiguration(noise, kinetic, gov, needle):
+        """A misconfigured CSF3 run must die loudly, not silently make garbage."""
+>       with pytest.raises(RuntimeError, match=needle):
+E       AssertionError: Regex pattern did not match.
+E        Regex: 'governor'
+E        Input: "KT runs require float64: call jax.config.update('jax_enable_x64', True) BEFORE any array is created. float32 Langevin at gamma=0.1, dt=0.02 does not resolve the winding-slip rates this experiment measures."
+
+tests/test_kt.py:112: AssertionError
+=============================== warnings summary ===============================
+tests/test_c2w11_nulls.py::test_anytime_read_uses_the_frozen_split_rule
+tests/test_c2w11_nulls.py::test_decodability_ceiling_is_perfect_on_noiseless_codes
+tests/test_c2w11_nulls.py::test_l2_anchor_k1_knn_memorises_seen
+  /Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/jax/_src/dtypes.py:1037: UserWarning: Explicitly requested dtype float64 requested in dtype is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.
+    dtype, weak_type = lattice_result_type(*(default_float_dtype() if arg is None else arg for arg in args))
+
+tests/test_c2w11_nulls.py::test_anytime_read_uses_the_frozen_split_rule
+  /Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/jax/_src/numpy/util.py:85: UserWarning: Explicitly requested dtype float64 requested in dtype is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.
+    to_dtype, weak_type = dtypes.lattice_result_type(*args)
+
+tests/test_c2w11_substrate.py::test_the_stationarity_shift_survives_a_MIXED_dtype_call
+  /Users/user/Desktop/CHLU-c2w11c/tests/test_c2w11_substrate.py:451: UserWarning: Explicitly requested dtype float64 requested in zeros is not available, and will be truncated to dtype float32. To enable more dtypes, set the jax_enable_x64 configuration option or the JAX_ENABLE_X64 shell environment variable. See https://github.com/jax-ml/jax#current-gotchas for more.
+    jit64 = jnp.zeros((6, 10), dtype=jnp.float64)
+
+tests/test_cifar_strong_phi.py: 5 warnings
+tests/test_cl_entry.py: 5 warnings
+tests/test_phi_encoders.py: 10 warnings
+tests/test_phi_read_in.py: 1 warning
+tests/test_phi_stream.py: 1 warning
+  /Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+  Possibly assigning a JAX-transformed callable as an attribute on
+  equinox._jit._JitWrapper. This will not have any of its parameters updated.
+  
+  For example, the following code is buggy:
+  ```python
+  class MyModule(eqx.Module):
+      vmap_linear: Callable
+  
+      def __init__(self, ...):
+          self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+  
+      def __call__(self, ...):
+          ... = self.vmap_linear(...)
+  ```
+  This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+  the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+  
+  You can most easily fix this either by applying the wrapper at `__call__` time:
+  ```python
+  class MyModule(eqx.Module):
+      linear: Callable
+  
+      def __init__(self, ...):
+          self.linear = eqx.nn.Linear(...)
+  
+      def __call__(self, ...):
+          ... = jax.vmap(self.linear)(...)
+  ```
+  or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+  ```python
+  class MyModule(eqx.Module):
+      vmap_linear: Callable
+  
+      def __init__(self, ...):
+          self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+  
+      def __call__(self, ...):
+          ... = self.vmap_linear(...)
+  ```
+  
+    jit_wrapper = _JitWrapper(
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+tests/test_eval_metrics.py::test_fast_mode_is_subset_of_full
+tests/test_eval_metrics.py::test_point_metrics_keys_and_no_point_adjust
+  /Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/sklearn/metrics/_classification.py:1833: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+    _warn_prf(average, modifier, f"{metric.capitalize()} is", result.shape[0])
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:126: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:145: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:178: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:214: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:245: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:307: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-c2w11c/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:423: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+  /Users/user/Desktop/CHLU-c2w11c/chlu/experiments/exp_v1_hopfield_gate.py:232: RuntimeWarning: Mean of empty slice
+    "within_model_auroc": float(np.nanmean(per_ep)) if per_ep else float("nan"),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+--------- coverage: platform darwin, python 3.11.13-final-0 ----------
+Name                                                              Stmts   Miss  Cover
+-------------------------------------------------------------------------------------
+chlu/__init__.py                                                     15      0   100%
+chlu/__main__.py                                                      3      3     0%
+chlu/chlu.py                                                         40     31    22%
+chlu/cli/__init__.py                                                  7      0   100%
+chlu/cli/data_cmd.py                                                 94     44    53%
+chlu/cli/eval_cmd.py                                                132    119    10%
+chlu/cli/experiment_cmd.py                                         1197    767    36%
+chlu/cli/project_cmd.py                                              59     51    14%
+chlu/cli/train_cmd.py                                               182    162    11%
+chlu/cli/utils_cmd.py                                                58     52    10%
+chlu/config.py                                                     1405      1    99%
+chlu/core/__init__.py                                                 4      0   100%
+chlu/core/admission.py                                               70     12    83%
+chlu/core/baselines.py                                               62      3    95%
+chlu/core/blocks.py                                                 713      8    99%
+chlu/core/chlu_unit.py                                              155     22    86%
+chlu/core/clu_controller.py                                         218     13    94%
+chlu/core/clu_system.py                                             846     68    92%
+chlu/core/controller.py                                             316     15    95%
+chlu/core/emission_head.py                                          148      2    99%
+chlu/core/factored_store.py                                         654     99    85%
+chlu/core/feature_launch.py                                         134     12    91%
+chlu/core/friction_field.py                                         132      2    98%
+chlu/core/implicit_grad.py                                          147      5    97%
+chlu/core/integrators.py                                             86     10    88%
+chlu/core/lattice.py                                                226     10    96%
+chlu/core/memory_potentials.py                                      477     15    97%
+chlu/core/monitors.py                                               582     17    97%
+chlu/core/multiplicity_read.py                                      426     29    93%
+chlu/core/multiwell_read.py                                         447     59    87%
+chlu/core/null_arms.py                                              620     74    88%
+chlu/core/placement.py                                              151     10    93%
+chlu/core/potentials.py                                             131     24    82%
+chlu/core/psi_readout.py                                            395     24    94%
+chlu/core/regularization.py                                          29      0   100%
+chlu/core/shard_store.py                                            226     10    96%
+chlu/core/shell_atoms.py                                            161     23    86%
+chlu/core/soft_certificate.py                                       158      6    96%
+chlu/core/store_lifecycle.py                                        289      7    98%
+chlu/core/transforms.py                                              32      0   100%
+chlu/core/twins.py                                                  127      1    99%
+chlu/core/well_lifecycle.py                                         349     10    97%
+chlu/data/__init__.py                                                 6      0   100%
+chlu/data/band_selection.py                                          66     12    82%
+chlu/data/circle_vacuum.py                                           12      1    92%
+chlu/data/enwik8.py                                                  82     15    82%
+chlu/data/figure8.py                                                 17      0   100%
+chlu/data/industrial/__init__.py                                     10      1    90%
+chlu/data/industrial/base.py                                        112     35    69%
+chlu/data/industrial/mimii.py                                        35     35     0%
+chlu/data/industrial/skab.py                                         56     14    75%
+chlu/data/industrial/smd_tsb.py                                      42      6    86%
+chlu/data/industrial/tep_rieth.py                                    73     43    41%
+chlu/data/industrial/voraus_ad.py                                    98     16    84%
+chlu/data/mnist.py                                                   29      7    76%
+chlu/data/mqar.py                                                    40      0   100%
+chlu/data/seq_tasks.py                                               22      0   100%
+chlu/data/sine_waves.py                                              15      0   100%
+chlu/data/two_timescale_orbits.py                                    18      1    94%
+chlu/data/wikitext.py                                                54     54     0%
+chlu/eval/__init__.py                                                 6      0   100%
+chlu/eval/_tsb_vendor/__init__.py                                     0      0   100%
+chlu/eval/_tsb_vendor/affiliation/__init__.py                         0      0   100%
+chlu/eval/_tsb_vendor/affiliation/_affiliation_zone.py               29      0   100%
+chlu/eval/_tsb_vendor/affiliation/_integral_interval.py             208     16    92%
+chlu/eval/_tsb_vendor/affiliation/_single_ground_truth_event.py      25      0   100%
+chlu/eval/_tsb_vendor/affiliation/generics.py                        57     20    65%
+chlu/eval/_tsb_vendor/affiliation/metrics.py                         50     19    62%
+chlu/eval/_tsb_vendor/basic_metrics.py                              476    225    53%
+chlu/eval/_tsb_vendor/metrics.py                                     38     15    61%
+chlu/eval/attribution.py                                            331     17    95%
+chlu/eval/baselines.py                                               95      4    96%
+chlu/eval/cafe_model.py                                             162     13    92%
+chlu/eval/clu_scorer.py                                             294     24    92%
+chlu/eval/config.py                                                 150     19    87%
+chlu/eval/dividend.py                                               161     16    90%
+chlu/eval/fb4_gate.py                                               102      2    98%
+chlu/eval/harness.py                                                233     27    88%
+chlu/eval/metrics.py                                                 47      1    98%
+chlu/eval/race.py                                                   332     28    92%
+chlu/eval/rivals/__init__.py                                          6      0   100%
+chlu/eval/rivals/deltanet.py                                        109      1    99%
+chlu/eval/rivals/fit.py                                             136      6    96%
+chlu/eval/rivals/ledger.py                                           88     19    78%
+chlu/eval/rivals/mamba2.py                                          147      5    97%
+chlu/eval/rivals/ttt.py                                             129      6    95%
+chlu/eval/rollout_diag.py                                            48      0   100%
+chlu/eval/splits.py                                                  45      0   100%
+chlu/experiments/__init__.py                                         11      0   100%
+chlu/experiments/cl_baselines.py                                    352     42    88%
+chlu/experiments/exp_a_stability.py                                 159     78    51%
+chlu/experiments/exp_anti_erosion.py                                469    258    45%
+chlu/experiments/exp_b_noise.py                                     234    155    34%
+chlu/experiments/exp_bprime_rivals.py                               488    324    34%
+chlu/experiments/exp_c2w11_nulls.py                                 592    411    31%
+chlu/experiments/exp_c2w11_substrate.py                             608    491    19%
+chlu/experiments/exp_c_dreaming.py                                  211    198     6%
+chlu/experiments/exp_capture_armA.py                                136    106    22%
+chlu/experiments/exp_capture_armB.py                                161    135    16%
+chlu/experiments/exp_capture_strong_phi.py                          220     91    59%
+chlu/experiments/exp_cat_test.py                                    393    363     8%
+chlu/experiments/exp_cl_entry.py                                    780    239    69%
+chlu/experiments/exp_clu_system.py                                  344    344     0%
+chlu/experiments/exp_cluformer_pilot.py                             403    142    65%
+chlu/experiments/exp_controller_mvp.py                              271    271     0%
+chlu/experiments/exp_d_goldstone.py                                 152     97    36%
+chlu/experiments/exp_designed_mechanism.py                          584    268    54%
+chlu/experiments/exp_dim_scaling.py                                 382    176    54%
+chlu/experiments/exp_fb4_gate.py                                    247    198    20%
+chlu/experiments/exp_gated_write.py                                 250    182    27%
+chlu/experiments/exp_hopfield_capacity.py                           434    259    40%
+chlu/experiments/exp_lattice.py                                     234    206    12%
+chlu/experiments/exp_learned_memory.py                              294    174    41%
+chlu/experiments/exp_memory_gym.py                                  474    198    58%
+chlu/experiments/exp_minus_physics.py                               203    176    13%
+chlu/experiments/exp_null_arms.py                                   443    360    19%
+chlu/experiments/exp_paid_access.py                                 402    349    13%
+chlu/experiments/exp_persistent_store.py                            306     97    68%
+chlu/experiments/exp_phi_geometry.py                                335    204    39%
+chlu/experiments/exp_phi_particle.py                                496    496     0%
+chlu/experiments/exp_phi_read_in.py                                 357    134    62%
+chlu/experiments/exp_phi_stream.py                                  315    101    68%
+chlu/experiments/exp_placement_probe.py                             224    147    34%
+chlu/experiments/exp_potential_class.py                             377    272    28%
+chlu/experiments/exp_primitive_harness.py                           518    293    43%
+chlu/experiments/exp_psi_residual.py                                292    191    35%
+chlu/experiments/exp_retrieval.py                                   456    339    26%
+chlu/experiments/exp_retry_compute.py                               521    208    60%
+chlu/experiments/exp_route3_attribution.py                          468    252    46%
+chlu/experiments/exp_s1_gamma_field.py                              196    174    11%
+chlu/experiments/exp_sequential_write.py                            547    417    24%
+chlu/experiments/exp_sharded_store.py                               467    314    33%
+chlu/experiments/exp_ssb_shell.py                                   538    437    19%
+chlu/experiments/exp_tierii_cardinality.py                          305    305     0%
+chlu/experiments/exp_tierii_read.py                                 223    223     0%
+chlu/experiments/exp_traj_write.py                                  173    111    36%
+chlu/experiments/exp_trajectory_read.py                             726    668     8%
+chlu/experiments/exp_v1_calibration.py                              548    441    20%
+chlu/experiments/exp_v1_gate.py                                     358    221    38%
+chlu/experiments/exp_v1_hopfield_gate.py                            212     30    86%
+chlu/experiments/exp_v1_wormhole.py                                 464      3    99%
+chlu/experiments/exp_well_lifecycle.py                              347     60    83%
+chlu/experiments/exp_write_ceiling.py                               323    211    35%
+chlu/experiments/goldstone_harness.py                               145     11    92%
+chlu/experiments/kt/__init__.py                                       2      0   100%
+chlu/experiments/kt/clu_path.py                                     175    147    16%
+chlu/experiments/kt/postproc.py                                     230    165    28%
+chlu/experiments/kt/reduced_xy.py                                   210     74    65%
+chlu/experiments/kt/runner.py                                       135     98    27%
+chlu/experiments/memory_gym.py                                      283     10    96%
+chlu/experiments/phi_encoders.py                                    312     13    96%
+chlu/experiments/plot_primitive_harness.py                          103    103     0%
+chlu/experiments/stream_sources.py                                  141      2    99%
+chlu/experiments/usage_telemetry.py                                 115      6    95%
+chlu/project.py                                                      81     67    17%
+chlu/training/__init__.py                                             5      0   100%
+chlu/training/calibration.py                                         80      0   100%
+chlu/training/losses.py                                               7      0   100%
+chlu/training/replay_buffer.py                                       23      0   100%
+chlu/training/train.py                                              209     14    93%
+chlu/training/train_baselines.py                                     90     79    12%
+chlu/training/train_cluformer.py                                    777     53    93%
+chlu/training/train_generative.py                                   124     18    85%
+chlu/training/train_memory.py                                       167      9    95%
+chlu/utils/__init__.py                                                3      0   100%
+chlu/utils/checkpoints.py                                            45     26    42%
+chlu/utils/metrics.py                                                58      8    86%
+chlu/utils/plotting.py                                             1048    914    13%
+-------------------------------------------------------------------------------------
+TOTAL                                                             40585  17000    58%
+Coverage XML written to file coverage.xml
+
+=========================== short test summary info ============================
+FAILED tests/test_c2w11_nulls.py::test_anytime_read_uses_the_frozen_split_rule
+FAILED tests/test_friction_field.py::test_single_hole_reduces_to_thread1_form
+FAILED tests/test_friction_field.py::test_prop11_det_jacobian - AssertionErro...
+FAILED tests/test_friction_field.py::test_add_and_prune_holes_roundtrip - ass...
+FAILED tests/test_goldstone.py::test_goldstone_latch_exact - AssertionError: ...
+FAILED tests/test_goldstone.py::test_underdamped_saturation_and_mass_independence
+FAILED tests/test_goldstone.py::test_noether_charge_exact_decay - AssertionEr...
+FAILED tests/test_goldstone.py::test_kinetic_isotropy_requirement - Assertion...
+FAILED tests/test_goldstone.py::test_spectrum_probe_gmor_tilt - assert 1.4570...
+FAILED tests/test_goldstone.py::test_linear_spurion_gmor_exact - AssertionErr...
+FAILED tests/test_goldstone.py::test_linear_spurion_direction_independence - ...
+FAILED tests/test_goldstone.py::test_circle_vacuum_dataset - assert Array(1.1...
+FAILED tests/test_goldstone.py::test_mode_coordinates_roundtrip - assert 2.98...
+FAILED tests/test_kt.py::test_winding1d_msd_round_trip_exact[8-6.54966062238462e-05-1.39453125]
+FAILED tests/test_kt.py::test_msd_fit_window_shortens_the_fit - RuntimeError:...
+FAILED tests/test_kt.py::test_assert_kt_settings_accepts_the_validated_configuration
+FAILED tests/test_kt.py::test_assert_kt_settings_rejects_misconfiguration[legacy-newtonian_learned-False-fdt]
+FAILED tests/test_kt.py::test_assert_kt_settings_rejects_misconfiguration[fdt-relativistic-False-newtonian_learned]
+FAILED tests/test_kt.py::test_assert_kt_settings_rejects_misconfiguration[fdt-newtonian_learned-True-governor]
+19 failed, 1684 passed, 41 warnings in 2404.65s (0:40:04)

@@ -1,0 +1,834 @@
+[06:58:16Z] rung 5 seed 0: rival:rung5:mlp__declared,rival:rung5:lstm__declared,rival:rung5:transformer__declared,rival:rung5:cont_mlp__declared,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed0/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed0/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed0/K32_n32768/arm.pkl:store_K32_n32768,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed0/K5_n32768/arm.pkl:store_K5_n32768
+[08:58:50] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[08:59:22] FastJudge positive control: True
+[08:59:22] corners=rung:5 seed=0: 120 corners
+[09:02:56]   mlp__declared@rung5                          novel/corner 51.192 (ceiling 72.00)  in 206s
+[09:06:15]   lstm__declared@rung5                         novel/corner 46.492 (ceiling 72.00)  in 191s
+[09:09:26]   transformer__declared@rung5                  novel/corner 37.142 (ceiling 72.00)  in 176s
+[09:12:25]   cont_mlp__declared@rung5                     novel/corner 21.817 (ceiling 72.00)  in 175s
+[09:15:23]   store_K32_n16384                             novel/corner 65.708 (ceiling 72.00)  in 177s
+[09:18:06]   store_K32_n16384__landscape_removed          novel/corner 0.000 (ceiling 72.00)  in 164s
+[09:20:46]   store_K32_n16384__landscape_shuffled         novel/corner 0.000 (ceiling 72.00)  in 160s
+[09:20:46]   across-wells DERANGEMENT perm=[28, 29, 25, 18, 24, 14, 15, 13, 9, 19, 7, 20, 5, 10, 3, 26, 12, 4, 0, 6, 27, 30, 11, 31, 8, 17, 22, 1, 23, 21, 2, 16] fixed_points=0 | historical T7 perm fixed_points=0
+[09:23:43]   store_K32_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 176s
+[09:26:21]   store_K32_n16384__random_atoms               novel/corner 0.000 (ceiling 72.00)  in 159s
+[09:28:57]   store_K5_n16384                              novel/corner 62.608 (ceiling 72.00)  in 156s
+[09:31:28]   store_K5_n16384__landscape_removed           novel/corner 0.000 (ceiling 72.00)  in 151s
+[09:34:00]   store_K5_n16384__landscape_shuffled          novel/corner 0.000 (ceiling 72.00)  in 152s
+[09:34:00]   across-wells DERANGEMENT perm=[1, 2, 4, 0, 3] fixed_points=0 | historical T7 perm fixed_points=1
+[09:36:12]   store_K5_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 131s
+[09:38:23]   store_K5_n16384__random_atoms                novel/corner 0.000 (ceiling 72.00)  in 131s
+[09:40:51]   store_K32_n32768                             novel/corner 65.900 (ceiling 72.00)  in 148s
+[09:43:16]   store_K32_n32768__landscape_removed          novel/corner 0.000 (ceiling 72.00)  in 146s
+[09:45:46]   store_K32_n32768__landscape_shuffled         novel/corner 0.000 (ceiling 72.00)  in 150s
+[09:45:46]   across-wells DERANGEMENT perm=[28, 29, 25, 18, 24, 14, 15, 13, 9, 19, 7, 20, 5, 10, 3, 26, 12, 4, 0, 6, 27, 30, 11, 31, 8, 17, 22, 1, 23, 21, 2, 16] fixed_points=0 | historical T7 perm fixed_points=0
+[09:48:12]   store_K32_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 146s
+[09:50:45]   store_K32_n32768__random_atoms               novel/corner 0.000 (ceiling 72.00)  in 153s
+[09:53:32]   store_K5_n32768                              novel/corner 63.392 (ceiling 72.00)  in 167s
+[09:55:53]   store_K5_n32768__landscape_removed           novel/corner 0.000 (ceiling 72.00)  in 140s
+[09:58:18]   store_K5_n32768__landscape_shuffled          novel/corner 0.000 (ceiling 72.00)  in 146s
+[09:58:19]   across-wells DERANGEMENT perm=[1, 2, 4, 0, 3] fixed_points=0 | historical T7 perm fixed_points=1
+[10:00:43]   store_K5_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 144s
+[10:03:11]   store_K5_n32768__random_atoms                novel/corner 0.000 (ceiling 72.00)  in 148s
+[10:03:11] done
+[10:04:02] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[10:04:26] FastJudge positive control: True
+[10:04:26] corners=rung:5 seed=0: 120 corners
+[10:04:26]   across-wells DERANGEMENT perm=[28, 29, 25, 18, 24, 14, 15, 13, 9, 19, 7, 20, 5, 10, 3, 26, 12, 4, 0, 6, 27, 30, 11, 31, 8, 17, 22, 1, 23, 21, 2, 16] fixed_points=0 | historical T7 perm fixed_points=0
+[10:07:09]   store_K32_n131072_REBUILT__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 163s
+[10:07:09] done
+[10:08:01] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[10:08:25] FastJudge positive control: True
+[10:08:25] corners=rung:5 seed=0: 120 corners
+[10:11:01]   store_K32_n131072_REBUILT                    novel/corner 65.642 (ceiling 72.00)  in 157s
+[10:11:01] done
+[08:11:07Z] rung 5 seed 1: rival:rung5:mlp__declared,rival:rung5:lstm__declared,rival:rung5:transformer__declared,rival:rung5:cont_mlp__declared,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed1/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed1/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed1/K32_n32768/arm.pkl:store_K32_n32768,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed1/K5_n32768/arm.pkl:store_K5_n32768
+[10:12:05] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[10:12:29] FastJudge positive control: True
+[10:12:29] corners=rung:5 seed=1: 120 corners
+[10:15:12]   mlp__declared@rung5                          novel/corner 52.825 (ceiling 72.00)  in 157s
+[10:17:39]   lstm__declared@rung5                         novel/corner 47.442 (ceiling 72.00)  in 142s
+[10:20:35]   transformer__declared@rung5                  novel/corner 37.458 (ceiling 72.00)  in 164s
+[10:23:20]   cont_mlp__declared@rung5                     novel/corner 32.583 (ceiling 72.00)  in 159s
+[10:26:04]   store_K32_n16384                             novel/corner 66.192 (ceiling 72.00)  in 163s
+[10:28:51]   store_K32_n16384__landscape_removed          novel/corner 0.000 (ceiling 72.00)  in 167s
+[10:31:39]   store_K32_n16384__landscape_shuffled         novel/corner 0.000 (ceiling 72.00)  in 168s
+[10:31:39]   across-wells DERANGEMENT perm=[2, 24, 4, 14, 10, 21, 3, 9, 30, 22, 15, 1, 13, 29, 31, 25, 7, 11, 26, 12, 28, 0, 17, 5, 27, 23, 16, 6, 20, 8, 19, 18] fixed_points=0 | historical T7 perm fixed_points=0
+[10:34:23]   store_K32_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 164s
+[10:36:53]   store_K32_n16384__random_atoms               novel/corner 0.000 (ceiling 72.00)  in 150s
+[10:39:02]   store_K5_n16384                              novel/corner 63.458 (ceiling 72.00)  in 130s
+[10:41:09]   store_K5_n16384__landscape_removed           novel/corner 0.000 (ceiling 72.00)  in 127s
+[10:43:18]   store_K5_n16384__landscape_shuffled          novel/corner 0.000 (ceiling 72.00)  in 129s
+[10:43:18]   across-wells DERANGEMENT perm=[1, 4, 3, 2, 0] fixed_points=0 | historical T7 perm fixed_points=3
+[10:45:25]   store_K5_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 126s
+[10:47:31]   store_K5_n16384__random_atoms                novel/corner 0.000 (ceiling 72.00)  in 126s
+[10:49:37]   store_K32_n32768                             novel/corner 66.733 (ceiling 72.00)  in 126s
+[10:51:49]   store_K32_n32768__landscape_removed          novel/corner 0.000 (ceiling 72.00)  in 132s
+[10:54:07]   store_K32_n32768__landscape_shuffled         novel/corner 0.000 (ceiling 72.00)  in 139s
+[10:54:07]   across-wells DERANGEMENT perm=[2, 24, 4, 14, 10, 21, 3, 9, 30, 22, 15, 1, 13, 29, 31, 25, 7, 11, 26, 12, 28, 0, 17, 5, 27, 23, 16, 6, 20, 8, 19, 18] fixed_points=0 | historical T7 perm fixed_points=0
+[10:56:10]   store_K32_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 123s
+[10:58:06]   store_K32_n32768__random_atoms               novel/corner 0.000 (ceiling 72.00)  in 116s
+[10:59:59]   store_K5_n32768                              novel/corner 63.742 (ceiling 72.00)  in 113s
+[11:01:49]   store_K5_n32768__landscape_removed           novel/corner 0.000 (ceiling 72.00)  in 110s
+[11:03:48]   store_K5_n32768__landscape_shuffled          novel/corner 0.000 (ceiling 72.00)  in 119s
+[11:03:49]   across-wells DERANGEMENT perm=[1, 4, 3, 2, 0] fixed_points=0 | historical T7 perm fixed_points=3
+[11:05:26]   store_K5_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 98s
+[11:07:04]   store_K5_n32768__random_atoms                novel/corner 0.000 (ceiling 72.00)  in 98s
+[11:07:04] done
+[11:07:34] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[11:07:55] FastJudge positive control: True
+[11:07:55] corners=rung:5 seed=1: 120 corners
+[11:07:55]   across-wells DERANGEMENT perm=[2, 24, 4, 14, 10, 21, 3, 9, 30, 22, 15, 1, 13, 29, 31, 25, 7, 11, 26, 12, 28, 0, 17, 5, 27, 23, 16, 6, 20, 8, 19, 18] fixed_points=0 | historical T7 perm fixed_points=0
+[11:09:46]   store_K32_n131072_REBUILT__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 110s
+[11:09:46] done
+[11:10:17] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[11:10:36] FastJudge positive control: True
+[11:10:36] corners=rung:5 seed=1: 120 corners
+[11:12:16]   store_K32_n131072_REBUILT                    novel/corner 66.817 (ceiling 72.00)  in 100s
+[11:12:16] done
+[09:12:19Z] rung 5 seed 2: rival:rung5:mlp__declared,rival:rung5:lstm__declared,rival:rung5:transformer__declared,rival:rung5:cont_mlp__declared,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed2/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed2/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed2/K32_n32768/arm.pkl:store_K32_n32768,store:C:/chlu/outputs/w20-shapes-data-matched/stores/rung5/seed2/K5_n32768/arm.pkl:store_K5_n32768
+[11:12:50] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[11:13:11] FastJudge positive control: True
+[11:13:11] corners=rung:5 seed=2: 120 corners
+[11:14:57]   mlp__declared@rung5                          novel/corner 58.842 (ceiling 72.00)  in 101s
+[11:16:59]   lstm__declared@rung5                         novel/corner 55.692 (ceiling 72.00)  in 118s
+[11:19:05]   transformer__declared@rung5                  novel/corner 52.475 (ceiling 72.00)  in 117s
+[11:20:54]   cont_mlp__declared@rung5                     novel/corner 37.550 (ceiling 72.00)  in 107s
+[11:22:41]   store_K32_n16384                             novel/corner 66.867 (ceiling 72.00)  in 107s
+[11:24:36]   store_K32_n16384__landscape_removed          novel/corner 0.000 (ceiling 72.00)  in 114s
+[11:26:26]   store_K32_n16384__landscape_shuffled         novel/corner 0.000 (ceiling 72.00)  in 110s
+[11:26:26]   across-wells DERANGEMENT perm=[20, 31, 17, 16, 15, 2, 8, 6, 26, 22, 9, 7, 0, 10, 25, 12, 19, 18, 29, 5, 27, 23, 1, 24, 28, 21, 30, 11, 3, 4, 14, 13] fixed_points=0 | historical T7 perm fixed_points=2
+[11:28:15]   store_K32_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 109s
+[11:30:03]   store_K32_n16384__random_atoms               novel/corner 0.000 (ceiling 72.00)  in 108s
+[11:31:50]   store_K5_n16384                              novel/corner 65.842 (ceiling 72.00)  in 107s
+[11:33:32]   store_K5_n16384__landscape_removed           novel/corner 0.000 (ceiling 72.00)  in 103s
+[11:35:19]   store_K5_n16384__landscape_shuffled          novel/corner 0.000 (ceiling 72.00)  in 106s
+[11:35:19]   across-wells DERANGEMENT perm=[4, 2, 0, 1, 3] fixed_points=0 | historical T7 perm fixed_points=2
+[11:37:07]   store_K5_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 108s
+[11:38:56]   store_K5_n16384__random_atoms                novel/corner 0.000 (ceiling 72.00)  in 109s
+[11:40:46]   store_K32_n32768                             novel/corner 67.075 (ceiling 72.00)  in 110s
+[11:42:35]   store_K32_n32768__landscape_removed          novel/corner 0.000 (ceiling 72.00)  in 109s
+[11:44:30]   store_K32_n32768__landscape_shuffled         novel/corner 0.000 (ceiling 72.00)  in 115s
+[11:44:30]   across-wells DERANGEMENT perm=[20, 31, 17, 16, 15, 2, 8, 6, 26, 22, 9, 7, 0, 10, 25, 12, 19, 18, 29, 5, 27, 23, 1, 24, 28, 21, 30, 11, 3, 4, 14, 13] fixed_points=0 | historical T7 perm fixed_points=2
+[11:46:23]   store_K32_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 113s
+[11:48:12]   store_K32_n32768__random_atoms               novel/corner 0.000 (ceiling 72.00)  in 109s
+[11:50:03]   store_K5_n32768                              novel/corner 66.050 (ceiling 72.00)  in 110s
+[11:51:51]   store_K5_n32768__landscape_removed           novel/corner 0.000 (ceiling 72.00)  in 108s
+[11:53:40]   store_K5_n32768__landscape_shuffled          novel/corner 0.000 (ceiling 72.00)  in 109s
+[11:53:40]   across-wells DERANGEMENT perm=[4, 2, 0, 1, 3] fixed_points=0 | historical T7 perm fixed_points=2
+[11:55:30]   store_K5_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 110s
+[11:57:18]   store_K5_n32768__random_atoms                novel/corner 0.000 (ceiling 72.00)  in 109s
+[11:57:18] done
+[11:58:12] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[11:58:27] FastJudge positive control: True
+[11:58:27] corners=rung:5 seed=2: 120 corners
+[11:58:27]   across-wells DERANGEMENT perm=[20, 31, 17, 16, 15, 2, 8, 6, 26, 22, 9, 7, 0, 10, 25, 12, 19, 18, 29, 5, 27, 23, 1, 24, 28, 21, 30, 11, 3, 4, 14, 13] fixed_points=0 | historical T7 perm fixed_points=2
+[12:00:19]   store_K32_n131072_REBUILT__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 111s
+[12:00:19] done
+[12:00:41] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[12:00:55] FastJudge positive control: True
+[12:00:55] corners=rung:5 seed=2: 120 corners
+[12:02:51]   store_K32_n131072_REBUILT                    novel/corner 67.283 (ceiling 72.00)  in 116s
+[12:02:51] done
+[10:02:54Z] missing=27
+[10:07:55Z] missing=0
+LADDERSCORE DONE
+[10:28:48Z] missing=6
+[10:33:48Z] missing=6
+[10:38:49Z] missing=6
+[10:43:50Z] missing=6
+[10:48:50Z] missing=6
+[10:53:51Z] missing=6
+[10:58:52Z] missing=6
+[11:03:53Z] missing=6
+[11:08:53Z] missing=6
+[11:13:55Z] missing=6
+[11:18:55Z] missing=6
+[11:23:55Z] missing=6
+[11:28:56Z] missing=6
+[11:33:57Z] missing=6
+[11:38:57Z] missing=6
+[11:43:58Z] missing=6
+[11:48:58Z] missing=6
+[11:53:58Z] missing=6
+[11:59:00Z] missing=6
+[12:04:00Z] missing=6
+[12:09:00Z] missing=6
+[12:14:01Z] rung 5 seed 2: rival:rung5:mlp__tenx
+[14:14:16] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:14:33] FastJudge positive control: True
+[14:14:33] corners=rung:5 seed=2: 120 corners
+[14:16:28]   mlp__tenx@rung5                              novel/corner 60.767 (ceiling 72.00)  in 111s
+[14:16:28] done
+[12:16:31Z] missing=6
+[12:21:32Z] rung 5 seed 0: rival:rung5:mlp__tenx
+[14:21:55] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:22:16] FastJudge positive control: True
+[14:22:16] corners=rung:5 seed=0: 120 corners
+[14:24:09]   mlp__tenx@rung5                              novel/corner 53.642 (ceiling 72.00)  in 108s
+[14:24:09] done
+[12:24:12Z] rung 5 seed 1: rival:rung5:mlp__tenx
+[14:24:34] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:24:57] FastJudge positive control: True
+[14:24:57] corners=rung:5 seed=1: 120 corners
+[14:27:22]   mlp__tenx@rung5                              novel/corner 53.275 (ceiling 72.00)  in 139s
+[14:27:22] done
+[12:27:27Z] missing=5
+[12:32:28Z] missing=3
+[12:37:28Z] missing=3
+[12:42:30Z] missing=3
+[12:47:30Z] missing=3
+[12:52:30Z] missing=3
+[12:57:32Z] missing=3
+[13:02:32Z] missing=3
+[13:07:32Z] rung 5 seed 0: rival:rung5:cont_mlp__tenx
+[15:07:46] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:08:00] FastJudge positive control: True
+[15:08:00] corners=rung:5 seed=0: 120 corners
+[15:09:33]   cont_mlp__tenx@rung5                         novel/corner 40.192 (ceiling 72.00)  in 90s
+[15:09:33] done
+[13:09:35Z] rung 5 seed 1: rival:rung5:cont_mlp__tenx
+[15:09:44] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:09:56] FastJudge positive control: True
+[15:09:56] corners=rung:5 seed=1: 120 corners
+[15:11:34]   cont_mlp__tenx@rung5                         novel/corner 49.858 (ceiling 72.00)  in 95s
+[15:11:34] done
+[13:11:37Z] rung 5 seed 2: rival:rung5:cont_mlp__tenx
+[15:11:46] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:11:57] FastJudge positive control: True
+[15:11:57] corners=rung:5 seed=2: 120 corners
+[15:12:59]   cont_mlp__tenx@rung5                         novel/corner 54.258 (ceiling 72.00)  in 59s
+[15:12:59] done
+[13:13:00Z] missing=3
+[13:18:01Z] missing=0
+LADDERSCORE DONE

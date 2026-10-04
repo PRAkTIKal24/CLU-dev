@@ -1,0 +1,44 @@
+{
+ "backend": "Agg",
+ "evidence_root": "/Users/batmac/clu/evidence/outputs",
+ "figures": {
+  "fig_crossover": {
+   "awaiting": "w15 crossover-seeds (3 seeds at every K) -- may confirm, narrow, or overturn the no-crossover reading",
+   "notes": "n = 1 (seed 0) at K = 8..28; n = 3 (seeds 0,1,2) at K = 5 and K = 32. Byte convention: the crossover hub's four-part honest ledger (atoms + covariance/count + address book + coupling/hole), summed and never netted; 524,288 B drawn as a reference line only. The artefact's first key is SMOKE_NOT_A_CLAIM: true; the honest_total_bytes column (not the parts-1-2-4 column) is the one plotted, per the w13 advisor report section 5.",
+   "placeholder": true,
+   "sources": [
+    "w12-single-design-crossover/CROSSOVER-val.json"
+   ]
+  },
+  "fig_deletion": {
+   "awaiting": "w15 single-design-seeds (deletion rows at seeds 1-2) -- may reproduce or break the seed-0 reading",
+   "notes": "CLU: 1 seed (0), TEST, K = 32, value scope = every fit row with object_hue index 0 (11,044 rows). Exactness is STORE-SCOPED; the frozen encoder/decoder and the address book are outside the deletable object (the book is carried). Post-deletion adaptation is light and data-free, not 'no change'. Rivals delete only by retrain-without on their OWN 16,384-row fit pool (seed 0 cost line; the pools differ and are printed on the axis). Rival post-deletion composition on the scored corners was never measured (DECLARED NOT-RUN in the evidence), so panel (a) is CLU-only. Panel (a) prints survivor corners only (measurement (d)); the deleted-corner bars were retired by the Head's deletion-rule amendment (w18 seeds-and-tables pass 4).",
+   "placeholder": true,
+   "sources": [
+    "w12-deletion-baselines/comparators/seed_0/cont_mlp__retrain_without__value-object_hue-0.rival.json",
+    "w12-deletion-baselines/comparators/seed_0/lstm__retrain_without__value-object_hue-0.rival.json",
+    "w12-deletion-baselines/comparators/seed_0/mlp__retrain_without__value-object_hue-0.rival.json",
+    "w12-deletion-baselines/comparators/seed_0/transformer__retrain_without__value-object_hue-0.rival.json",
+    "w12-single-design-crossover/deletion/test_seed0_K32/deletion.json"
+   ]
+  },
+  "fig_encoder_adapt": {
+   "awaiting": null,
+   "notes": "3 seeds x 3 configurations = 9 arm-runs (3 SEEDS). Margin = single design - best learned baseline (mlp_180k, chosen per arm); a DIFFERENT opponent from the ladder's learned 1x, so this figure is never merged with fig_ladder. Equal compute: 400 steps / 25,600 images per arm-run (printed in CROSS-ARM.md).",
+   "placeholder": false,
+   "sources": [
+    "w13-encoder-adapt/CROSS-ARM.json"
+   ]
+  },
+  "fig_ladder": {
+   "awaiting": "wave 18 regeneration (Amendment 1 lists the ladder); no w15/w16 row is read",
+   "notes": "3 seeds (0,1,2) on every rung; mean line, min-max seed band. Learned 1x uses the crossover hub's FOUR-PART convention at K* (the one convention used in every figure); the K = 5 full-square-priced opponent (the inflated row) is NOT drawn. MLP/LSTM/Transformer/continuous MLP/table are the 524,288 B reference-pin rivals from the w12 ladder (K-independent). Panel (b) plots KSTAR-LADDER.json by_rung.*.kstar_K32.margin per seed. learned_1x is the strongest learned arm at every (rung, seed): False. For n >= 3 the axis is a TRAINING-DATA axis (identical 120 corners); only n = 2 vs n = 6 is a depth contrast.",
+   "placeholder": true,
+   "sources": [
+    "w12-composition-ladder/LADDER.csv",
+    "w12b-nr6-and-kstar/KSTAR-LADDER.json"
+   ]
+  }
+ },
+ "matplotlib": "3.10.8"
+}

@@ -1,0 +1,53 @@
+  ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+  ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+  ⭐ cache coverage: shortfall 0 — nothing will be encoded
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+  ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+surrogate cell: 72 rows, 72 distinct tuples (Montero's B is 72)
+store pool: 32768 -> 32762 after removing every row whose TUPLE is in the surrogate cell (6 removed)
+(store fitted on the reduced pool in 584s)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+SEEN (fitted on)         n= 512 | CEILING  490 (0.9570) | ROUND-TRIP    9 (0.0176, relerr 0.3524) | REQUEST-READ    6 (0.0117)
+SURROGATE (never seen)   n=  72 | CEILING   47 (0.6528) | ROUND-TRIP    0 (0.0000, relerr 0.3432) | REQUEST-READ    0 (0.0000)
+done

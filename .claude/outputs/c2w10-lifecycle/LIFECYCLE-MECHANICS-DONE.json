@@ -1,0 +1,1185 @@
+{
+  "wave": "C2W10",
+  "spoke": "lifecycle-mechanics",
+  "label": "MECHANICS \u2014 no VALUE cell, no performance claim, no verdict (\u00a7A33.1). Any launder margin would be a DIAGNOSTIC column.",
+  "commit": "6e0c325",
+  "base": "9e0bb25",
+  "branch": "agent/experiment-engineer/c2w10-lifecycle-mechanics",
+  "legs": {
+    "L1": {
+      "landed": true,
+      "reason": "",
+      "pytest": {
+        "cmd": "tests/test_store_lifecycle.py -q --no-cov -p no:cacheprovider -k l1_",
+        "returncode": 0,
+        "summary": "6 passed, 28 deselected in 12.47s",
+        "passed": true
+      },
+      "designed_negatives": [
+        {
+          "statement": "a single burst reaching h_hi does NOT promote",
+          "test": "test_l1_single_burst_does_not_promote",
+          "can_fail_test": "test_l1_single_burst_negative_can_fail",
+          "mutation_that_makes_it_fail": "d_dwell := window (the hysteresis stops binding)",
+          "result": "pass"
+        },
+        {
+          "statement": "a well below h_lo never promotes",
+          "test": "test_l1_below_h_lo_never_promotes",
+          "can_fail_test": "test_l1_below_h_lo_negative_can_fail",
+          "mutation_that_makes_it_fail": "h_hi := 0 (the threshold stops binding)",
+          "result": "pass"
+        }
+      ],
+      "exercised_on_stream": true,
+      "n_events_on_stream": 60
+    },
+    "L2": {
+      "landed": true,
+      "reason": "",
+      "pytest": {
+        "cmd": "tests/test_store_lifecycle.py -q --no-cov -p no:cacheprovider -k l2_",
+        "returncode": 0,
+        "summary": "4 passed, 30 deselected in 3.04s",
+        "passed": true
+      },
+      "designed_negatives": [
+        {
+          "statement": "an early-popular-then-abandoned well MUST demote, and must NOT be trashed",
+          "test": "test_l2_early_popular_then_abandoned_well_demotes",
+          "can_fail_test": "test_l2_demotion_negative_can_fail",
+          "mutation_that_makes_it_fail": "demote := False (the verb is switched off)",
+          "result": "pass"
+        }
+      ],
+      "exercised_on_stream": true,
+      "n_events_on_stream": 53
+    },
+    "L3": {
+      "landed": true,
+      "reason": "",
+      "pytest": {
+        "cmd": "tests/test_store_lifecycle.py -q --no-cov -p no:cacheprovider -k l3_",
+        "returncode": 0,
+        "summary": "9 passed, 25 deselected in 2.85s",
+        "passed": true
+      },
+      "designed_negatives": [
+        {
+          "statement": "(a) useful in stream 1 only => trashed at k",
+          "test": "test_l3_useful_in_stream_one_only_is_trashed_at_k",
+          "can_fail_test": "test_l3_the_two_readings_of_the_criterion_differ_and_both_ship",
+          "mutation_that_makes_it_fail": "trash_criterion := since_first_seen (the literal reading does not fire)",
+          "result": "pass"
+        },
+        {
+          "statement": "(b) useful in EVERY stream => never trashed",
+          "test": "test_l3_useful_in_every_stream_is_never_trashed",
+          "can_fail_test": "test_l3_useful_in_every_stream_negative_can_fail",
+          "mutation_that_makes_it_fail": "the discriminating input flipped: the same item with its hits zeroed IS trashed",
+          "result": "pass"
+        },
+        {
+          "statement": "(c) the censoring guard: a well admitted in the last stream is never trashed",
+          "test": "test_l3_censoring_guard_spares_a_young_well",
+          "can_fail_test": "test_l3_censoring_guard_can_fail",
+          "mutation_that_makes_it_fail": "censoring_guard := False (the young well IS trashed)",
+          "result": "pass"
+        }
+      ],
+      "exercised_on_stream": true,
+      "n_events_on_stream": 117
+    },
+    "L4": {
+      "landed": true,
+      "reason": "",
+      "pytest": {
+        "cmd": "tests/test_store_lifecycle.py -q --no-cov -p no:cacheprovider -k l4_",
+        "returncode": 0,
+        "summary": "3 passed, 31 deselected in 2.81s",
+        "passed": true
+      },
+      "designed_negatives": [
+        {
+          "statement": "forcing every item's usage high trips the monitor and REFUSES",
+          "test": "test_l4_forcing_every_item_high_trips_the_monitor_and_refuses",
+          "can_fail_test": "test_l4_negative_can_fail",
+          "mutation_that_makes_it_fail": "f_max := 1.0 (the bound stops binding; everything protects, no trip)",
+          "result": "pass"
+        }
+      ],
+      "exercised_on_stream": false,
+      "n_events_on_stream": 0,
+      "k_c_verdict": "UNEXERCISED at the measured operating point \u2014 the verb's designed negatives are green on the planted population, and its target population on the stream was empty. Not working, not broken (K-C, registered in advance)."
+    },
+    "L5": {
+      "landed": true,
+      "reason": "",
+      "pytest": {
+        "cmd": "tests/test_store_lifecycle.py -q --no-cov -p no:cacheprovider -k l5_ or l5b_",
+        "returncode": 0,
+        "summary": "7 passed, 27 deselected in 2.86s",
+        "passed": true
+      },
+      "designed_negatives": [
+        {
+          "statement": "with the guard OFF a planted destructive rewrite reduces the depth",
+          "test": "test_l5_guard_off_a_destructive_rewrite_reduces_depth",
+          "can_fail_test": "test_l5_guard_off_a_destructive_rewrite_reduces_depth",
+          "mutation_that_makes_it_fail": "refresh_monotonic := False vs True on the same event (both asserted)",
+          "result": "pass"
+        },
+        {
+          "statement": "L5-b: the store-level guard matches blocks.py on C2W6's OWN events",
+          "test": "test_l5b_cross_implementation_against_c2w6_recorded_events",
+          "can_fail_test": "test_l5b_cross_implementation_against_c2w6_recorded_events",
+          "mutation_that_makes_it_fail": "guard OFF on the same recorded events reproduces 16/2/3 and 6/0/0 post-guard violations",
+          "result": "pass"
+        }
+      ]
+    },
+    "L6": {
+      "landed": true,
+      "reason": "",
+      "pytest": {
+        "cmd": "tests/test_store_lifecycle.py -q --no-cov -p no:cacheprovider -k l6_",
+        "returncode": 0,
+        "summary": "5 passed, 29 deselected in 3.23s",
+        "passed": true
+      },
+      "designed_negatives": [
+        {
+          "statement": "netted == raw BITWISE at leak = 0",
+          "test": "test_l6_netted_is_bitwise_raw_at_leak_zero",
+          "can_fail_test": "test_l6_netted_exceeds_raw_under_decay",
+          "mutation_that_makes_it_fail": "leak > 0 => netted > raw strictly (the same function, both branches)",
+          "result": "pass"
+        },
+        {
+          "statement": "a well with no writes nets to the analytic exp(-leak dt)",
+          "test": "test_l6_a_well_with_no_writes_nets_to_the_analytic_law_x64",
+          "can_fail_test": "test_l6_a_well_with_no_writes_nets_to_the_analytic_law_float32_floor",
+          "mutation_that_makes_it_fail": "the shipped float32 store misses 1e-9 by ~5e-8; both bounds asserted",
+          "result": "pass"
+        }
+      ]
+    },
+    "L7": {
+      "landed": true,
+      "reason": "",
+      "pytest": {
+        "cmd": "tests/test_persistent_store.py -q --no-cov -p no:cacheprovider -k l7_",
+        "returncode": 0,
+        "summary": "2 passed, 12 deselected in 4.39s",
+        "passed": true
+      },
+      "designed_negatives": [
+        {
+          "statement": "OFF is bit-identical AND parameter-count-identical",
+          "test": "test_l7_off_is_bit_identical_and_parameter_count_identical",
+          "can_fail_test": "test_l7_the_store_config_only_attaches_the_trash_region_when_the_verb_is_on",
+          "mutation_that_makes_it_fail": "the trash region is attached only when the verb is ON; OFF attaches no field at all (an empty field is not bit-identical)",
+          "result": "pass"
+        }
+      ]
+    }
+  },
+  "lifecycle_mechanics_done": true,
+  "how_computed": "the AND over legs[L1..L7]['landed'], each of which is a pytest exit status; nothing here is a judgement call",
+  "supporting_suites": {
+    "gamma_phi_off_regressions": {
+      "cmd": "tests/test_well_lifecycle.py -q --no-cov -p no:cacheprovider -k gamma_phi",
+      "returncode": 0,
+      "summary": "3 passed, 15 deselected in 5.51s",
+      "passed": true
+    },
+    "stream_sources": {
+      "cmd": "tests/test_stream_sources.py -q --no-cov -p no:cacheprovider",
+      "returncode": 0,
+      "summary": "21 passed in 2.81s",
+      "passed": true
+    },
+    "rig": {
+      "cmd": "tests/test_persistent_store.py -q --no-cov -p no:cacheprovider",
+      "returncode": 0,
+      "summary": "14 passed in 34.74s",
+      "passed": true
+    }
+  },
+  "exercised_on_stream": {
+    "L1_promote": 60,
+    "L2_demote": 53,
+    "L3_trash": 117,
+    "L4_promote_refused": 0
+  },
+  "declared_not_runs": [
+    "the real INSECTS stream: BENCHMARK-GATE.json does not exist, so the real-stream legs are a DECLARED NOT-RUN, never a null. The loader, its sha256 reproduction gate, decimation and the structure-preservation assertion all ship and are pytest-pinned on the synthetic.",
+    "d = 16 (measured inert at 131 072 atoms)",
+    "merge verbs / K9 re-registration; prune-below-budget by depth",
+    "the anytime / compute-adaptive curve (C2W9's)",
+    "any VALUE cell, tier-ii verdict, full-CLU verdict or CSF3 claim"
+  ],
+  "venue_note": "\u26d4 the synthetic regime-switcher is a regression / mechanics instrument and NEVER a claim venue (\u00a7A14.8)",
+  "run": {
+    "pricing": {
+      "write_s_first": 7.450139999389648,
+      "write_s_median_steady": 4.169864892959595,
+      "read_s_per_chunk": 11.826354265213013,
+      "n_chunks": 48,
+      "n_writes": 144,
+      "projected_wall_s_per_seed": 1168.1255493164062,
+      "target_s": 7200.0,
+      "meets_target": 1,
+      "decimation": {
+        "rows": [
+          {
+            "m": 1,
+            "projected_wall_s": 1168.1255493164062,
+            "meets_target": 1
+          },
+          {
+            "m": 2,
+            "projected_wall_s": 584.0627746582031,
+            "meets_target": 1
+          },
+          {
+            "m": 5,
+            "projected_wall_s": 233.62510986328124,
+            "meets_target": 1
+          },
+          {
+            "m": 10,
+            "projected_wall_s": 116.81255493164062,
+            "meets_target": 1
+          }
+        ],
+        "wall_s_at_m1": 1168.1255493164062,
+        "target_s": 7200.0,
+        "selected_m": 1,
+        "rule": "smallest m on the registered ladder meeting the wall-clock target"
+      },
+      "n94_ok": 1
+    },
+    "off_identity": {
+      "param_count_identical": 1,
+      "n_params": 492493,
+      "leaves_bitwise_identical": 1,
+      "read_bitwise_identical": 1,
+      "trash_attached": 0,
+      "trash_bytes": 0,
+      "note": "OFF means NO field is attached at all: an empty gamma_phi field is not bit-identical, because the integrator composes 1 - (1-gamma)(1-gamma_phi) (C2W8 K2, fact (i))"
+    },
+    "real_stream": {
+      "status": "NOT RUN",
+      "reason": "BENCHMARK-GATE.json is absent at '.claude/outputs/c2w10-benchmark-gate/BENCHMARK-GATE.json': no frozen file and no sha256 exist yet, so the real-stream legs are a DECLARED NOT-RUN (never a null). \u26d4 This spoke does not re-download or re-freeze the stream \u2014 one frozen file, one sha256, all arms."
+    },
+    "n_live_max": 64,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "wall_s": 4027.476525783539,
+    "byte_ledger_by_seed": [
+      {
+        "clu_store_bytes": 1969920,
+        "clu_codebook_bytes": 3024,
+        "phi_param_bytes": 484,
+        "trash_bytes": 2220,
+        "gamma_phi_enabled": 1,
+        "clu_total_bytes": 1975648
+      },
+      {
+        "clu_store_bytes": 1969920,
+        "clu_codebook_bytes": 3024,
+        "phi_param_bytes": 484,
+        "trash_bytes": 2520,
+        "gamma_phi_enabled": 1,
+        "clu_total_bytes": 1975948
+      },
+      {
+        "clu_store_bytes": 1969920,
+        "clu_codebook_bytes": 3024,
+        "phi_param_bytes": 484,
+        "trash_bytes": 2280,
+        "gamma_phi_enabled": 1,
+        "clu_total_bytes": 1975708
+      }
+    ],
+    "monitor_trips_by_seed": [
+      {
+        "vacuous_gate": {
+          "mode": 3,
+          "tripped": 1,
+          "applicable": 1,
+          "severity_class": "II",
+          "value": 0.4652777777777778
+        },
+        "starvation": {
+          "mode": 12,
+          "tripped": 1,
+          "applicable": 1,
+          "severity_class": "II",
+          "value": 0.42576113154230544
+        }
+      },
+      {
+        "starvation": {
+          "mode": 12,
+          "tripped": 1,
+          "applicable": 1,
+          "severity_class": "II",
+          "value": 0.4284484082947477
+        }
+      },
+      {
+        "vacuous_gate": {
+          "mode": 3,
+          "tripped": 1,
+          "applicable": 1,
+          "severity_class": "II",
+          "value": 0.4791666666666667
+        },
+        "starvation": {
+          "mode": 12,
+          "tripped": 1,
+          "applicable": 1,
+          "severity_class": "II",
+          "value": 0.3734128984680749
+        }
+      }
+    ],
+    "protected_saturation_by_seed": [
+      {
+        "name": "protected_saturation",
+        "tripped": 0,
+        "saturated": 0,
+        "n_protected": 3,
+        "protected_cap": 16,
+        "protected_fraction": 0.046875,
+        "f_max": 0.25,
+        "n_promote_refused": 0,
+        "budget": 64
+      },
+      {
+        "name": "protected_saturation",
+        "tripped": 0,
+        "saturated": 0,
+        "n_protected": 1,
+        "protected_cap": 16,
+        "protected_fraction": 0.015625,
+        "f_max": 0.25,
+        "n_promote_refused": 0,
+        "budget": 64
+      },
+      {
+        "name": "protected_saturation",
+        "tripped": 0,
+        "saturated": 0,
+        "n_protected": 3,
+        "protected_cap": 16,
+        "protected_fraction": 0.046875,
+        "f_max": 0.25,
+        "n_promote_refused": 0,
+        "budget": 64
+      }
+    ],
+    "read_coverage_by_seed": [
+      {
+        "covered": 2791,
+        "queries": 6016,
+        "rate": 0.46392952127659576
+      },
+      {
+        "covered": 2719,
+        "queries": 6016,
+        "rate": 0.4519614361702128
+      },
+      {
+        "covered": 3090,
+        "queries": 6016,
+        "rate": 0.5136303191489362
+      }
+    ],
+    "geometry_by_seed": [
+      {
+        "spacing": 0.4260943114517761,
+        "median_nn_instances": 0.4260943114517761,
+        "duplicates_detected": 0,
+        "n_distinct": 64,
+        "jump_at_k": 1,
+        "jump_ratio": 1.46598209612165
+      },
+      {
+        "spacing": 0.5489813192278153,
+        "median_nn_instances": 0.1777171697518875,
+        "duplicates_detected": 1,
+        "n_distinct": 46,
+        "jump_at_k": 1,
+        "jump_ratio": 3.0890730478898183
+      },
+      {
+        "spacing": 0.3615873553389922,
+        "median_nn_instances": 0.3615873553389922,
+        "duplicates_detected": 0,
+        "n_distinct": 64,
+        "jump_at_k": 1,
+        "jump_ratio": 1.4165048457233922
+      }
+    ],
+    "flags": {
+      "seed": 0,
+      "clu_system": {
+        "addr_dim": 12,
+        "capacity": 72,
+        "atom_width": 0.6391414671776642,
+        "atom_kernel": "wendland",
+        "atom_site_local_init": 1,
+        "write_steps": 40,
+        "address_steps": 100,
+        "read_steps": 200,
+        "d_safe_override": 0.2556565868710657,
+        "budget": 64,
+        "leak": 0.02,
+        "stage_lifetimes": 1,
+        "gamma_phi": 1
+      },
+      "lifecycle": {
+        "lifecycle": 1,
+        "promote": 1,
+        "demote": 1,
+        "trash": 1,
+        "h_hi": 2,
+        "h_lo": 1,
+        "window": 2,
+        "d_dwell": 3,
+        "d_demote": 2,
+        "k_streams": 3,
+        "trash_criterion": "last_k_streams",
+        "censoring_guard": 1,
+        "f_max": 0.25,
+        "leak": 0.02,
+        "refresh_monotonic": 0,
+        "refresh_max_gain": 4.0
+      },
+      "persistent_store": 1,
+      "addr_dim": 12,
+      "well_budget": 64,
+      "capacity": 72,
+      "leak": 0.02,
+      "d_safe_override": 0.2556565868710657,
+      "distinct_key_spacing_stream0": 0.4260943114517761,
+      "atom_width": 0.6391414671776642,
+      "atom_width_frac_spacing": 1.5,
+      "chunk_size": 8,
+      "offers_per_chunk": 3,
+      "write_steps": 40,
+      "read_steps": 200,
+      "address_steps": 100,
+      "decimation_m": 1,
+      "address_block": "cheap unfitted random projection (\u00a7A31.4), 0 fit steps",
+      "promotable": 1,
+      "why_not_promotable": "",
+      "declared_not_runs": [
+        "d = 16 (measured inert, 131 072 atoms)",
+        "merge verbs / K9 re-registration",
+        "prune-below-budget by depth",
+        "the anytime / compute-adaptive curve (C2W9's)",
+        "any VALUE cell, tier-ii verdict or full-CLU verdict"
+      ],
+      "venue_note": "\u26d4 the synthetic regime-switcher is a MECHANICS instrument and NEVER a claim venue (\u00a7A14.8)"
+    },
+    "drift_free_control": {
+      "controller_events": {
+        "offered": 144,
+        "admitted": 77,
+        "refused": 67,
+        "evicted": 14,
+        "decayed_out": 0,
+        "read_events": 47,
+        "promote": 22,
+        "demote": 21,
+        "trash": 37,
+        "promote_refused": 0,
+        "trash_route_missing": 0
+      },
+      "lifecycle": {
+        "n_items": 77,
+        "states": {
+          "PROTECTED": 1,
+          "ACTIVE": 39,
+          "TRASH": 37
+        },
+        "state_ids": {
+          "PROTECTED": [
+            96
+          ],
+          "ACTIVE": [
+            16,
+            22,
+            32,
+            33,
+            42,
+            44,
+            57,
+            60,
+            64,
+            67,
+            68,
+            72,
+            73,
+            74,
+            77,
+            82,
+            84,
+            86,
+            89,
+            94,
+            95,
+            99,
+            100,
+            101,
+            104,
+            106,
+            108,
+            109,
+            110,
+            111,
+            118,
+            121,
+            122,
+            124,
+            126,
+            127,
+            129,
+            133,
+            134
+          ],
+          "TRASH": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            17,
+            19,
+            20,
+            21,
+            26,
+            27,
+            28,
+            29,
+            30,
+            34,
+            36,
+            37,
+            39,
+            45,
+            47,
+            48,
+            50,
+            53,
+            54,
+            56,
+            59,
+            61,
+            63
+          ]
+        },
+        "counts": {
+          "promote": 22,
+          "demote": 21,
+          "trash": 37,
+          "promote_refused": 0,
+          "trash_route_missing": 0
+        },
+        "monitor": {
+          "name": "protected_saturation",
+          "tripped": 0,
+          "saturated": 0,
+          "n_protected": 1,
+          "protected_cap": 16,
+          "protected_fraction": 0.015625,
+          "f_max": 0.25,
+          "n_promote_refused": 0,
+          "budget": 64
+        },
+        "params": {
+          "lifecycle": 1,
+          "promote": 1,
+          "demote": 1,
+          "trash": 1,
+          "h_hi": 2,
+          "h_lo": 1,
+          "window": 2,
+          "d_dwell": 3,
+          "d_demote": 2,
+          "k_streams": 3,
+          "trash_criterion": "last_k_streams",
+          "censoring_guard": 1,
+          "f_max": 0.25,
+          "leak": 0.02,
+          "refresh_monotonic": 0,
+          "refresh_max_gain": 4.0
+        },
+        "hits_by_stream": {
+          "0": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "1": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "2": {
+            "0": 19,
+            "1": 24,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "3": {
+            "0": 14,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "4": {
+            "0": 58,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "5": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "6": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "9": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "10": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "11": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 19,
+            "5": 0
+          },
+          "12": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "13": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "14": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 12
+          },
+          "15": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 15,
+            "5": 18
+          },
+          "16": {
+            "0": 37,
+            "1": 126,
+            "2": 75,
+            "3": 33,
+            "4": 0,
+            "5": 0
+          },
+          "17": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 14
+          },
+          "19": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 14
+          },
+          "20": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "21": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "22": {
+            "0": 0,
+            "1": 62,
+            "2": 14,
+            "3": 96,
+            "4": 0,
+            "5": 0
+          },
+          "26": {
+            "1": 111,
+            "2": 16,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "27": {
+            "1": 13,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 32
+          },
+          "28": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 39
+          },
+          "29": {
+            "1": 0,
+            "2": 26,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "30": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "32": {
+            "1": 14,
+            "2": 37,
+            "3": 17,
+            "4": 0,
+            "5": 0
+          },
+          "33": {
+            "1": 0,
+            "2": 0,
+            "3": 7,
+            "4": 0,
+            "5": 0
+          },
+          "34": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "36": {
+            "1": 0,
+            "2": 14,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "37": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "39": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 17
+          },
+          "42": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 27,
+            "5": 0
+          },
+          "44": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 15,
+            "5": 0
+          },
+          "45": {
+            "1": 0,
+            "2": 16,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "47": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "48": {
+            "2": 39,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "50": {
+            "2": 34,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "53": {
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "54": {
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "56": {
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "57": {
+            "2": 81,
+            "3": 71,
+            "4": 71,
+            "5": 59
+          },
+          "59": {
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "60": {
+            "2": 0,
+            "3": 0,
+            "4": 17,
+            "5": 16
+          },
+          "61": {
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "63": {
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "64": {
+            "2": 0,
+            "3": 0,
+            "4": 15,
+            "5": 0
+          },
+          "67": {
+            "2": 14,
+            "3": 23,
+            "4": 0,
+            "5": 0
+          },
+          "68": {
+            "2": 45,
+            "3": 40,
+            "4": 12,
+            "5": 20
+          },
+          "72": {
+            "3": 53,
+            "4": 0,
+            "5": 0
+          },
+          "73": {
+            "3": 0,
+            "4": 0,
+            "5": 0
+          },
+          "74": {
+            "3": 61,
+            "4": 49,
+            "5": 112
+          },
+          "77": {
+            "3": 19,
+            "4": 0,
+            "5": 0
+          },
+          "82": {
+            "3": 51,
+            "4": 70,
+            "5": 39
+          },
+          "84": {
+            "3": 0,
+            "4": 21,
+            "5": 20
+          },
+          "86": {
+            "3": 0,
+            "4": 12,
+            "5": 20
+          },
+          "89": {
+            "3": 19,
+            "4": 17,
+            "5": 0
+          },
+          "94": {
+            "3": 0,
+            "4": 110,
+            "5": 16
+          },
+          "95": {
+            "3": 0,
+            "4": 45,
+            "5": 0
+          },
+          "96": {
+            "4": 11,
+            "5": 68
+          },
+          "99": {
+            "4": 38,
+            "5": 17
+          },
+          "100": {
+            "4": 19,
+            "5": 15
+          },
+          "101": {
+            "4": 18,
+            "5": 32
+          },
+          "104": {
+            "4": 32,
+            "5": 0
+          },
+          "106": {
+            "4": 0,
+            "5": 35
+          },
+          "108": {
+            "4": 0,
+            "5": 0
+          },
+          "109": {
+            "4": 0,
+            "5": 0
+          },
+          "110": {
+            "4": 31,
+            "5": 0
+          },
+          "111": {
+            "4": 0,
+            "5": 0
+          },
+          "118": {
+            "4": 0,
+            "5": 15
+          },
+          "121": {
+            "5": 0
+          },
+          "122": {
+            "5": 30
+          },
+          "124": {
+            "5": 37
+          },
+          "126": {
+            "5": 0
+          },
+          "127": {
+            "5": 16
+          },
+          "129": {
+            "5": 10
+          },
+          "133": {
+            "5": 0
+          },
+          "134": {
+            "5": 25
+          }
+        },
+        "first_seen_stream": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 0,
+          "6": 0,
+          "9": 0,
+          "10": 0,
+          "11": 0,
+          "12": 0,
+          "13": 0,
+          "14": 0,
+          "15": 0,
+          "16": 0,
+          "17": 0,
+          "19": 0,
+          "20": 0,
+          "21": 0,
+          "22": 0,
+          "26": 1,
+          "27": 1,
+          "28": 1,
+          "29": 1,
+          "30": 1,
+          "32": 1,
+          "33": 1,
+          "34": 1,
+          "36": 1,
+          "37": 1,
+          "39": 1,
+          "42": 1,
+          "44": 1,
+          "45": 1,
+          "47": 1,
+          "48": 2,
+          "50": 2,
+          "53": 2,
+          "54": 2,
+          "56": 2,
+          "57": 2,
+          "59": 2,
+          "60": 2,
+          "61": 2,
+          "63": 2,
+          "64": 2,
+          "67": 2,
+          "68": 2,
+          "72": 3,
+          "73": 3,
+          "74": 3,
+          "77": 3,
+          "82": 3,
+          "84": 3,
+          "86": 3,
+          "89": 3,
+          "94": 3,
+          "95": 3,
+          "96": 4,
+          "99": 4,
+          "100": 4,
+          "101": 4,
+          "104": 4,
+          "106": 4,
+          "108": 4,
+          "109": 4,
+          "110": 4,
+          "111": 4,
+          "118": 4,
+          "121": 5,
+          "122": 5,
+          "124": 5,
+          "126": 5,
+          "127": 5,
+          "129": 5,
+          "133": 5,
+          "134": 5
+        }
+      },
+      "n_live_max": 64,
+      "read_coverage": {
+        "covered": 2791,
+        "queries": 6016,
+        "rate": 0.46392952127659576
+      }
+    }
+  }
+}

@@ -1,0 +1,79 @@
+# Full reproductions from the fresh copy (/private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg), 2026-09-26T02:06:01Z
+
+## Shapes3D: n-CLU K*=32, seed 0, rows 3-4 TEST (Tab. t7, Tab. ledger-kstar)
+$ python scripts/shapes_build_nclu.py --where test --seed 0 --K 32 --npool 131072   (built in the smoke pass: build_nclu_full)
+build_seconds 2.4 address_fit_seconds 86.8
+footprint {"p1_atom_bytes": 516096, "p2_covariance_plus_count_bytes": 560608, "p2_covariance_bytes": 549120, "p2_count_bytes": 11488, "p3_address_book_bytes": 1060864, "p4_coupling_hole_table_bytes": 6610, "honest_total_bytes": 2144178, "reference_pin_bytes": 524288, "times_reference_pin": 4.0897, "netted": false, "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this round -- the single design is 1x its own total"}
+$ python scripts/shapes_score_arms.py --corners rows34 --seed 0 --arms store:runs/shapes3d/stores/test/seed0/K32_n131072/arm.pkl:store_K32_n131072
+[04:06:27]   store_K32_n131072                            novel/corner 47.495 (ceiling 52.18)  in 18s
+[04:06:44]   store_K32_n131072__landscape_removed         novel/corner 0.000 (ceiling 52.18)  in 17s
+[04:07:01]   store_K32_n131072__landscape_shuffled        novel/corner 0.000 (ceiling 52.18)  in 17s
+[04:07:01]   across-wells DERANGEMENT perm=[28, 29, 25, 18, 24, 14, 15, 13, 9, 19, 7, 20, 5, 10, 3, 26, 12, 4, 0, 6, 27, 30, 11, 31, 8, 17, 22, 1, 23, 21, 2, 16] fixed_points=0 | historical T7 perm fixed_points=0
+[04:07:19]   store_K32_n131072__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 17s
+[04:07:36]   store_K32_n131072__random_atoms              novel/corner 0.000 (ceiling 52.18)  in 17s
+scoring runtime_s=95
+n-CLU all-109 47.495 | row3 31.600 | row4 66.959
+control landscape_removed                  all-109 0.000
+control landscape_shuffled                 all-109 0.000
+control landscape_shuffled_across_wells    all-109 0.000
+control random_atoms                       all-109 0.000
+
+## Shapes3D deletion, random 1% of items, seed 0 (Tab. del item row; run in the smoke pass: delete_nclu_item)
+rows deleted 1311
+(a) max|mode dev| 8.102506399154663e-08
+(d) survivors before 47.495 -> after 47.477 (paired -0.018); downdate - refit-without +0.000
+(b) rendered rel dev 2.138e-09; book refit from statistic 86.3 s
+
+## Shapes3D lookup-table floor, seed 0 (Tab. t7 floor row; built and scored in the smoke pass)
+FileNotFoundError: [Errno 2] No such file or directory: 'runs/shapes3d/scores/rows34/seed0/table_FLOOR.json'
+
+## Generation table, K* row and its controls, seed 0 (Tab. gentable-kstar; run in the smoke pass: generation_table_kstar)
+kstar                                    composition-B aggregate 0.5718
+kstar/landscape_removed                  composition-B aggregate 0.0556
+kstar/landscape_shuffled                 composition-B aggregate 0.1481
+kstar/landscape_shuffled_across_wells    composition-B aggregate 0.1273
+kstar/random_atoms                       composition-B aggregate 0.1458
+deployed bytes (four-part) 2145738
+
+## CMAZE-T: words + observation, TEST, seed 0, full run (Tab. cmazet-sym)
+$ python scripts/cmazet_symmetric.py 0 runs/cmaze_t/symmetric/test --cond BOTH --leg test
+exit 0 runtime_s=220
+  CLU                                                                         0.8003
+  control: landscape_removed                                                  0.0000
+  control: landscape_shuffled                                                 0.2313
+  control: landscape_shuffled_across_wells                                    0.4152
+  control: random_atoms                                                       0.2707
+  arm: BLIND-COLOUR (learned: colour identity removed from the request)       0.0000
+  arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)    0.2392
+  rival: mlp                                                                  0.4875
+  rival@10x-steps: mlp                                                        0.6281
+  diagnostic@10x-read-floats: mlp                                             0.6150
+  rival: lstm                                                                 0.2852
+  rival@10x-steps: lstm                                                       0.8003
+  diagnostic@10x-read-floats: lstm                                            0.8108
+  rival: transformer                                                          0.6781
+  rival@10x-steps: transformer                                                0.6991
+  diagnostic@10x-read-floats: transformer                                     0.8239
+  floor: lookup cross-maze WORDS                                              0.0000
+  floor: lookup cross-maze raw r1                                             0.0000
+  floor: fragment cross-maze r1                                               0.0460
+  floor: lookup WITHIN-maze raw r1 (NOT transfer)                             0.1275
+  column: ORACLE (planner)                                                    1.0000
+  column: BLIND-A (planner)                                                   0.5453
+  column: BLIND-B (planner)                                                   0.9080
+  column: BLIND-COLOUR (planner)                                              0.5466
+  column: BLIND-SEQUENTIAL (planner)                                          0.9080
+  column: BLIND-FACTOR (planner)                                              0.6189
+rollout {"n_rollouts": 45, "mean_route_len": 40.955555555555556, "arms": {"CLU": {"label": "", "n_rollouts": 45, "validity": 0.0, "goal_reached_rate": 0.0, "all_steps_exact_rate": 0.0, "per_step_exactness": 0.9303405572755418, "steps_attempted": 646, "mean_rollout_length": 40.955555555555556, "mean_first_er
+$ python scripts/cmazet_tables_six_seeds.py runs/cmaze_t/symmetric   (seed 0 only present)
+wrote TABLES.md + MAZE-T-SEED4.json; BOTH-TEST seeds [0] OBS-VAL [] WF [] REL []; class {}
+end 2026-09-26T02:11:16Z
+table floor all-109 8.229 | row3 5.833 | row4 11.163   (runs/shapes3d/scores/rows34_smoke/seed0/table_FLOOR.json: the smoke pass writes it under --out-tag _smoke)
+
+# Verdict (AMENDMENT-3 rebuild, proof E)
+Every number above (Shapes3D n-CLU 47.495 and its four controls, footprint, deletion (a)/(b)/(d), table floor
+8.229, generation table K* row and controls, every CMAZE-T arm, floor, planner column and the rollout record)
+is identical to proof C (proof/repro.log), so the paper comparison table in proof/repro.log stands unchanged,
+including its three reported mismatches (across-wells control of the generation table 0.1273 vs 0.1065;
+CMAZE-T best matched baseline 0.8003 vs 0.627 and the margin that follows from it).
+All 46 smokes rc=0 in the fresh copy + fresh venv (proof/amend3_smoke.log.progress).

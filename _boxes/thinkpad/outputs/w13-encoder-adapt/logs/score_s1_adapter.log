@@ -1,0 +1,77 @@
+chlu.__file__ = C:\chlu\worktrees\CHLU-w13-encoder-adapt\chlu\__init__.py
+authorisation: {"scored": true, "condition": "test", "run_n": 1, "prereg": "C:\\chlu\\outputs\\w13-encoder-adapt\\PREREG-w13-encoder-adapt-1.md", "ledger_row": "w13 hub/encoder-adapt | encoder-adapt | 1/3"}
+  features    -> C:\chlu\outputs\w13-encoder-adapt\run\seed_1\adapter\cache
+  decoder     -> C:\chlu\outputs\w13-encoder-adapt\run\seed_1\adapter\declift
+  rivals      -> C:\chlu\outputs\w13-encoder-adapt\run\seed_1\adapter\rivals
+  classifier  -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+K* = 32 from wave 12's CROSSOVER-val.json (rule frozen 11:10:24Z); nothing in this hub re-selects K
+cache asserted GENERATION 2: {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:\\chlu\\outputs\\w13-encoder-adapt\\run\\seed_1\\adapter\\cache'}
+test corners: row 3 = 60 pair sub-corners, row 4 = 49 n-way
+dead channels: frozen file 64, THIS ARM 0, union 64 of 2048
+store K=32 A=63 built 14.8s  wells 64..64  RANK/WIDTH 0.9844..0.9844
+address book 1463.2s  1,077,504 B
+FOUR-PART LEDGER (summed, never netted): atoms 516,096 | cov+count 560,608 | address 1,077,504 | coupling 6,610 = 2,160,818 B [4.1214x the 524,288 B REFERENCE column]
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cov_tensor (THE SINGLE DESIGN)         109 corners in 183s
+    landscape_removed                      109 corners in 147s
+    landscape_shuffled                     109 corners in 152s
+    landscape_shuffled_across_wells        109 corners in 159s
+    random_atoms                           109 corners in 308s
+    mlp                                    109 corners in 296s
+    mlp_180k                               109 corners in 221s
+    cont_mlp                               109 corners in 186s
+    transformer                            109 corners in 435s
+    lstm                                   109 corners in 276s
+wrote C:\chlu\outputs\w13-encoder-adapt\score\test_seed1_adapter_K32\score.json
+  cov_tensor                             novel/corner   13.349  distinct_valid/corner   13.349  judge_acc 0.2462
+  landscape_removed                      novel/corner    0.000  distinct_valid/corner    0.000  judge_acc 0.0000
+  landscape_shuffled                     novel/corner    0.000  distinct_valid/corner    0.000  judge_acc 0.0000
+  landscape_shuffled_across_wells        novel/corner    0.000  distinct_valid/corner    0.000  judge_acc 0.0000
+  random_atoms                           novel/corner    0.000  distinct_valid/corner    0.000  judge_acc 0.0000
+  mlp                                    novel/corner   10.312  distinct_valid/corner   10.312  judge_acc 0.1823
+  mlp_180k                               novel/corner   12.982  distinct_valid/corner   12.982  judge_acc 0.2506
+  cont_mlp                               novel/corner    3.780  distinct_valid/corner    3.780  judge_acc 0.0636
+  transformer                            novel/corner    9.697  distinct_valid/corner    9.697  judge_acc 0.1718
+  lstm                                   novel/corner   10.899  distinct_valid/corner   10.899  judge_acc 0.1964
+  MARGIN (adapter) = +0.3670 vs best learned baseline mlp_180k

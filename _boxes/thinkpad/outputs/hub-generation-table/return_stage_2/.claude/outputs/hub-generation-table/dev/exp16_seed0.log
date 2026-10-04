@@ -1,0 +1,121 @@
+[23:57:40] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[23:57:40]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[23:57:40]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[23:57:41]   channel geometry loaded from chan_geom_s0_c0_n32766.npz
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[23:57:44] corner 0 {'hue_lo': 0.2, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': True}: knn_proto=0.7801(53/72) best_const=0.5278
+[23:58:28]   [c0 K32_M26_r16_p2_ridge10] modes=0.9097(61)  atoms=0.7986(48)  pca=0.8310(66)  random=0.6829(36)  mean=0.2130(9)  total=469504 ⭐under
+[23:58:35]   [c0 K32_M26_r16_p3_ridge10] modes=0.9051(63)  atoms=0.7500(48)  pca=0.8032(53)  random=0.6991(33)  mean=0.2037(9)  total=473344 ⭐under
+[23:59:17]   [c0 K64_M16_r16_p2_ridge10] modes=0.8889(56)  atoms=0.8218(56)  pca=0.9259(66)  random=0.6389(56)  mean=0.1921(15)  total=444416 ⭐under
+[23:59:23]   [c0 K64_M16_r8_p2_ridge10] modes=0.8727(54)  atoms=0.7963(53)  pca=0.8958(62)  random=0.6366(56)  mean=0.1852(16)  total=406528 ⭐under
+[23:59:30]   [c0 K32_M26_r8_p2_ridge10] modes=0.8750(58)  atoms=0.8125(53)  pca=0.8333(68)  random=0.6829(31)  mean=0.2245(8)  total=437760 ⭐under
+[00:00:16]   [c0 K16_M32_r16_p2_ridge10] modes=0.8565(52)  atoms=0.6829(51)  pca=0.7431(43)  random=0.6875(18)  mean=0.2778(12)  total=423936 ⭐under
+[00:00:17]     [corr] 1.0s
+[00:00:18]     [dead] 0.3s
+[00:00:19]     [linkage_ward] 1.8s
+[00:00:20]     [linkage_avg] 0.1s
+[00:00:21]   channel geometry computed and cached -> chan_geom_s0_c1_n32761.npz
+[00:00:23] corner 1 {'hue_lo': 0.4, 'scale_hi': True, 'shape_value': 2.0, 'orient_hi': True}: knn_proto=0.9190(50/72) best_const=0.5278
+[00:01:06]   [c1 K32_M26_r16_p2_ridge10] modes=0.8773(51)  atoms=0.9190(59)  pca=0.6759(33)  random=0.8773(36)  mean=0.3148(7)  total=469504 ⭐under
+[00:01:14]   [c1 K32_M26_r16_p3_ridge10] modes=0.8565(64)  atoms=0.8704(56)  pca=0.6620(33)  random=0.8472(30)  mean=0.3148(7)  total=473344 ⭐under
+[00:01:54]   [c1 K64_M16_r16_p2_ridge10] modes=0.8565(48)  atoms=0.9144(47)  pca=0.7014(34)  random=0.7083(38)  mean=0.3750(3)  total=444416 ⭐under
+[00:02:01]   [c1 K64_M16_r8_p2_ridge10] modes=0.8819(49)  atoms=0.9005(46)  pca=0.7130(36)  random=0.7130(39)  mean=0.3727(3)  total=406528 ⭐under
+[00:02:07]   [c1 K32_M26_r8_p2_ridge10] modes=0.8912(50)  atoms=0.8912(44)  pca=0.6829(34)  random=0.8727(31)  mean=0.3102(8)  total=437760 ⭐under
+[00:02:50]   [c1 K16_M32_r16_p2_ridge10] modes=0.8102(45)  atoms=0.8426(55)  pca=0.6551(38)  random=0.7500(41)  mean=0.2778(2)  total=423936 ⭐under
+[00:02:51]     [corr] 0.9s
+[00:02:52]     [dead] 0.3s
+[00:02:53]     [linkage_ward] 1.7s
+[00:02:53]     [linkage_avg] 0.1s
+[00:02:55]   channel geometry computed and cached -> chan_geom_s0_c2_n32764.npz
+[00:02:56] corner 2 {'hue_lo': 0.6, 'scale_hi': False, 'shape_value': 1.0, 'orient_hi': False}: knn_proto=0.8750(49/72) best_const=0.5278
+[00:03:38]   [c2 K32_M26_r16_p2_ridge10] modes=0.8912(61)  atoms=0.8843(57)  pca=0.5741(38)  random=0.5880(16)  mean=0.1944(4)  total=469504 ⭐under
+[00:03:45]   [c2 K32_M26_r16_p3_ridge10] modes=0.8241(62)  atoms=0.8796(54)  pca=0.6157(44)  random=0.5579(10)  mean=0.1944(4)  total=473344 ⭐under
+[00:04:25]   [c2 K64_M16_r16_p2_ridge10] modes=0.8912(60)  atoms=0.8426(60)  pca=0.7292(43)  random=0.7639(45)  mean=0.3148(5)  total=444416 ⭐under
+[00:04:32]   [c2 K64_M16_r8_p2_ridge10] modes=0.8819(58)  atoms=0.8634(61)  pca=0.7338(48)  random=0.7546(43)  mean=0.3125(5)  total=406528 ⭐under
+[00:04:39]   [c2 K32_M26_r8_p2_ridge10] modes=0.9120(66)  atoms=0.9213(59)  pca=0.6042(42)  random=0.5903(16)  mean=0.1968(4)  total=437760 ⭐under
+[00:05:21]   [c2 K16_M32_r16_p2_ridge10] modes=0.8426(59)  atoms=0.7269(29)  pca=0.5602(35)  random=0.6343(25)  mean=0.1250(7)  total=423936 ⭐under
+[00:05:23]     [corr] 1.0s
+[00:05:23]     [dead] 0.3s
+[00:05:25]     [linkage_ward] 1.9s
+[00:05:25]     [linkage_avg] 0.1s
+[00:05:26]   channel geometry computed and cached -> chan_geom_s0_c3_n32765.npz
+[00:05:28] corner 3 {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': True}: knn_proto=0.8287(48/72) best_const=0.5278
+[00:06:09]   [c3 K32_M26_r16_p2_ridge10] modes=0.8125(48)  atoms=0.8125(44)  pca=0.8241(45)  random=0.5926(44)  mean=0.1806(7)  total=469504 ⭐under
+[00:06:16]   [c3 K32_M26_r16_p3_ridge10] modes=0.7824(46)  atoms=0.7986(44)  pca=0.7870(39)  random=0.5741(44)  mean=0.1806(10)  total=473344 ⭐under
+[00:06:56]   [c3 K64_M16_r16_p2_ridge10] modes=0.8148(49)  atoms=0.7593(52)  pca=0.8218(55)  random=0.6921(42)  mean=0.1111(18)  total=444416 ⭐under
+[00:07:02]   [c3 K64_M16_r8_p2_ridge10] modes=0.8194(47)  atoms=0.7315(50)  pca=0.8125(49)  random=0.6852(45)  mean=0.1111(17)  total=406528 ⭐under
+[00:07:09]   [c3 K32_M26_r8_p2_ridge10] modes=0.8171(47)  atoms=0.8102(46)  pca=0.7940(54)  random=0.5880(37)  mean=0.1806(9)  total=437760 ⭐under
+[00:07:50]   [c3 K16_M32_r16_p2_ridge10] modes=0.8079(40)  atoms=0.7454(46)  pca=0.7546(35)  random=0.4954(29)  mean=0.1111(3)  total=423936 ⭐under
+[00:07:52]     [corr] 0.8s
+[00:07:52]     [dead] 0.2s
+[00:07:53]     [linkage_ward] 1.4s
+[00:07:53]     [linkage_avg] 0.1s
+[00:07:55]   channel geometry computed and cached -> chan_geom_s0_c4_n32766.npz
+[00:07:56] corner 4 {'hue_lo': 0.4, 'scale_hi': False, 'shape_value': 1.0, 'orient_hi': False}: knn_proto=0.8889(50/72) best_const=0.5278
+[00:08:34]   [c4 K32_M26_r16_p2_ridge10] modes=0.8935(59)  atoms=0.8310(66)  pca=0.6736(42)  random=0.6088(24)  mean=0.3056(5)  total=469504 ⭐under
+[00:08:40]   [c4 K32_M26_r16_p3_ridge10] modes=0.8310(66)  atoms=0.8171(59)  pca=0.6852(42)  random=0.6019(25)  mean=0.3056(5)  total=473344 ⭐under
+[00:09:15]   [c4 K64_M16_r16_p2_ridge10] modes=0.9005(59)  atoms=0.7639(46)  pca=0.7153(41)  random=0.6644(43)  mean=0.2801(9)  total=444416 ⭐under
+[00:09:21]   [c4 K64_M16_r8_p2_ridge10] modes=0.9005(59)  atoms=0.8032(43)  pca=0.6782(45)  random=0.6019(44)  mean=0.2384(5)  total=406528 ⭐under
+[00:09:27]   [c4 K32_M26_r8_p2_ridge10] modes=0.8843(57)  atoms=0.7894(55)  pca=0.6551(46)  random=0.6250(22)  mean=0.3056(6)  total=437760 ⭐under
+[00:10:03]   [c4 K16_M32_r16_p2_ridge10] modes=0.7917(34)  atoms=0.7917(62)  pca=0.4745(27)  random=0.6181(18)  mean=0.1944(6)  total=423936 ⭐under
+[00:10:05]     [corr] 0.8s
+[00:10:05]     [dead] 0.2s
+[00:10:06]     [linkage_ward] 1.3s
+[00:10:06]     [linkage_avg] 0.1s
+[00:10:07]   channel geometry computed and cached -> chan_geom_s0_c5_n32764.npz
+[00:10:09] corner 5 {'hue_lo': 0.6, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': False}: knn_proto=0.6898(57/72) best_const=0.5278
+[00:10:45]   [c5 K32_M26_r16_p2_ridge10] modes=0.6852(59)  atoms=0.6019(47)  pca=0.7870(53)  random=0.7106(39)  mean=0.2685(4)  total=469504 ⭐under
+[00:10:51]   [c5 K32_M26_r16_p3_ridge10] modes=0.7199(39)  atoms=0.6389(49)  pca=0.8032(51)  random=0.7338(35)  mean=0.2708(4)  total=473344 ⭐under
+[00:11:25]   [c5 K64_M16_r16_p2_ridge10] modes=0.6597(68)  atoms=0.6667(62)  pca=0.7870(43)  random=0.6782(48)  mean=0.4352(9)  total=444416 ⭐under
+[00:11:31]   [c5 K64_M16_r8_p2_ridge10] modes=0.5903(64)  atoms=0.6667(67)  pca=0.7824(43)  random=0.6528(49)  mean=0.4329(8)  total=406528 ⭐under
+[00:11:36]   [c5 K32_M26_r8_p2_ridge10] modes=0.6713(57)  atoms=0.5972(53)  pca=0.7870(52)  random=0.7106(39)  mean=0.2731(4)  total=437760 ⭐under
+[00:12:13]   [c5 K16_M32_r16_p2_ridge10] modes=0.6296(58)  atoms=0.6296(43)  pca=0.6343(25)  random=0.5162(28)  mean=0.2176(8)  total=423936 ⭐under
+[00:12:13] [SUMMARY K32_M26_r16_p2_ridge10] n=6 modes=0.8449±0.0778(56.5) atoms=0.8079±0.1011 pca=0.7276 random=0.6767 mean=0.2461 | knn=0.8302±0.0770 | Dknn=+0.0147 (3/6) Datoms=+0.0370 (4/6)
+[00:12:13] [SUMMARY K32_M26_r16_p3_ridge10] n=6 modes=0.8198±0.0579(56.7) atoms=0.7924±0.0813 pca=0.7261 random=0.6690 mean=0.2450 | knn=0.8302±0.0770 | Dknn=-0.0104 (2/6) Datoms=+0.0274 (3/6)
+[00:12:13] [SUMMARY K64_M16_r16_p2_ridge10] n=6 modes=0.8353±0.0836(56.7) atoms=0.7948±0.0774 pca=0.7801 random=0.6910 mean=0.2847 | knn=0.8302±0.0770 | Dknn=+0.0050 (3/6) Datoms=+0.0405 (4/6)
+[00:12:13] [SUMMARY K64_M16_r8_p2_ridge10] n=6 modes=0.8245±0.1077(55.2) atoms=0.7936±0.0779 pca=0.7693 random=0.6740 mean=0.2755 | knn=0.8302±0.0770 | Dknn=-0.0058 (3/6) Datoms=+0.0309 (4/6)
+[00:12:13] [SUMMARY K32_M26_r8_p2_ridge10] n=6 modes=0.8418±0.0816(55.8) atoms=0.8036±0.1036 pca=0.7261 random=0.6782 mean=0.2485 | knn=0.8302±0.0770 | Dknn=+0.0116 (2/6) Datoms=+0.0382 (5/6)
+[00:12:13] [SUMMARY K16_M32_r16_p2_ridge10] n=6 modes=0.7897±0.0749(48.0) atoms=0.7365±0.0692 pca=0.6370 random=0.6169 mean=0.2006 | knn=0.8302±0.0770 | Dknn=-0.0405 (1/6) Datoms=+0.0532 (3/6)
+[00:12:13] done in 876.0s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table\dev\exp16_seed0.json
+exit=0

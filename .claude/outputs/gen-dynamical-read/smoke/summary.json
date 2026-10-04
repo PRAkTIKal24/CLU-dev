@@ -1,0 +1,1034 @@
+{
+  "budgets": {
+    "A": {
+      "atoms_are_train_rows": {
+        "atom_selection": "kmeanspp",
+        "atoms_are_train_rows": true,
+        "max_abs_delta_vs_train_rows": 0.0,
+        "n_atoms": 64,
+        "n_distinct_atom_rows": 64,
+        "note": "\u26d4 The minima are NOT the k-means centres: every atom is a verbatim train feature row. Per-value weights over centres would be the old flat count table wearing a different hat."
+      },
+      "byte_ledger": {
+        "budget_bytes": 524288,
+        "coupling": {
+          "bytes_formula": "sum_{k<l} r*(d_k + d_l)*4",
+          "coupling_bytes": 524288,
+          "derived_free": "the per-well centre m_k and radius s_k are functions of the ATOMS (0 additional bytes)",
+          "dtype": "float32",
+          "identity": "= r*(K-1)*D*4 when the wells partition D",
+          "n_pairs": 10,
+          "note": "\u26d4 EXTRA to store_bytes \u2014 a byte-matched rival must be told about it.",
+          "per_pair": [
+            {
+              "bytes": 38912,
+              "k": 0,
+              "l": 1
+            },
+            {
+              "bytes": 56064,
+              "k": 0,
+              "l": 2
+            },
+            {
+              "bytes": 51456,
+              "k": 0,
+              "l": 3
+            },
+            {
+              "bytes": 42816,
+              "k": 0,
+              "l": 4
+            },
+            {
+              "bytes": 56192,
+              "k": 1,
+              "l": 2
+            },
+            {
+              "bytes": 51584,
+              "k": 1,
+              "l": 3
+            },
+            {
+              "bytes": 42944,
+              "k": 1,
+              "l": 4
+            },
+            {
+              "bytes": 68736,
+              "k": 2,
+              "l": 3
+            },
+            {
+              "bytes": 60096,
+              "k": 2,
+              "l": 4
+            },
+            {
+              "bytes": 55488,
+              "k": 3,
+              "l": 4
+            }
+          ],
+          "rank": 16
+        },
+        "d3_rule": "store + coupling <= 2x budget",
+        "d3_rule_binding": true,
+        "d3_rule_satisfied": true,
+        "label": "budget A (MATCHED)",
+        "multiple_of_budget": 2.0,
+        "store": {
+          "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+          "dim": 2048,
+          "dtype": "float32",
+          "n_atoms_per_well": 64,
+          "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72).",
+          "store_bytes": 524288,
+          "well_sizes": [
+            303,
+            305,
+            573,
+            501,
+            366
+          ]
+        },
+        "total_bytes": 1048576
+      },
+      "byte_ledger_matches_prereg": {
+        "coupling_bytes": true,
+        "multiple_of_budget": true,
+        "store_bytes": true,
+        "total_bytes": true
+      },
+      "byte_ledger_prereg": {
+        "coupling_bytes": 524288,
+        "multiple_of_budget": 2.0,
+        "store_bytes": 524288,
+        "total_bytes": 1048576
+      },
+      "declared_channel": {
+        "declared_channel_bits": 65536,
+        "declared_channel_floats": 2048,
+        "dtype": "float32",
+        "note": "\u26d4 NOT K*log2(M): the settled state is continuous. The width is declared at the store's full float width and the empirical spread of the settled states is reported beside it (settled_state_spread).",
+        "parity_with": "knn_proto (also D floats to the decoder)",
+        "read_mode": "state"
+      },
+      "request_sets": {
+        "CORNER_B": {
+          "bypass_all_stages_caught": [
+            true
+          ],
+          "dynamics": {
+            "coupling_off": {
+              "accepted_fraction": [
+                0.6818333333333333
+              ],
+              "displacement_final_step": [
+                0.00023664378770465392
+              ],
+              "displacement_step_1": [
+                0.0720245869209369
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.0
+              ],
+              "frac_still_descending": [
+                0.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.24781503195519355
+              ],
+              "mean_pairwise_rms_settled": [
+                0.12690431810469655
+              ],
+              "verdict": [
+                "settled (no chain descending in the final window)"
+              ]
+            },
+            "full": {
+              "accepted_fraction": [
+                0.7859861111111112
+              ],
+              "displacement_final_step": [
+                0.0007788908587826882
+              ],
+              "displacement_step_1": [
+                0.0664693396538496
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.0
+              ],
+              "frac_still_descending": [
+                0.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.24781503195519355
+              ],
+              "mean_pairwise_rms_settled": [
+                0.3852499319814406
+              ],
+              "verdict": [
+                "settled (no chain descending in the final window)"
+              ]
+            },
+            "request_off": {
+              "accepted_fraction": [
+                0.7810972222222222
+              ],
+              "displacement_final_step": [
+                0.0034534304124665344
+              ],
+              "displacement_step_1": [
+                0.08246726139138143
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.07863849765258216
+              ],
+              "frac_still_descending": [
+                1.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.24781503195519355
+              ],
+              "mean_pairwise_rms_settled": [
+                5.9075768071428625e-08
+              ],
+              "verdict": [
+                "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step"
+              ]
+            },
+            "request_off_launch": {
+              "accepted_fraction": [
+                0.786
+              ],
+              "displacement_final_step": [
+                0.0034534307196736336
+              ],
+              "displacement_step_1": [
+                0.08113156259059906
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.8012519561815337
+              ],
+              "frac_still_descending": [
+                1.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.0
+              ],
+              "mean_pairwise_rms_settled": [
+                2.9615766379008645e-09
+              ],
+              "verdict": [
+                "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step"
+              ]
+            },
+            "zero_step": {
+              "accepted_fraction": [
+                NaN
+              ],
+              "displacement_final_step": [
+                NaN
+              ],
+              "displacement_step_1": [
+                NaN
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.09154929577464789
+              ],
+              "frac_still_descending": [
+                NaN
+              ],
+              "mean_pairwise_rms_launch": [
+                0.24781503195519355
+              ],
+              "mean_pairwise_rms_settled": [
+                0.24781503195519355
+              ],
+              "verdict": [
+                "ZERO-STEP CONTROL (the launch, decoded; no chain was run)"
+              ]
+            }
+          },
+          "n_requests": 72,
+          "n_values_realised": {
+            "floor_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            },
+            "object_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            },
+            "orientation": {
+              "cardinality": 15,
+              "n_values_realised": 3
+            },
+            "scale": {
+              "cardinality": 8,
+              "n_values_realised": 3
+            },
+            "shape": {
+              "cardinality": 4,
+              "n_values_realised": 1
+            },
+            "wall_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            }
+          },
+          "steering": [
+            {
+              "per_arm": {
+                "coupling_off": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 2.97649884223938,
+                  "rms_delta_relative_to_spread": 0.9701919100011938,
+                  "rms_delta_vs_full": 0.32626187801361084
+                },
+                "request_off": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 6.323322296142578,
+                  "rms_delta_relative_to_spread": 2.0902099038070494,
+                  "rms_delta_vs_full": 0.7029081583023071
+                },
+                "request_off_launch": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 6.323322772979736,
+                  "rms_delta_relative_to_spread": 2.0902099038070494,
+                  "rms_delta_vs_full": 0.7029081583023071
+                },
+                "zero_step": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 4.037765026092529,
+                  "rms_delta_relative_to_spread": 1.3685958991244416,
+                  "rms_delta_vs_full": 0.4602395296096802
+                }
+              },
+              "reading": "request-off moves the trajectory; the request energy is doing work. \u26d4 Whether that work is a GAIN is a scored-run question and is not answered here.",
+              "reference": "full",
+              "settled_state_rms_spread": 0.33628591895103455
+            }
+          ]
+        },
+        "SPREAD": {
+          "bypass_all_stages_caught": [
+            true
+          ],
+          "dynamics": {
+            "coupling_off": {
+              "accepted_fraction": [
+                0.6374765625
+              ],
+              "displacement_final_step": [
+                0.00020472889218581258
+              ],
+              "displacement_step_1": [
+                0.07293667655903846
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.0
+              ],
+              "frac_still_descending": [
+                0.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.6771553951516711
+              ],
+              "mean_pairwise_rms_settled": [
+                0.3918271247734659
+              ],
+              "verdict": [
+                "settled (no chain descending in the final window)"
+              ]
+            },
+            "full": {
+              "accepted_fraction": [
+                0.784
+              ],
+              "displacement_final_step": [
+                0.0007568666778752231
+              ],
+              "displacement_step_1": [
+                0.06654380497639067
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.0
+              ],
+              "frac_still_descending": [
+                0.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.6771553951516711
+              ],
+              "mean_pairwise_rms_settled": [
+                0.7692085447333051
+              ],
+              "verdict": [
+                "settled (no chain descending in the final window)"
+              ]
+            },
+            "request_off": {
+              "accepted_fraction": [
+                0.78815625
+              ],
+              "displacement_final_step": [
+                0.003453430126683088
+              ],
+              "displacement_step_1": [
+                0.08115982462186366
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.004921259842519685
+              ],
+              "frac_still_descending": [
+                1.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.6771553951516711
+              ],
+              "mean_pairwise_rms_settled": [
+                6.629249456796111e-08
+              ],
+              "verdict": [
+                "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step"
+              ]
+            },
+            "request_off_launch": {
+              "accepted_fraction": [
+                0.783375
+              ],
+              "displacement_final_step": [
+                0.003453427867498249
+              ],
+              "displacement_step_1": [
+                0.08113156259059906
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.4562007874015748
+              ],
+              "frac_still_descending": [
+                1.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.0
+              ],
+              "mean_pairwise_rms_settled": [
+                3.9022603507979635e-08
+              ],
+              "verdict": [
+                "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step"
+              ]
+            },
+            "zero_step": {
+              "accepted_fraction": [
+                NaN
+              ],
+              "displacement_final_step": [
+                NaN
+              ],
+              "displacement_step_1": [
+                NaN
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.00024606299212598425
+              ],
+              "frac_still_descending": [
+                NaN
+              ],
+              "mean_pairwise_rms_launch": [
+                0.6771553951516711
+              ],
+              "mean_pairwise_rms_settled": [
+                0.6771553951516711
+              ],
+              "verdict": [
+                "ZERO-STEP CONTROL (the launch, decoded; no chain was run)"
+              ]
+            }
+          },
+          "n_requests": 128,
+          "n_values_realised": {
+            "floor_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            },
+            "object_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            },
+            "orientation": {
+              "cardinality": 15,
+              "n_values_realised": 15
+            },
+            "scale": {
+              "cardinality": 8,
+              "n_values_realised": 8
+            },
+            "shape": {
+              "cardinality": 4,
+              "n_values_realised": 4
+            },
+            "wall_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            }
+          },
+          "steering": [
+            {
+              "per_arm": {
+                "coupling_off": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 4.844196319580078,
+                  "rms_delta_relative_to_spread": 0.6669043147071949,
+                  "rms_delta_vs_full": 0.38674840331077576
+                },
+                "request_off": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 9.090392112731934,
+                  "rms_delta_relative_to_spread": 1.4207630418976596,
+                  "rms_delta_vs_full": 0.8239230513572693
+                },
+                "request_off_launch": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 9.090392112731934,
+                  "rms_delta_relative_to_spread": 1.4207630418976596,
+                  "rms_delta_vs_full": 0.8239230513572693
+                },
+                "zero_step": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 4.959166526794434,
+                  "rms_delta_relative_to_spread": 0.7567113773198564,
+                  "rms_delta_vs_full": 0.4388289451599121
+                }
+              },
+              "reading": "request-off moves the trajectory; the request energy is doing work. \u26d4 Whether that work is a GAIN is a scored-run question and is not answered here.",
+              "reference": "full",
+              "settled_state_rms_spread": 0.5799158811569214
+            }
+          ]
+        }
+      }
+    },
+    "B": {
+      "atoms_are_train_rows": {
+        "atom_selection": "kmeanspp",
+        "atoms_are_train_rows": true,
+        "max_abs_delta_vs_train_rows": 0.0,
+        "n_atoms": 512,
+        "n_distinct_atom_rows": 512,
+        "note": "\u26d4 The minima are NOT the k-means centres: every atom is a verbatim train feature row. Per-value weights over centres would be the old flat count table wearing a different hat."
+      },
+      "byte_ledger": {
+        "budget_bytes": 4194304,
+        "coupling": {
+          "bytes_formula": "sum_{k<l} r*(d_k + d_l)*4",
+          "coupling_bytes": 4194304,
+          "derived_free": "the per-well centre m_k and radius s_k are functions of the ATOMS (0 additional bytes)",
+          "dtype": "float32",
+          "identity": "= r*(K-1)*D*4 when the wells partition D",
+          "n_pairs": 10,
+          "note": "\u26d4 EXTRA to store_bytes \u2014 a byte-matched rival must be told about it.",
+          "per_pair": [
+            {
+              "bytes": 311296,
+              "k": 0,
+              "l": 1
+            },
+            {
+              "bytes": 448512,
+              "k": 0,
+              "l": 2
+            },
+            {
+              "bytes": 411648,
+              "k": 0,
+              "l": 3
+            },
+            {
+              "bytes": 342528,
+              "k": 0,
+              "l": 4
+            },
+            {
+              "bytes": 449536,
+              "k": 1,
+              "l": 2
+            },
+            {
+              "bytes": 412672,
+              "k": 1,
+              "l": 3
+            },
+            {
+              "bytes": 343552,
+              "k": 1,
+              "l": 4
+            },
+            {
+              "bytes": 549888,
+              "k": 2,
+              "l": 3
+            },
+            {
+              "bytes": 480768,
+              "k": 2,
+              "l": 4
+            },
+            {
+              "bytes": 443904,
+              "k": 3,
+              "l": 4
+            }
+          ],
+          "rank": 128
+        },
+        "d3_rule": "store + coupling <= 2x budget",
+        "d3_rule_binding": true,
+        "d3_rule_satisfied": true,
+        "label": "budget B (DECLARED LARGER)",
+        "multiple_of_budget": 2.0,
+        "store": {
+          "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+          "dim": 2048,
+          "dtype": "float32",
+          "n_atoms_per_well": 512,
+          "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72).",
+          "store_bytes": 4194304,
+          "well_sizes": [
+            303,
+            305,
+            573,
+            501,
+            366
+          ]
+        },
+        "total_bytes": 8388608
+      },
+      "byte_ledger_matches_prereg": {
+        "coupling_bytes": true,
+        "multiple_of_budget": true,
+        "store_bytes": true,
+        "total_bytes": true
+      },
+      "byte_ledger_prereg": {
+        "coupling_bytes": 4194304,
+        "multiple_of_budget": 2.0,
+        "store_bytes": 4194304,
+        "total_bytes": 8388608
+      },
+      "declared_channel": {
+        "declared_channel_bits": 65536,
+        "declared_channel_floats": 2048,
+        "dtype": "float32",
+        "note": "\u26d4 NOT K*log2(M): the settled state is continuous. The width is declared at the store's full float width and the empirical spread of the settled states is reported beside it (settled_state_spread).",
+        "parity_with": "knn_proto (also D floats to the decoder)",
+        "read_mode": "state"
+      },
+      "request_sets": {
+        "CORNER_B": {
+          "bypass_all_stages_caught": [
+            true
+          ],
+          "dynamics": {
+            "coupling_off": {
+              "accepted_fraction": [
+                0.7935972222222222
+              ],
+              "displacement_final_step": [
+                0.000234799342959175
+              ],
+              "displacement_step_1": [
+                0.10069609547240867
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.0
+              ],
+              "frac_still_descending": [
+                0.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.4152983155742745
+              ],
+              "mean_pairwise_rms_settled": [
+                0.08727624723976728
+              ],
+              "verdict": [
+                "settled (no chain descending in the final window)"
+              ]
+            },
+            "full": {
+              "accepted_fraction": [
+                0.869875
+              ],
+              "displacement_final_step": [
+                0.003097454104540197
+              ],
+              "displacement_step_1": [
+                0.10316092313991652
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.0019561815336463224
+              ],
+              "frac_still_descending": [
+                0.4166666666666667
+              ],
+              "mean_pairwise_rms_launch": [
+                0.4152983155742745
+              ],
+              "mean_pairwise_rms_settled": [
+                0.7463069315729003
+              ],
+              "verdict": [
+                "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step"
+              ]
+            },
+            "request_off": {
+              "accepted_fraction": [
+                0.8727777777777778
+              ],
+              "displacement_final_step": [
+                0.0009662207076972765
+              ],
+              "displacement_step_1": [
+                0.10790289876361688
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.05594679186228482
+              ],
+              "frac_still_descending": [
+                0.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.4152983155742745
+              ],
+              "mean_pairwise_rms_settled": [
+                7.066252717057301e-08
+              ],
+              "verdict": [
+                "settled (no chain descending in the final window)"
+              ]
+            },
+            "request_off_launch": {
+              "accepted_fraction": [
+                0.867
+              ],
+              "displacement_final_step": [
+                0.0009662149241194129
+              ],
+              "displacement_step_1": [
+                0.07510858029127121
+              ],
+              "frac_pairs_collapsed_settled": [
+                1.0
+              ],
+              "frac_still_descending": [
+                0.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.0
+              ],
+              "mean_pairwise_rms_settled": [
+                0.0
+              ],
+              "verdict": [
+                "settled (no chain descending in the final window)"
+              ]
+            },
+            "zero_step": {
+              "accepted_fraction": [
+                NaN
+              ],
+              "displacement_final_step": [
+                NaN
+              ],
+              "displacement_step_1": [
+                NaN
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.10993740219092332
+              ],
+              "frac_still_descending": [
+                NaN
+              ],
+              "mean_pairwise_rms_launch": [
+                0.4152983155742745
+              ],
+              "mean_pairwise_rms_settled": [
+                0.4152983155742745
+              ],
+              "verdict": [
+                "ZERO-STEP CONTROL (the launch, decoded; no chain was run)"
+              ]
+            }
+          },
+          "n_requests": 72,
+          "n_values_realised": {
+            "floor_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            },
+            "object_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            },
+            "orientation": {
+              "cardinality": 15,
+              "n_values_realised": 3
+            },
+            "scale": {
+              "cardinality": 8,
+              "n_values_realised": 3
+            },
+            "shape": {
+              "cardinality": 4,
+              "n_values_realised": 1
+            },
+            "wall_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            }
+          },
+          "steering": [
+            {
+              "per_arm": {
+                "coupling_off": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 5.864771842956543,
+                  "rms_delta_relative_to_spread": 1.015428198076171,
+                  "rms_delta_vs_full": 0.6728036999702454
+                },
+                "request_off": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 12.500165939331055,
+                  "rms_delta_relative_to_spread": 1.4968329751645988,
+                  "rms_delta_vs_full": 0.9917734861373901
+                },
+                "request_off_launch": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 12.500165939331055,
+                  "rms_delta_relative_to_spread": 1.4968329751645988,
+                  "rms_delta_vs_full": 0.9917734861373901
+                },
+                "zero_step": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 6.765913009643555,
+                  "rms_delta_relative_to_spread": 1.2956587322598976,
+                  "rms_delta_vs_full": 0.8584792017936707
+                }
+              },
+              "reading": "request-off moves the trajectory; the request energy is doing work. \u26d4 Whether that work is a GAIN is a scored-run question and is not answered here.",
+              "reference": "full",
+              "settled_state_rms_spread": 0.6625812649726868
+            }
+          ]
+        },
+        "SPREAD": {
+          "bypass_all_stages_caught": [
+            true
+          ],
+          "dynamics": {
+            "coupling_off": {
+              "accepted_fraction": [
+                0.7955703125
+              ],
+              "displacement_final_step": [
+                0.0002569943170556144
+              ],
+              "displacement_step_1": [
+                0.09762083616806194
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.0
+              ],
+              "frac_still_descending": [
+                0.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.6497298841103806
+              ],
+              "mean_pairwise_rms_settled": [
+                0.3937052183709606
+              ],
+              "verdict": [
+                "settled (no chain descending in the final window)"
+              ]
+            },
+            "full": {
+              "accepted_fraction": [
+                0.910875
+              ],
+              "displacement_final_step": [
+                0.001597236094312393
+              ],
+              "displacement_step_1": [
+                0.09726158360717818
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.0
+              ],
+              "frac_still_descending": [
+                0.171875
+              ],
+              "mean_pairwise_rms_launch": [
+                0.6497298841103806
+              ],
+              "mean_pairwise_rms_settled": [
+                0.940769712077695
+              ],
+              "verdict": [
+                "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step"
+              ]
+            },
+            "request_off": {
+              "accepted_fraction": [
+                0.8804609375
+              ],
+              "displacement_final_step": [
+                0.0009662180859777436
+              ],
+              "displacement_step_1": [
+                0.10267131426371634
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.0062746062992125986
+              ],
+              "frac_still_descending": [
+                0.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.6497298841103806
+              ],
+              "mean_pairwise_rms_settled": [
+                7.913802957467603e-08
+              ],
+              "verdict": [
+                "settled (no chain descending in the final window)"
+              ]
+            },
+            "request_off_launch": {
+              "accepted_fraction": [
+                0.869625
+              ],
+              "displacement_final_step": [
+                0.0009662165030022152
+              ],
+              "displacement_step_1": [
+                0.07510858029127121
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.3937007874015748
+              ],
+              "frac_still_descending": [
+                0.0
+              ],
+              "mean_pairwise_rms_launch": [
+                0.0
+              ],
+              "mean_pairwise_rms_settled": [
+                5.067702438801603e-08
+              ],
+              "verdict": [
+                "settled (no chain descending in the final window)"
+              ]
+            },
+            "zero_step": {
+              "accepted_fraction": [
+                NaN
+              ],
+              "displacement_final_step": [
+                NaN
+              ],
+              "displacement_step_1": [
+                NaN
+              ],
+              "frac_pairs_collapsed_settled": [
+                0.0036909448818897637
+              ],
+              "frac_still_descending": [
+                NaN
+              ],
+              "mean_pairwise_rms_launch": [
+                0.6497298841103806
+              ],
+              "mean_pairwise_rms_settled": [
+                0.6497298841103806
+              ],
+              "verdict": [
+                "ZERO-STEP CONTROL (the launch, decoded; no chain was run)"
+              ]
+            }
+          },
+          "n_requests": 128,
+          "n_values_realised": {
+            "floor_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            },
+            "object_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            },
+            "orientation": {
+              "cardinality": 15,
+              "n_values_realised": 15
+            },
+            "scale": {
+              "cardinality": 8,
+              "n_values_realised": 8
+            },
+            "shape": {
+              "cardinality": 4,
+              "n_values_realised": 4
+            },
+            "wall_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            }
+          },
+          "steering": [
+            {
+              "per_arm": {
+                "coupling_off": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 6.739015579223633,
+                  "rms_delta_relative_to_spread": 0.8344109989940334,
+                  "rms_delta_vs_full": 0.6234850883483887
+                },
+                "request_off": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 12.768987655639648,
+                  "rms_delta_relative_to_spread": 1.4953713648975475,
+                  "rms_delta_vs_full": 1.1173651218414307
+                },
+                "request_off_launch": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 12.768986701965332,
+                  "rms_delta_relative_to_spread": 1.4953713648975475,
+                  "rms_delta_vs_full": 1.1173651218414307
+                },
+                "zero_step": {
+                  "identical_to_full": false,
+                  "max_abs_delta_vs_full": 8.098000526428223,
+                  "rms_delta_relative_to_spread": 1.0686919426387627,
+                  "rms_delta_vs_full": 0.7985435128211975
+                }
+              },
+              "reading": "request-off moves the trajectory; the request energy is doing work. \u26d4 Whether that work is a GAIN is a scored-run question and is not answered here.",
+              "reference": "full",
+              "settled_state_rms_spread": 0.7472158074378967
+            }
+          ]
+        }
+      }
+    }
+  },
+  "build_only": "\u26d4 BUILD ONLY. The scored run is gated: no falsifier verdict, no 3-seed cell and no external-classifier number is emitted here.",
+  "n_seeds": 1,
+  "schema": "chlu-gen-dynamical-read-summary/1",
+  "seeds": [
+    0
+  ]
+}

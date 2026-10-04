@@ -1,0 +1,86 @@
+{
+ "margin": 0.1,
+ "rows": [
+  {
+   "target": "object_hue = 0.5",
+   "seed": 0,
+   "sensitivity_clu_full": 0.54296875,
+   "specificity_controls": {
+    "random_span": 0.0,
+    "clu_shuffled": 0.015625
+   },
+   "specificity_worst_case": 0.015625,
+   "specificity_binding_control": "clu_shuffled",
+   "separation": 0.52734375,
+   "calibrated": true,
+   "levels": {
+    "basis_head_gated": 0.62890625,
+    "basis_head_refit": 0.0,
+    "clu_deleted": 0.041666666666666664,
+    "clu_full": 0.54296875,
+    "clu_placebo": 0.5625,
+    "clu_shuffled": 0.015625,
+    "knn_proto_gated": 1.0,
+    "knn_proto_refit": 0.0,
+    "random_span": 0.0
+   },
+   "best_move": {
+    "basis_head_gated": "M3_offgrid_bracket",
+    "basis_head_refit": "M2_weight_read",
+    "clu_deleted": "M4a_convex_span_sweep",
+    "clu_full": "M1_direct_request",
+    "clu_placebo": "M4a_convex_span_sweep",
+    "clu_shuffled": "M5_read_reachable",
+    "knn_proto_gated": "M2_weight_read",
+    "knn_proto_refit": "M2_weight_read",
+    "random_span": "M2_weight_read"
+   },
+   "clu_deleted": 0.041666666666666664,
+   "best_gated_baseline": 1.0,
+   "gap_gated_minus_clu": 0.9583333333333334,
+   "refit_baselines": {
+    "basis_head_refit": 0.0,
+    "knn_proto_refit": 0.0
+   },
+   "verdict": "ERASED vs GATED"
+  },
+  {
+   "target": "shape = cube",
+   "seed": 0,
+   "sensitivity_clu_full": 0.3854166666666667,
+   "specificity_controls": {
+    "random_span": 0.0,
+    "clu_shuffled": 0.34375
+   },
+   "specificity_worst_case": 0.34375,
+   "specificity_binding_control": "clu_shuffled",
+   "separation": 0.041666666666666685,
+   "calibrated": false,
+   "levels": {
+    "basis_head_gated": 0.4375,
+    "basis_head_refit": 0.28125,
+    "clu_deleted": 0.1875,
+    "clu_full": 0.3854166666666667,
+    "clu_placebo": 0.3958333333333333,
+    "clu_shuffled": 0.34375,
+    "knn_proto_gated": 0.6458333333333334,
+    "knn_proto_refit": 0.5104166666666666,
+    "random_span": 0.0
+   },
+   "best_move": {
+    "basis_head_gated": "M4a_convex_span_sweep",
+    "basis_head_refit": "M4a_convex_span_sweep",
+    "clu_deleted": "M4a_convex_span_sweep",
+    "clu_full": "M4a_convex_span_sweep",
+    "clu_placebo": "M4a_convex_span_sweep",
+    "clu_shuffled": "M4a_convex_span_sweep",
+    "knn_proto_gated": "M4a_convex_span_sweep",
+    "knn_proto_refit": "M4a_convex_span_sweep",
+    "random_span": "M2_weight_read"
+   },
+   "verdict": "ADVERSARY NOT CALIBRATED",
+   "why": "sensitivity 0.3854166666666667 does not clear the worst-case specificity 0.34375 (binding control: clu_shuffled) by the pre-registered margin 0.1. A store whose content has been destroyed recovers the value about as well as one that holds it, so this move is not reading store content on this target. No erasure claim is readable from this cell."
+  }
+ ],
+ "rule": "a cell is read ONLY if sensitivity clears the WORST of the two negative controls (random span, landscape-removed store) by the margin; the verdict is ERASED vs GATED iff the best gated baseline's recovery exceeds the refitted CLU's by the margin"
+}

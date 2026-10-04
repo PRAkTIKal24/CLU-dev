@@ -1,0 +1,149 @@
+⭐ gen-encoder-pretrain · dataset=shapes3d · variants=['recon_control', 'random_init', 'ae_plain', 'recon_control_2x', 'ae_deep', 'mae', 'ae_hires', 'vae'] · seeds=[0, 1, 2] · REDUCED SCALE (n_enc_train=4096, enc_steps=400)
+  split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  corner (matched-seen, SEEN): 216 rows
+  seed 0: rows enc_train=4096 probe_train=4096 probe_eval=2048 corner_eval=213 (corner rows dropped for landing in enc_train: 3)
+    streamed 10453 images in 70.6s
+  [recon_control] fitting encoder (recon, x1 steps) …
+    step 1/400  loss=0.19074
+    step 80/400  loss=0.02121
+    step 160/400  loss=0.01251
+    step 240/400  loss=0.01017
+    step 320/400  loss=0.00798
+    step 400/400  loss=0.00731
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    [recon_control/linear] grid scale=0.6646 orientation=0.7974  -> FAIL
+    [recon_control/mlp] grid scale=0.7246 orientation=0.8022  -> FAIL
+  [recon_control] done in 392.6s train / 1.9s encode
+  [random_init] fitting encoder (random, x0 steps) …
+    [random_init/linear] grid scale=0.8022 orientation=0.9414  -> FAIL
+    [random_init/mlp] grid scale=0.7910 orientation=0.9019  -> FAIL
+  [random_init] done in 0.0s train / 1.8s encode
+  [ae_plain] fitting encoder (ae, x1 steps) …
+    step 1/400  loss=0.19074
+    step 80/400  loss=0.02121
+    step 160/400  loss=0.01251
+    step 240/400  loss=0.01017
+    step 320/400  loss=0.00798
+    step 400/400  loss=0.00731
+    [ae_plain/linear] grid scale=0.6646 orientation=0.7974  -> FAIL
+    [ae_plain/mlp] grid scale=0.7246 orientation=0.8022  -> FAIL
+  [ae_plain] done in 313.3s train / 2.4s encode
+  [recon_control_2x] fitting encoder (recon, x2 steps) …
+    step 1/800  loss=0.19074
+    step 160/800  loss=0.01251
+    step 320/800  loss=0.00798
+    step 480/800  loss=0.00583
+    step 640/800  loss=0.00659
+    step 800/800  loss=0.00445
+    [recon_control_2x/linear] grid scale=0.7266 orientation=0.8872  -> FAIL
+    [recon_control_2x/mlp] grid scale=0.7881 orientation=0.8848  -> FAIL
+  [recon_control_2x] done in 588.8s train / 2.2s encode
+  [ae_deep] fitting encoder (ae, x1 steps) …
+    step 1/400  loss=0.16752
+    step 80/400  loss=0.07301
+    step 160/400  loss=0.02401
+    step 240/400  loss=0.01324
+    step 320/400  loss=0.01051
+    step 400/400  loss=0.00788
+    [ae_deep/linear] grid scale=0.6157 orientation=0.6885  -> FAIL
+    [ae_deep/mlp] grid scale=0.6694 orientation=0.7241  -> FAIL
+  [ae_deep] done in 706.9s train / 3.1s encode
+  [mae] fitting encoder (mae, x1 steps) …
+    step 1/400  loss=0.18769
+    step 80/400  loss=0.05721
+    step 160/400  loss=0.02351
+    step 240/400  loss=0.01817
+    step 320/400  loss=0.01534
+    step 400/400  loss=0.01313
+    [mae/linear] grid scale=0.5776 orientation=0.7451  -> FAIL
+    [mae/mlp] grid scale=0.6152 orientation=0.7197  -> FAIL
+  [mae] done in 478.5s train / 3.0s encode
+  [ae_hires] fitting encoder (ae, x1 steps) …
+    step 1/400  loss=0.17450
+    step 80/400  loss=0.01054
+    step 160/400  loss=0.00716
+    step 240/400  loss=0.00513
+    step 320/400  loss=0.00445
+    step 400/400  loss=0.00377
+    [ae_hires/linear] grid scale=0.8467 orientation=0.9609  -> FAIL
+    [ae_hires/mlp] grid scale=0.8105 orientation=0.9165  -> FAIL
+  [ae_hires] done in 795.4s train / 2.9s encode
+  [vae] fitting encoder (vae, x1 steps) …
+    step 1/400  loss=0.18998
+    step 80/400  loss=0.03608
+    step 160/400  loss=0.02444
+    step 240/400  loss=0.02031
+    step 320/400  loss=0.01769
+    step 400/400  loss=0.01624
+    [vae/linear] grid scale=0.6650 orientation=0.9380  -> FAIL
+    [vae/mlp] grid scale=0.7617 orientation=0.9360  -> FAIL
+  [vae] done in 615.8s train / 3.9s encode
+  seed 1: rows enc_train=4096 probe_train=4096 probe_eval=2048 corner_eval=216 (corner rows dropped for landing in enc_train: 0)
+    streamed 10456 images in 2207.2s
+  [recon_control] fitting encoder (recon, x1 steps) …
+    step 1/400  loss=0.16138
+    step 80/400  loss=0.02111
+    step 160/400  loss=0.01165
+    step 240/400  loss=0.00883
+    step 320/400  loss=0.00733
+    step 400/400  loss=0.00664
+    [recon_control/linear] grid scale=0.6660 orientation=0.8184  -> FAIL
+    [recon_control/mlp] grid scale=0.7266 orientation=0.8262  -> FAIL
+  [recon_control] done in 624.6s train / 5.4s encode
+  [random_init] fitting encoder (random, x0 steps) …
+    [random_init/linear] grid scale=0.8320 orientation=0.9282  -> FAIL
+    [random_init/mlp] grid scale=0.8066 orientation=0.9043  -> FAIL
+  [random_init] done in 0.0s train / 3.4s encode
+  [ae_plain] fitting encoder (ae, x1 steps) …
+    step 1/400  loss=0.16138
+    step 80/400  loss=0.02111
+    step 160/400  loss=0.01165
+    step 240/400  loss=0.00883
+    step 320/400  loss=0.00733
+    step 400/400  loss=0.00664
+    [ae_plain/linear] grid scale=0.6660 orientation=0.8184  -> FAIL
+    [ae_plain/mlp] grid scale=0.7266 orientation=0.8262  -> FAIL
+  [ae_plain] done in 2546.7s train / 2.9s encode
+  [recon_control_2x] fitting encoder (recon, x2 steps) …
+    step 1/800  loss=0.16138

@@ -1,0 +1,53 @@
+[20:12:59] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[20:12:59]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[20:12:59]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[20:13:00] C12 shipped train_store, steps=1200, corners=[0, 2, 4, 6, 20, 44]; bytes 469,504
+[20:13:08] [c0] init_store done (7s); training 1200 steps…
+[20:37:43] [c0] train_store 1200 steps in 1475s (1.23 s/step); loss 5.8397 -> 4.5607 ⚠ tau anneals, so this pair is NOT a monotone curve
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[20:37:46] [c0] ⭐ TRAINED tuples_valid_novel= 33  agg=0.8889  distinct= 59  (corner total 1485s)
+[20:37:53] [c2] init_store done (7s); training 1200 steps…
+[21:05:42] [c2] train_store 1200 steps in 1669s (1.39 s/step); loss 5.8717 -> 4.5037 ⚠ tau anneals, so this pair is NOT a monotone curve
+[21:05:46] [c2] ⭐ TRAINED tuples_valid_novel= 28  agg=0.8727  distinct= 56  (corner total 1680s)
+[21:05:58] [c4] init_store done (12s); training 1200 steps…

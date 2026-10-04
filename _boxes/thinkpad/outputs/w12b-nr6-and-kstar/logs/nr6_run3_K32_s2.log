@@ -1,0 +1,117 @@
+chlu.__file__ = C:\chlu\worktrees\CHLU-w12b-nr6-and-kstar\chlu\__init__.py  (inside C:\chlu\worktrees\CHLU-w12b-nr6-and-kstar)
+GATE OPEN: C:\chlu\outputs\w12-deletion-baselines\BASELINES-READY.json
+  {
+  "NOT_A_SCORED_RUN": true,
+  "SEED_COVERAGE": "seeds present: [0, 1, 2]. Any seed NOT listed here is a DECLARED NOT-RUN for this spoke, never a zero: re-run scripts/w12_deletion_baselines.py with --seed S and this file merges it in.",
+  "branch": "w12/deletion-baselines",
+  "comparators": {
+    "as_trained": {
+      "arms": [
+        "mlp",
+        "cont_mlp",
+        "transformer",
+        "lstm"
+      ],
+      "entry_point": "chlu.eval.rivals.w12_deletion_baselines.fit_as_trained",
+      "exactness": "n/a -- it has not deleted anything",
+      "reads_deleted_rows": true,
+      "role": "the learned arm BEFORE any deletion -- the reference the others move from"
+    },
+    "refuse_token": {
+      "arms": [
+        "transformer"
+      ],
+      "entry_point": "chlu.eval.rivals.w12_deletion_baselines.fit_refuse_token_transformer",
+      "exactness": "n/a -- it is a refusal comparator, scored by separation",
+      "reads_deleted_rows": true,
+      "role": "COMPARATOR 3 -- the refuse-token transformer, the ONLY permitted comparator for refusal DISPLAY rows"
+    },
+    "retrain_without": {
+      "arms": [
+        "mlp",
+        "cont_mlp",
+        "transformer",
+        "lstm"
+      ],
+      "entry_point": "chlu.eval.rivals.w12_deletion_baselines.retrain_without",
+      "exactness": "exact by construction: the deleted rows were never in the pool",
+      "reads_deleted_rows": false,
+      "role": "COMPARATOR 1 -- the EXACT reference: refit from scratch on the pool minus the delete
+CACHE GATE (5 seeds): C:\chlu\outputs\w12-cache-gen2-seeds-3-4\CACHE-READY.json exists = True
+K = 32 (explicit override)
+cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+TEST corners: row 3 = 60 pair sub-corners, row 4 = 49 n-way
+store K=32 A=63 built 19.2s  RANK/WIDTH 0.4375..0.9844
+address book 2004.9s  1,058,264 B
+FOUR-PART LEDGER (summed, never netted): atoms 516,096 | cov+count 560,608 | address 1,058,264 | coupling 6,610 = 2,141,578 B  [4.0847x the 524,288 B REFERENCE column]
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cov_tensor (THE ARM)                   109 corners in 245s
+    landscape_removed                      109 corners in 255s
+    landscape_shuffled                     109 corners in 262s
+    landscape_shuffled_across_wells        109 corners in 265s
+    random_atoms                           109 corners in 232s
+    mlp__as_trained                        109 corners in 277s
+    lstm__as_trained                       109 corners in 316s
+    transformer__as_trained                109 corners in 360s
+    cont_mlp__as_trained                   109 corners in 309s
+    table                                  109 corners in 266s
+    [transformer] matched width=45, params=130433 vs target 131072 (-0.488%), kind=tokens
+    transformer as-trained: 82.03 s - 16,384 data rows read - 521,732 B rewritten (327,680 gradient row-visits)
+    transformer__refit_postfix             109 corners in 258s
+    [lstm] matched width=51, params=130721 vs target 131072 (-0.268%), kind=tokens
+    lstm as-trained: 25.36 s - 16,384 data rows read - 522,884 B rewritten (327,680 gradient row-visits)
+    lstm__refit_postfix                    109 corners in 262s
+wrote C:\chlu\outputs\w12b-nr6-and-kstar\scored\run3_seed2_K32\scored.json
+  cov_tensor                             row3   33.217  row4   68.592
+  landscape_removed                      row3    0.000  row4    0.000
+  landscape_shuffled                     row3    0.000  row4    0.000
+  landscape_shuffled_across_wells        row3    0.000  row4    0.000
+  random_atoms                           row3    0.000  row4    0.000
+  mlp__as_trained                        row3    5.267  row4   11.735
+  lstm__as_trained                       row3    4.917  row4   14.898
+  transformer__as_trained                row3    1.717  row4    4.735
+  cont_mlp__as_trained                   row3    0.017  row4    0.102
+  table                                  row3    6.183  row4   14.122
+  transformer__refit_postfix             row3    1.733  row4    3.163
+  lstm__refit_postfix                    row3    4.367  row4    8.061

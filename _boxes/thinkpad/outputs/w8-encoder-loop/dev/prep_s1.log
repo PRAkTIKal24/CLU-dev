@@ -1,0 +1,994 @@
+[pipe s1 18:16:37Z] === warm start ===
+[pipe s1 18:16:37Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage warm --seed 1 --out /c/chlu/outputs/w8-encoder-loop/run
+[20:16:39] stage=warm seed=1 arm=None out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[20:16:39] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[20:16:39] jax devices: [CpuDevice(id=0)]
+[20:16:39]   warm start for seed 1: already on disk -- SKIPPED
+[20:16:39] done in 0.0s
+[pipe s1 18:16:40Z] === train alone ===
+[pipe s1 18:16:40Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage train --seed 1 --arm alone --out /c/chlu/outputs/w8-encoder-loop/run
+[20:16:42] stage=train seed=1 arm=alone out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[20:16:42] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[20:16:42] jax devices: [CpuDevice(id=0)]
+[20:16:42]   judge: external classifier seed 1 aa69b436989b (hash-asserted)
+[20:16:42]   streaming 8192 training images ...
+[20:17:51]     [alone    ] step 1/400  loss=0.00858 recon=0.00858 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[20:20:56]     [alone    ] step 66/400  loss=0.02512 recon=0.02512 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[20:24:10]     [alone    ] step 132/400  loss=0.01153 recon=0.01153 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[20:27:24]     [alone    ] step 198/400  loss=0.00877 recon=0.00877 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[20:30:38]     [alone    ] step 264/400  loss=0.00706 recon=0.00706 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[20:33:39]     [alone    ] step 330/400  loss=0.00502 recon=0.00502 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[20:36:43]     [alone    ] step 396/400  loss=0.00466 recon=0.00466 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[20:36:59]   refitting the decoder from alone's own features (w8_v1_short, the gated architecture at a declared shorter budget) ...
+[20:37:14]     step 1/400  loss=0.16162
+[20:44:05]     step 80/400  loss=0.01183
+[20:51:12]     step 160/400  loss=0.00625
+[20:58:21]     step 240/400  loss=0.00484
+[21:06:55]     step 320/400  loss=0.00427
+[21:15:23]     step 400/400  loss=0.00388
+[21:15:44]   no-bypass OK: same-codes-different-features delta = 0.0; channel = 30.0 bits (K*log2(M))
+[21:15:44]   decoder published for the Judge -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\alone\declift (declared NOT the frozen winner)
+[21:15:45]   arm alone seed 1 written -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\alone\arm.json
+[21:15:45] done in 3542.6s
+[pipe s1 19:15:47Z] === train loop_nosw ===
+[pipe s1 19:15:47Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage train --seed 1 --arm loop_nosw --out /c/chlu/outputs/w8-encoder-loop/run
+[21:15:54] stage=train seed=1 arm=loop_nosw out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[21:15:54] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[21:15:54] jax devices: [CpuDevice(id=0)]
+[21:15:54]   judge: external classifier seed 1 aa69b436989b (hash-asserted)
+[21:15:54]   streaming 8192 training images ...
+[21:17:17]     [loop_nosw] step 1/400  loss=0.13209 recon=0.01888 code=0.09057 commit=0.09057 swap=0.00000 swap_exact=0.0000
+[21:21:10]     [loop_nosw] step 66/400  loss=0.10372 recon=0.02066 code=0.06645 commit=0.06645 swap=0.00000 swap_exact=0.0000
+[21:25:40]     [loop_nosw] step 132/400  loss=0.08369 recon=0.01545 code=0.05459 commit=0.05459 swap=0.00000 swap_exact=0.0000
+[21:29:50]     [loop_nosw] step 198/400  loss=0.07885 recon=0.01321 code=0.05252 commit=0.05252 swap=0.00000 swap_exact=0.0000
+[21:33:46]     [loop_nosw] step 264/400  loss=0.07344 recon=0.01290 code=0.04843 commit=0.04843 swap=0.00000 swap_exact=0.0000
+[21:37:44]     [loop_nosw] step 330/400  loss=0.06139 recon=0.01061 code=0.04062 commit=0.04062 swap=0.00000 swap_exact=0.0000
+[21:41:33]     [loop_nosw] step 396/400  loss=0.05765 recon=0.00953 code=0.03850 commit=0.03850 swap=0.00000 swap_exact=0.0000
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[21:41:50]   refitting the decoder from loop_nosw's own features (w8_v1_short, the gated architecture at a declared shorter budget) ...
+[21:42:08]     step 1/400  loss=0.16064
+[21:51:24]     step 80/400  loss=0.01442
+[22:00:22]     step 160/400  loss=0.00789
+[22:09:22]     step 240/400  loss=0.00626
+[22:18:39]     step 320/400  loss=0.00547
+[22:27:10]     step 400/400  loss=0.00494
+[22:27:23]   no-bypass OK: same-codes-different-features delta = 0.0; channel = 30.0 bits (K*log2(M))
+[22:27:23]   decoder published for the Judge -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\loop_nosw\declift (declared NOT the frozen winner)
+[22:27:23]   arm loop_nosw seed 1 written -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\loop_nosw\arm.json
+[22:27:23] done in 4289.1s
+[pipe s1 20:27:25Z] === train loop_swap ===
+[pipe s1 20:27:25Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage train --seed 1 --arm loop_swap --out /c/chlu/outputs/w8-encoder-loop/run
+[22:27:28] stage=train seed=1 arm=loop_swap out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[22:27:28] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[22:27:28] jax devices: [CpuDevice(id=0)]
+[22:27:29]   judge: external classifier seed 1 aa69b436989b (hash-asserted)
+[22:27:29]   streaming 8192 training images ...
+[22:29:02]     [loop_swap] beta_swap=auto -> 0.0046183 (recon_0=0.01930 / swap_0=4.17815; the two terms enter the loss at EQUAL magnitude, measured on the shared warm start)
+[22:29:17]     [loop_swap] step 1/400  loss=0.14917 recon=0.01888 code=0.09057 commit=0.09057 swap=3.69952 swap_exact=0.0000
+[22:36:47]     [loop_swap] step 66/400  loss=0.13598 recon=0.02657 code=0.07275 commit=0.07275 swap=3.99810 swap_exact=0.0000
+[22:43:35]     [loop_swap] step 132/400  loss=0.11288 recon=0.01987 code=0.06529 commit=0.06529 swap=2.46955 swap_exact=0.0000
+[22:50:09]     [loop_swap] step 198/400  loss=0.10876 recon=0.01850 code=0.06374 commit=0.06374 swap=2.29106 swap_exact=0.0000
+[22:56:50]     [loop_swap] step 264/400  loss=0.09847 recon=0.01504 code=0.05969 commit=0.05969 swap=1.91019 swap_exact=0.0000
+[23:03:52]     [loop_swap] step 330/400  loss=0.08737 recon=0.01353 code=0.05179 commit=0.05179 swap=1.96906 swap_exact=0.0000
+[23:10:56]     [loop_swap] step 396/400  loss=0.08873 recon=0.01356 code=0.05393 commit=0.05393 swap=1.68007 swap_exact=0.0000
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[23:11:25]   refitting the decoder from loop_swap's own features (w8_v1_short, the gated architecture at a declared shorter budget) ...
+[23:11:40]     step 1/400  loss=0.15989
+[23:19:10]     step 80/400  loss=0.01491
+[23:26:47]     step 160/400  loss=0.00720
+[23:34:06]     step 240/400  loss=0.00564
+[23:40:45]     step 320/400  loss=0.00501
+[23:47:36]     step 400/400  loss=0.00452
+[23:47:53]   no-bypass OK: same-codes-different-features delta = 0.0; channel = 30.0 bits (K*log2(M))
+[23:47:54]   decoder published for the Judge -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\loop_swap\declift (declared NOT the frozen winner)
+[23:47:54]   arm loop_swap seed 1 written -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\loop_swap\arm.json
+[23:47:54] done in 4825.2s
+[pipe s1 21:47:58Z] === train alone_wc ===
+[pipe s1 21:47:58Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage train --seed 1 --arm alone_wc --out /c/chlu/outputs/w8-encoder-loop/run
+[23:48:03] stage=train seed=1 arm=alone_wc out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[23:48:03] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[23:48:03] jax devices: [CpuDevice(id=0)]
+[23:48:03]   judge: external classifier seed 1 aa69b436989b (hash-asserted)
+[23:48:03]   streaming 8192 training images ...
+[23:49:17]   alone_wc: matching loop_swap's 2538.8s at alone's 2.8764s/step -> 883 steps (vs the equal-steps arms' 400)
+[23:49:23]     [alone_wc ] step 1/883  loss=0.00858 recon=0.00858 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[23:56:00]     [alone_wc ] step 147/883  loss=0.01158 recon=0.01158 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[00:03:10]     [alone_wc ] step 294/883  loss=0.00767 recon=0.00767 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[00:10:22]     [alone_wc ] step 441/883  loss=0.00502 recon=0.00502 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[00:17:15]     [alone_wc ] step 588/883  loss=0.00379 recon=0.00379 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[00:23:48]     [alone_wc ] step 735/883  loss=0.00256 recon=0.00256 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[00:30:17]     [alone_wc ] step 882/883  loss=0.00280 recon=0.00280 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[00:30:22]   alone_wc: NO render-decoder refit (declared in PINS). It is the WALL-CLOCK control; its train_seconds and its probe margin need no renderer, so this changes no reported number. It is therefore NOT SCOREABLE on rows 3/4.
+[00:30:36]   no-bypass OK: same-codes-different-features delta = 0.0; channel = 30.0 bits (K*log2(M))
+[00:30:36]   arm alone_wc seed 1 written -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\alone_wc\arm.json
+[00:30:36] done in 2553.8s
+[pipe s1 22:30:38Z] === probe alone (a MARGIN over the random-init floor, never an absolute) ===
+[pipe s1 22:30:38Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage probe --seed 1 --arm alone --out /c/chlu/outputs/w8-encoder-loop/run
+[00:30:41] stage=probe seed=1 arm=alone out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[00:30:41] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[00:30:41] jax devices: [CpuDevice(id=0)]
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[00:33:10]     probe[alone] aggregate=0.9638 exact=0.7915
+[00:33:27]     probe[random_init] aggregate=0.9670 exact=0.8135
+[00:33:27]   probe margin over random init: aggregate -0.0032 exact -0.0220
+[00:33:27] done in 165.8s
+[pipe s1 22:33:28Z] === probe loop_nosw (a MARGIN over the random-init floor, never an absolute) ===
+[pipe s1 22:33:28Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage probe --seed 1 --arm loop_nosw --out /c/chlu/outputs/w8-encoder-loop/run
+[00:33:30] stage=probe seed=1 arm=loop_nosw out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[00:33:30] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[00:33:30] jax devices: [CpuDevice(id=0)]
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[00:35:51]     probe[loop_nosw] aggregate=0.9535 exact=0.7368
+[00:35:51]     random-init floor: reused from this seed (identical by construction)
+[00:35:51]   probe margin over random init: aggregate -0.0135 exact -0.0767
+[00:35:51] done in 140.8s
+[pipe s1 22:35:51Z] === probe loop_swap (a MARGIN over the random-init floor, never an absolute) ===
+[pipe s1 22:35:51Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage probe --seed 1 --arm loop_swap --out /c/chlu/outputs/w8-encoder-loop/run
+[00:35:54] stage=probe seed=1 arm=loop_swap out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[00:35:54] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[00:35:54] jax devices: [CpuDevice(id=0)]
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[00:38:18]     probe[loop_swap] aggregate=0.9635 exact=0.7861
+[00:38:18]     random-init floor: reused from this seed (identical by construction)
+[00:38:18]   probe margin over random init: aggregate -0.0035 exact -0.0273
+[00:38:18] done in 144.2s
+[pipe s1 22:38:18Z] === probe alone_wc (a MARGIN over the random-init floor, never an absolute) ===
+[pipe s1 22:38:18Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage probe --seed 1 --arm alone_wc --out /c/chlu/outputs/w8-encoder-loop/run
+[00:38:21] stage=probe seed=1 arm=alone_wc out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[00:38:21] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[00:38:21] jax devices: [CpuDevice(id=0)]
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[00:40:46]     probe[alone_wc] aggregate=0.9789 exact=0.8745
+[00:40:46]     random-init floor: reused from this seed (identical by construction)
+[00:40:46]   probe margin over random init: aggregate +0.0119 exact +0.0610
+[00:40:46] done in 145.2s
+[pipe s1 22:40:47Z] === cache alone (480,000 rows, one CPU device, per-block sha256) ===
+[pipe s1 22:40:47Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage cache --seed 1 --arm alone --out /c/chlu/outputs/w8-encoder-loop/run
+[00:40:50] stage=cache seed=1 arm=alone out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[00:40:50] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[00:40:50] jax devices: [CpuDevice(id=0)]
+[00:40:50]   cache for alone seed 1: already complete -- SKIPPED
+[00:40:50] done in 0.0s
+[pipe s1 22:40:50Z] === cache loop_swap (480,000 rows, one CPU device, per-block sha256) ===
+[pipe s1 22:40:50Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage cache --seed 1 --arm loop_swap --out /c/chlu/outputs/w8-encoder-loop/run
+[00:40:53] stage=cache seed=1 arm=loop_swap out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[00:40:53] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[00:40:53] jax devices: [CpuDevice(id=0)]
+[00:40:54]   generation-2 cache for loop_swap seed 1: 480000 rows -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\loop_swap\cache\shapes3d_recon\seed_1
+[00:40:54]   device guard PASSES: one device, cpu:0 (['cpu']), precision=HIGHEST, jax 0.9.0
+[00:40:54]   generation 2 / seed 1: 480000 rows, 59 blocks of 8192, dtype=float16 - 0 block(s) already done
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[00:40:58]     block 1/59 rows 0:8192  [1/59 done, 0.1 min elapsed]
+[00:41:03]     block 2/59 rows 8192:16384  [2/59 done, 0.2 min elapsed]
+[00:41:08]     block 3/59 rows 16384:24576  [3/59 done, 0.2 min elapsed]
+[00:41:13]     block 4/59 rows 24576:32768  [4/59 done, 0.3 min elapsed]
+[00:41:18]     block 5/59 rows 32768:40960  [5/59 done, 0.4 min elapsed]
+[00:41:24]     block 6/59 rows 40960:49152  [6/59 done, 0.5 min elapsed]
+[00:41:29]     block 7/59 rows 49152:57344  [7/59 done, 0.6 min elapsed]
+[00:41:34]     block 8/59 rows 57344:65536  [8/59 done, 0.7 min elapsed]
+[00:41:40]     block 9/59 rows 65536:73728  [9/59 done, 0.8 min elapsed]
+[00:41:45]     block 10/59 rows 73728:81920  [10/59 done, 0.9 min elapsed]
+[00:41:50]     block 11/59 rows 81920:90112  [11/59 done, 0.9 min elapsed]
+[00:41:55]     block 12/59 rows 90112:98304  [12/59 done, 1.0 min elapsed]
+[00:42:00]     block 13/59 rows 98304:106496  [13/59 done, 1.1 min elapsed]
+[00:42:05]     block 14/59 rows 106496:114688  [14/59 done, 1.2 min elapsed]
+[00:42:10]     block 15/59 rows 114688:122880  [15/59 done, 1.3 min elapsed]
+[00:42:15]     block 16/59 rows 122880:131072  [16/59 done, 1.4 min elapsed]
+[00:42:21]     block 17/59 rows 131072:139264  [17/59 done, 1.5 min elapsed]
+[00:42:26]     block 18/59 rows 139264:147456  [18/59 done, 1.5 min elapsed]
+[00:42:31]     block 19/59 rows 147456:155648  [19/59 done, 1.6 min elapsed]
+[00:42:35]     block 20/59 rows 155648:163840  [20/59 done, 1.7 min elapsed]
+[00:42:40]     block 21/59 rows 163840:172032  [21/59 done, 1.8 min elapsed]
+[00:42:45]     block 22/59 rows 172032:180224  [22/59 done, 1.9 min elapsed]
+[00:42:49]     block 23/59 rows 180224:188416  [23/59 done, 1.9 min elapsed]
+[00:42:55]     block 24/59 rows 188416:196608  [24/59 done, 2.0 min elapsed]
+[00:43:00]     block 25/59 rows 196608:204800  [25/59 done, 2.1 min elapsed]
+[00:43:05]     block 26/59 rows 204800:212992  [26/59 done, 2.2 min elapsed]
+[00:43:11]     block 27/59 rows 212992:221184  [27/59 done, 2.3 min elapsed]
+[00:43:16]     block 28/59 rows 221184:229376  [28/59 done, 2.4 min elapsed]
+[00:43:22]     block 29/59 rows 229376:237568  [29/59 done, 2.5 min elapsed]
+[00:43:27]     block 30/59 rows 237568:245760  [30/59 done, 2.6 min elapsed]
+[00:43:33]     block 31/59 rows 245760:253952  [31/59 done, 2.7 min elapsed]
+[00:43:38]     block 32/59 rows 253952:262144  [32/59 done, 2.7 min elapsed]
+[00:43:44]     block 33/59 rows 262144:270336  [33/59 done, 2.8 min elapsed]
+[00:43:50]     block 34/59 rows 270336:278528  [34/59 done, 2.9 min elapsed]
+[00:43:56]     block 35/59 rows 278528:286720  [35/59 done, 3.0 min elapsed]
+[00:44:02]     block 36/59 rows 286720:294912  [36/59 done, 3.1 min elapsed]
+[00:44:07]     block 37/59 rows 294912:303104  [37/59 done, 3.2 min elapsed]
+[00:44:13]     block 38/59 rows 303104:311296  [38/59 done, 3.3 min elapsed]
+[00:44:20]     block 39/59 rows 311296:319488  [39/59 done, 3.4 min elapsed]
+[00:44:26]     block 40/59 rows 319488:327680  [40/59 done, 3.5 min elapsed]
+[00:44:32]     block 41/59 rows 327680:335872  [41/59 done, 3.6 min elapsed]
+[00:44:38]     block 42/59 rows 335872:344064  [42/59 done, 3.7 min elapsed]
+[00:44:44]     block 43/59 rows 344064:352256  [43/59 done, 3.8 min elapsed]
+[00:44:50]     block 44/59 rows 352256:360448  [44/59 done, 3.9 min elapsed]
+[00:44:56]     block 45/59 rows 360448:368640  [45/59 done, 4.0 min elapsed]
+[00:45:02]     block 46/59 rows 368640:376832  [46/59 done, 4.1 min elapsed]
+[00:45:07]     block 47/59 rows 376832:385024  [47/59 done, 4.2 min elapsed]
+[00:45:13]     block 48/59 rows 385024:393216  [48/59 done, 4.3 min elapsed]
+[00:45:19]     block 49/59 rows 393216:401408  [49/59 done, 4.4 min elapsed]
+[00:45:24]     block 50/59 rows 401408:409600  [50/59 done, 4.5 min elapsed]
+[00:45:30]     block 51/59 rows 409600:417792  [51/59 done, 4.6 min elapsed]
+[00:45:36]     block 52/59 rows 417792:425984  [52/59 done, 4.7 min elapsed]
+[00:45:42]     block 53/59 rows 425984:434176  [53/59 done, 4.8 min elapsed]
+[00:45:48]     block 54/59 rows 434176:442368  [54/59 done, 4.9 min elapsed]
+[00:45:53]     block 55/59 rows 442368:450560  [55/59 done, 5.0 min elapsed]
+[00:45:57]     block 56/59 rows 450560:458752  [56/59 done, 5.1 min elapsed]
+[00:46:03]     block 57/59 rows 458752:466944  [57/59 done, 5.2 min elapsed]
+[00:46:08]     block 58/59 rows 466944:475136  [58/59 done, 5.2 min elapsed]
+[00:46:11]     block 59/59 rows 475136:480000  [59/59 done, 5.3 min elapsed]
+[00:46:14]   generation 2 / seed 1 COMPLETE: 480000 rows, features_sha256=be7e025051f44a1653fc05d78e1ad651efe93ffae37043e14f3a13403ca60728
+[00:46:14]   bridgified -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\loop_swap\cache\shapes3d_recon\seed_1
+[00:46:14] done in 321.0s
+[pipe s1 22:46:15Z] === cache loop_nosw (480,000 rows, one CPU device, per-block sha256) ===
+[pipe s1 22:46:15Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage cache --seed 1 --arm loop_nosw --out /c/chlu/outputs/w8-encoder-loop/run
+[00:46:19] stage=cache seed=1 arm=loop_nosw out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[00:46:19] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[00:46:19] jax devices: [CpuDevice(id=0)]
+[00:46:20]   generation-2 cache for loop_nosw seed 1: 480000 rows -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\loop_nosw\cache\shapes3d_recon\seed_1
+[00:46:20]   device guard PASSES: one device, cpu:0 (['cpu']), precision=HIGHEST, jax 0.9.0
+[00:46:20]   generation 2 / seed 1: 480000 rows, 59 blocks of 8192, dtype=float16 - 0 block(s) already done
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[00:46:25]     block 1/59 rows 0:8192  [1/59 done, 0.1 min elapsed]
+[00:46:31]     block 2/59 rows 8192:16384  [2/59 done, 0.2 min elapsed]
+[00:46:36]     block 3/59 rows 16384:24576  [3/59 done, 0.3 min elapsed]
+[00:46:41]     block 4/59 rows 24576:32768  [4/59 done, 0.4 min elapsed]
+[00:46:47]     block 5/59 rows 32768:40960  [5/59 done, 0.4 min elapsed]
+[00:46:52]     block 6/59 rows 40960:49152  [6/59 done, 0.5 min elapsed]
+[00:46:57]     block 7/59 rows 49152:57344  [7/59 done, 0.6 min elapsed]
+[00:47:03]     block 8/59 rows 57344:65536  [8/59 done, 0.7 min elapsed]
+[00:47:08]     block 9/59 rows 65536:73728  [9/59 done, 0.8 min elapsed]
+[00:47:14]     block 10/59 rows 73728:81920  [10/59 done, 0.9 min elapsed]
+[00:47:19]     block 11/59 rows 81920:90112  [11/59 done, 1.0 min elapsed]
+[00:47:24]     block 12/59 rows 90112:98304  [12/59 done, 1.1 min elapsed]
+[00:47:30]     block 13/59 rows 98304:106496  [13/59 done, 1.2 min elapsed]
+[00:47:35]     block 14/59 rows 106496:114688  [14/59 done, 1.3 min elapsed]
+[00:47:40]     block 15/59 rows 114688:122880  [15/59 done, 1.3 min elapsed]
+[00:47:46]     block 16/59 rows 122880:131072  [16/59 done, 1.4 min elapsed]
+[00:47:51]     block 17/59 rows 131072:139264  [17/59 done, 1.5 min elapsed]
+[00:47:56]     block 18/59 rows 139264:147456  [18/59 done, 1.6 min elapsed]
+[00:48:02]     block 19/59 rows 147456:155648  [19/59 done, 1.7 min elapsed]
+[00:48:07]     block 20/59 rows 155648:163840  [20/59 done, 1.8 min elapsed]
+[00:48:13]     block 21/59 rows 163840:172032  [21/59 done, 1.9 min elapsed]
+[00:48:18]     block 22/59 rows 172032:180224  [22/59 done, 2.0 min elapsed]
+[00:48:22]     block 23/59 rows 180224:188416  [23/59 done, 2.0 min elapsed]
+[00:48:28]     block 24/59 rows 188416:196608  [24/59 done, 2.1 min elapsed]
+[00:48:34]     block 25/59 rows 196608:204800  [25/59 done, 2.2 min elapsed]
+[00:48:40]     block 26/59 rows 204800:212992  [26/59 done, 2.3 min elapsed]
+[00:48:46]     block 27/59 rows 212992:221184  [27/59 done, 2.4 min elapsed]
+[00:48:52]     block 28/59 rows 221184:229376  [28/59 done, 2.5 min elapsed]
+[00:48:58]     block 29/59 rows 229376:237568  [29/59 done, 2.6 min elapsed]
+[00:49:04]     block 30/59 rows 237568:245760  [30/59 done, 2.7 min elapsed]
+[00:49:10]     block 31/59 rows 245760:253952  [31/59 done, 2.8 min elapsed]
+[00:49:16]     block 32/59 rows 253952:262144  [32/59 done, 2.9 min elapsed]
+[00:49:22]     block 33/59 rows 262144:270336  [33/59 done, 3.0 min elapsed]
+[00:49:28]     block 34/59 rows 270336:278528  [34/59 done, 3.1 min elapsed]
+[00:49:34]     block 35/59 rows 278528:286720  [35/59 done, 3.2 min elapsed]
+[00:49:40]     block 36/59 rows 286720:294912  [36/59 done, 3.3 min elapsed]
+[00:49:46]     block 37/59 rows 294912:303104  [37/59 done, 3.4 min elapsed]
+[00:49:52]     block 38/59 rows 303104:311296  [38/59 done, 3.5 min elapsed]
+[00:49:58]     block 39/59 rows 311296:319488  [39/59 done, 3.6 min elapsed]
+[00:50:03]     block 40/59 rows 319488:327680  [40/59 done, 3.7 min elapsed]
+[00:50:10]     block 41/59 rows 327680:335872  [41/59 done, 3.8 min elapsed]
+[00:50:16]     block 42/59 rows 335872:344064  [42/59 done, 3.9 min elapsed]
+[00:50:22]     block 43/59 rows 344064:352256  [43/59 done, 4.0 min elapsed]
+[00:50:29]     block 44/59 rows 352256:360448  [44/59 done, 4.1 min elapsed]
+[00:50:34]     block 45/59 rows 360448:368640  [45/59 done, 4.2 min elapsed]
+[00:50:41]     block 46/59 rows 368640:376832  [46/59 done, 4.3 min elapsed]
+[00:50:46]     block 47/59 rows 376832:385024  [47/59 done, 4.4 min elapsed]
+[00:50:53]     block 48/59 rows 385024:393216  [48/59 done, 4.5 min elapsed]
+[00:50:58]     block 49/59 rows 393216:401408  [49/59 done, 4.6 min elapsed]
+[00:51:05]     block 50/59 rows 401408:409600  [50/59 done, 4.7 min elapsed]
+[00:51:10]     block 51/59 rows 409600:417792  [51/59 done, 4.8 min elapsed]
+[00:51:16]     block 52/59 rows 417792:425984  [52/59 done, 4.9 min elapsed]
+[00:51:22]     block 53/59 rows 425984:434176  [53/59 done, 5.0 min elapsed]
+[00:51:28]     block 54/59 rows 434176:442368  [54/59 done, 5.1 min elapsed]
+[00:51:34]     block 55/59 rows 442368:450560  [55/59 done, 5.2 min elapsed]
+[00:51:39]     block 56/59 rows 450560:458752  [56/59 done, 5.3 min elapsed]
+[00:51:44]     block 57/59 rows 458752:466944  [57/59 done, 5.4 min elapsed]
+[00:51:49]     block 58/59 rows 466944:475136  [58/59 done, 5.5 min elapsed]
+[00:51:51]     block 59/59 rows 475136:480000  [59/59 done, 5.5 min elapsed]
+[00:51:54]   generation 2 / seed 1 COMPLETE: 480000 rows, features_sha256=b2b87d324d5233fe311eb81d9aaff5749844abc71dd34e041d17710b7f7d8483
+[00:51:54]   bridgified -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\loop_nosw\cache\shapes3d_recon\seed_1
+[00:51:54] done in 334.4s
+[00:51:58] stage=report seed=0 arm=None out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[00:51:58] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[00:51:58] jax devices: [CpuDevice(id=0)]
+[00:51:58] {
+  "seed0:alone": {
+    "arm": "alone",
+    "arm_class": "CONTROL -- the encoder trained ALONE (the target's named control)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.0034479829482734203,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9726969401041666,
+    "probe_margin_aggregate": 0.0005289713541666297,
+    "probe_margin_exact": -0.00341796875,
+    "recon_final": 0.004951403941959143,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 2.8940320068597796,
+    "seed": 0,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        68608,
+        89600,
+        76032,
+        71936,
+        218112
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1157.6128027439117
+  },
+  "seed0:alone_wc": {
+    "arm": "alone_wc",
+    "arm_class": "CONTROL -- `alone` matched on WALL CLOCK instead of on steps",
+    "decoder_refit_loss_final": null,
+    "encoder_changed": true,
+    "gradient_steps": 893,
+    "images_seen": 57152,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9809977213541666,
+    "probe_margin_aggregate": 0.00882975260416663,
+    "probe_margin_exact": 0.0439453125,
+    "recon_final": 0.0022453018464148045,
+    "scoreable_on_rows_3_4": false,
+    "seconds_per_step": 2.8060121661738346,
+    "seed": 0,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        68608,
+        89600,
+        76032,
+        71936,
+        218112
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 2505.7688643932343
+  },
+  "seed0:loop_nosw": {
+    "arm": "loop_nosw",
+    "arm_class": "COLUMN -- unfrozen WITHOUT the swap loss (isolates the new ingredient)",
+    "decoder_refit_loss_final": 0.004079412203282118,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.951416015625,
+    "probe_margin_aggregate": -0.020751953125,
+    "probe_margin_exact": -0.12353515625,
+    "recon_final": 0.013254059478640556,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 3.611166923046112,
+    "seed": 0,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        68608,
+        89600,
+        76032,
+        71936,
+        218112
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1444.4667692184448
+  },
+  "seed0:loop_swap": {
+    "arm": "loop_swap",
+    "arm_class": "ARM -- the store in the loop, swap loss + reconstruction",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004052752163261175,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.9593098958333334,
+    "probe_margin_aggregate": -0.01285807291666663,
+    "probe_margin_exact": -0.080810546875,
+    "recon_final": 0.016162119805812836,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 6.454680689573288,
+    "seed": 0,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        68608,
+        89600,
+        76032,
+        71936,
+        218112
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 2581.872275829315
+  },
+  "seed1:alone": {
+    "arm": "alone",
+    "arm_class": "CONTROL -- the encoder trained ALONE (the target's named control)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.0038759270682930946,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9637858072916666,
+    "probe_margin_aggregate": -0.0032145182291667407,
+    "probe_margin_exact": -0.02197265625,
+    "recon_final": 0.004468132741749287,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 2.8763860285282137,
+    "seed": 1,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        94464,
+        88576,
+        126208,
+        79360,
+        135680
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1150.5544114112854
+  },
+  "seed1:alone_wc": {
+    "arm": "alone_wc",
+    "arm_class": "CONTROL -- `alone` matched on WALL CLOCK instead of on steps",
+    "decoder_refit_loss_final": null,
+    "encoder_changed": true,
+    "gradient_steps": 883,
+    "images_seen": 56512,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9789225260416666,
+    "probe_margin_aggregate": 0.01192220052083326,
+    "probe_margin_exact": 0.06103515625,
+    "recon_final": 0.002539964858442545,
+    "scoreable_on_rows_3_4": false,
+    "seconds_per_step": 2.7874807747142096,
+    "seed": 1,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        94464,
+        88576,
+        126208,
+        79360,
+        135680
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 2461.345524072647
+  },
+  "seed1:loop_nosw": {
+    "arm": "loop_nosw",
+    "arm_class": "COLUMN -- unfrozen WITHOUT the swap loss (isolates the new ingredient)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004944740794599056,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.9534912109375,
+    "probe_margin_aggregate": -0.01350911458333337,
+    "probe_margin_exact": -0.07666015625,
+    "recon_final": 0.009779756888747215,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 3.6888562762737274,
+    "seed": 1,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        94464,
+        88576,
+        126208,
+        79360,
+        135680
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1475.542510509491
+  },
+  "seed1:loop_swap": {
+    "arm": "loop_swap",
+    "arm_class": "ARM -- the store in the loop, swap loss + reconstruction",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004520674701780081,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.9635416666666666,
+    "probe_margin_aggregate": -0.0034586588541667407,
+    "probe_margin_exact": -0.02734375,
+    "recon_final": 0.01338054146617651,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 6.346973457932473,
+    "seed": 1,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        94464,
+        88576,
+        126208,
+        79360,
+        135680
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 2538.789383172989
+  },
+  "seed2:alone": {
+    "arm": "alone",
+    "arm_class": "CONTROL -- the encoder trained ALONE (the target's named control)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004202231764793396,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9542236328125,
+    "probe_margin_aggregate": -0.00846354166666663,
+    "probe_margin_exact": -0.0546875,
+    "recon_final": 0.007356319110840559,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 3.0503646022081377,
+    "seed": 2,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        91904,
+        92928,
+        109056,
+        72448,
+        157952
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1220.145840883255
+  },
+  "seed2:alone_wc": {
+    "arm": "alone_wc",
+    "arm_class": "CONTROL -- `alone` matched on WALL CLOCK instead of on steps",
+    "decoder_refit_loss_final": null,
+    "encoder_changed": true,
+    "gradient_steps": 837,
+    "images_seen": 53568,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9747721354166666,
+    "probe_margin_aggregate": 0.0120849609375,
+    "probe_margin_exact": 0.05810546875,
+    "recon_final": 0.002939845435321331,
+    "scoreable_on_rows_3_4": false,
+    "seconds_per_step": 2.8813065984058266,
+    "seed": 2,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        91904,
+        92928,
+        109056,
+        72448,
+        157952
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 2411.653622865677
+  },
+  "seed2:loop_nosw": {
+    "arm": "loop_nosw",
+    "arm_class": "COLUMN -- unfrozen WITHOUT the swap loss (isolates the new ingredient)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004732232540845871,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.9455159505208334,
+    "probe_margin_aggregate": -0.01717122395833326,
+    "probe_margin_exact": -0.100341796875,
+    "recon_final": 0.01312417071312666,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 3.6176216250658033,
+    "seed": 2,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        91904,
+        92928,
+        109056,
+        72448,
+        157952
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1447.0486500263214
+  },
+  "seed2:loop_swap": {
+    "arm": "loop_swap",
+    "arm_class": "ARM -- the store in the loop, swap loss + reconstruction",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004268843214958906,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.9635009765625,
+    "probe_margin_aggregate": 0.0008138020833333703,
+    "probe_margin_exact": -0.007080078125,
+    "recon_final": 0.013797735795378685,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 6.379505624175072,
+    "seed": 2,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        91904,
+        92928,
+        109056,
+        72448,
+        157952
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.015625,
+    "train_seconds": 2551.8022496700287
+  }
+}
+[00:51:58] done in 0.0s
+[pipe s1 22:51:58Z] done: seed 1 clean

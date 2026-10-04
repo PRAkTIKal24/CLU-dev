@@ -1,0 +1,72 @@
+  ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+  ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+  ⭐ cache coverage: shortfall 0 — nothing will be encoded
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+  ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+--- alpha sweep on the store's OWN residual (self-aligned structure preserved) ---
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+alpha=1     relerr=0.3486  exact=0.0195  valid=  10/512
+alpha=0.8   relerr=0.2789  exact=0.0566  valid=  29/512
+alpha=0.6   relerr=0.2092  exact=0.1445  valid=  74/512
+alpha=0.5   relerr=0.1743  exact=0.2363  valid= 121/512
+alpha=0.4   relerr=0.1394  exact=0.4121  valid= 211/512
+alpha=0.3   relerr=0.1046  exact=0.6250  valid= 320/512
+alpha=0.25  relerr=0.0872  exact=0.7285  valid= 373/512
+alpha=0.2   relerr=0.0697  exact=0.7969  valid= 408/512
+alpha=0.15  relerr=0.0523  exact=0.8711  valid= 446/512
+alpha=0.1   relerr=0.0349  exact=0.9160  valid= 469/512
+alpha=0.07  relerr=0.0244  exact=0.9414  valid= 482/512
+alpha=0.05  relerr=0.0174  exact=0.9473  valid= 485/512
+alpha=0.03  relerr=0.0105  exact=0.9531  valid= 488/512
+alpha=0     relerr=0.0000  exact=0.9590  valid= 491/512
+--- how the residual shrinks with codewords M (K = 5, the shipped partition) ---
+M=16    store=    131072 B  relerr=0.5428  exact=0.0000 valid=   0/512
+M=32    store=    262144 B  relerr=0.4816  exact=0.0078 valid=   4/512
+M=64    store=    524288 B  relerr=0.4366  exact=0.0117 valid=   6/512
+M=128   store=   1048576 B  relerr=0.3978  exact=0.0273 valid=  14/512
+M=256   store=   2097152 B  relerr=0.3517  exact=0.0371 valid=  19/512
+M=512   store=   4194304 B  relerr=0.3157  exact=0.0508 valid=  26/512
+M=1024  store=   8388608 B  relerr=0.2758  exact=0.1094 valid=  56/512
+M=2048  store=  16777216 B  relerr=0.2394  exact=0.1426 valid=  73/512
+done

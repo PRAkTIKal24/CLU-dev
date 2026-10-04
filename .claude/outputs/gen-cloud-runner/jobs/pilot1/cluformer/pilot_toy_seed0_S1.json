@@ -1,0 +1,937 @@
+{
+  "scale": "toy",
+  "seed": 0,
+  "stage_requested": "s1",
+  "flags": {
+    "pilot": {
+      "d_model": 64,
+      "n_layers": 2,
+      "seq_len": 512,
+      "batch": 4,
+      "addr_dim": 2,
+      "payload_dim": 1,
+      "capacity": 8,
+      "atoms_per_item": 128,
+      "steps": 60,
+      "warmup": 10,
+      "eval_batches": 4,
+      "dyneval_batches": 4,
+      "data_bytes": 4000000,
+      "memory": {
+        "chunk": 32,
+        "address_steps": 24,
+        "read_steps": 24,
+        "traj_stride": 8,
+        "psi_hidden": 32,
+        "write_inner_steps": 4,
+        "write_n_perturb": 8,
+        "retry_rounds": 1,
+        "conv_kernel": 4,
+        "mlp_mult": 4
+      }
+    },
+    "memory": {
+      "chunk": 32,
+      "address_steps": 24,
+      "read_steps": 24,
+      "traj_stride": 8,
+      "read_mode": "trajectory",
+      "write_inner_steps": 4,
+      "write_lr": 0.05,
+      "write_n_perturb": 8,
+      "write_sign": true,
+      "psi_hidden": 32,
+      "phi_gain": 3.838528981698984,
+      "retry_rounds": 1,
+      "trainable_gamma": true,
+      "trainable_mass": true,
+      "conv_kernel": 4,
+      "mlp_mult": 4,
+      "atom_local_radius": 0.0,
+      "atom_group_centers": null,
+      "atom_place_radius": 0.0,
+      "write_lambda_traj": 0.0,
+      "write_traj_steps": 0,
+      "write_traj_n_launch": 2,
+      "psi_payload_residual": false,
+      "psi_residual_source": "q_star",
+      "psi_residual_gain": 1.0,
+      "psi_residual_trainable": true,
+      "erosion_partition": false,
+      "refresh_monotonic": false,
+      "refresh_max_gain": 4.0,
+      "refresh_amp_ceiling": 0.0,
+      "remat_chunks": false,
+      "remat_read_segments": 0
+    },
+    "store": {
+      "addr_dim": 2,
+      "atoms_per_item": 128,
+      "budget": 6,
+      "leak": 0.02,
+      "retry_max_rounds": 1,
+      "stage_lifetimes": true,
+      "stage_admission": true,
+      "stage_capacity_pressure": true,
+      "stage_deletion": true,
+      "stage_basin_interaction": true,
+      "stage_retry": true,
+      "stage_trajectory_read": true,
+      "soft_certificate": true
+    },
+    "store_dim": 3,
+    "store_n_atoms": 1024,
+    "jax_version": "0.9.0",
+    "jax_backend": "gpu"
+  },
+  "stages_reached": [
+    "S1"
+  ],
+  "not_run": [],
+  "data": {
+    "train_B": 3600000,
+    "valid_B": 200000,
+    "test_B": 200000,
+    "n_bytes_staged": 4000000
+  },
+  "phi_gain_calibrated": 3.838528981698984,
+  "swap_ledger": {
+    "clu_store": {
+      "params": 8616,
+      "state_floats": 5144,
+      "state_bytes": 20576,
+      "v_theta_floats": 5120,
+      "n_atoms": 1024,
+      "params_vs_clu": 1.0,
+      "params_matched_pct": 0.0,
+      "state_vs_clu": 1.0,
+      "clu_state_over_arm": 1.0
+    },
+    "gru_matched": {
+      "params": 8682,
+      "state_floats": 51,
+      "state_bytes": 204,
+      "params_vs_clu": 1.0076601671309193,
+      "params_matched_pct": 0.766016713091922,
+      "state_vs_clu": 0.009914463452566096,
+      "clu_state_over_arm": 100.86274509803921
+    },
+    "ttt_matched": {
+      "params": 8620,
+      "state_floats": 5139,
+      "state_bytes": 20556,
+      "params_vs_clu": 1.000464252553389,
+      "params_matched_pct": 0.04642525533890436,
+      "state_vs_clu": 0.9990279937791602,
+      "clu_state_over_arm": 1.0009729519361743
+    },
+    "none": {
+      "params": 0,
+      "state_floats": 0,
+      "state_bytes": 0,
+      "params_vs_clu": 0.0,
+      "params_matched_pct": -100.0,
+      "state_vs_clu": 0.0,
+      "clu_state_over_arm": Infinity
+    },
+    "echo": {
+      "params": 0,
+      "state_floats": 0,
+      "state_bytes": 0,
+      "params_vs_clu": 0.0,
+      "params_matched_pct": -100.0,
+      "state_vs_clu": 0.0,
+      "clu_state_over_arm": Infinity
+    },
+    "gru_matched_state_ARITHMETIC_ONLY": {
+      "hidden": 5144,
+      "params": 79469668,
+      "state_floats": 5144,
+      "state_bytes": 20576,
+      "note": "NOT CONSTRUCTED - see report; this is the two-sided-match impossibility for a GRU cell, stated as arithmetic."
+    },
+    "_byte_law_per_item": 214.0,
+    "_table_rows_at_matched_state": 1714,
+    "_store_items": 8
+  },
+  "byte_ledger": {
+    "budget_bytes": 2097152,
+    "budget_provenance": "RULED Advisor+Head 2026-08-13 as '\u22482 MB'; implemented as the 2 MiB ceiling 2,097,152 B on the Hub's recommendation (CLU d=12 1,966,080 B = 0.94x; TTT-Linear 1,597,440 B = 0.76x). \u26a0\u26a0 INTERIM AND BINDS NOTHING YET (Head+Advisor 2026-08-13): the ceiling digit is set in the RIVAL-LADDER PREREG, when the C3 CLU arm's store geometry is frozen \u2014 the pilot geometry is NOT presumed to be the C3 geometry. Until that prereg is filed no rival-ladder arm may train. \u26d4 NO DTYPE NORMALISATION: NONE. RULED Head+Advisor 2026-08-13: the convention is TOTAL STATE BYTES AS DEPLOYED \u2014 an fp32 store pays its real 2x cost against a bf16 rival, and our arms ARE fp32 while the published-rival table is bf16. \u26d4 This is NOT a bug: harder-for-us is the defensible direction of a matched-bytes control, so dtype_bytes is a DECLARED field of every row and never a conversion factor. Do not 'fix' this by normalising widths. See chlu/eval/byte_ledger.py INTERIM_MATCHED_STATE_BYTE_BUDGET.",
+    "budget_is_interim": true,
+    "budget_ceiling_prereg": null,
+    "dtype_normalisation": "NONE. RULED Head+Advisor 2026-08-13: the convention is TOTAL STATE BYTES AS DEPLOYED \u2014 an fp32 store pays its real 2x cost against a bf16 rival, and our arms ARE fp32 while the published-rival table is bf16. \u26d4 This is NOT a bug: harder-for-us is the defensible direction of a matched-bytes control, so dtype_bytes is a DECLARED field of every row and never a conversion factor. Do not 'fix' this by normalising widths.",
+    "enforced": true,
+    "arms": {
+      "clu_store": {
+        "arm": "clu_store",
+        "n_layers": 2,
+        "n_store_layers": 2,
+        "store_layer_fraction": 1.0,
+        "dtype_bytes": 4,
+        "cell_params": 8616,
+        "cell_state_bytes_per_layer": 20576,
+        "phi_params_bytes_per_layer": 12940,
+        "phi_params_bytes_total": 25880,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 41152,
+        "budget_bytes": 2097152,
+        "occupancy": 0.019622802734375,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_store_layers * cell_state_bytes + n_layers * phi_state_bytes = 2 * 20576 + 2 * 0 = 41152 B (store-bearing layers [0, 1] of 2); phi_params_bytes = 2 * 12940 = 25880 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 5144,
+        "store_layer_indices": [
+          0,
+          1
+        ]
+      },
+      "echo": {
+        "arm": "echo",
+        "n_layers": 2,
+        "n_store_layers": 2,
+        "store_layer_fraction": 1.0,
+        "dtype_bytes": 4,
+        "cell_params": 0,
+        "cell_state_bytes_per_layer": 0,
+        "phi_params_bytes_per_layer": 12940,
+        "phi_params_bytes_total": 25880,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 0,
+        "budget_bytes": 2097152,
+        "occupancy": 0.0,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_store_layers * cell_state_bytes + n_layers * phi_state_bytes = 2 * 0 + 2 * 0 = 0 B (store-bearing layers [0, 1] of 2); phi_params_bytes = 2 * 12940 = 25880 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 0,
+        "store_layer_indices": [
+          0,
+          1
+        ]
+      },
+      "gru_matched": {
+        "arm": "gru_matched",
+        "n_layers": 2,
+        "n_store_layers": 2,
+        "store_layer_fraction": 1.0,
+        "dtype_bytes": 4,
+        "cell_params": 8682,
+        "cell_state_bytes_per_layer": 204,
+        "phi_params_bytes_per_layer": 12940,
+        "phi_params_bytes_total": 25880,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 408,
+        "budget_bytes": 2097152,
+        "occupancy": 0.000194549560546875,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_store_layers * cell_state_bytes + n_layers * phi_state_bytes = 2 * 204 + 2 * 0 = 408 B (store-bearing layers [0, 1] of 2); phi_params_bytes = 2 * 12940 = 25880 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 51,
+        "store_layer_indices": [
+          0,
+          1
+        ]
+      },
+      "none": {
+        "arm": "none",
+        "n_layers": 2,
+        "n_store_layers": 2,
+        "store_layer_fraction": 1.0,
+        "dtype_bytes": 4,
+        "cell_params": 0,
+        "cell_state_bytes_per_layer": 0,
+        "phi_params_bytes_per_layer": 12940,
+        "phi_params_bytes_total": 25880,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 0,
+        "budget_bytes": 2097152,
+        "occupancy": 0.0,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_store_layers * cell_state_bytes + n_layers * phi_state_bytes = 2 * 0 + 2 * 0 = 0 B (store-bearing layers [0, 1] of 2); phi_params_bytes = 2 * 12940 = 25880 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 0,
+        "store_layer_indices": [
+          0,
+          1
+        ]
+      },
+      "ttt_matched": {
+        "arm": "ttt_matched",
+        "n_layers": 2,
+        "n_store_layers": 2,
+        "store_layer_fraction": 1.0,
+        "dtype_bytes": 4,
+        "cell_params": 8620,
+        "cell_state_bytes_per_layer": 20556,
+        "phi_params_bytes_per_layer": 12940,
+        "phi_params_bytes_total": 25880,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 41112,
+        "budget_bytes": 2097152,
+        "occupancy": 0.019603729248046875,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_store_layers * cell_state_bytes + n_layers * phi_state_bytes = 2 * 20556 + 2 * 0 = 41112 B (store-bearing layers [0, 1] of 2); phi_params_bytes = 2 * 12940 = 25880 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 5139,
+        "store_layer_indices": [
+          0,
+          1
+        ]
+      }
+    },
+    "over_budget": [],
+    "phi_accounted_on_every_arm": true,
+    "rival_reference": {
+      "budget_bytes": 2097152,
+      "budget_provenance": "RULED Advisor+Head 2026-08-13 as '\u22482 MB'; implemented as the 2 MiB ceiling 2,097,152 B on the Hub's recommendation (CLU d=12 1,966,080 B = 0.94x; TTT-Linear 1,597,440 B = 0.76x). \u26a0\u26a0 INTERIM AND BINDS NOTHING YET (Head+Advisor 2026-08-13): the ceiling digit is set in the RIVAL-LADDER PREREG, when the C3 CLU arm's store geometry is frozen \u2014 the pilot geometry is NOT presumed to be the C3 geometry. Until that prereg is filed no rival-ladder arm may train. \u26d4 NO DTYPE NORMALISATION: NONE. RULED Head+Advisor 2026-08-13: the convention is TOTAL STATE BYTES AS DEPLOYED \u2014 an fp32 store pays its real 2x cost against a bf16 rival, and our arms ARE fp32 while the published-rival table is bf16. \u26d4 This is NOT a bug: harder-for-us is the defensible direction of a matched-bytes control, so dtype_bytes is a DECLARED field of every row and never a conversion factor. Do not 'fix' this by normalising widths. See chlu/eval/byte_ledger.py INTERIM_MATCHED_STATE_BYTE_BUDGET.",
+      "rivals": {
+        "ttt_linear": {
+          "state_bytes": 1597440,
+          "elements": 798720,
+          "dtype_bytes": 2,
+          "n_layers": 24,
+          "d_model": 512,
+          "formula": "n_L * (H*d_h^2 + H*d_h)",
+          "pinned_params": {
+            "n_heads": 8,
+            "head_dim": 64
+          },
+          "provenance": "OFFICIAL IMPLEMENTATION: test-time-training/ttt-lm-pytorch/ttt.py \u2014 W1 (H,d_h,d_h), b1 (H,1,d_h); head_dim=width//n_heads. arXiv:2407.04620 publishes no enwik8/WT-103/PG-19 cell.",
+          "occupancy": 0.76171875,
+          "within_budget": true
+        },
+        "ttt_mlp": {
+          "state_bytes": 12705792,
+          "elements": 6352896,
+          "dtype_bytes": 2,
+          "n_layers": 24,
+          "d_model": 512,
+          "formula": "n_L * H * (8*d_h^2 + 5*d_h)",
+          "pinned_params": {
+            "n_heads": 8,
+            "head_dim": 64
+          },
+          "provenance": "OFFICIAL IMPLEMENTATION: ttt-lm-pytorch/ttt.py (W2 at 4x width + b2, W1 symmetric).",
+          "occupancy": 6.05859375,
+          "within_budget": false,
+          "shrink_to_match": {
+            "rival": "ttt_mlp",
+            "knob": "head_dim",
+            "published_value": 64,
+            "shrunk_value": 25,
+            "state_bytes_published": 12705792,
+            "state_bytes_shrunk": 1968000,
+            "budget_bytes": 2097152,
+            "occupancy_published": 6.05859375,
+            "occupancy_shrunk": 0.93841552734375,
+            "shrink_factor": 6.45619512195122,
+            "formula": "n_L * H * (8*d_h^2 + 5*d_h)",
+            "provenance": "OFFICIAL IMPLEMENTATION: ttt-lm-pytorch/ttt.py (W2 at 4x width + b2, W1 symmetric).",
+            "dtype_bytes": 2
+          }
+        },
+        "gated_deltanet2": {
+          "state_bytes": 3145728,
+          "elements": 1572864,
+          "dtype_bytes": 2,
+          "n_layers": 24,
+          "d_model": 512,
+          "formula": "n_L * d_model^2 / H",
+          "pinned_params": {
+            "n_heads": 4,
+            "d_k": 128,
+            "d_v": 128
+          },
+          "provenance": "PAPER: arXiv:2605.22791 (Hatamizadeh, Choi, Kautz, NVIDIA, 2026-05-21) states H=16, d_k=d_v=128, d_model=2048 and '262,144 floats per batch element' per layer => state/layer = d_model^2/H. Scaled to d_model 512 at H=4 to hold d_k=d_v=128. \u26d4 NOT the flash-linear-attention default (head_dim=256, num_heads=6, expand_v=2), which is 3x the paper's state \u2014 TRAP 2.",
+          "occupancy": 1.5,
+          "within_budget": false,
+          "shrink_to_match": {
+            "rival": "gated_deltanet2",
+            "knob": "n_heads",
+            "published_value": 4,
+            "shrunk_value": 6,
+            "state_bytes_published": 3145728,
+            "state_bytes_shrunk": 2097152,
+            "budget_bytes": 2097152,
+            "occupancy_published": 1.5,
+            "occupancy_shrunk": 1.0,
+            "shrink_factor": 1.5,
+            "formula": "n_L * d_model^2 / H",
+            "provenance": "PAPER: arXiv:2605.22791 (Hatamizadeh, Choi, Kautz, NVIDIA, 2026-05-21) states H=16, d_k=d_v=128, d_model=2048 and '262,144 floats per batch element' per layer => state/layer = d_model^2/H. Scaled to d_model 512 at H=4 to hold d_k=d_v=128. \u26d4 NOT the flash-linear-attention default (head_dim=256, num_heads=6, expand_v=2), which is 3x the paper's state \u2014 TRAP 2.",
+            "dtype_bytes": 2
+          }
+        },
+        "mamba2": {
+          "state_bytes": 6475776,
+          "elements": 3237888,
+          "dtype_bytes": 2,
+          "n_layers": 24,
+          "d_model": 512,
+          "formula": "n_L * (n_heads*headdim*d_state + (d_inner + 2*ngroups*d_state)*(d_conv-1))",
+          "pinned_params": {
+            "d_state": 128,
+            "d_conv": 4,
+            "expand": 2,
+            "headdim": 64,
+            "ngroups": 1
+          },
+          "provenance": "OFFICIAL IMPLEMENTATION: state-spaces/mamba, mamba_ssm/modules/mamba2.py defaults; allocate_inference_cache allocates (batch, nheads, headdim, d_state). \u26a0 The paper's per-size appendix table was NOT OBTAINED (arXiv:2405.21060) \u2014 this row's provenance is CODE, not a paper table.",
+          "occupancy": 3.087890625,
+          "within_budget": false,
+          "shrink_to_match": {
+            "rival": "mamba2",
+            "knob": "d_state",
+            "published_value": 128,
+            "shrunk_value": 39,
+            "state_bytes_published": 6475776,
+            "state_bytes_shrunk": 2075616,
+            "budget_bytes": 2097152,
+            "occupancy_published": 3.087890625,
+            "occupancy_shrunk": 0.9897308349609375,
+            "shrink_factor": 3.119929697978817,
+            "formula": "n_L * (n_heads*headdim*d_state + (d_inner + 2*ngroups*d_state)*(d_conv-1))",
+            "provenance": "OFFICIAL IMPLEMENTATION: state-spaces/mamba, mamba_ssm/modules/mamba2.py defaults; allocate_inference_cache allocates (batch, nheads, headdim, d_state). \u26a0 The paper's per-size appendix table was NOT OBTAINED (arXiv:2405.21060) \u2014 this row's provenance is CODE, not a paper table.",
+            "dtype_bytes": 2
+          }
+        },
+        "transformer_xl": {
+          "state_bytes": 6291456,
+          "elements": 3145728,
+          "dtype_bytes": 2,
+          "n_layers": 12,
+          "d_model": 512,
+          "formula": "n_L * mem_len * d_model",
+          "pinned_params": {
+            "mem_len": 512
+          },
+          "provenance": "PAPER: arXiv:1901.02860 Table 2 + \u00a73 (segment 784, eval attention length 3800). Caches hidden states, not K/V.",
+          "occupancy": 3.0,
+          "within_budget": false,
+          "shrink_to_match": {
+            "rival": "transformer_xl",
+            "knob": "mem_len",
+            "published_value": 512,
+            "shrunk_value": 170,
+            "state_bytes_published": 6291456,
+            "state_bytes_shrunk": 2088960,
+            "budget_bytes": 2097152,
+            "occupancy_published": 3.0,
+            "occupancy_shrunk": 0.99609375,
+            "shrink_factor": 3.011764705882353,
+            "formula": "n_L * mem_len * d_model",
+            "provenance": "PAPER: arXiv:1901.02860 Table 2 + \u00a73 (segment 784, eval attention length 3800). Caches hidden states, not K/V.",
+            "dtype_bytes": 2
+          }
+        },
+        "sliding_window": {
+          "state_bytes": 12582912,
+          "elements": 6291456,
+          "dtype_bytes": 2,
+          "n_layers": 12,
+          "d_model": 512,
+          "formula": "2 * n_L * window * d_model",
+          "pinned_params": {
+            "window": 512
+          },
+          "provenance": "PAPER: arXiv:2004.05150 (Longformer small, 41 M => 1.00 bpc); per-layer windows 32->512 staged. Caches K AND V.",
+          "occupancy": 6.0,
+          "within_budget": false,
+          "shrink_to_match": {
+            "rival": "sliding_window",
+            "knob": "window",
+            "published_value": 512,
+            "shrunk_value": 85,
+            "state_bytes_published": 12582912,
+            "state_bytes_shrunk": 2088960,
+            "budget_bytes": 2097152,
+            "occupancy_published": 6.0,
+            "occupancy_shrunk": 0.99609375,
+            "shrink_factor": 6.023529411764706,
+            "formula": "2 * n_L * window * d_model",
+            "provenance": "PAPER: arXiv:2004.05150 (Longformer small, 41 M => 1.00 bpc); per-layer windows 32->512 staged. Caches K AND V.",
+            "dtype_bytes": 2
+          }
+        }
+      }
+    },
+    "budget_exempted": false,
+    "preregistered_continuation": null,
+    "ladder_guard": {
+      "ladder_arms_requested": [],
+      "budget_is_interim": true,
+      "budget_ceiling_prereg": null
+    }
+  },
+  "shell": {
+    "shared_shell_params": 142598,
+    "shared_shell_bytes": 570392
+  },
+  "total_params": {
+    "clu_store": 159830,
+    "gru_matched": 159962,
+    "ttt_matched": 159838,
+    "none": 142598,
+    "echo": 142598
+  },
+  "monitors_init": {
+    "applicable": true,
+    "readings": [
+      {
+        "name": "overdamping",
+        "mode": 1,
+        "value": 1.8314088516941094,
+        "band": "rho_conv <= 1e-06 and delta >= 0.02 (doctrine S2b)",
+        "tripped": true,
+        "applicable": true,
+        "severity_class": "III",
+        "cost_ms": 0.2386,
+        "lever": "gamma/steps",
+        "verb": "anneal|retry|stop",
+        "stage": "stream",
+        "detail": {
+          "rho_conv": 1.8314088516941094,
+          "delta": 0.37997307721626483,
+          "corr_q0_qstar": 0.9924311602416044,
+          "grad_norm_q0_med": 0.15363170206546783,
+          "grad_norm_qstar_med": 0.28136245906352997,
+          "false_trip_mode": "flat minima => tiny |grad V(q0)| => rho_conv is noise (denominator floored)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "settle_argmin",
+        "mode": 2,
+        "value": null,
+        "band": "rho_ex >= 0.1; D <= U by Prop D1; INAPPLICABLE if U < 0.01",
+        "tripped": false,
+        "applicable": false,
+        "severity_class": "IV",
+        "cost_ms": 0.0613,
+        "lever": "",
+        "verb": "ESCALATE (no verb by design)",
+        "stage": "stream",
+        "detail": {
+          "why": "U=0.0000 < u_floor => rho_ex is 0/0",
+          "D": 0.125,
+          "U": 0.0,
+          "prop_D1_holds": 0,
+          "false_trip_mode": "a genuinely tight query law puts all mass inside the balls => U -> 0 => 0/0",
+          "note": "no restoring verb: this monitor ESCALATES, never acts"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "vacuous_gate",
+        "mode": 3,
+        "value": 0.796875,
+        "band": "fire-rate f in (0,1) strictly; C3 calibration rho_C3 in [1/3,3] and P[Delta>3B] <= 0.10 (C2W3 D3; the corr leg is RETIRED to a diagnostic); n_live/N_pack <= 0.95 (N74/N91); SC-3 deficit_rel <= B when the soft certificate is on",
+        "tripped": false,
+        "applicable": true,
+        "severity_class": "II",
+        "cost_ms": 0.0713,
+        "lever": "d_safe / address-space volume",
+        "verb": "admit|expand|stop",
+        "stage": "stream",
+        "detail": {
+          "fire_rate": 0.796875,
+          "n_offers": 64,
+          "n_refused": 51,
+          "validity_corr_RETIRED_DIAGNOSTIC": null,
+          "validity_corr_domain": "valid only for d/s >~ 4; the gym runs at d/s ~ 1.9-2",
+          "c3_calibration_leg": {
+            "n_pairs": 0,
+            "n_qualifying": 0,
+            "lambda_floor": 0.0,
+            "delta_num": 1e-06,
+            "kappa": 3.0,
+            "eta": 0.1,
+            "rho_band": [
+              0.3333333333333333,
+              3.0
+            ],
+            "leg": "c3_first_order_calibration (D3: replaces corr(margin, drift))",
+            "applicable": 0,
+            "tripped": 0,
+            "rho_c3": null,
+            "violation_rate": null,
+            "why": "fewer than 3 qualifying pairs (lambda_min <= floor => the site is not a minimum => #8-N3's trip, not this one's)"
+          },
+          "soft_certificate_budget": null,
+          "utilisation": 0.375,
+          "false_trip_mode": "genuinely well-separated proposals give f=0 legitimately (leg ii must agree)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "blank",
+        "mode": 4,
+        "value": 0.3333333333333333,
+        "band": "acc_blank < chance + 3*se, chance = empirical marginal (N68/N110)",
+        "tripped": false,
+        "applicable": true,
+        "severity_class": "I",
+        "cost_ms": 0.0152,
+        "lever": "read-out / instrument",
+        "verb": "stop",
+        "stage": "stream",
+        "detail": {
+          "score": 0.3333333333333333,
+          "chance": 0.3333333333333333,
+          "se": 0.2721655269759087,
+          "bar": 1.1498299142610593,
+          "metric": "self-probe decode (nearest stored payload)",
+          "representation": "trajectory psi",
+          "false_trip_mode": "a skewed marginal label distribution makes 1/K the wrong bar (chance is empirical)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "addressing",
+        "mode": 5,
+        "value": 0.3333333333333333,
+        "band": "acq >= 0.9 (chance 1/K); w19 violation 0.042",
+        "tripped": true,
+        "applicable": true,
+        "severity_class": "III",
+        "cost_ms": 0.0108,
+        "lever": "addressing / read schedule",
+        "verb": "anneal|route|place",
+        "stage": "stream",
+        "detail": {
+          "acq_basin": 0.3333333333333333,
+          "acq_strict": 0.0,
+          "chance": 0.3333333333333333,
+          "n_probed": 3,
+          "false_trip_mode": "an item deliberately decayed below the amp floor self-probes badly (excluded)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "objective_divergence",
+        "mode": 6,
+        "value": null,
+        "band": "sign agreement over 3 windows (w25/w26 violation), dead-band eps = 1e-09 * max|loss| (gym R2), eps_acq = 1e-09 * max|acq| (fb4 R4)",
+        "tripped": false,
+        "applicable": false,
+        "severity_class": "III",
+        "cost_ms": 0.0115,
+        "lever": "",
+        "verb": "stop|consolidate",
+        "stage": "stream",
+        "detail": {
+          "why": "no (loss, acq) pair"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "mass_gauge",
+        "mode": 7,
+        "value": null,
+        "band": "pytest gauge: trajectory-wise invariance, Newtonian exact; relativistic breaks as O(1/c^2) (SCOPE, not a pass)",
+        "tripped": false,
+        "applicable": false,
+        "severity_class": "I",
+        "cost_ms": 0.0139,
+        "lever": "",
+        "verb": "",
+        "stage": "stream",
+        "detail": {
+          "why": "gauge test runs in pytest (test_monitors.py), not in the stream",
+          "kinetic_mode": "newtonian_learned",
+          "false_trip_mode": "endpoint-only comparison passes vacuously once both runs settle (compare trajectories)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "certificates",
+        "mode": 8,
+        "value": 2.668943405151367,
+        "band": "N1 injective; N2 sep/sigma_q >= 5.15; N3 lambda_min > 0; N4 gap/(2*delta_read) >= 1 (doctrine R1)",
+        "tripped": true,
+        "applicable": true,
+        "severity_class": "II",
+        "cost_ms": 0.0172,
+        "lever": "write operator / placement",
+        "verb": "place|admit|evict (stop under a global-support write)",
+        "stage": "stream",
+        "detail": {
+          "failed": [
+            "N2",
+            "N3",
+            "N4"
+          ],
+          "N1_injective": 1,
+          "N2_sep_over_sigma_q": 2.668943405151367,
+          "N3_lambda_min": -0.32499632239341736,
+          "N4_ratio": 0.23337515782140295,
+          "payload_gap": 0.07100158929824829,
+          "delta_read": 0.1521189957857132,
+          "erf_accuracy_at_margin": null,
+          "false_trip_mode": "a declared register/coset shares a site by design => N1 fires (exempt declared cosets)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "lifetimes",
+        "mode": 9,
+        "value": 0.014063736433646095,
+        "band": "Delta_ret <= 0.1 (effect size, doctrine R4); corr reported as direction only",
+        "tripped": false,
+        "applicable": true,
+        "severity_class": "IV",
+        "cost_ms": 0.3353,
+        "lever": "payload excursion / decay law",
+        "verb": "decay (uncleanable at large excursion)",
+        "stage": "stream",
+        "detail": {
+          "delta_retention": 0.014063736433646095,
+          "corr_direction_only": -0.9776722094388637,
+          "n_items": 3,
+          "known_uncleanable": "at large excursion the fix is C1W27 gated stiffness",
+          "false_trip_mode": "items with deliberately different leak_i show intended spread (group within a leak cohort)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "dead_axis",
+        "mode": 10,
+        "value": null,
+        "band": "every DECLARED knob is read at least once; each swept knob moves an observable",
+        "tripped": false,
+        "applicable": false,
+        "severity_class": "I",
+        "cost_ms": 0.009,
+        "lever": "",
+        "verb": "stop",
+        "stage": "stream",
+        "detail": {
+          "why": "no config access counts"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "reach",
+        "mode": 11,
+        "value": Infinity,
+        "band": "a_U - |a_i| > 0 for every live item (saddle criterion, 0 free params)",
+        "tripped": false,
+        "applicable": true,
+        "severity_class": "II",
+        "cost_ms": 0.0458,
+        "lever": "payload excursion / |c| / width",
+        "verb": "place|anneal|route|admit",
+        "stage": "stream",
+        "detail": {
+          "worst_margin": Infinity,
+          "n_unreachable": 0,
+          "n_items": 3,
+          "unreachable_ids": [],
+          "a_U": [
+            Infinity,
+            Infinity,
+            Infinity
+          ],
+          "false_trip_mode": "single-well criterion: no neighbour term => mis-flags crowded cells (pair with #12 above 80% utilisation)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "starvation",
+        "mode": 12,
+        "value": 0.0,
+        "band": "fairness >= 0.5; C3 ratio <= 2x the first-order bound; oldest-item retention drop <= 0.1",
+        "tripped": true,
+        "applicable": true,
+        "severity_class": "II",
+        "cost_ms": 0.0112,
+        "lever": "write operator / allocation",
+        "verb": "admit|place|expand|evict",
+        "stage": "stream",
+        "detail": {
+          "fairness": 0.0,
+          "c3_ratio": null,
+          "oldest_retention_drop": 0.83271283878839,
+          "false_trip_mode": "an intentional update of an already-live item looks like starvation (exempt same-id writes)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "maturity",
+        "mode": 13,
+        "value": 4.0,
+        "band": "write_steps >= 40 to PROMOTE a reading (N94)",
+        "tripped": false,
+        "applicable": true,
+        "severity_class": "I",
+        "cost_ms": 0.0085,
+        "lever": "",
+        "verb": "",
+        "stage": "stream",
+        "detail": {
+          "promotable": 0,
+          "false_trip_mode": "n/a \u2014 not a trip"
+        },
+        "provenance": {
+          "write_steps": 4,
+          "epochs": null,
+          "wall_clock_s": 0.0,
+          "note": "readings below the maturity threshold may be logged, never promoted to a band statement"
+        }
+      },
+      {
+        "name": "guard_liveness",
+        "mode": 14,
+        "value": 12.0,
+        "band": "every designed guard fires >= once on the canary stream",
+        "tripped": true,
+        "applicable": true,
+        "severity_class": "I",
+        "cost_ms": 0.0316,
+        "lever": "controller policy / guard calibration",
+        "verb": "stop",
+        "stage": "stream",
+        "detail": {
+          "never_fired": [
+            "admit.budget",
+            "admit.priority",
+            "admit.reach",
+            "anneal.return",
+            "evict.class_i",
+            "evict.persistence",
+            "evict.set_function",
+            "expand.monotone",
+            "place.injective",
+            "place.lambda_min",
+            "retry.budget",
+            "route.signal"
+          ],
+          "counts": {
+            "admit.priority": 0,
+            "admit.reach": 0,
+            "admit.merge": 51,
+            "admit.budget": 0,
+            "place.lambda_min": 0,
+            "place.injective": 0,
+            "evict.persistence": 0,
+            "evict.class_i": 0,
+            "evict.set_function": 0,
+            "decay.permanent": 64,
+            "route.signal": 0,
+            "retry.budget": 0,
+            "anneal.return": 0,
+            "expand.monotone": 0
+          },
+          "false_trip_mode": "a guard that the canary stream does not exercise (canary must be constructed to require each)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "launch_collapse",
+        "mode": 15,
+        "value": null,
+        "band": "S_marg = exp(H(p_bar)) >= 0.5 * N_a (marginal well usage across the batch)",
+        "tripped": false,
+        "applicable": false,
+        "severity_class": "I",
+        "cost_ms": 0.0073,
+        "lever": "",
+        "verb": "regularize|place",
+        "stage": "stream",
+        "detail": {
+          "why": "no launch-usage pass"
+        },
+        "provenance": {}
+      }
+    ],
+    "n_monitors": 15,
+    "n_applicable": 10,
+    "n_tripped": 5,
+    "tripped": [
+      "overdamping",
+      "addressing",
+      "certificates",
+      "starvation",
+      "guard_liveness"
+    ],
+    "inapplicable": [
+      "settle_argmin",
+      "objective_divergence",
+      "mass_gauge",
+      "dead_axis",
+      "launch_collapse"
+    ],
+    "self_probe": {
+      "acq": 0.3333333333333333,
+      "strict": 0.0,
+      "chance": 0.3333333333333333,
+      "n_probed": 3,
+      "retention": [
+        0.022549782705131565,
+        0.013122268431520862,
+        0.0037722891346801185
+      ],
+      "payload_abs": [
+        0.6218081712722778,
+        0.7785948514938354,
+        0.8495964407920837
+      ]
+    },
+    "blank_probe_acq": 0.3333333333333333,
+    "certificates": {
+      "injective": true,
+      "sep_over_sigma_q": 2.668943405151367,
+      "lambda_min": -0.32499632239341736,
+      "payload_gap": 0.07100158929824829,
+      "delta_read_basin_conditioned": 0.1521189957857132
+    },
+    "read_residual_median": 0.28136245906352997,
+    "read_rho_conv_median": 1.8152891397476196,
+    "sep": 0.4003415107727051,
+    "plan": {
+      "offers": 64,
+      "refused": 51,
+      "evicted": 0,
+      "n_live_end": 13,
+      "lane_mode": "serial",
+      "guards": {
+        "admit.priority": 0,
+        "admit.reach": 0,
+        "admit.merge": 51,
+        "admit.budget": 0,
+        "place.lambda_min": 0,
+        "place.injective": 0,
+        "evict.persistence": 0,
+        "evict.class_i": 0,
+        "evict.set_function": 0,
+        "decay.permanent": 64,
+        "route.signal": 0,
+        "retry.budget": 0,
+        "anneal.return": 0,
+        "expand.monotone": 0
+      }
+    },
+    "maturity_write_steps": 4,
+    "maturity_floor": 40,
+    "maturity_trips_by_arithmetic": true,
+    "wall_s": 61.893821239471436
+  },
+  "allocation_liveness_init": {
+    "grad_phi_addr_head": 0.018354900739315897,
+    "n_lanes": 4,
+    "policy_logits": null,
+    "policy_logits_note": "the C2W1 controller's policy is RULE-BASED, not logit-parameterised: there are no policy logits. phi's address head is the learned allocator.",
+    "slot_entropy_normalised_per_layer": [
+      0.6180952906624155,
+      0.7273352715867379
+    ],
+    "slot_occupancy_per_layer": [
+      0.5,
+      0.625
+    ]
+  },
+  "wall_s_total": 148.89758205413818
+}

@@ -1,0 +1,51 @@
+[    0.0s]   field(seed 2): already built, loading
+[    0.1s]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\numpy\lib\_function_base_impl.py:4596: RuntimeWarning: invalid value encountered in scalar subtract
+  diff_b_a = b - a
+[    5.5s]   seed 2 r1_seen (n=512): field_geom accept 1.0000 | bitmap8 1.0000 | pair_presence 1.0000
+[   11.3s]   seed 2 r2_unseen_valid (n=512): field_geom accept 1.0000 | bitmap8 1.0000 | pair_presence 1.0000
+[   16.8s]   seed 2 r5_comp_refusal (n=512): field_geom accept 0.0000 | bitmap8 0.0000 | pair_presence 0.0000
+[   22.0s]   seed 2 r6_invalid_refusal (n=512): field_geom accept 0.0000 | bitmap8 0.0000 | pair_presence 0.0000
+[   22.0s]   queries(seed 2): done in 22.0s

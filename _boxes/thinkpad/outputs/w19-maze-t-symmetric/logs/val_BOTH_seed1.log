@@ -1,0 +1,26 @@
+[BOTH_val seed 1] config {'latent': 128, 'K': 2, 'n_atoms': 6, 'ridge': 1.0} rival_steps 8000 / 80000
+  CODEC latent 128  loss 0.00005  [9.4s]
+  across-wells derangement [1, 0] (no fixed point: asserted)
+  MATCHED PARAMETERS (target 4584 = CLU read floats, obs 954, out 21)
+    mlp          width   4  params    4693  (+2.38%)
+    lstm         width   4  params    4817  (+5.08%)
+    transformer  width   4  params    4869  (+6.22%)  n_layers=1 heads=2
+  MATCHED PARAMETERS (target 45840 = CLU read floats, obs 954, out 21)
+    mlp          width  44  params   46133  (+0.64%)
+    lstm         width  35  params   45210  (-1.37%)
+    transformer  width  30  params   45455  (-0.84%)  n_layers=2 heads=2
+    TRAIN rival: mlp   params    4693  loss 0.0002  [64.1s]
+    TRAIN rival@10x-steps: mlp params    4693  loss 0.0000  [556.9s]
+    TRAIN diagnostic@10x-read-floats: mlp params   46133  loss 0.0000  [66.2s]
+    TRAIN rival: lstm  params    4817  loss 0.0372  [64.9s]
+    TRAIN rival@10x-steps: lstm params    4817  loss 0.0000  [997.4s]
+    TRAIN diagnostic@10x-read-floats: lstm params   45210  loss 0.0000  [172.9s]
+    TRAIN rival: transformer params    4869  loss 0.0002  [151.4s]
+    TRAIN rival@10x-steps: transformer params    4869  loss 0.0000  [1489.1s]
+    TRAIN diagnostic@10x-read-floats: transformer params   45455  loss 0.0000  [212.3s]
+  row seen  n=4000  CLU 0.9762 best-rival8k 1.0000 best-rival80k 1.0000 worst-ctl 0.5500 bseq 0.9493 bcol 0.5785
+  row pair  n=1121  CLU 0.4425 best-rival8k 0.4380 best-rival80k 0.4362 worst-ctl 0.2792 bseq 0.4505 bcol 0.0187
+  row nway  n=675   CLU 0.5689 best-rival8k 0.5674 best-rival80k 0.5659 worst-ctl 0.2148 bseq 0.3156 bcol 0.1007
+  row value n=4000  CLU 0.4410 best-rival8k 0.6250 best-rival80k 0.6368 worst-ctl 0.2495 bseq 0.4530 bcol 0.2442
+  rollout CLU validity 0.0000 per-step 0.9104
+[BOTH_val seed 1] wrote C:/chlu/outputs/w19-maze-t-symmetric/val\BOTH_val_seed1.json [4337.3s]

@@ -1,0 +1,220 @@
+[21:50:00Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners rows34 --run-n 2 --seed 0 --arms "store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed0/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed0/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed0/K32_n32768/arm.pkl:store_K32_n32768,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed0/K5_n32768/arm.pkl:store_K5_n32768"
+[23:50:27] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+[23:50:27] LEDGER GATE OPEN: run 2/3
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[23:51:21] FastJudge positive control: True
+[23:51:21] corners=rows34 seed=0: 109 corners
+[23:53:17]   store_K32_n16384                             novel/corner 46.147 (ceiling 52.18)  in 116s
+[23:55:12]   store_K32_n16384__landscape_removed          novel/corner 0.000 (ceiling 52.18)  in 114s
+[23:57:08]   store_K32_n16384__landscape_shuffled         novel/corner 0.000 (ceiling 52.18)  in 116s
+[23:57:08]   across-wells DERANGEMENT perm=[28, 29, 25, 18, 24, 14, 15, 13, 9, 19, 7, 20, 5, 10, 3, 26, 12, 4, 0, 6, 27, 30, 11, 31, 8, 17, 22, 1, 23, 21, 2, 16] fixed_points=0 | historical T7 perm fixed_points=0
+[23:59:06]   store_K32_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 118s
+[00:01:11]   store_K32_n16384__random_atoms               novel/corner 0.000 (ceiling 52.18)  in 125s
+[00:03:16]   store_K5_n16384                              novel/corner 43.183 (ceiling 52.18)  in 125s
+[00:05:19]   store_K5_n16384__landscape_removed           novel/corner 0.000 (ceiling 52.18)  in 122s
+[00:07:20]   store_K5_n16384__landscape_shuffled          novel/corner 0.000 (ceiling 52.18)  in 121s
+[00:07:20]   across-wells DERANGEMENT perm=[1, 2, 4, 0, 3] fixed_points=0 | historical T7 perm fixed_points=1
+[00:09:19]   store_K5_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 119s
+[00:11:08]   store_K5_n16384__random_atoms                novel/corner 0.000 (ceiling 52.18)  in 109s
+[00:13:02]   store_K32_n32768                             novel/corner 47.275 (ceiling 52.18)  in 114s
+[00:15:01]   store_K32_n32768__landscape_removed          novel/corner 0.000 (ceiling 52.18)  in 119s
+[00:16:59]   store_K32_n32768__landscape_shuffled         novel/corner 0.000 (ceiling 52.18)  in 118s
+[00:16:59]   across-wells DERANGEMENT perm=[28, 29, 25, 18, 24, 14, 15, 13, 9, 19, 7, 20, 5, 10, 3, 26, 12, 4, 0, 6, 27, 30, 11, 31, 8, 17, 22, 1, 23, 21, 2, 16] fixed_points=0 | historical T7 perm fixed_points=0
+[00:19:06]   store_K32_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 127s
+[00:20:57]   store_K32_n32768__random_atoms               novel/corner 0.000 (ceiling 52.18)  in 111s
+[00:22:48]   store_K5_n32768                              novel/corner 43.330 (ceiling 52.18)  in 111s
+[00:24:43]   store_K5_n32768__landscape_removed           novel/corner 0.000 (ceiling 52.18)  in 114s
+[00:26:30]   store_K5_n32768__landscape_shuffled          novel/corner 0.000 (ceiling 52.18)  in 107s
+[00:26:30]   across-wells DERANGEMENT perm=[1, 2, 4, 0, 3] fixed_points=0 | historical T7 perm fixed_points=1
+[00:28:05]   store_K5_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 95s
+[00:29:46]   store_K5_n32768__random_atoms                novel/corner 0.000 (ceiling 52.18)  in 101s
+[00:29:46] done
+[22:29:49Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners rows34 --run-n 2 --seed 0 --arms "store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed0/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed0/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed0/K32_n32768/arm.pkl:store_K32_n32768,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed0/K5_n32768/arm.pkl:store_K5_n32768"
+[22:29:49Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners rows34 --run-n 2 --seed 1 --arms "store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed1/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed1/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed1/K32_n32768/arm.pkl:store_K32_n32768,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed1/K5_n32768/arm.pkl:store_K5_n32768"
+[00:30:12] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+[00:30:12] LEDGER GATE OPEN: run 2/3
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[00:31:05] FastJudge positive control: True
+[00:31:05] corners=rows34 seed=1: 109 corners
+[00:33:16]   store_K32_n16384                             novel/corner 47.092 (ceiling 52.18)  in 131s
+[00:35:07]   store_K32_n16384__landscape_removed          novel/corner 0.000 (ceiling 52.18)  in 111s
+[00:37:08]   store_K32_n16384__landscape_shuffled         novel/corner 0.000 (ceiling 52.18)  in 121s
+[00:37:08]   across-wells DERANGEMENT perm=[2, 24, 4, 14, 10, 21, 3, 9, 30, 22, 15, 1, 13, 29, 31, 25, 7, 11, 26, 12, 28, 0, 17, 5, 27, 23, 16, 6, 20, 8, 19, 18] fixed_points=0 | historical T7 perm fixed_points=0
+[00:39:08]   store_K32_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 120s
+[00:41:00]   store_K32_n16384__random_atoms               novel/corner 0.000 (ceiling 52.18)  in 112s
+[00:43:03]   store_K5_n16384                              novel/corner 44.651 (ceiling 52.18)  in 122s
+[00:45:09]   store_K5_n16384__landscape_removed           novel/corner 0.000 (ceiling 52.18)  in 126s
+[00:47:02]   store_K5_n16384__landscape_shuffled          novel/corner 0.000 (ceiling 52.18)  in 113s
+[00:47:03]   across-wells DERANGEMENT perm=[1, 4, 3, 2, 0] fixed_points=0 | historical T7 perm fixed_points=3
+[00:48:57]   store_K5_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 114s
+[00:50:53]   store_K5_n16384__random_atoms                novel/corner 0.000 (ceiling 52.18)  in 116s
+[00:52:50]   store_K32_n32768                             novel/corner 47.275 (ceiling 52.18)  in 117s
+[00:54:55]   store_K32_n32768__landscape_removed          novel/corner 0.000 (ceiling 52.18)  in 125s
+[00:56:50]   store_K32_n32768__landscape_shuffled         novel/corner 0.000 (ceiling 52.18)  in 115s
+[00:56:50]   across-wells DERANGEMENT perm=[2, 24, 4, 14, 10, 21, 3, 9, 30, 22, 15, 1, 13, 29, 31, 25, 7, 11, 26, 12, 28, 0, 17, 5, 27, 23, 16, 6, 20, 8, 19, 18] fixed_points=0 | historical T7 perm fixed_points=0
+[00:58:44]   store_K32_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 114s
+[01:00:39]   store_K32_n32768__random_atoms               novel/corner 0.000 (ceiling 52.18)  in 115s
+[01:02:38]   store_K5_n32768                              novel/corner 45.761 (ceiling 52.18)  in 118s
+[01:04:38]   store_K5_n32768__landscape_removed           novel/corner 0.000 (ceiling 52.18)  in 120s
+[01:06:45]   store_K5_n32768__landscape_shuffled          novel/corner 0.000 (ceiling 52.18)  in 127s
+[01:06:46]   across-wells DERANGEMENT perm=[1, 4, 3, 2, 0] fixed_points=0 | historical T7 perm fixed_points=3
+[01:09:33]   store_K5_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 168s
+[01:12:49]   store_K5_n32768__random_atoms                novel/corner 0.000 (ceiling 52.18)  in 195s
+[01:12:49] done
+[23:13:08Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners rows34 --run-n 2 --seed 1 --arms "store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed1/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed1/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed1/K32_n32768/arm.pkl:store_K32_n32768,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed1/K5_n32768/arm.pkl:store_K5_n32768"
+[23:13:08Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners rows34 --run-n 2 --seed 2 --arms "store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed2/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed2/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed2/K32_n32768/arm.pkl:store_K32_n32768,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed2/K5_n32768/arm.pkl:store_K5_n32768"
+[01:14:40] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+[01:14:40] LEDGER GATE OPEN: run 2/3
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:16:27] FastJudge positive control: True
+[01:16:27] corners=rows34 seed=2: 109 corners
+[01:19:24]   store_K32_n16384                             novel/corner 48.587 (ceiling 52.18)  in 177s
+[01:22:28]   store_K32_n16384__landscape_removed          novel/corner 0.000 (ceiling 52.18)  in 184s
+[01:25:24]   store_K32_n16384__landscape_shuffled         novel/corner 0.000 (ceiling 52.18)  in 176s
+[01:25:24]   across-wells DERANGEMENT perm=[20, 31, 17, 16, 15, 2, 8, 6, 26, 22, 9, 7, 0, 10, 25, 12, 19, 18, 29, 5, 27, 23, 1, 24, 28, 21, 30, 11, 3, 4, 14, 13] fixed_points=0 | historical T7 perm fixed_points=2
+[01:28:35]   store_K32_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 190s
+[01:31:42]   store_K32_n16384__random_atoms               novel/corner 0.000 (ceiling 52.18)  in 187s
+[01:34:26]   store_K5_n16384                              novel/corner 47.991 (ceiling 52.18)  in 164s
+[01:37:14]   store_K5_n16384__landscape_removed           novel/corner 0.000 (ceiling 52.18)  in 169s
+[01:40:10]   store_K5_n16384__landscape_shuffled          novel/corner 0.000 (ceiling 52.18)  in 175s
+[01:40:11]   across-wells DERANGEMENT perm=[4, 2, 0, 1, 3] fixed_points=0 | historical T7 perm fixed_points=2
+[01:43:09]   store_K5_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 178s
+[01:46:27]   store_K5_n16384__random_atoms                novel/corner 0.000 (ceiling 52.18)  in 198s
+[01:50:16]   store_K32_n32768                             novel/corner 48.936 (ceiling 52.18)  in 229s
+[01:53:43]   store_K32_n32768__landscape_removed          novel/corner 0.000 (ceiling 52.18)  in 206s
+[01:57:06]   store_K32_n32768__landscape_shuffled         novel/corner 0.000 (ceiling 52.18)  in 203s
+[01:57:06]   across-wells DERANGEMENT perm=[20, 31, 17, 16, 15, 2, 8, 6, 26, 22, 9, 7, 0, 10, 25, 12, 19, 18, 29, 5, 27, 23, 1, 24, 28, 21, 30, 11, 3, 4, 14, 13] fixed_points=0 | historical T7 perm fixed_points=2
+[02:00:37]   store_K32_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 211s
+[02:04:01]   store_K32_n32768__random_atoms               novel/corner 0.000 (ceiling 52.18)  in 204s
+[02:07:16]   store_K5_n32768                              novel/corner 48.037 (ceiling 52.18)  in 196s
+[02:10:38]   store_K5_n32768__landscape_removed           novel/corner 0.000 (ceiling 52.18)  in 202s
+[02:13:45]   store_K5_n32768__landscape_shuffled          novel/corner 0.000 (ceiling 52.18)  in 186s
+[02:13:45]   across-wells DERANGEMENT perm=[4, 2, 0, 1, 3] fixed_points=0 | historical T7 perm fixed_points=2
+[02:16:27]   store_K5_n32768__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 52.18)  in 162s
+[02:19:13]   store_K5_n32768__random_atoms                novel/corner 0.000 (ceiling 52.18)  in 166s
+[02:19:13] done
+[00:19:20Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners rows34 --run-n 2 --seed 2 --arms "store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed2/K32_n16384/arm.pkl:store_K32_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed2/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed2/K32_n32768/arm.pkl:store_K32_n32768,store:C:/chlu/outputs/w20-shapes-data-matched/stores/test/seed2/K5_n32768/arm.pkl:store_K5_n32768"
+[00:19:20Z] LANE DONE

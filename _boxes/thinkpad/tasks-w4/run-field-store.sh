@@ -1,0 +1,3 @@
+cd /c/chlu/worktrees/CHLU-w4-field-store
+source /c/chlu/env_w4.sh
+exec claude --permission-mode bypassPermissions --model opus "$(cat /c/chlu/tasks-w4/launch-field-store.txt)"

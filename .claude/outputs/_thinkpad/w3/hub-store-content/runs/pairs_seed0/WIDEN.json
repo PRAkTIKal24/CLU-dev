@@ -1,0 +1,404 @@
+{
+ "spec": {
+  "name": "WIDEN",
+  "blocks": [
+   "p",
+   "b3"
+  ],
+  "half_channels": [],
+  "shuffle": [],
+  "shuffle_seed": 0,
+  "D": 4096,
+  "n_atoms": 32,
+  "store_bytes": 524288,
+  "budget_bytes": 524288,
+  "byte_matched": true,
+  "dims_per_block": {
+   "p": 2048,
+   "b3": 2048
+  },
+  "bytes_formula": "n_atoms * D * 4",
+  "note": "THE ARM. All of the penultimate map PLUS conv block 3 (the map one block earlier, 8x8, block-mean pooled to 4x4). Paid for in atoms: 64 -> 32. D=4096 <= the 20,000 LACE whitening limit, so LACE stays fair."
+ },
+ "set": "pairs",
+ "set_label": "the 3 pair corners (seeded subsample of 1176/corner, declared)",
+ "n_requests": 3528,
+ "seed": 0,
+ "grouping": {
+  "well_sizes": [
+   495,
+   495,
+   495,
+   796,
+   1815
+  ],
+  "K": 5,
+  "method_used": "ward",
+  "n_dead_channels": 71,
+  "well_block_composition": [
+   {
+    "p": 226,
+    "b3": 269
+   },
+   {
+    "p": 230,
+    "b3": 265
+   },
+   {
+    "p": 242,
+    "b3": 253
+   },
+   {
+    "p": 372,
+    "b3": 424
+   },
+   {
+    "p": 978,
+    "b3": 837
+   }
+  ],
+  "mean_well_purity": 0.5322810563377032,
+  "global_block_fractions": {
+   "p": 0.5,
+   "b3": 0.5
+  },
+  "mixing": 0.9354378873245937,
+  "mixing_note": "1.0 = every well holds the global block mixture; 0.0 = every well is a single block. A low value means the joint store is two stores side by side."
+ },
+ "byte_ledger": {
+  "n_atoms_per_well": 32,
+  "dim": 4096,
+  "well_sizes": [
+   495,
+   495,
+   495,
+   796,
+   1815
+  ],
+  "store_bytes": 524288,
+  "dtype": "float32",
+  "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+  "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72).",
+  "deployed_bytes": 524288,
+  "budget_bytes": 524288,
+  "what": "32 atoms x 4096 float32 = the store, content=['p', 'b3']"
+ },
+ "provenance": {
+  "spec": {
+   "name": "WIDEN",
+   "blocks": [
+    "p",
+    "b3"
+   ],
+   "half_channels": [],
+   "shuffle": [],
+   "shuffle_seed": 0,
+   "D": 4096,
+   "n_atoms": 32,
+   "store_bytes": 524288,
+   "budget_bytes": 524288,
+   "byte_matched": true,
+   "dims_per_block": {
+    "p": 2048,
+    "b3": 2048
+   },
+   "bytes_formula": "n_atoms * D * 4",
+   "note": "THE ARM. All of the penultimate map PLUS conv block 3 (the map one block earlier, 8x8, block-mean pooled to 4x4). Paid for in atoms: 64 -> 32. D=4096 <= the 20,000 LACE whitening limit, so LACE stays fair."
+  },
+  "scales": {
+   "p": 0.7127604819142,
+   "b3": 0.6060705824806284
+  },
+  "sigma": [
+   9.368582725524902,
+   10.143306732177734,
+   8.650821685791016,
+   10.656993865966797,
+   22.3798885345459
+  ],
+  "atom_selection": "kmeanspp",
+  "seed": 0,
+  "launch_mode": "clamp_atom",
+  "settling_steps": 0,
+  "read_mode": "state",
+  "sigma_rule": "nn_median",
+  "book_smoothing": 1.0
+ },
+ "rows": {
+  "full": {
+   "n": 3528,
+   "aggregate": 0.4661753590325018,
+   "exact_match": 0.0002834467120181406,
+   "per_factor": {
+    "floor_hue": 0.8959750566893424,
+    "wall_hue": 0.9421768707482994,
+    "object_hue": 0.5036848072562359,
+    "scale": 0.14342403628117914,
+    "shape": 0.1884920634920635,
+    "orientation": 0.12329931972789115
+   },
+   "n_distinct_index_tuples": 1519,
+   "mean_confidence": 0.11547724902629852,
+   "launch_mode": "clamp_atom",
+   "per_corner": {
+    "pair-000": {
+     "n": 1176,
+     "aggregate": 0.46485260770975056,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.9013605442176871,
+      "wall_hue": 0.9795918367346939,
+      "object_hue": 0.4200680272108844,
+      "scale": 0.1445578231292517,
+      "shape": 0.21258503401360543,
+      "orientation": 0.13095238095238096
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-001": {
+     "n": 1176,
+     "aggregate": 0.4750566893424036,
+     "exact_match": 0.0008503401360544217,
+     "per_factor": {
+      "floor_hue": 0.8894557823129252,
+      "wall_hue": 0.8945578231292517,
+      "object_hue": 0.5093537414965986,
+      "scale": 0.141156462585034,
+      "shape": 0.2857142857142857,
+      "orientation": 0.13010204081632654
+     },
+     "distinct_valid_tuples": 1,
+     "distinct_valid_novel_tuples": 1,
+     "replayed_seen_tuples": 0,
+     "n_valid": 1
+    },
+    "pair-002": {
+     "n": 1176,
+     "aggregate": 0.4586167800453515,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.8971088435374149,
+      "wall_hue": 0.9523809523809523,
+      "object_hue": 0.5816326530612245,
+      "scale": 0.1445578231292517,
+      "shape": 0.06717687074829932,
+      "orientation": 0.10884353741496598
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    }
+   }
+  },
+  "atom_mean_lookup": {
+   "n": 3528,
+   "aggregate": 0.42772108843537415,
+   "exact_match": 0.0008503401360544217,
+   "per_factor": {
+    "floor_hue": 0.891156462585034,
+    "wall_hue": 0.9461451247165533,
+    "object_hue": 0.16638321995464853,
+    "scale": 0.1306689342403628,
+    "shape": 0.3517573696145125,
+    "orientation": 0.08021541950113378
+   },
+   "n_distinct_index_tuples": 1519,
+   "mean_confidence": 0.11547724902629852,
+   "launch_mode": "posterior_mean",
+   "per_corner": {
+    "pair-000": {
+     "n": 1176,
+     "aggregate": 0.42191043083900226,
+     "exact_match": 0.0008503401360544217,
+     "per_factor": {
+      "floor_hue": 0.8537414965986394,
+      "wall_hue": 0.939625850340136,
+      "object_hue": 0.30017006802721086,
+      "scale": 0.13520408163265307,
+      "shape": 0.2151360544217687,
+      "orientation": 0.08758503401360544
+     },
+     "distinct_valid_tuples": 1,
+     "distinct_valid_novel_tuples": 1,
+     "replayed_seen_tuples": 0,
+     "n_valid": 1
+    },
+    "pair-001": {
+     "n": 1176,
+     "aggregate": 0.3548752834467121,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.8775510204081632,
+      "wall_hue": 0.9481292517006803,
+      "object_hue": 0.0008503401360544217,
+      "scale": 0.1377551020408163,
+      "shape": 0.0935374149659864,
+      "orientation": 0.07142857142857142
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-002": {
+     "n": 1176,
+     "aggregate": 0.5063775510204082,
+     "exact_match": 0.0017006802721088435,
+     "per_factor": {
+      "floor_hue": 0.9421768707482994,
+      "wall_hue": 0.9506802721088435,
+      "object_hue": 0.19812925170068027,
+      "scale": 0.11904761904761904,
+      "shape": 0.7465986394557823,
+      "orientation": 0.08163265306122448
+     },
+     "distinct_valid_tuples": 2,
+     "distinct_valid_novel_tuples": 2,
+     "replayed_seen_tuples": 0,
+     "n_valid": 2
+    }
+   }
+  },
+  "row_lookup": {
+   "n": 3528,
+   "aggregate": 0.2978552532123961,
+   "exact_match": 0.0,
+   "per_factor": {
+    "floor_hue": 0.4384920634920635,
+    "wall_hue": 0.6159297052154195,
+    "object_hue": 0.17828798185941044,
+    "scale": 0.13350340136054423,
+    "shape": 0.3177437641723356,
+    "orientation": 0.10317460317460317
+   },
+   "n_distinct_rows_returned": 32,
+   "launch_mode": "row_lookup",
+   "per_corner": {
+    "pair-000": {
+     "n": 1176,
+     "aggregate": 0.3174603174603174,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.4328231292517007,
+      "wall_hue": 0.6318027210884354,
+      "object_hue": 0.17517006802721088,
+      "scale": 0.11734693877551021,
+      "shape": 0.45153061224489793,
+      "orientation": 0.09608843537414966
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-001": {
+     "n": 1176,
+     "aggregate": 0.3062641723356009,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.4523809523809524,
+      "wall_hue": 0.5977891156462585,
+      "object_hue": 0.15136054421768708,
+      "scale": 0.13945578231292516,
+      "shape": 0.3843537414965986,
+      "orientation": 0.11224489795918367
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-002": {
+     "n": 1176,
+     "aggregate": 0.2698412698412698,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.4302721088435374,
+      "wall_hue": 0.6181972789115646,
+      "object_hue": 0.20833333333333334,
+      "scale": 0.14370748299319727,
+      "shape": 0.11734693877551021,
+      "orientation": 0.10119047619047619
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    }
+   }
+  },
+  "atoms_shuffled": {
+   "n": 3528,
+   "aggregate": 0.12636999244142103,
+   "exact_match": 0.0,
+   "per_factor": {
+    "floor_hue": 0.06746031746031746,
+    "wall_hue": 0.12528344671201813,
+    "object_hue": 0.061507936507936505,
+    "scale": 0.12868480725623582,
+    "shape": 0.3191609977324263,
+    "orientation": 0.05612244897959184
+   },
+   "n_distinct_index_tuples": 1519,
+   "launch_mode": "atoms_shuffled",
+   "per_corner": {
+    "pair-000": {
+     "n": 1176,
+     "aggregate": 0.15419501133786848,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.14965986394557823,
+      "wall_hue": 0.11224489795918367,
+      "object_hue": 0.07482993197278912,
+      "scale": 0.11904761904761904,
+      "shape": 0.4064625850340136,
+      "orientation": 0.06292517006802721
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-001": {
+     "n": 1176,
+     "aggregate": 0.13151927437641722,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.02806122448979592,
+      "wall_hue": 0.12414965986394558,
+      "object_hue": 0.09183673469387756,
+      "scale": 0.12670068027210885,
+      "shape": 0.3664965986394558,
+      "orientation": 0.05187074829931973
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-002": {
+     "n": 1176,
+     "aggregate": 0.09339569160997734,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.02465986394557823,
+      "wall_hue": 0.13945578231292516,
+      "object_hue": 0.017857142857142856,
+      "scale": 0.14030612244897958,
+      "shape": 0.18452380952380953,
+      "orientation": 0.05357142857142857
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    }
+   }
+  }
+ },
+ "wall_seconds": 133.1849329471588
+}

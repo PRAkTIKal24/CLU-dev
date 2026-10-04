@@ -1,0 +1,70 @@
+{
+ "file": ".claude/outputs/gen-external-classifier/classifier_gate.json",
+ "found": "2026-09-16 by gen-addressed-read, before its first scored run",
+ "symptom": "json.JSONDecodeError: Extra data: line 52 column 1 (char 1296) \u2014 `check_preconditions` aborts EVERY gen-cell run at precondition 1/2",
+ "cause": "one stray byte 0x78 ('x') appended AFTER the document's closing '}\\n'",
+ "repair": "TRUNCATION ONLY (raw[:-1]); \u26d4 no byte inside the JSON was altered",
+ "before": {
+  "bytes": 1297,
+  "sha256": "fbd2c55aa89d4ba71c03cbb0139b0048e1b24428eb3d35338c36a4cef8ecfad9"
+ },
+ "after": {
+  "bytes": 1296,
+  "sha256": "88079d5fdf974761e801b988296260b6c27e282e0b308eb237779096d63f7254"
+ },
+ "repair_is_a_pure_prefix_of_the_original": true,
+ "backup_of_the_corrupt_file": ".claude/outputs/gen-external-classifier/classifier_gate.json.CORRUPT-BACKUP-2026-09-16",
+ "gate_content_unchanged": {
+  "decoder": {
+   "param_hash_per_seed": {
+    "0": "01ef91f75eeaae7be8d83a220c9cc6629120345357da9033db22375c278ab196",
+    "1": "001011bc603a7cb914cfaa592f43087685727431902ffc133755de30dbb21e4f",
+    "2": "2d7eea75add770441fcd0068ffc7a3dcc0b02cd16d6a31b3e095f47b64aa2455"
+   },
+   "recipe": "v1_capacity_schedule",
+   "source": "winner"
+  },
+  "floor": 0.95,
+  "gate": "PASS",
+  "mean": 1.0,
+  "min": 1.0,
+  "n_seeds": 3,
+  "n_seeds_requested": 3,
+  "no_leak": {
+   "n_decoder_renders_in_training": 0,
+   "n_holdout_images_in_training": 0,
+   "per_seed_holdout_excluded": {
+    "0": 72,
+    "1": 72,
+    "2": 72
+   },
+   "per_seed_render_rows_checked": {
+    "0": 64,
+    "1": 64,
+    "2": 64
+   }
+  },
+  "note": "the external classifier can read real held-out-combination images in the corner, so a low number on the decoder's renders is the decoder's, not the instrument's",
+  "per_seed": {
+   "0": 1.0,
+   "1": 1.0,
+   "2": 1.0
+  },
+  "probe_companion_on_real": {
+   "mean": 1.0,
+   "n": 3,
+   "per_seed": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "std": 0.0
+  },
+  "rule": "PASS iff EVERY seed >= floor (the mean is reported, not read)",
+  "seeds_not_run": [],
+  "statistic": "in-corner shape balanced accuracy on REAL held-out images",
+  "std": 0.0
+ },
+ "mtime_of_the_corrupt_file": "2026-09-15 22:11",
+ "OWNER_NEEDED": "\u26d4 this is `gen-external-classifier`'s artefact, \u26d4 not this spoke's. The corruption post-dates `gen-read-cell-arm`'s run (which passed this gate on 2026-09-15). Whoever owns that spoke should confirm the body is the gate they wrote."
+}

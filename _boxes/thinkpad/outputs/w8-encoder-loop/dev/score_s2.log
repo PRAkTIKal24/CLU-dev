@@ -1,0 +1,1061 @@
+[pipe s2 22:59:03Z] === rivals alone (refit on THIS arm's features, w4_learners verbatim) ===
+[pipe s2 22:59:03Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage rivals --seed 2 --arm alone --out /c/chlu/outputs/w8-encoder-loop/run --families mlp_180k
+[00:59:08] stage=rivals seed=2 arm=alone out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[00:59:08] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[00:59:08] jax devices: [CpuDevice(id=0)]
+[00:59:08]   rivals for alone seed 2: ['mlp_180k'] already fitted -- SKIPPED
+[00:59:08] done in 0.1s
+[pipe s2 22:59:09Z] === score alone on test (rows 3 and 4): pca_tensor rival_mlp_180k ===
+[pipe s2 22:59:09Z] ---- bash scripts/w8_encoder_loop_score.sh test 2 alone /c/chlu/outputs/w8-encoder-loop/run /c/chlu/outputs/w8-encoder-loop/score pca_tensor rival_mlp_180k
+[score] cond=test seed=2 encoder-arm=alone
+[score]   features  -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/alone/cache
+[score]   decoder   -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/alone/declift   (this arm's own refit; NOT the gated winner)
+[score]   rivals    -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/alone/rivals       (refit on THIS arm's features)
+[score]   judge     -> /c/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier   *** INVARIANT, does not move ***
+[score] scored run authorised by /c/chlu/outputs/w8-encoder-loop/PREREG-w8-encoder-loop-1.md + this hub's OWN ledger row
+[leg] classifier root -> /c/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier
+[leg] cache root -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/alone/cache (generation 2)
+[leg] scored run authorised by /c/chlu/outputs/w8-encoder-loop/PREREG-w8-encoder-loop-1.md + the ledger row
+[leg] condition=test seed=2 leg=/c/chlu/outputs/w8-encoder-loop/score/alone/test_seed2 arms=pca_tensor rival_mlp_180k
+  "pre_existing_unchanged": true
+ }
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[00:59:21] stage=prepare arm=None out=C:\chlu\outputs\w8-encoder-loop\score\alone\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[00:59:21]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+[00:59:25]   dead channels: 75
+[01:00:09]   channel-factor relevance: (2048, 6) in 43.4s; mean top-factor MI 0.5427 bits
+[01:00:16]   partitions written -> C:\chlu\outputs\w8-encoder-loop\score\alone\test_seed2\partitions.json
+[01:00:16] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- pca_tensor ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:00:19] stage=fit arm=pca_tensor out=C:\chlu\outputs\w8-encoder-loop\score\alone\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:00:19]   partitions: already on disk, skipping
+[01:01:16]   principal content: 64 atoms x 2048 float32 = 524,288 B, wells [805, 895, 219, 65, 64], variance explained [0.9776, 0.9661, 0.9668, 1.0, 1.0]
+[01:01:27]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 63) (131072, 63)
+[01:01:35]     als 1/40 train_mse=0.05702 val_mse=0.05717
+[01:01:43]     als 2/40 train_mse=0.02433 val_mse=0.02448
+[01:01:51]     als 3/40 train_mse=0.01816 val_mse=0.01826
+[01:02:00]     als 4/40 train_mse=0.01580 val_mse=0.01587
+[01:02:07]     als 5/40 train_mse=0.01446 val_mse=0.01453
+[01:02:15]     als 6/40 train_mse=0.01357 val_mse=0.01363
+[01:02:24]     als 7/40 train_mse=0.01291 val_mse=0.01296
+[01:02:32]     als 8/40 train_mse=0.01239 val_mse=0.01244
+[01:02:40]     als 9/40 train_mse=0.01197 val_mse=0.01202
+[01:02:47]     als 10/40 train_mse=0.01162 val_mse=0.01167
+[01:02:55]     als 11/40 train_mse=0.01133 val_mse=0.01137
+[01:03:04]     als 12/40 train_mse=0.01107 val_mse=0.01111
+[01:03:11]     als 13/40 train_mse=0.01084 val_mse=0.01089
+[01:03:19]     als 14/40 train_mse=0.01064 val_mse=0.01068
+[01:03:27]     als 15/40 train_mse=0.01046 val_mse=0.01050
+[01:03:36]     als 16/40 train_mse=0.01029 val_mse=0.01034
+[01:03:44]     als 17/40 train_mse=0.01014 val_mse=0.01018
+[01:03:52]     als 18/40 train_mse=0.01000 val_mse=0.01004
+[01:04:00]     als 19/40 train_mse=0.00986 val_mse=0.00991
+[01:04:08]     als 20/40 train_mse=0.00974 val_mse=0.00979
+[01:04:15]     als 21/40 train_mse=0.00963 val_mse=0.00968
+[01:04:23]     als 22/40 train_mse=0.00952 val_mse=0.00957
+[01:04:32]     als 23/40 train_mse=0.00942 val_mse=0.00947
+[01:04:40]     als 24/40 train_mse=0.00933 val_mse=0.00938
+[01:04:48]     als 25/40 train_mse=0.00924 val_mse=0.00929
+[01:04:56]     als 26/40 train_mse=0.00916 val_mse=0.00920
+[01:05:04]     als 27/40 train_mse=0.00908 val_mse=0.00912
+[01:05:12]     als 28/40 train_mse=0.00900 val_mse=0.00905
+[01:05:20]     als 29/40 train_mse=0.00893 val_mse=0.00897
+[01:05:27]     als 30/40 train_mse=0.00886 val_mse=0.00891
+[01:05:35]     als 31/40 train_mse=0.00879 val_mse=0.00884
+[01:05:43]     als 32/40 train_mse=0.00873 val_mse=0.00878
+[01:05:51]     als 33/40 train_mse=0.00867 val_mse=0.00872
+[01:06:00]     als 34/40 train_mse=0.00861 val_mse=0.00866
+[01:06:08]     als 35/40 train_mse=0.00856 val_mse=0.00860
+[01:06:16]     als 36/40 train_mse=0.00851 val_mse=0.00855
+[01:06:24]     als 37/40 train_mse=0.00846 val_mse=0.00850
+[01:06:32]     als 38/40 train_mse=0.00841 val_mse=0.00845
+[01:06:39]     als 39/40 train_mse=0.00836 val_mse=0.00841
+[01:06:45]     als 40/40 train_mse=0.00832 val_mse=0.00836
+[01:06:45]   arm pca_tensor: fitted in 386.5s; store 524,288 B + address 194,544 B
+[01:06:45] {"arm": "pca_tensor", "address_bytes": {"address_bytes": 194544, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 162816, "normalisation_bytes": 2544, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.977574, 0.966131, 0.966832, 1.0, 1.0]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:06:48] stage=run arm=pca_tensor out=C:\chlu\outputs\w8-encoder-loop\score\alone\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:06:48]   arm pca_tensor: already fitted, loading
+[01:06:48]   arm pca_tensor: already fitted, loading
+[01:06:48]   judge: decoder 4f79ff55fc3f (w8_v1_short) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:09:13]   arm pca_tensor: r1_seen accept=1.0000 valid=0.3945
+[01:09:18]   arm pca_tensor: r2_unseen_valid accept=1.0000 valid=0.4141
+[01:09:24]   arm pca_tensor: r5_comp_refusal accept=0.0000 valid=0.0000
+[01:09:28]   arm pca_tensor: r6_invalid_refusal accept=0.0000 valid=0.0000
+[01:10:11]   arm pca_tensor: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[01:10:11]   arm pca_tensor: all rows done in 195.2s
+[01:10:11] {"incomplete": false, "n_done": 109}
+[leg] ---- rival_mlp_180k ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:10:16] stage=fit arm=rival_mlp_180k out=C:\chlu\outputs\w8-encoder-loop\score\alone\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:10:17]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[01:10:17] {"arm": "rival_mlp_180k", "address_bytes": {"address_bytes": 0, "note": "a rival's parameters ARE its address book"}, "byte_ledger": {"deployed_bytes": 0, "what": "spoke A's fitted mlp_180k, generation 2", "param_count": 178952}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:10:20] stage=run arm=rival_mlp_180k out=C:\chlu\outputs\w8-encoder-loop\score\alone\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:10:20]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[01:10:21]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[01:10:21]   judge: decoder 4f79ff55fc3f (w8_v1_short) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:12:54]   arm rival_mlp_180k: r1_seen accept=1.0000 valid=0.0000
+[01:13:00]   arm rival_mlp_180k: r2_unseen_valid accept=0.0000 valid=0.0000
+[01:13:06]   arm rival_mlp_180k: r5_comp_refusal accept=0.0000 valid=0.0000
+[01:13:11]   arm rival_mlp_180k: r6_invalid_refusal accept=0.0000 valid=0.0000
+[01:13:58]   arm rival_mlp_180k: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[01:13:58]   arm rival_mlp_180k: all rows done in 209.2s
+[01:13:58]   arm rival_mlp_180k: rival refusals recorded -> ['full_request']
+[01:13:58] {"incomplete": false, "n_done": 109}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:14:06] stage=table arm=None out=C:\chlu\outputs\w8-encoder-loop\score\alone\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:14:13]   arms with rows: ['rival_mlp_180k', 'pca_tensor']
+[01:14:13]   declared NOT-RUN: []
+[01:14:14]   table written -> C:\chlu\outputs\w8-encoder-loop\score\alone\test_seed2\READ-TABLE.json
+[01:14:14]     rival_mlp_180k         RIVAL                                    r4=  0.000 r3=  0.000
+[01:14:14]     pca_tensor             ARM                                      r4= 22.449 r3= 10.733
+[leg] done: /c/chlu/outputs/w8-encoder-loop/score/alone/test_seed2
+[pipe s2 23:14:14Z] === rivals loop_swap (refit on THIS arm's features, w4_learners verbatim) ===
+[pipe s2 23:14:14Z] ---- python -u -m chlu.experiments.exp_w8_encoder_loop --stage rivals --seed 2 --arm loop_swap --out /c/chlu/outputs/w8-encoder-loop/run --families mlp_180k
+[01:14:16] stage=rivals seed=2 arm=loop_swap out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[01:14:16] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[01:14:16] jax devices: [CpuDevice(id=0)]
+[01:14:16]   rivals for loop_swap seed 2: ['mlp_180k'] already fitted -- SKIPPED
+[01:14:16] done in 0.0s
+[pipe s2 23:14:17Z] === score loop_swap on test (rows 3 and 4): pca_tensor rival_mlp_180k ===
+[pipe s2 23:14:17Z] ---- bash scripts/w8_encoder_loop_score.sh test 2 loop_swap /c/chlu/outputs/w8-encoder-loop/run /c/chlu/outputs/w8-encoder-loop/score pca_tensor rival_mlp_180k
+[score] cond=test seed=2 encoder-arm=loop_swap
+[score]   features  -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/loop_swap/cache
+[score]   decoder   -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/loop_swap/declift   (this arm's own refit; NOT the gated winner)
+[score]   rivals    -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/loop_swap/rivals       (refit on THIS arm's features)
+[score]   judge     -> /c/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier   *** INVARIANT, does not move ***
+[score] scored run authorised by /c/chlu/outputs/w8-encoder-loop/PREREG-w8-encoder-loop-1.md + this hub's OWN ledger row
+[leg] classifier root -> /c/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier
+[leg] cache root -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/loop_swap/cache (generation 2)
+[leg] scored run authorised by /c/chlu/outputs/w8-encoder-loop/PREREG-w8-encoder-loop-1.md + the ledger row
+[leg] condition=test seed=2 leg=/c/chlu/outputs/w8-encoder-loop/score/loop_swap/test_seed2 arms=pca_tensor rival_mlp_180k
+  "pre_existing_unchanged": true
+ }
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:14:21] stage=prepare arm=None out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:14:21]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+[01:14:24]   dead channels: 125
+[01:14:53]   channel-factor relevance: (2048, 6) in 28.6s; mean top-factor MI 0.6319 bits
+[01:14:59]   partitions written -> C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed2\partitions.json
+[01:14:59] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- pca_tensor ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:15:02] stage=fit arm=pca_tensor out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:15:02]   partitions: already on disk, skipping
+[01:15:53]   principal content: 64 atoms x 2048 float32 = 524,288 B, wells [690, 807, 312, 120, 119], variance explained [0.9852, 0.9748, 0.9722, 1.0, 0.9961]
+[01:16:02]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 63) (131072, 64)
+[01:16:10]     als 1/40 train_mse=0.04332 val_mse=0.04348
+[01:16:18]     als 2/40 train_mse=0.01817 val_mse=0.01828
+[01:16:25]     als 3/40 train_mse=0.01407 val_mse=0.01413
+[01:16:31]     als 4/40 train_mse=0.01234 val_mse=0.01237
+[01:16:39]     als 5/40 train_mse=0.01130 val_mse=0.01133
+[01:16:46]     als 6/40 train_mse=0.01058 val_mse=0.01060
+[01:16:53]     als 7/40 train_mse=0.01003 val_mse=0.01006
+[01:16:59]     als 8/40 train_mse=0.00960 val_mse=0.00962
+[01:17:06]     als 9/40 train_mse=0.00924 val_mse=0.00927
+[01:17:13]     als 10/40 train_mse=0.00895 val_mse=0.00897
+[01:17:21]     als 11/40 train_mse=0.00869 val_mse=0.00872
+[01:17:29]     als 12/40 train_mse=0.00847 val_mse=0.00850
+[01:17:37]     als 13/40 train_mse=0.00827 val_mse=0.00830
+[01:17:45]     als 14/40 train_mse=0.00810 val_mse=0.00813
+[01:17:53]     als 15/40 train_mse=0.00794 val_mse=0.00797
+[01:18:01]     als 16/40 train_mse=0.00780 val_mse=0.00783
+[01:18:09]     als 17/40 train_mse=0.00767 val_mse=0.00770
+[01:18:17]     als 18/40 train_mse=0.00755 val_mse=0.00758
+[01:18:25]     als 19/40 train_mse=0.00744 val_mse=0.00747
+[01:18:33]     als 20/40 train_mse=0.00734 val_mse=0.00737
+[01:18:41]     als 21/40 train_mse=0.00725 val_mse=0.00727
+[01:18:49]     als 22/40 train_mse=0.00716 val_mse=0.00719
+[01:18:57]     als 23/40 train_mse=0.00708 val_mse=0.00711
+[01:19:05]     als 24/40 train_mse=0.00701 val_mse=0.00703
+[01:19:13]     als 25/40 train_mse=0.00694 val_mse=0.00696
+[01:19:21]     als 26/40 train_mse=0.00687 val_mse=0.00690
+[01:19:29]     als 27/40 train_mse=0.00681 val_mse=0.00683
+[01:19:37]     als 28/40 train_mse=0.00675 val_mse=0.00677
+[01:19:45]     als 29/40 train_mse=0.00669 val_mse=0.00672
+[01:19:53]     als 30/40 train_mse=0.00664 val_mse=0.00666
+[01:20:01]     als 31/40 train_mse=0.00659 val_mse=0.00661
+[01:20:08]     als 32/40 train_mse=0.00654 val_mse=0.00656
+[01:20:17]     als 33/40 train_mse=0.00649 val_mse=0.00652
+[01:20:24]     als 34/40 train_mse=0.00645 val_mse=0.00647
+[01:20:32]     als 35/40 train_mse=0.00641 val_mse=0.00643
+[01:20:40]     als 36/40 train_mse=0.00637 val_mse=0.00639
+[01:20:48]     als 37/40 train_mse=0.00633 val_mse=0.00635
+[01:20:56]     als 38/40 train_mse=0.00629 val_mse=0.00631
+[01:21:04]     als 39/40 train_mse=0.00626 val_mse=0.00628
+[01:21:12]     als 40/40 train_mse=0.00622 val_mse=0.00624
+[01:21:12]   arm pca_tensor: fitted in 369.7s; store 524,288 B + address 195,064 B
+[01:21:12] {"arm": "pca_tensor", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.985196, 0.974754, 0.97224, 1.0, 0.996097]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:21:14] stage=run arm=pca_tensor out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:21:14]   arm pca_tensor: already fitted, loading
+[01:21:14]   arm pca_tensor: already fitted, loading
+[01:21:15]   judge: decoder 2a65988377c2 (w8_v1_short) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:23:36]   arm pca_tensor: r1_seen accept=1.0000 valid=0.4199
+[01:23:41]   arm pca_tensor: r2_unseen_valid accept=1.0000 valid=0.4766
+[01:23:46]   arm pca_tensor: r5_comp_refusal accept=0.0000 valid=0.0000
+[01:23:51]   arm pca_tensor: r6_invalid_refusal accept=0.0000 valid=0.0000
+[01:24:34]   arm pca_tensor: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[01:24:34]   arm pca_tensor: all rows done in 191.9s
+[01:24:34] {"incomplete": false, "n_done": 109}
+[leg] ---- rival_mlp_180k ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:24:39] stage=fit arm=rival_mlp_180k out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:24:40]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[01:24:40] {"arm": "rival_mlp_180k", "address_bytes": {"address_bytes": 0, "note": "a rival's parameters ARE its address book"}, "byte_ledger": {"deployed_bytes": 0, "what": "spoke A's fitted mlp_180k, generation 2", "param_count": 178952}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:24:42] stage=run arm=rival_mlp_180k out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:24:43]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[01:24:43]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[01:24:43]   judge: decoder 2a65988377c2 (w8_v1_short) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:27:17]   arm rival_mlp_180k: r1_seen accept=1.0000 valid=0.0000
+[01:27:23]   arm rival_mlp_180k: r2_unseen_valid accept=0.0000 valid=0.0000
+[01:27:28]   arm rival_mlp_180k: r5_comp_refusal accept=0.0000 valid=0.0000
+[01:27:33]   arm rival_mlp_180k: r6_invalid_refusal accept=0.0000 valid=0.0000
+[01:28:22]   arm rival_mlp_180k: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[01:28:22]   arm rival_mlp_180k: all rows done in 210.6s
+[01:28:22]   arm rival_mlp_180k: rival refusals recorded -> ['full_request']
+[01:28:22] {"incomplete": false, "n_done": 109}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:28:28] stage=table arm=None out=C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:28:35]   arms with rows: ['rival_mlp_180k', 'pca_tensor']
+[01:28:35]   declared NOT-RUN: []
+[01:28:35]   table written -> C:\chlu\outputs\w8-encoder-loop\score\loop_swap\test_seed2\READ-TABLE.json
+[01:28:35]     rival_mlp_180k         RIVAL                                    r4=  0.000 r3=  0.000
+[01:28:35]     pca_tensor             ARM                                      r4= 26.388 r3= 12.433
+[leg] done: /c/chlu/outputs/w8-encoder-loop/score/loop_swap/test_seed2
+[pipe s2 23:28:36Z] === score loop_nosw on test (rows 3 and 4): pca_tensor ===
+[pipe s2 23:28:36Z] ---- bash scripts/w8_encoder_loop_score.sh test 2 loop_nosw /c/chlu/outputs/w8-encoder-loop/run /c/chlu/outputs/w8-encoder-loop/score pca_tensor
+[score] cond=test seed=2 encoder-arm=loop_nosw
+[score]   features  -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/loop_nosw/cache
+[score]   decoder   -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/loop_nosw/declift   (this arm's own refit; NOT the gated winner)
+[score]   rivals    -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/loop_nosw/rivals       (refit on THIS arm's features)
+[score]   judge     -> /c/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier   *** INVARIANT, does not move ***
+[score] scored run authorised by /c/chlu/outputs/w8-encoder-loop/PREREG-w8-encoder-loop-1.md + this hub's OWN ledger row
+[leg] classifier root -> /c/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/gen-external-classifier
+[leg] cache root -> /c/chlu/outputs/w8-encoder-loop/run/seed_2/loop_nosw/cache (generation 2)
+[leg] scored run authorised by /c/chlu/outputs/w8-encoder-loop/PREREG-w8-encoder-loop-1.md + the ledger row
+[leg] condition=test seed=2 leg=/c/chlu/outputs/w8-encoder-loop/score/loop_nosw/test_seed2 arms=pca_tensor
+  "pre_existing_unchanged": true
+ }
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:28:41] stage=prepare arm=None out=C:\chlu\outputs\w8-encoder-loop\score\loop_nosw\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:28:41]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+[01:28:43]   dead channels: 161
+[01:29:14]   channel-factor relevance: (2048, 6) in 30.9s; mean top-factor MI 0.6470 bits
+[01:29:20]   partitions written -> C:\chlu\outputs\w8-encoder-loop\score\loop_nosw\test_seed2\partitions.json
+[01:29:20] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- pca_tensor ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:29:23] stage=fit arm=pca_tensor out=C:\chlu\outputs\w8-encoder-loop\score\loop_nosw\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:29:23]   partitions: already on disk, skipping
+[01:30:14]   principal content: 64 atoms x 2048 float32 = 524,288 B, wells [694, 817, 296, 121, 120], variance explained [0.9863, 0.978, 0.9725, 1.0, 0.9999]
+[01:30:25]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 63) (131072, 64)
+[01:30:34]     als 1/40 train_mse=0.03671 val_mse=0.03681
+[01:30:42]     als 2/40 train_mse=0.01433 val_mse=0.01437
+[01:30:50]     als 3/40 train_mse=0.01102 val_mse=0.01105
+[01:30:58]     als 4/40 train_mse=0.00966 val_mse=0.00969
+[01:31:06]     als 5/40 train_mse=0.00887 val_mse=0.00889
+[01:31:14]     als 6/40 train_mse=0.00835 val_mse=0.00836
+[01:31:22]     als 7/40 train_mse=0.00796 val_mse=0.00798
+[01:31:30]     als 8/40 train_mse=0.00767 val_mse=0.00768
+[01:31:38]     als 9/40 train_mse=0.00743 val_mse=0.00744
+[01:31:47]     als 10/40 train_mse=0.00723 val_mse=0.00724
+[01:31:55]     als 11/40 train_mse=0.00706 val_mse=0.00707
+[01:32:03]     als 12/40 train_mse=0.00691 val_mse=0.00692
+[01:32:10]     als 13/40 train_mse=0.00678 val_mse=0.00679
+[01:32:19]     als 14/40 train_mse=0.00666 val_mse=0.00667
+[01:32:27]     als 15/40 train_mse=0.00655 val_mse=0.00656
+[01:32:35]     als 16/40 train_mse=0.00646 val_mse=0.00647
+[01:32:43]     als 17/40 train_mse=0.00637 val_mse=0.00638
+[01:32:51]     als 18/40 train_mse=0.00628 val_mse=0.00629
+[01:32:59]     als 19/40 train_mse=0.00621 val_mse=0.00622
+[01:33:07]     als 20/40 train_mse=0.00613 val_mse=0.00615
+[01:33:15]     als 21/40 train_mse=0.00607 val_mse=0.00608
+[01:33:23]     als 22/40 train_mse=0.00600 val_mse=0.00602
+[01:33:31]     als 23/40 train_mse=0.00594 val_mse=0.00596
+[01:33:39]     als 24/40 train_mse=0.00589 val_mse=0.00590
+[01:33:48]     als 25/40 train_mse=0.00584 val_mse=0.00585
+[01:33:56]     als 26/40 train_mse=0.00579 val_mse=0.00580
+[01:34:04]     als 27/40 train_mse=0.00574 val_mse=0.00575
+[01:34:12]     als 28/40 train_mse=0.00569 val_mse=0.00571
+[01:34:20]     als 29/40 train_mse=0.00565 val_mse=0.00566
+[01:34:28]     als 30/40 train_mse=0.00561 val_mse=0.00562
+[01:34:36]     als 31/40 train_mse=0.00557 val_mse=0.00559
+[01:34:44]     als 32/40 train_mse=0.00553 val_mse=0.00555
+[01:34:51]     als 33/40 train_mse=0.00550 val_mse=0.00551
+[01:34:59]     als 34/40 train_mse=0.00546 val_mse=0.00548
+[01:35:07]     als 35/40 train_mse=0.00543 val_mse=0.00545
+[01:35:15]     als 36/40 train_mse=0.00540 val_mse=0.00542
+[01:35:23]     als 37/40 train_mse=0.00537 val_mse=0.00539
+[01:35:31]     als 38/40 train_mse=0.00534 val_mse=0.00536
+[01:35:39]     als 39/40 train_mse=0.00531 val_mse=0.00533
+[01:35:46]     als 40/40 train_mse=0.00529 val_mse=0.00531
+[01:35:46]   arm pca_tensor: fitted in 383.3s; store 524,288 B + address 195,064 B
+[01:35:46] {"arm": "pca_tensor", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.986305, 0.97801, 0.972456, 1.0, 0.999916]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:35:49] stage=run arm=pca_tensor out=C:\chlu\outputs\w8-encoder-loop\score\loop_nosw\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:35:49]   arm pca_tensor: already fitted, loading
+[01:35:49]   arm pca_tensor: already fitted, loading
+[01:35:49]   judge: decoder a18fc7abaff3 (w8_v1_short) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:38:13]   arm pca_tensor: r1_seen accept=1.0000 valid=0.3320
+[01:38:18]   arm pca_tensor: r2_unseen_valid accept=1.0000 valid=0.3379
+[01:38:23]   arm pca_tensor: r5_comp_refusal accept=0.0000 valid=0.0000
+[01:38:27]   arm pca_tensor: r6_invalid_refusal accept=0.0000 valid=0.0000
+[01:39:10]   arm pca_tensor: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[01:39:10]   arm pca_tensor: all rows done in 194.1s
+[01:39:10] {"incomplete": false, "n_done": 109}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[01:39:16] stage=table arm=None out=C:\chlu\outputs\w8-encoder-loop\score\loop_nosw\test_seed2 seed=2 cond=test install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[01:39:23]   arms with rows: ['pca_tensor']
+[01:39:23]   declared NOT-RUN: []
+[01:39:23]   table written -> C:\chlu\outputs\w8-encoder-loop\score\loop_nosw\test_seed2\READ-TABLE.json
+[01:39:23]     pca_tensor             ARM                                      r4= 19.000 r3=  8.450
+[leg] done: /c/chlu/outputs/w8-encoder-loop/score/loop_nosw/test_seed2
+[01:39:25] stage=report seed=0 arm=None out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[01:39:25] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[01:39:25] jax devices: [CpuDevice(id=0)]
+[01:39:25] {
+  "seed0:alone": {
+    "arm": "alone",
+    "arm_class": "CONTROL -- the encoder trained ALONE (the target's named control)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.0034479829482734203,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9726969401041666,
+    "probe_margin_aggregate": 0.0005289713541666297,
+    "probe_margin_exact": -0.00341796875,
+    "recon_final": 0.004951403941959143,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 2.8940320068597796,
+    "seed": 0,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        68608,
+        89600,
+        76032,
+        71936,
+        218112
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1157.6128027439117
+  },
+  "seed0:alone_wc": {
+    "arm": "alone_wc",
+    "arm_class": "CONTROL -- `alone` matched on WALL CLOCK instead of on steps",
+    "decoder_refit_loss_final": null,
+    "encoder_changed": true,
+    "gradient_steps": 893,
+    "images_seen": 57152,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9809977213541666,
+    "probe_margin_aggregate": 0.00882975260416663,
+    "probe_margin_exact": 0.0439453125,
+    "recon_final": 0.0022453018464148045,
+    "scoreable_on_rows_3_4": false,
+    "seconds_per_step": 2.8060121661738346,
+    "seed": 0,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        68608,
+        89600,
+        76032,
+        71936,
+        218112
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 2505.7688643932343
+  },
+  "seed0:loop_nosw": {
+    "arm": "loop_nosw",
+    "arm_class": "COLUMN -- unfrozen WITHOUT the swap loss (isolates the new ingredient)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004079412203282118,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.951416015625,
+    "probe_margin_aggregate": -0.020751953125,
+    "probe_margin_exact": -0.12353515625,
+    "recon_final": 0.013254059478640556,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 3.611166923046112,
+    "seed": 0,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        68608,
+        89600,
+        76032,
+        71936,
+        218112
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1444.4667692184448
+  },
+  "seed0:loop_swap": {
+    "arm": "loop_swap",
+    "arm_class": "ARM -- the store in the loop, swap loss + reconstruction",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004052752163261175,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.9593098958333334,
+    "probe_margin_aggregate": -0.01285807291666663,
+    "probe_margin_exact": -0.080810546875,
+    "recon_final": 0.016162119805812836,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 6.454680689573288,
+    "seed": 0,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        68608,
+        89600,
+        76032,
+        71936,
+        218112
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 2581.872275829315
+  },
+  "seed1:alone": {
+    "arm": "alone",
+    "arm_class": "CONTROL -- the encoder trained ALONE (the target's named control)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.0038759270682930946,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9637858072916666,
+    "probe_margin_aggregate": -0.0032145182291667407,
+    "probe_margin_exact": -0.02197265625,
+    "recon_final": 0.004468132741749287,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 2.8763860285282137,
+    "seed": 1,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        94464,
+        88576,
+        126208,
+        79360,
+        135680
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1150.5544114112854
+  },
+  "seed1:alone_wc": {
+    "arm": "alone_wc",
+    "arm_class": "CONTROL -- `alone` matched on WALL CLOCK instead of on steps",
+    "decoder_refit_loss_final": null,
+    "encoder_changed": true,
+    "gradient_steps": 883,
+    "images_seen": 56512,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9789225260416666,
+    "probe_margin_aggregate": 0.01192220052083326,
+    "probe_margin_exact": 0.06103515625,
+    "recon_final": 0.002539964858442545,
+    "scoreable_on_rows_3_4": false,
+    "seconds_per_step": 2.7874807747142096,
+    "seed": 1,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        94464,
+        88576,
+        126208,
+        79360,
+        135680
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 2461.345524072647
+  },
+  "seed1:loop_nosw": {
+    "arm": "loop_nosw",
+    "arm_class": "COLUMN -- unfrozen WITHOUT the swap loss (isolates the new ingredient)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004944740794599056,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.9534912109375,
+    "probe_margin_aggregate": -0.01350911458333337,
+    "probe_margin_exact": -0.07666015625,
+    "recon_final": 0.009779756888747215,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 3.6888562762737274,
+    "seed": 1,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        94464,
+        88576,
+        126208,
+        79360,
+        135680
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1475.542510509491
+  },
+  "seed1:loop_swap": {
+    "arm": "loop_swap",
+    "arm_class": "ARM -- the store in the loop, swap loss + reconstruction",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004520674701780081,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.9635416666666666,
+    "probe_margin_aggregate": -0.0034586588541667407,
+    "probe_margin_exact": -0.02734375,
+    "recon_final": 0.01338054146617651,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 6.346973457932473,
+    "seed": 1,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        94464,
+        88576,
+        126208,
+        79360,
+        135680
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 2538.789383172989
+  },
+  "seed2:alone": {
+    "arm": "alone",
+    "arm_class": "CONTROL -- the encoder trained ALONE (the target's named control)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004202231764793396,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9542236328125,
+    "probe_margin_aggregate": -0.00846354166666663,
+    "probe_margin_exact": -0.0546875,
+    "recon_final": 0.007356319110840559,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 3.0503646022081377,
+    "seed": 2,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        91904,
+        92928,
+        109056,
+        72448,
+        157952
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1220.145840883255
+  },
+  "seed2:alone_wc": {
+    "arm": "alone_wc",
+    "arm_class": "CONTROL -- `alone` matched on WALL CLOCK instead of on steps",
+    "decoder_refit_loss_final": null,
+    "encoder_changed": true,
+    "gradient_steps": 837,
+    "images_seen": 53568,
+    "n_params_optimised": 1944803,
+    "probe_absolute_DO_NOT_QUOTE": 0.9747721354166666,
+    "probe_margin_aggregate": 0.0120849609375,
+    "probe_margin_exact": 0.05810546875,
+    "recon_final": 0.002939845435321331,
+    "scoreable_on_rows_3_4": false,
+    "seconds_per_step": 2.8813065984058266,
+    "seed": 2,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        91904,
+        92928,
+        109056,
+        72448,
+        157952
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 2411.653622865677
+  },
+  "seed2:loop_nosw": {
+    "arm": "loop_nosw",
+    "arm_class": "COLUMN -- unfrozen WITHOUT the swap loss (isolates the new ingredient)",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004732232540845871,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.9455159505208334,
+    "probe_margin_aggregate": -0.01717122395833326,
+    "probe_margin_exact": -0.100341796875,
+    "recon_final": 0.01312417071312666,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 3.6176216250658033,
+    "seed": 2,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        91904,
+        92928,
+        109056,
+        72448,
+        157952
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.0,
+    "train_seconds": 1447.0486500263214
+  },
+  "seed2:loop_swap": {
+    "arm": "loop_swap",
+    "arm_class": "ARM -- the store in the loop, swap loss + reconstruction",
+    "cache": "ok",
+    "decoder_refit_loss_final": 0.004268843214958906,
+    "encoder_changed": true,
+    "gradient_steps": 400,
+    "images_seen": 25600,
+    "n_params_optimised": 2075875,
+    "probe_absolute_DO_NOT_QUOTE": 0.9635009765625,
+    "probe_margin_aggregate": 0.0008138020833333703,
+    "probe_margin_exact": -0.007080078125,
+    "recon_final": 0.013797735795378685,
+    "scoreable_on_rows_3_4": true,
+    "seconds_per_step": 6.379505624175072,
+    "seed": 2,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_modes_per_well": [
+        64,
+        64,
+        64,
+        64,
+        64
+      ],
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        91904,
+        92928,
+        109056,
+        72448,
+        157952
+      ],
+      "uniform_allocation": true
+    },
+    "swap_exact_final": 0.015625,
+    "train_seconds": 2551.8022496700287
+  }
+}
+[01:39:25] done in 0.0s
+[pipe s2 23:39:25Z] done: seed 2 clean

@@ -1,0 +1,12 @@
+# w23 seed5-diagnosis LOG
+- 2026-09-25T09:15:11Z start. Zero-fit only.
+- env: env_w3.sh + PYTHONPATH re-joined with ';' (trap 2); chlu.__file__ asserted inside worktree: OK
+- 09:19Z Q1 trace script written (scripts/w23_seed5_trace.py); running
+- 09:21Z Q1 trace ran (EXIT 0, 74s): hashes OK, reproduces 0.681818 + per-tuple. Wrong fact = displacement (emit N, truth S). Design estimable (null frac ~1e-15). L2-oracle on atoms decodes E (margin 0.04). Block swap tint x dir fixes. Next: per-code content audit + controls.
+- 09:23Z Q1b content audit: (1,3,0,2) span rel-resid 0.387, L2-oracle decodes (1,2,0,2) margin 0.04, CLU in-sample 0.666 on its 317 fit rows; Pearson(resid, in-sample) -0.858 over 23 codes. across_wells control right by accident (resid 0.935, 16/27 codes wrong). Also: pickup codes (1,0,*,*) in-sample 0.000 (492 fit rows). LOCUS = CONTENT. Next: cross-seed check.
+- 09:23Z choice: extend content test to seeds 0-4 (w19-maze-t-symmetric persist for 0-2, w21-maze-t-seed4 for 3-4) -- zero-fit read, answers 'seed-5 accident or general CLU fragility' (closest to an ICLR result).
+- 09:26Z Q1c all-seeds: seed-5 (1,3,0,2) is the ONLY code with >=20 fit rows whose L2-oracle decodes wrong across 6 seeds; same tuple (2,0,3,2) same code on seed 3: resid 0.197, margin 6.55, CLU 72/72. Starting Q2.
+- 09:29Z section-9 pair located: w21-maze-t-clu-improve/TABLES.md:105 = seeds-0-2 MEANS (CLU-REL value 0.500; transformer@80k 0.792). Q2 script written, running.
+- 09:32Z Q2 ran EXIT 0 (142s). All 6 seeds hash OK + value row reproduced. Brief numbers reproduce; 0.8676 = best incl '+rel'/10x-floats diagnostics (matched-only 0.7970). eq cols NOT all-zero on value rows; C4 (90 cols) all-zero in fit, head rows <=6.4e-10, read invariant (max|dz|=0). Loss = truth-names-4 rows 1503/12032 vs colour-free 11785/11968.
+- 09:33Z FINDINGS.md + W23-SEED5-DIAGNOSIS.json written. Committing + bundling.
+- 09:34Z committed 677e4e3 (branch whole), bundle w23-seed5-diagnosis.bundle created + git bundle verify OK. No background PIDs launched (PIDS.txt: none). Nothing written to w17-paper/figures/paper-visuals. DONE.

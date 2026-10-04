@@ -1,0 +1,408 @@
+{
+ "spec": {
+  "name": "WIDEN_SHUF",
+  "blocks": [
+   "p",
+   "b3"
+  ],
+  "half_channels": [],
+  "shuffle": [
+   "b3"
+  ],
+  "shuffle_seed": 20260919,
+  "D": 4096,
+  "n_atoms": 32,
+  "store_bytes": 524288,
+  "budget_bytes": 524288,
+  "byte_matched": true,
+  "dims_per_block": {
+   "p": 2048,
+   "b3": 2048
+  },
+  "bytes_formula": "n_atoms * D * 4",
+  "note": "THE LAUNDERING CONTROL for WIDEN. Identical D, N, bytes and marginal statistics; the b3 rows are permuted so the block carries NO information about the row it sits beside. A WIDEN gain that survives here is not content."
+ },
+ "set": "pairs",
+ "set_label": "the 3 pair corners (seeded subsample of 1176/corner, declared)",
+ "n_requests": 3528,
+ "seed": 0,
+ "grouping": {
+  "well_sizes": [
+   979,
+   1008,
+   1049,
+   530,
+   530
+  ],
+  "K": 5,
+  "method_used": "ward",
+  "n_dead_channels": 71,
+  "well_block_composition": [
+   {
+    "p": 979,
+    "b3": 0
+   },
+   {
+    "p": 1004,
+    "b3": 4
+   },
+   {
+    "p": 0,
+    "b3": 1049
+   },
+   {
+    "p": 14,
+    "b3": 516
+   },
+   {
+    "p": 51,
+    "b3": 479
+   }
+  ],
+  "mean_well_purity": 0.9746780473195568,
+  "global_block_fractions": {
+   "p": 0.5,
+   "b3": 0.5
+  },
+  "mixing": 0.050643905360886476,
+  "mixing_note": "1.0 = every well holds the global block mixture; 0.0 = every well is a single block. A low value means the joint store is two stores side by side."
+ },
+ "byte_ledger": {
+  "n_atoms_per_well": 32,
+  "dim": 4096,
+  "well_sizes": [
+   979,
+   1008,
+   1049,
+   530,
+   530
+  ],
+  "store_bytes": 524288,
+  "dtype": "float32",
+  "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+  "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72).",
+  "deployed_bytes": 524288,
+  "budget_bytes": 524288,
+  "what": "32 atoms x 4096 float32 = the store, content=['p', 'b3']"
+ },
+ "provenance": {
+  "spec": {
+   "name": "WIDEN_SHUF",
+   "blocks": [
+    "p",
+    "b3"
+   ],
+   "half_channels": [],
+   "shuffle": [
+    "b3"
+   ],
+   "shuffle_seed": 20260919,
+   "D": 4096,
+   "n_atoms": 32,
+   "store_bytes": 524288,
+   "budget_bytes": 524288,
+   "byte_matched": true,
+   "dims_per_block": {
+    "p": 2048,
+    "b3": 2048
+   },
+   "bytes_formula": "n_atoms * D * 4",
+   "note": "THE LAUNDERING CONTROL for WIDEN. Identical D, N, bytes and marginal statistics; the b3 rows are permuted so the block carries NO information about the row it sits beside. A WIDEN gain that survives here is not content."
+  },
+  "scales": {
+   "p": 0.7120305605301868,
+   "b3": 0.6097401877245198
+  },
+  "sigma": [
+   18.3900203704834,
+   15.465038299560547,
+   13.421671867370605,
+   9.141130447387695,
+   7.304128646850586
+  ],
+  "atom_selection": "kmeanspp",
+  "seed": 0,
+  "launch_mode": "clamp_atom",
+  "settling_steps": 0,
+  "read_mode": "state",
+  "sigma_rule": "nn_median",
+  "book_smoothing": 1.0
+ },
+ "rows": {
+  "full": {
+   "n": 3528,
+   "aggregate": 0.40079365079365087,
+   "exact_match": 0.0008503401360544217,
+   "per_factor": {
+    "floor_hue": 0.7468820861678005,
+    "wall_hue": 0.8117913832199547,
+    "object_hue": 0.2825963718820862,
+    "scale": 0.14710884353741496,
+    "shape": 0.27154195011337867,
+    "orientation": 0.14484126984126985
+   },
+   "n_distinct_index_tuples": 574,
+   "mean_confidence": 0.0577956847846508,
+   "launch_mode": "clamp_atom",
+   "per_corner": {
+    "pair-000": {
+     "n": 1176,
+     "aggregate": 0.39923469387755106,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.8222789115646258,
+      "wall_hue": 0.798469387755102,
+      "object_hue": 0.19727891156462585,
+      "scale": 0.13435374149659865,
+      "shape": 0.29081632653061223,
+      "orientation": 0.1522108843537415
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-001": {
+     "n": 1176,
+     "aggregate": 0.4108560090702948,
+     "exact_match": 0.0008503401360544217,
+     "per_factor": {
+      "floor_hue": 0.7678571428571429,
+      "wall_hue": 0.8401360544217688,
+      "object_hue": 0.18452380952380953,
+      "scale": 0.17687074829931973,
+      "shape": 0.3630952380952381,
+      "orientation": 0.1326530612244898
+     },
+     "distinct_valid_tuples": 1,
+     "distinct_valid_novel_tuples": 1,
+     "replayed_seen_tuples": 0,
+     "n_valid": 1
+    },
+    "pair-002": {
+     "n": 1176,
+     "aggregate": 0.3922902494331066,
+     "exact_match": 0.0017006802721088435,
+     "per_factor": {
+      "floor_hue": 0.6505102040816326,
+      "wall_hue": 0.7967687074829932,
+      "object_hue": 0.46598639455782315,
+      "scale": 0.13010204081632654,
+      "shape": 0.16071428571428573,
+      "orientation": 0.14965986394557823
+     },
+     "distinct_valid_tuples": 2,
+     "distinct_valid_novel_tuples": 2,
+     "replayed_seen_tuples": 0,
+     "n_valid": 2
+    }
+   }
+  },
+  "atom_mean_lookup": {
+   "n": 3528,
+   "aggregate": 0.26936885865457294,
+   "exact_match": 0.0,
+   "per_factor": {
+    "floor_hue": 0.2423469387755102,
+    "wall_hue": 0.6729024943310657,
+    "object_hue": 0.10997732426303855,
+    "scale": 0.1349206349206349,
+    "shape": 0.3679138321995465,
+    "orientation": 0.08815192743764172
+   },
+   "n_distinct_index_tuples": 574,
+   "mean_confidence": 0.0577956847846508,
+   "launch_mode": "posterior_mean",
+   "per_corner": {
+    "pair-000": {
+     "n": 1176,
+     "aggregate": 0.20932539682539686,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.21428571428571427,
+      "wall_hue": 0.6887755102040817,
+      "object_hue": 0.04081632653061224,
+      "scale": 0.14030612244897958,
+      "shape": 0.09268707482993198,
+      "orientation": 0.07908163265306123
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-001": {
+     "n": 1176,
+     "aggregate": 0.23681972789115646,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.24404761904761904,
+      "wall_hue": 0.6683673469387755,
+      "object_hue": 0.0858843537414966,
+      "scale": 0.12585034013605442,
+      "shape": 0.2108843537414966,
+      "orientation": 0.0858843537414966
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-002": {
+     "n": 1176,
+     "aggregate": 0.36196145124716556,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.2687074829931973,
+      "wall_hue": 0.6615646258503401,
+      "object_hue": 0.2032312925170068,
+      "scale": 0.13860544217687074,
+      "shape": 0.8001700680272109,
+      "orientation": 0.09948979591836735
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    }
+   }
+  },
+  "row_lookup": {
+   "n": 3528,
+   "aggregate": 0.24315003779289493,
+   "exact_match": 0.0,
+   "per_factor": {
+    "floor_hue": 0.34552154195011336,
+    "wall_hue": 0.41836734693877553,
+    "object_hue": 0.13803854875283447,
+    "scale": 0.1388888888888889,
+    "shape": 0.32454648526077096,
+    "orientation": 0.0935374149659864
+   },
+   "n_distinct_rows_returned": 30,
+   "launch_mode": "row_lookup",
+   "per_corner": {
+    "pair-000": {
+     "n": 1176,
+     "aggregate": 0.23384353741496597,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.320578231292517,
+      "wall_hue": 0.40901360544217685,
+      "object_hue": 0.1641156462585034,
+      "scale": 0.13690476190476192,
+      "shape": 0.28061224489795916,
+      "orientation": 0.09183673469387756
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-001": {
+     "n": 1176,
+     "aggregate": 0.24291383219954646,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.4005102040816326,
+      "wall_hue": 0.40476190476190477,
+      "object_hue": 0.05187074829931973,
+      "scale": 0.14625850340136054,
+      "shape": 0.3562925170068027,
+      "orientation": 0.0977891156462585
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-002": {
+     "n": 1176,
+     "aggregate": 0.25269274376417233,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.31547619047619047,
+      "wall_hue": 0.4413265306122449,
+      "object_hue": 0.19812925170068027,
+      "scale": 0.13350340136054423,
+      "shape": 0.336734693877551,
+      "orientation": 0.09098639455782313
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    }
+   }
+  },
+  "atoms_shuffled": {
+   "n": 3528,
+   "aggregate": 0.1439909297052154,
+   "exact_match": 0.0,
+   "per_factor": {
+    "floor_hue": 0.07171201814058957,
+    "wall_hue": 0.09438775510204081,
+    "object_hue": 0.12613378684807255,
+    "scale": 0.11848072562358276,
+    "shape": 0.3784013605442177,
+    "orientation": 0.07482993197278912
+   },
+   "n_distinct_index_tuples": 574,
+   "launch_mode": "atoms_shuffled",
+   "per_corner": {
+    "pair-000": {
+     "n": 1176,
+     "aggregate": 0.13279478458049887,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.0858843537414966,
+      "wall_hue": 0.0858843537414966,
+      "object_hue": 0.15476190476190477,
+      "scale": 0.12244897959183673,
+      "shape": 0.2763605442176871,
+      "orientation": 0.07142857142857142
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-001": {
+     "n": 1176,
+     "aggregate": 0.10685941043083902,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.03316326530612245,
+      "wall_hue": 0.07993197278911565,
+      "object_hue": 0.02891156462585034,
+      "scale": 0.11904761904761904,
+      "shape": 0.3078231292517007,
+      "orientation": 0.07227891156462585
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    },
+    "pair-002": {
+     "n": 1176,
+     "aggregate": 0.19231859410430838,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.09608843537414966,
+      "wall_hue": 0.11734693877551021,
+      "object_hue": 0.19472789115646258,
+      "scale": 0.11394557823129252,
+      "shape": 0.5510204081632653,
+      "orientation": 0.08078231292517007
+     },
+     "distinct_valid_tuples": 0,
+     "distinct_valid_novel_tuples": 0,
+     "replayed_seen_tuples": 0,
+     "n_valid": 0
+    }
+   }
+  }
+ },
+ "wall_seconds": 135.65310168266296
+}

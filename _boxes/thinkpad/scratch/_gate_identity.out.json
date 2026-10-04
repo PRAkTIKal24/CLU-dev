@@ -1,0 +1,85 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+{
+  "schema": "admission-gate-identity/1",
+  "rung": "A",
+  "n_wells": 5,
+  "sigma_head": [
+    4.634332180023193,
+    5.071405410766602,
+    9.182735443115234,
+    6.305441856384277,
+    5.100610733032227
+  ],
+  "wells": [
+    {
+      "well": 0,
+      "n_atoms": 64,
+      "sigma": 4.634332180023193,
+      "max_E_at_atoms": -33.3983039855957,
+      "min_E_at_atoms": -54.653568267822266
+    },
+    {
+      "well": 1,
+      "n_atoms": 64,
+      "sigma": 5.071405410766602,
+      "max_E_at_atoms": -40.861785888671875,
+      "min_E_at_atoms": -60.47782897949219
+    },
+    {
+      "well": 2,
+      "n_atoms": 64,
+      "sigma": 9.182735443115234,
+      "max_E_at_atoms": -225.5814666748047,
+      "min_E_at_atoms": -262.185791015625
+    },
+    {
+      "well": 3,
+      "n_atoms": 64,
+      "sigma": 6.305441856384277,
+      "max_E_at_atoms": -89.68307495117188,
+      "min_E_at_atoms": -118.92387390136719
+    },
+    {
+      "well": 4,
+      "n_atoms": 64,
+      "sigma": 5.100610733032227,
+      "max_E_at_atoms": -30.393728256225586,
+      "min_E_at_atoms": -65.74612426757812
+    }
+  ],
+  "max_over_all_wells": -30.393728256225586,
+  "identity_E_le_0_holds": true,
+  "certified_bound_d": [
+    {
+      "well": 0,
+      "N": 64,
+      "sigma_sqrt_2logN": 13.365663210066256
+    },
+    {
+      "well": 1,
+      "N": 64,
+      "sigma_sqrt_2logN": 14.62620591035727
+    },
+    {
+      "well": 2,
+      "N": 64,
+      "sigma_sqrt_2logN": 26.48350280303008
+    },
+    {
+      "well": 3,
+      "N": 64,
+      "sigma_sqrt_2logN": 18.18523337760942
+    },
+    {
+      "well": 4,
+      "N": 64,
+      "sigma_sqrt_2logN": 14.710435630235018
+    }
+  ],
+  "NOTE_store_energy_sums_over_wells": "gen_landscape.store_energy returns the SUM over wells (e = e - s**2*logsumexp per well, accumulated). The per-well gate must use _well_logk(store, X, sigma)[k] and apply -sigma_k**2 * logsumexp itself."
+}

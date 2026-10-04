@@ -1,0 +1,70 @@
+==============================================================================
+⛔⛔ SCORED RUN — eval_b IS ABOUT TO BE READ.  1 of 3 for this target.
+    PREREG : C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-composition/iter2r/PREREG-hub-composition-2-1.md
+    object : K=32 M=26 rank=16 ridge=10.0 pairs=['floor_huexscale', 'object_huexscale']
+    seed   : 0   (⛔ seed 0 only on this box — seeds 1/2 are cache-blocked)
+==============================================================================
+[15:29:15] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[15:29:15]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[15:29:15]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[15:29:17] B: 72 rows · pool 32768 rows / 32768 distinct tuples
+[15:30:31]   store K=32 M=26 built and cached -> store_s0_cB_K32_M26_n32768.npz
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:30:35] clu_linear             tuples_valid_novel= 42  agg=0.9167  distinct= 55  exact=0.5833  bytes=469,504
+[15:30:38] knn_proto              tuples_valid_novel= 12  agg=0.8565  distinct= 56  exact=0.1667  bytes=475,136
+[15:30:40] store_removed_zero     tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=469,504
+[15:30:43] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1759  distinct= 65  exact=0.0000  bytes=469,504
+[15:30:45] head_additive_only     tuples_valid_novel= 11  agg=0.8287  distinct= 36  exact=0.1528  bytes=406,016
+[15:31:09] lookup_feat            tuples_valid_novel=  0  agg=0.3750  distinct=  3  exact=0.0000  bytes=466,944
+[15:31:11] lookup_tuple           tuples_valid_novel=  0  agg=0.3565  distinct=  5  exact=0.0000  bytes=466,944
+[15:31:14] const_mu               tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=8,192
+[15:31:16] ceiling                tuples_valid_novel= 67  agg=0.9861  distinct= 70  exact=0.9306  bytes=0
+[15:31:16] R1 clu_linear             Δ=+0.4167 agg (+30.00 tuples) CI95 [+20.27, +39.73] tuples McNemar p=2.272e-07 -> WIN
+[15:31:16] R1 store_removed_zero     Δ=-0.1667 agg (-12.00 tuples) CI95 [-18.35, -5.65] tuples McNemar p=0.0004883 -> LOSS
+[15:31:16] R1 store_removed_shuffle  Δ=-0.1667 agg (-12.00 tuples) CI95 [-18.35, -5.65] tuples McNemar p=0.0004883 -> LOSS
+[15:31:16] R1 head_additive_only     Δ=-0.0139 agg (-1.00 tuples) CI95 [-7.02, +5.02] tuples McNemar p=1 -> TIE
+[15:31:16] R1 lookup_feat            Δ=-0.1667 agg (-12.00 tuples) CI95 [-18.35, -5.65] tuples McNemar p=0.0004883 -> LOSS
+[15:31:16] R1 lookup_tuple           Δ=-0.1667 agg (-12.00 tuples) CI95 [-18.35, -5.65] tuples McNemar p=0.0004883 -> LOSS
+[15:31:16] R1 const_mu               Δ=-0.1667 agg (-12.00 tuples) CI95 [-18.35, -5.65] tuples McNemar p=0.0004883 -> LOSS
+[15:31:16] ⭐ SCORED RUN COMPLETE in 124.8s -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-composition\iter2r\dev\SCORED_B_seed0.json

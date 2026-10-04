@@ -1,0 +1,62 @@
+=== replication done; running the distinct-output diagnostic ===
+  arm factor_aligned_balanced: already fitted, loading
+  arm landscape_removed: already fitted, loading
+  cont_mlp: hidden=248 params=573,440 target=572,672 (100.1% of matched)
+    step 1/4000 mse=0.50741 (1s)
+    step 501/4000 mse=0.04684 (11s)
+    step 1001/4000 mse=0.02691 (23s)
+    step 1501/4000 mse=0.01902 (33s)
+    step 2001/4000 mse=0.01586 (44s)
+    step 2501/4000 mse=0.01379 (56s)
+    step 3001/4000 mse=0.01260 (66s)
+    step 3501/4000 mse=0.01168 (76s)
+    step 4000/4000 mse=0.01085 (87s)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[div] mlp refit 573,440 params, mse 0.0108
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+[div] linear_span_ARM                  readout_sd=   5.479  distinct_tuples= 4028  per_corner_mean= 57.70  distinct_feature_rows= 4073
+[div] landscape_removed_CONTROL        readout_sd=   6.879  distinct_tuples=    1  per_corner_mean=  1.00  distinct_feature_rows=    1
+[div] lookup_argmax_FLOOR              readout_sd=  10.621  distinct_tuples= 3245  per_corner_mean= 52.97  distinct_feature_rows= 3586
+[div] cont_mlp_ARMMATCHED_RIVAL        readout_sd=   5.064  distinct_tuples= 4049  per_corner_mean= 57.93  distinct_feature_rows= 4061
+[div] wrote diversity_s0.json in 598s

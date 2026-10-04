@@ -1,0 +1,42 @@
+{
+ "what": "Artefacts that shipped entry points need and that are NOT on this machine (batmac). Nothing was substituted for any of them. Paths are the old evidence/stage layout, for the harvester; the package itself never names them.",
+ "items": [
+  {
+   "artefact": "frozen-encoder feature caches, seeds 1 and 2 (generation 2): cache_generation2/shapes3d_recon/seed_1/features.npy, seed_2/features.npy (1,966,080,128 B each)",
+   "expected_sha256": {
+    "seed_1": "86b44d0f1e6470e7f1e0e0c37c961974b8dcf8a083546c0e6600d71d53eb5b08",
+    "seed_2": "3ab14e583c3f500da060638cb9255072c20cf4053c212321d797469a080d3a3a"
+   },
+   "needed_for": "every Shapes3D number at seeds 1 and 2 (Tabs. t7, ledger-kstar, ladder, del, k5, kcurve3, rivals-del, rivals-del-seeds, lace-poe; Figs. ladder, crossover, deletion)",
+   "status_here": "only seed_0 is staged (stage/outputs/spoke-a-rivals/cache_generation2/shapes3d_recon/seed_0); the proof therefore reproduces seed-0 cells only STILL NOT AVAILABLE after AMENDMENT-1 (the Hub will not stage them; rebuildable with --stage cache2 from the shipped encoder)"
+  },
+  {
+   "artefact": "the frozen-encoder run per seed (the 'bridge'): encoder.pkl, probe.pkl, bridge_manifest.json, feature_cache.json (generation 1), feature_rows.npy",
+   "source_on_origin_machine": "outputs/gen-feature-bridge/runs/shapes3d_recon/seed_{0,1,2}/ (only the JSON manifests are in evidence/outputs/gen-feature-bridge here; the .pkl and .npy files are not)",
+   "sizes": "encoder 428,576 parameters (~1.7 MB float32) per seed, probe small; would be shippable under weights/ if the Head approves",
+   "needed_for": "(i) rebuilding a feature cache from pixels (python -m nclu.experiments.baseline_suite --stage cache2); (ii) the earlier baseline set and the lookup-table floor, whose builder (nclu.experiments.baseline_suite --stage table / learners) loads the probe and the bridge manifests; (iii) Tab. gentable-kstar (nclu.experiments.exp_gen_cell)",
+   "status_here": "RESOLVED by AMENDMENT-1: staged; converted to array-only files and shipped under weights/encoder/ (hashes verified)"
+  },
+  {
+   "artefact": "branch w15/crossover-seeds (scripts/w15_crossover_seeds.py, w15_crossover_report.py, w15_crossover_figure.py)",
+   "needed_for": "Tab. kcurve3 aggregation and Fig. crossover input (CROSSOVER-3SEED.json). The sweep it calls (scripts/shapes_sweep_k.py) ships; the three-seed aggregator does not",
+   "status_here": "RESOLVED by AMENDMENT-1: branch in the clone; shipped as scripts/shapes_sweep_k_{seeds,report,figure}.py"
+  },
+  {
+   "artefact": "branch w15/coverage-control (scripts/w15_coverage_leg.py, w15_coverage_report.py)",
+   "needed_for": "the coverage-control numbers in the caption of Tab. ladder (validation leg)",
+   "status_here": "RESOLVED by AMENDMENT-1: branch in the clone; shipped as scripts/shapes_coverage_control{,_report}.py"
+  },
+  {
+   "artefact": "branch w15/lace-poe-rows (chlu/experiments/exp_gen_cell_kstar.py; scripts/w15_lace_poe_gencell.py, w15_lace_poe_table.py)",
+   "needed_for": "the K* row of Tab. gentable-kstar (the generation-table registry entry for the K* object)",
+   "status_here": "RESOLVED by AMENDMENT-1: branch in the clone; K* registry entry shipped (nclu/experiments/gen_cell_kstar.py, scripts/shapes_generation_table.py)"
+  },
+  {
+   "artefact": "branch w15/bar-d-score and the GPU encoder-loop leg",
+   "needed_for": "Tab. bard-gpu",
+   "status_here": "RESOLVED by AMENDMENT-1: branch in the clone; shipped (nclu/experiments/encoder_loop.py, scripts/encoder_loop_{report,criteria}.py); GPU leg not run"
+  }
+ ],
+ "amended": "2026-09-26, after AMENDMENT-1: only the generation-2 caches of seeds 1 and 2 remain unavailable"
+}

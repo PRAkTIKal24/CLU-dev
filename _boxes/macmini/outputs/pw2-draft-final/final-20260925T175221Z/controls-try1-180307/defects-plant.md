@@ -1,0 +1,25 @@
+- rendered `??` (undefined reference): 0; `[?]` (undefined citation): 0
+- absolute machine paths in the .tex (code and comments): 1
+  - l.212 `has not seen~\citep{valevski_diffusion_2025}, and trusted with the answer. We name three properties and use them throughout. the the planted % /Users/someone/x`
+- rendered title lines (page 1, between the running head and the author line): 2: `NAIVE-CLU: DELETABLECOMPOSITIONAL` / `GENERATION ON AFROZENENCODER`
+- doubled words in the rendered text (page, context): 17
+  - p.5 `t hue 0.3 0.3 ✓ scale 1.11 1.11 ✓ shape sphere sphere ✓ orientation +21° +21°`
+  - p.11 `204,800 for the MLP and the continuous MLP MLP (20,480) 3 22.450 / 25.2`
+  - p.38 `l ↑ − ✗ illegal ✗ legal ↑ − ✗ illegal ✗ illegal illegal ✓ illegal ✓ illegal ✓ il`
+  - p.38 `legal ✗ legal · + ✗ legal ↓ ✗ legal · ✓ illegal illegal ✓ illegal ✓ illegal ✓ il`
+  - p.38 `Transformer landscape removed landscape shuffled shuffled across wells random atom`
+  - p.39 `→ ✗ legal ↑ legal ← ✓ legal ← illegal ✗ illegal illegal ✓ illegal illegal ✗ lega`
+  - p.39 `← ✓ legal ← illegal ✗ illegal illegal ✓ illegal illegal ✗ legal · legal ↓ ✓ lega`
+  - p.39 `✗ legal · illegal ✓ illegal legal ←− ✗ illegal illegal ✓ illegal legal ←− ✗ ill`
+  - p.40 `✗ illegal legal ← ✓ legal ← legal ↑− ✗ illegal illegal ✓ illegal illegal ✗ ille`
+  - p.40 `✓ legal ← legal ↑− ✗ illegal illegal ✓ illegal illegal ✗ illegal illegal ✓ ille`
+  - p.40 `− ✗ illegal illegal ✓ illegal illegal ✗ illegal illegal ✓ illegal legal ←− ✗ ill`
+  - p.40 `✗ illegal illegal ✓ illegal legal ←− ✗ illegal illegal ✗ legal · legal → ✓ lega`
+  - p.40 `✗ legal ← legal ← ✓ legal ← legal ←− ✗ illegal illegal ✓ illegal legal ↓− ✗ leg`
+  - p.40 `✓ illegal legal ↓− ✗ legal ←− illegal ✓ illegal illegal ✗ illegal legal → ✓ lega`
+  - p.40 `✗ legal →− illegal ✓ illegal legal ←− ✗ illegal illegal ✓ illegal legal ←− ✗ ill`
+  - p.40 `✗ illegal illegal ✓ illegal legal ←− ✗ illegal illegal ✓ illegal legal ←− ✗ leg`
+  - p.41 `Transformer landscape removed landscape shuffled shuffled across wells random atom`
+- doubled words in the .tex source (comments and macro names removed; prose, captions and tables): 1
+  - l.212 `ties and use them throughout. the the planted {Rule val`
+- forced `\\` line breaks outside tables, figures and the title: 0

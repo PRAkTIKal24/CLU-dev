@@ -1,0 +1,107 @@
+condition=test seed=2 K=32 corners=109 stage=full cache={'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+  red AND <shape> rows in the fit pool: {'cube': 0, 'cylinder': 0, 'sphere': 5511, 'oblong': 5533}
+  scope value            : 11,044 of 131,072 fit rows (8.43 %)
+  scope conjunction      : 0 of 131,072 fit rows (0.00 %)
+  scope conjunction_live : 5,511 of 131,072 fit rows (4.20 %)
+  scope item             : 1,311 of 131,072 fit rows (1.00 %)
+  reusing the fitted arm from C:\chlu\outputs\w12b-nr6-and-kstar\scored\run3_seed2_K32\arm.pkl (K=32, A=63)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    BEFORE deletion                        109 corners in 294s
+  BEFORE reproduces the scored row: max dev 0.0
+    DEGRADED landscape_removed             109 corners in 219s
+  SHAPE (landscape_removed) sphere excess +0.6709
+    DEGRADED random_atoms                  109 corners in 274s
+  SHAPE (random_atoms) sphere excess -0.1338
+
+===== SCOPE VALUE -- 11,044 rows =====
+  OUR ADAPTATION  1.3085s  2,078,464 B rewritten  0 data rows read
+  EXACTNESS (store-scoped)  max|mode dev| 2.011e-08  max subspace dist 3.408e-08  ranks agree True  (refit-without took 14.4s, read 120,028 rows)
+    AFTER value                            109 corners in 229s
+
+===== SCOPE CONJUNCTION -- 0 rows =====
+  OUR ADAPTATION  0.0432s  2,078,464 B rewritten  0 data rows read
+  EXACTNESS (store-scoped)  max|mode dev| 0.000e+00  max subspace dist 0.000e+00  ranks agree True  (refit-without took 13.3s, read 131,072 rows)
+    AFTER conjunction                      109 corners in 183s
+
+===== SCOPE CONJUNCTION_LIVE -- 5,511 rows =====
+  OUR ADAPTATION  0.8311s  2,078,464 B rewritten  0 data rows read
+  EXACTNESS (store-scoped)  max|mode dev| 6.253e-08  max subspace dist 1.086e-07  ranks agree True  (refit-without took 11.5s, read 125,561 rows)
+    AFTER conjunction_live                 109 corners in 300s
+
+===== SCOPE ITEM -- 1,311 rows =====
+  OUR ADAPTATION  0.3837s  2,078,464 B rewritten  0 data rows read
+  EXACTNESS (store-scoped)  max|mode dev| 3.162e-08  max subspace dist 6.417e-08  ranks agree True  (refit-without took 18.6s, read 129,761 rows)
+    AFTER item                             109 corners in 316s
+
+===== RIVAL COLUMN, SCOPE VALUE (89 survivor corners) =====
+    mlp__retrain_without__value-object_hue-0 89 corners in 335s
+    mlp__retrain_without__value-object_hue-0             novel/corner    6.697
+    lstm__retrain_without__value-object_hue-0 89 corners in 349s
+    lstm__retrain_without__value-object_hue-0            novel/corner    8.449
+    transformer__retrain_without__value-object_hue-0 89 corners in 343s
+    transformer__retrain_without__value-object_hue-0     novel/corner    2.281
+    cont_mlp__retrain_without__value-object_hue-0 89 corners in 335s
+    cont_mlp__retrain_without__value-object_hue-0        novel/corner    0.112
+
+===== RIVAL COLUMN, SCOPE CONJUNCTION_LIVE (109 survivor corners) =====
+    mlp__retrain_without__conj-object_hue0-shape2 109 corners in 407s
+    mlp__retrain_without__conj-object_hue0-shape2        novel/corner    7.284
+    lstm__retrain_without__conj-object_hue0-shape2 109 corners in 344s
+    lstm__retrain_without__conj-object_hue0-shape2       novel/corner    7.982
+    transformer__retrain_without__conj-object_hue0-shape2 109 corners in 447s
+    transformer__retrain_without__conj-object_hue0-shape2 novel/corner    2.211
+    cont_mlp__retrain_without__conj-object_hue0-shape2 109 corners in 350s
+    cont_mlp__retrain_without__conj-object_hue0-shape2   novel/corner    0.055
+
+===== RIVAL COLUMN, SCOPE ITEM (109 survivor corners) =====
+    mlp__retrain_without__item-0.01        109 corners in 222s
+    mlp__retrain_without__item-0.01                      novel/corner    7.789
+    lstm__retrain_without__item-0.01       109 corners in 261s
+    lstm__retrain_without__item-0.01                     novel/corner    9.312
+    transformer__retrain_without__item-0.01 109 corners in 331s
+    transformer__retrain_without__item-0.01              novel/corner    3.037
+    cont_mlp__retrain_without__item-0.01   109 corners in 307s
+    cont_mlp__retrain_without__item-0.01                 novel/corner    0.055
+
+wrote C:\chlu\outputs\w15-single-design-seeds\deletion\test_seed2_K32\deletion.json

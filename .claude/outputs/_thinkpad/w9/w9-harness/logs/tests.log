@@ -1,0 +1,34 @@
+judge -- the dial
+  no float machinery in the judge source                     PASS
+  judge never touches a float (tracing ints)                 PASS
+  judge == independent replay on every route                 PASS  80 routes
+  optimum / truncation / budget / mutants crisp              PASS
+  the float tracer is not vacuous (it fires on a float)      PASS
+  budget is an exact integer boundary (L ok, L-1 rejected)   PASS
+stepper -- the judge's twin
+  stepper verdict == judge verdict on random routes          PASS  48 routes
+  every oracle route replays to the goal                     PASS
+encoder -- shared, and shared means shared
+  image is binary in every channel                           PASS
+  encoder loss sees no actions/labels                        PASS
+  encoder loss sees no judge                                 PASS
+  encoder loss takes exactly (model, images)                 PASS  ['X', 'ae', 'dec', 'enc', 'jax', 'logits', 'mean', 'optax', 'sigmoid_binary_cross_entropy', 'vmap', 'x']
+  frozen encoder is deterministic                            PASS
+observation -- one vector, every arm
+  obs_dim matches the vector actually produced               PASS  431
+  obs is finite                                              PASS
+  pocket state changes the observation                       PASS
+arms -- one head, matched counts
+  every arm's action head has the same shape                 PASS  {'mlp': 165, 'lstm': 165, 'transformer': 165}
+  every arm's action head starts from identical weights      PASS
+  trunk parameter counts matched within 2%                   PASS  spread 1.396%  [29951, 29533, 29897]
+impossible examples -- exactly certified, and unseen
+  every impossible instance is certified impossible          PASS  []
+  random search finds no accepted route on impossible set    PASS
+  impossible seeds disjoint from the arms' seeds             PASS
+reported columns -- reported, never gates
+  every blind planner produced a column                      PASS
+  the oracle column is 1.0 under the exact judge             PASS  1.0000
+  no abort/raise keyed on a column value                     PASS
+
+0 checks failed

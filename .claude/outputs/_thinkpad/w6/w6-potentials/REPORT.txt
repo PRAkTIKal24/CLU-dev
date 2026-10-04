@@ -1,0 +1,210 @@
+
+==============================================================================
+LEG C:/chlu/outputs/w6-potentials/test/s0   condition=test seed=0 corners=49 rows=64335
+  field sha 697d60dfa3e4b70c  ledger 524,288 B  matches_budget=True
+  integrator check max|diff| = 1.885e-08 (PASSED=True)
+  Hessian+D14 finite-difference max|resid| = 3.519e-11   [B6]
+  TRAP CHECK well_sigma/nn_median: w0=0.805, w1=0.895, w2=0.900, w3=1.759, w4=1.207   (1.000 would mean the knn_density length scale was inherited)
+
+  [B1] median over 49 corners of |log10 n_meas/n_pred_CRR| = 0.0433   BAR <= 0.10   PASS
+       (factor 1.105x at the median corner; IQR 0.0433-0.0433)
+  [B2] paired vs FIT1 (n = C/(eps mu)^2, C fitted on these rows, C = 0.2007):
+       mean delta = -0.5968   corners with delta<0: 49/49   BAR: mean < 0 AND >= 40/49   PASS
+       median |log10 err|: CRR 0.0433  vs  FIT1 0.6401
+  [B2b] paired vs FIT2 (n = C constant, C = 123):  mean delta = -0.5920   corners better: 49/49
+  [B1-resolved] same, restricted to cells with n_pred >= 10 (quantisation < 0.04): median over 49 corners = 0.0402   (context, never the bar)
+
+  CRR error resolved by h/h* (the exceptional point is h/h* = 1; V2 App. C
+  says the map is DEFECTIVE there, so the envelope is not a pure exponential):
+         h/h* bucket      n  median|log10|      p90  median n_pred
+               < 0.1   1668         0.0008   0.0018         1847.6
+           0.1 - 0.5   8177         0.0264   0.0428          183.8
+             0.5 - 2  14452         0.1482   0.3825           45.0
+              2 - 10   7554         0.0454   0.2625           68.6
+                > 10   9642         0.0262   0.0593          276.6
+    instrument floor on an EXACT quadratic: median 0.0349, p90 0.0749, max 0.1601
+      (worst cell at the exceptional point, median near it 0.05399530586991451)
+
+  bands (live, main grid, field): overdamped=16812, underdamped=24681   censored=5327
+  [B3] underdamped d log10 n_meas / d log10 mu^2, fitted PER GAMMA over 9 gammas:
+       signed median -0.0238;  |slope| median 0.0357  max 59.1158
+       BAR <= 0.10 read on the MEDIAN over gammas: PASS   (on the max it would be MISS -- both printed, neither hidden)
+          gamma      n  distinct mu2  log10 mu2 span       slope
+          0.002   3574           101          6.3283     -0.0178
+          0.005   2940            84          5.1332      0.0213
+          0.010   2892            83          4.6954      0.0357
+          0.020   2839            80          4.3283     -0.0271
+          0.050   2153            60          3.4512     -0.0238
+          0.100   1422            41          2.6954      0.0518
+          0.200   1124            32          2.2144     -0.1536
+       [correction, NOT the bar] restricted to gammas spanning >= 0.5 decade of mu^2: |slope| median 0.0271  max 0.1536  over 7 gammas
+       |log10 n_meas / (2ln2/-ln(1-gamma))| median = 0.0378   BAR <= 0.10   PASS
+
+  V-curves: 3675 (2988 with gamma_crit bracketed by the grid)
+  [B4] measured argmin / gamma_crit (D16 small-h form, 2 eps mu): median 0.3362  IQR 0.316-0.499   BAR within factor 2   MISS
+       same against the EXACT inversion of h*(gamma) = h (of which 2 eps mu is the small-h limit): median 0.3782  IQR 0.321-0.500
+       the PREDICTED curve's OWN argmin on the same grid, over gamma*_exact: median 1.0000
+         (1.00 means the gamma grid resolves the critical point, so any gap above is the ROLLOUT disagreeing with the law -- not spacing)
+  [B5] D17 overdamped  : n=932  slope measured +1.1368  derived +1.1385  naive +1
+       mean |meas - derived| = 0.0038   mean |meas - naive| = 0.1436   DERIVED WINS
+  [B5] D18 underdamped: n=2695  slope measured -1.1090  derived -1.0050  naive -1
+       mean |meas - derived| = 0.1368   mean |meas - naive| = 0.1417   DERIVED WINS
+
+  instruments overdamped   n=16812  envelope/first-crossing median =    1.000   |log10 err| envelope 0.0407 vs first-crossing 0.0407
+  instruments underdamped  n=19585  envelope/first-crossing median =    1.000   |log10 err| envelope 0.0613 vs first-crossing 0.2714
+  instruments deep underdamped (h/h* > 5) n= 6712  envelope/first-crossing median =    9.239   |log10 err| envelope 0.0284 vs first-crossing 1.0088
+       (V2 Fig. 1: the two coincide overdamped and DIVERGE above the exceptional point)
+
+  arm                     n   median|log10 CRR err|   hess_eig range        modes  degenerate
+  field                  41493                0.0435   [0.0736, 1.0000]        15  False
+  landscape_removed       3420                0.0435   [1.0000, 1.0000]        15  True
+  landscape_shuffled      3408                0.0428   [0.6400, 1.0000]        15  False
+  pca_tensor              3416                0.0434   [0.9527, 0.9999]        15  False
+       (landscape_removed: Cov_w = 0, so E = ||q-x*||^2/2 exactly and every
+        direction carries the SAME trivial curvature -- the store contributes
+        no structure at all.  That is the charter C.2 collapse, as a measurement.)
+
+  aux amp=0.05  (amp/sigma~0.009) alpha=0    n= 687  median|log10 CRR err| = 0.0227
+  aux amp=0.05  (amp/sigma~0.009) alpha=1    n= 780  median|log10 CRR err| = 0.0536
+  aux amp=0.5   (amp/sigma~0.089) alpha=0    n= 687  median|log10 CRR err| = 0.0220
+  aux amp=0.5   (amp/sigma~0.089) alpha=1    n= 780  median|log10 CRR err| = 0.0533
+
+==============================================================================
+LEG C:/chlu/outputs/w6-potentials/test/s1   condition=test seed=1 corners=49 rows=64320
+  field sha 608fc3da332b972d  ledger 524,288 B  matches_budget=True
+  integrator check max|diff| = 1.885e-08 (PASSED=True)
+  Hessian+D14 finite-difference max|resid| = 1.202e-10   [B6]
+  TRAP CHECK well_sigma/nn_median: w0=0.821, w1=0.882, w2=0.887, w3=1.406, w4=1.127   (1.000 would mean the knn_density length scale was inherited)
+
+  [B1] median over 49 corners of |log10 n_meas/n_pred_CRR| = 0.0435   BAR <= 0.10   PASS
+       (factor 1.105x at the median corner; IQR 0.0435-0.0435)
+  [B2] paired vs FIT1 (n = C/(eps mu)^2, C fitted on these rows, C = 0.206):
+       mean delta = -0.5796   corners with delta<0: 49/49   BAR: mean < 0 AND >= 40/49   PASS
+       median |log10 err|: CRR 0.0435  vs  FIT1 0.6232
+  [B2b] paired vs FIT2 (n = C constant, C = 123.2):  mean delta = -0.6065   corners better: 49/49
+  [B1-resolved] same, restricted to cells with n_pred >= 10 (quantisation < 0.04): median over 49 corners = 0.0411   (context, never the bar)
+
+  CRR error resolved by h/h* (the exceptional point is h/h* = 1; V2 App. C
+  says the map is DEFECTIVE there, so the envelope is not a pure exponential):
+         h/h* bucket      n  median|log10|      p90  median n_pred
+               < 0.1   1568         0.0006   0.0008         1848.4
+           0.1 - 0.5   8281         0.0264   0.0434          183.9
+             0.5 - 2  14259         0.1451   0.3827           44.1
+              2 - 10   7448         0.0459   0.2624           68.6
+                > 10   9849         0.0266   0.0598          276.6
+    instrument floor on an EXACT quadratic: median 0.0349, p90 0.0749, max 0.1601
+      (worst cell at the exceptional point, median near it 0.05399530586991451)
+
+  bands (live, main grid, field): overdamped=17199, underdamped=24206   censored=5070
+  [B3] underdamped d log10 n_meas / d log10 mu^2, fitted PER GAMMA over 7 gammas:
+       signed median -0.0199;  |slope| median 0.0282  max 0.1612
+       BAR <= 0.10 read on the MEDIAN over gammas: PASS   (on the max it would be MISS -- both printed, neither hidden)
+          gamma      n  distinct mu2  log10 mu2 span       slope
+          0.002   3577            73          6.2971     -0.0199
+          0.005   2940            60          4.5644      0.0282
+          0.010   2940            60          4.5644      0.0311
+          0.020   2842            58          4.2971     -0.0279
+          0.050   2205            45          3.5644     -0.0263
+          0.100   1470            30          2.5644      0.0370
+          0.200   1225            25          2.2971     -0.1612
+       [correction, NOT the bar] restricted to gammas spanning >= 0.5 decade of mu^2: |slope| median 0.0282  max 0.1612  over 7 gammas
+       |log10 n_meas / (2ln2/-ln(1-gamma))| median = 0.0378   BAR <= 0.10   PASS
+
+  V-curves: 3675 (2940 with gamma_crit bracketed by the grid)
+  [B4] measured argmin / gamma_crit (D16 small-h form, 2 eps mu): median 0.3301  IQR 0.316-0.483   BAR within factor 2   MISS
+       same against the EXACT inversion of h*(gamma) = h (of which 2 eps mu is the small-h limit): median 0.3784  IQR 0.326-0.500
+       the PREDICTED curve's OWN argmin on the same grid, over gamma*_exact: median 1.0000
+         (1.00 means the gamma grid resolves the critical point, so any gap above is the ROLLOUT disagreeing with the law -- not spacing)
+  [B5] D17 overdamped  : n=980  slope measured +1.1367  derived +1.1385  naive +1
+       mean |meas - derived| = 0.0042   mean |meas - naive| = 0.1430   DERIVED WINS
+  [B5] D18 underdamped: n=2695  slope measured -1.1090  derived -1.0050  naive -1
+       mean |meas - derived| = 0.1277   mean |meas - naive| = 0.1324   DERIVED WINS
+
+  instruments overdamped   n=17199  envelope/first-crossing median =    1.000   |log10 err| envelope 0.0427 vs first-crossing 0.0427
+  instruments underdamped  n=19208  envelope/first-crossing median =    1.000   |log10 err| envelope 0.0600 vs first-crossing 0.2674
+  instruments deep underdamped (h/h* > 5) n= 6860  envelope/first-crossing median =    9.254   |log10 err| envelope 0.0296 vs first-crossing 1.0180
+       (V2 Fig. 1: the two coincide overdamped and DIVERGE above the exceptional point)
+
+  arm                     n   median|log10 CRR err|   hess_eig range        modes  degenerate
+  field                  41405                0.0435   [0.2727, 1.0000]        15  False
+  landscape_removed       3420                0.0435   [1.0000, 1.0000]        15  True
+  landscape_shuffled      3416                0.0428   [0.7446, 1.0000]        15  False
+  pca_tensor              3420                0.0434   [0.9797, 0.9999]        15  False
+       (landscape_removed: Cov_w = 0, so E = ||q-x*||^2/2 exactly and every
+        direction carries the SAME trivial curvature -- the store contributes
+        no structure at all.  That is the charter C.2 collapse, as a measurement.)
+
+  aux amp=0.05  (amp/sigma~0.009) alpha=0    n= 687  median|log10 CRR err| = 0.0218
+  aux amp=0.05  (amp/sigma~0.009) alpha=1    n= 780  median|log10 CRR err| = 0.0488
+  aux amp=0.5   (amp/sigma~0.086) alpha=0    n= 687  median|log10 CRR err| = 0.0228
+  aux amp=0.5   (amp/sigma~0.086) alpha=1    n= 780  median|log10 CRR err| = 0.0455
+
+==============================================================================
+LEG C:/chlu/outputs/w6-potentials/test/s2   condition=test seed=2 corners=49 rows=64320
+  field sha fca1c4a89befc12e  ledger 524,288 B  matches_budget=True
+  integrator check max|diff| = 1.885e-08 (PASSED=True)
+  Hessian+D14 finite-difference max|resid| = 2.699e-11   [B6]
+  TRAP CHECK well_sigma/nn_median: w0=0.829, w1=0.870, w2=0.880, w3=1.276, w4=0.980   (1.000 would mean the knn_density length scale was inherited)
+
+  [B1] median over 49 corners of |log10 n_meas/n_pred_CRR| = 0.0431   BAR <= 0.10   PASS
+       (factor 1.104x at the median corner; IQR 0.0431-0.0431)
+  [B2] paired vs FIT1 (n = C/(eps mu)^2, C fitted on these rows, C = 0.2012):
+       mean delta = -0.5982   corners with delta<0: 49/49   BAR: mean < 0 AND >= 40/49   PASS
+       median |log10 err|: CRR 0.0431  vs  FIT1 0.6413
+  [B2b] paired vs FIT2 (n = C constant, C = 124.8):  mean delta = -0.5993   corners better: 49/49
+  [B1-resolved] same, restricted to cells with n_pred >= 10 (quantisation < 0.04): median over 49 corners = 0.0403   (context, never the bar)
+
+  CRR error resolved by h/h* (the exceptional point is h/h* = 1; V2 App. C
+  says the map is DEFECTIVE there, so the envelope is not a pure exponential):
+         h/h* bucket      n  median|log10|      p90  median n_pred
+               < 0.1   1665         0.0008   0.0015         1848.8
+           0.1 - 0.5   8232         0.0264   0.0433          183.8
+             0.5 - 2  14405         0.1417   0.3828           45.2
+              2 - 10   7401         0.0435   0.2454           88.4
+                > 10   9655         0.0262   0.0691          276.6
+    instrument floor on an EXACT quadratic: median 0.0349, p90 0.0749, max 0.1601
+      (worst cell at the exceptional point, median near it 0.05399530586991451)
+
+  bands (live, main grid, field): overdamped=17002, underdamped=24356   censored=5269
+  [B3] underdamped d log10 n_meas / d log10 mu^2, fitted PER GAMMA over 8 gammas:
+       signed median -0.0211;  |slope| median 0.0343  max 1883.2934
+       BAR <= 0.10 read on the MEDIAN over gammas: PASS   (on the max it would be MISS -- both printed, neither hidden)
+          gamma      n  distinct mu2  log10 mu2 span       slope
+          0.002   3577            87          6.3659     -0.0211
+          0.005   2940            72          5.0350      0.0175
+          0.010   2892            71          4.6778      0.0369
+          0.020   2842            69          4.3659     -0.0316
+          0.050   2156            52          3.4911     -0.0210
+          0.100   1422            35          2.6778      0.0477
+          0.200   1128            28          2.2490     -0.1453
+       [correction, NOT the bar] restricted to gammas spanning >= 0.5 decade of mu^2: |slope| median 0.0316  max 0.1453  over 7 gammas
+       |log10 n_meas / (2ln2/-ln(1-gamma))| median = 0.0348   BAR <= 0.10   PASS
+
+  V-curves: 3675 (2940 with gamma_crit bracketed by the grid)
+  [B4] measured argmin / gamma_crit (D16 small-h form, 2 eps mu): median 0.3520  IQR 0.316-0.498   BAR within factor 2   MISS
+       same against the EXACT inversion of h*(gamma) = h (of which 2 eps mu is the small-h limit): median 0.3834  IQR 0.330-0.500
+       the PREDICTED curve's OWN argmin on the same grid, over gamma*_exact: median 1.0000
+         (1.00 means the gamma grid resolves the critical point, so any gap above is the ROLLOUT disagreeing with the law -- not spacing)
+  [B5] D17 overdamped  : n=932  slope measured +1.1368  derived +1.1385  naive +1
+       mean |meas - derived| = 0.0040   mean |meas - naive| = 0.1436   DERIVED WINS
+  [B5] D18 underdamped: n=2695  slope measured -1.1086  derived -1.0050  naive -1
+       mean |meas - derived| = 0.1290   mean |meas - naive| = 0.1333   DERIVED WINS
+
+  instruments overdamped   n=17002  envelope/first-crossing median =    1.000   |log10 err| envelope 0.0427 vs first-crossing 0.0427
+  instruments underdamped  n=19357  envelope/first-crossing median =    1.000   |log10 err| envelope 0.0566 vs first-crossing 0.2626
+  instruments deep underdamped (h/h* > 5) n= 6764  envelope/first-crossing median =    9.232   |log10 err| envelope 0.0289 vs first-crossing 1.0102
+       (V2 Fig. 1: the two coincide overdamped and DIVERGE above the exceptional point)
+
+  arm                     n   median|log10 CRR err|   hess_eig range        modes  degenerate
+  field                  41358                0.0431   [0.0923, 1.0000]        15  False
+  landscape_removed       3420                0.0435   [1.0000, 1.0000]        15  True
+  landscape_shuffled      3412                0.0429   [0.5940, 1.0000]        15  False
+  pca_tensor              3420                0.0435   [0.9819, 1.0000]        15  False
+       (landscape_removed: Cov_w = 0, so E = ||q-x*||^2/2 exactly and every
+        direction carries the SAME trivial curvature -- the store contributes
+        no structure at all.  That is the charter C.2 collapse, as a measurement.)
+
+  aux amp=0.05  (amp/sigma~0.008) alpha=0    n= 681  median|log10 CRR err| = 0.0221
+  aux amp=0.05  (amp/sigma~0.008) alpha=1    n= 780  median|log10 CRR err| = 0.0464
+  aux amp=0.5   (amp/sigma~0.077) alpha=0    n= 681  median|log10 CRR err| = 0.0226
+  aux amp=0.5   (amp/sigma~0.077) alpha=1    n= 780  median|log10 CRR err| = 0.0465

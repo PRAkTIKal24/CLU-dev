@@ -1,0 +1,68 @@
+% ============================================================================================
+% PW-1 item 9 -- Shapes3D rendered success/failure figures (pw1-render-shapes).
+% NOT INSTALLED. A later spoke places these in Sec.~\ref{sec:shapes-t7}, after Tab.~\ref{tab:t7}.
+% They replace the w19 slots fig:t7-per-arm, fig:t7-rival-wins, fig:t7-rival-wins-s1
+% (removed by w22 draft-rulings Ruling 2; see the comment block at DRAFT-v2.tex:477-480).
+% Figure files: outputs/pw1-render-shapes/build/a/rc_pw1_shapes_per_model.pdf
+%               outputs/pw1-render-shapes/build/a/rc_pw1_shapes_baseline_wins.pdf
+% Every number below: outputs/pw1-render-shapes/REQUESTS-pw1.json (key named per line).
+% Requires amssymb (\checkmark); the drafts load it.
+% ============================================================================================
+
+% ---- (1) the paragraph that introduces the two figures (Shapes results section) ------------
+% SRCBLOCK: outputs/pw1-render-shapes/REQUESTS-pw1.json; outputs/pw1-render-shapes/factor-miss-seed0.txt
+\paragraph{What the counts look like.} Figs.~\ref{fig:shapes-per-model} and~\ref{fig:shapes-baseline-wins}
+show single held-out requests from Tab.~\ref{tab:t7} as images, at seed 0 and $\Kstar=32$, against the
+four data-matched baselines of that table (MLP and continuous MLP at $10\times$ training steps, LSTM and
+Transformer at their selected schedule, all fitted on the same 131,072 rows) and the lookup table as the
+floor. Every model's output on a request is drawn through the same frozen decoder, and each panel
+carries the judge's verdict on that image. Over all 5,688 held-out requests at seed 0 the judge marks
+the n-CLU valid on 5,177, the MLP on 4,361, the LSTM on 3,703, the Transformer on 2,786, the continuous
+MLP on 3,110 and the lookup table on 897.
+% SRC: REQUESTS-pw1.json counts_seed0.per_column.<column>.valid; n_heldout_requests
+Where the n-CLU is invalid, the image is almost always wrong in one factor only (497 of its 511 invalid
+renders), most often the scale (329) or the orientation (125), less often the shape (71).
+% SRC: factor-miss-seed0.txt (from scan/verdicts-seed0.json)
+Requests on which a baseline succeeds and the n-CLU fails exist for every baseline (310 requests at
+seed 0 have at least one); they are not confined to the capsule: 170 of the 310 are capsules, 100
+cylinders and 40 spheres.
+% SRC: REQUESTS-pw1.json counts_seed0.any_baseline_valid_and_n_clu_invalid
+The rows of both figures are drawn by a fixed-seed rule, stated in the captions, never by appearance.
+% ENDSRC
+
+% ---- (2) Figure: per-model success and failure grid ---------------------------------------
+% SOURCE: outputs/pw1-render-shapes/build/a/rc_pw1_shapes_per_model.pdf (sha256 in SHA256-build1.txt)
+\begin{figure}[t]\centering
+\includegraphics[width=0.9\linewidth]{figures/rendered/rc_pw1_shapes_per_model.pdf}
+\caption{\textbf{Each model succeeding and failing on held-out combinations (Shapes3D, seed 0,
+$\Kstar=32$).} Columns: the n-CLU, the four data-matched baselines of Tab.~\ref{tab:t7} (MLP and
+continuous MLP at $10\times$ training steps, LSTM and Transformer at their selected schedule) and the
+lookup table as the floor. For each model (bar at left) one held-out request it renders validly
+(success) and one it renders invalidly (failure); the framed panel is the model the row was drawn for.
+Every model's image on every request comes from the same frozen decoder, and the mark is the judge's
+verdict on that image ($\checkmark$ valid, $\times$ invalid). The requested values are printed left of
+each row (hues as fractions of the hue circle, scale, orientation in degrees); a request either holds out
+the object hue $\times$ shape pair or all six factors jointly. \emph{Selection:} a fixed-seed draw
+(seed 20260925) among all qualifying held-out requests, under a diversity rule: the target shape is
+cycled over the rows so the capsule is never drawn more often than any other shape, and among requests
+of the target shape the draw prefers object, floor and wall hues not yet shown. The judge's six read-back
+values for every panel are listed in the supplementary material.}
+% SRC: REQUESTS-pw1.json select_seed; per_model.rows[*]; carried_fit_seed0; selection_rule
+\label{fig:shapes-per-model}
+\end{figure}
+
+% ---- (3) Figure: baseline succeeds, n-CLU fails --------------------------------------------
+% SOURCE: outputs/pw1-render-shapes/build/a/rc_pw1_shapes_baseline_wins.pdf (sha256 in SHA256-build1.txt)
+\begin{figure}[t]\centering
+\includegraphics[width=\linewidth]{figures/rendered/rc_pw1_shapes_baseline_wins.pdf}
+\caption{\textbf{Held-out requests on which a baseline succeeds and the n-CLU fails (seed 0).} Such
+requests exist for every baseline: of the 5,688 held-out requests, the MLP is valid and the n-CLU
+invalid on 200, the LSTM on 197, the Transformer on 110 and the continuous MLP on 167 (310 requests have
+at least one such baseline; at seeds 1 and 2 there are 332 and 239). They are not all capsules: of the
+310 at seed 0, 170 are capsules, 100 cylinders and 40 spheres. One request per baseline is shown; the
+n-CLU's panel and the baseline's panel are framed. Same frozen decoder, judge marks, layout and
+fixed-seed diversity rule (seed 20260925) as Fig.~\ref{fig:shapes-per-model}.}
+% SRC: REQUESTS-pw1.json counts_seed0.baseline_valid_and_n_clu_invalid.<baseline>.n;
+%      counts_seed0.any_baseline_valid_and_n_clu_invalid; counts_seeds_1_2_not_drawn.{1,2}.any_baseline_valid_and_n_clu_invalid.n
+\label{fig:shapes-baseline-wins}
+\end{figure}

@@ -1,0 +1,59 @@
+[14:38:15] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[14:38:15]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[14:38:15]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[14:38:21] [c0] tau=4.1202 (store's own mode-distance scale); n=72; steps=300
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:38:26] [c0] CONTROL A zero-step launch β=0: LINEAR=  0 (distinct  70)  ARGMAX=  0
+[14:38:28] [c0] CONTROL A zero-step launch β=1: LINEAR=  0 (distinct  15)  ARGMAX=  0
+Traceback (most recent call last):
+  File "C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-composition\iter2r\dev\c05_dream.py", line 174, in <module>
+    out = dream_rollout(land, x0, coord_free, cfg, key, steps=STEPS,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PratikJawahar\chlu\CHLU-hub-composition-2\chlu\core\gen_dream.py", line 860, in dream_rollout
+    temp_now = jnp.asarray(_geom(t0, t1, i, n_steps), dt)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PratikJawahar\chlu\CHLU-hub-composition-2\chlu\core\gen_dream.py", line 729, in _geom
+    return float(a * (b / a) ** (i / (n - 1)))
+                      ~~^~~
+ZeroDivisionError: float division by zero

@@ -1,0 +1,128 @@
+[15:22:25] C02 tag=ref seed=0 spec=sel -> 32 corners: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62]
+[15:22:28] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[15:22:28]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[15:22:28]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[15:22:29] context ready in 3.5s
+[15:22:29] [c0] pool 32766 rows / 32766 distinct tuples; todo: ['ceiling']
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:22:31] [c0] ceiling                tuples_valid_novel= 56  agg=0.9630  distinct= 72  exact=0.7778  bytes=0
+[15:22:31] [c0] done in 2.1s
+[15:22:31] [c2] pool 32764 rows / 32764 distinct tuples; todo: ['ceiling']
+[15:22:32] [c2] ceiling                tuples_valid_novel= 59  agg=0.9699  distinct= 62  exact=0.8194  bytes=0
+[15:22:32] [c2] done in 1.6s
+[15:22:33] [c4] pool 32766 rows / 32766 distinct tuples; todo: ['ceiling']
+[15:22:34] [c4] ceiling                tuples_valid_novel= 31  agg=0.9051  distinct= 62  exact=0.4306  bytes=0
+[15:22:34] [c4] done in 1.6s
+[15:22:34] [c6] pool 32762 rows / 32762 distinct tuples; todo: ['ceiling']
+[15:22:36] [c6] ceiling                tuples_valid_novel= 68  agg=0.9907  distinct= 72  exact=0.9444  bytes=0
+[15:22:36] [c6] done in 1.6s
+[15:22:36] [c8] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.6, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[15:22:36] [c10] pool 32759 rows / 32759 distinct tuples; todo: ['ceiling']
+[15:22:37] [c10] ceiling                tuples_valid_novel= 68  agg=0.9907  distinct= 71  exact=0.9444  bytes=0
+[15:22:37] [c10] done in 1.7s
+[15:22:38] [c12] pool 32757 rows / 32757 distinct tuples; todo: ['ceiling']
+[15:22:39] [c12] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[15:22:39] [c12] done in 1.8s
+[15:22:40] [c14] pool 32763 rows / 32763 distinct tuples; todo: ['ceiling']
+[15:22:41] [c14] ceiling                tuples_valid_novel= 27  agg=0.8773  distinct= 63  exact=0.3750  bytes=0
+[15:22:41] [c14] done in 1.6s
+[15:22:41] [c16] pool 32761 rows / 32761 distinct tuples; todo: ['ceiling']
+[15:22:43] [c16] ceiling                tuples_valid_novel= 58  agg=0.9653  distinct= 72  exact=0.8056  bytes=0
+[15:22:43] [c16] done in 1.9s
+[15:22:43] [c18] pool 32763 rows / 32763 distinct tuples; todo: ['ceiling']
+[15:22:44] [c18] ceiling                tuples_valid_novel= 36  agg=0.9051  distinct= 59  exact=0.5000  bytes=0
+[15:22:44] [c18] done in 1.6s
+[15:22:45] [c20] pool 32764 rows / 32764 distinct tuples; todo: ['ceiling']
+[15:22:46] [c20] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[15:22:46] [c20] done in 1.6s
+[15:22:46] [c22] pool 32764 rows / 32764 distinct tuples; todo: ['ceiling']
+[15:22:48] [c22] ceiling                tuples_valid_novel= 58  agg=0.9676  distinct= 61  exact=0.8056  bytes=0
+[15:22:48] [c22] done in 1.6s
+[15:22:48] [c24] pool 32764 rows / 32764 distinct tuples; todo: ['ceiling']
+[15:22:49] [c24] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[15:22:49] [c24] done in 1.6s
+[15:22:49] [c26] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.0, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[15:22:49] [c28] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[15:22:50] [c30] pool 32760 rows / 32760 distinct tuples; todo: ['ceiling']
+[15:22:51] [c30] ceiling                tuples_valid_novel= 64  agg=0.9815  distinct= 67  exact=0.8889  bytes=0
+[15:22:51] [c30] done in 1.7s
+[15:22:51] [c32] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 1.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[15:22:51] [c34] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': True, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[15:22:51] [c36] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[15:22:52] [c38] pool 32765 rows / 32765 distinct tuples; todo: ['ceiling']
+[15:22:53] [c38] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[15:22:53] [c38] done in 1.6s
+[15:22:53] [c40] pool 32762 rows / 32762 distinct tuples; todo: ['ceiling']
+[15:22:55] [c40] ceiling                tuples_valid_novel= 45  agg=0.9375  distinct= 72  exact=0.6250  bytes=0
+[15:22:55] [c40] done in 1.5s
+[15:22:55] [c42] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.4, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[15:22:55] [c44] pool 32764 rows / 32764 distinct tuples; todo: ['ceiling']
+[15:22:56] [c44] ceiling                tuples_valid_novel= 67  agg=0.9884  distinct= 67  exact=0.9306  bytes=0
+[15:22:56] [c44] done in 1.7s
+[15:22:57] [c46] pool 32761 rows / 32761 distinct tuples; todo: ['ceiling']
+[15:22:58] [c46] ceiling                tuples_valid_novel= 45  agg=0.9306  distinct= 71  exact=0.6250  bytes=0
+[15:22:58] [c46] done in 1.8s
+[15:22:58] [c48] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.4, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[15:22:59] [c50] pool 32761 rows / 32761 distinct tuples; todo: ['ceiling']
+[15:23:00] [c50] ceiling                tuples_valid_novel= 45  agg=0.9306  distinct= 63  exact=0.6250  bytes=0
+[15:23:00] [c50] done in 2.0s
+[15:23:01] [c52] pool 32761 rows / 32761 distinct tuples; todo: ['ceiling']
+[15:23:02] [c52] ceiling                tuples_valid_novel= 54  agg=0.9583  distinct= 69  exact=0.7500  bytes=0
+[15:23:02] [c52] done in 1.9s
+[15:23:03] [c54] pool 32763 rows / 32763 distinct tuples; todo: ['ceiling']
+[15:23:04] [c54] ceiling                tuples_valid_novel= 31  agg=0.8843  distinct= 53  exact=0.4306  bytes=0
+[15:23:04] [c54] done in 1.9s
+[15:23:05] [c56] pool 32760 rows / 32760 distinct tuples; todo: ['ceiling']
+[15:23:06] [c56] ceiling                tuples_valid_novel= 62  agg=0.9769  distinct= 67  exact=0.8611  bytes=0
+[15:23:06] [c56] done in 2.0s
+[15:23:07] [c58] pool 32764 rows / 32764 distinct tuples; todo: ['ceiling']
+[15:23:08] [c58] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[15:23:08] [c58] done in 1.8s
+[15:23:09] [c60] pool 32766 rows / 32766 distinct tuples; todo: ['ceiling']
+[15:23:10] [c60] ceiling                tuples_valid_novel= 65  agg=0.9838  distinct= 65  exact=0.9028  bytes=0
+[15:23:10] [c60] done in 1.8s
+[15:23:11] [c62] pool 32759 rows / 32759 distinct tuples; todo: ['ceiling']
+[15:23:12] [c62] ceiling                tuples_valid_novel= 32  agg=0.9051  distinct= 67  exact=0.4444  bytes=0
+[15:23:12] [c62] done in 2.0s
+[15:23:12] C02 done: 24 corners scored, 8 refused [8, 26, 28, 32, 34, 36, 42, 48], 46.8s total

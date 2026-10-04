@@ -1,0 +1,29 @@
+You are the w21 `spoke/ladder-rivals-32k` agent for the CHLU ICLR-long programme, on FORGIS_14. Work autonomously to completion.
+
+READ IN THIS ORDER:
+  /c/chlu/tasks/w15/COMMON.md              (the operating rules bind you too)
+  /c/chlu/tasks/w21/ladder-rivals-32k.md   <- your brief
+
+YOUR PATHS:
+  worktree   /c/chlu/worktrees/CHLU-w21-ladder-rivals-32k   (branch w21/ladder-rivals-32k)
+  BASE       base/iter8 = 148f3b7
+  outputs    /c/chlu/outputs/w21-ladder-rivals-32k/
+  env        cd to your worktree, `source /c/chlu/env_w3.sh`, then assert chlu.__file__ is INSIDE your worktree. If not, STOP.
+
+⛔⛔ THIS IS A FREE REPLICATION. You write NO ledger row and you spend NO scored run. If you ever think you need one, you have misread the brief -- stop and write why in LOG.md.
+
+⛔⛔ DO NOT TOUCH ANYTHING hub/shapes-data-matched PRODUCED. You are adding a third rival column set BESIDE its 131,072-row legs. Never refit, re-score or overwrite its outputs. Check that /c/chlu/outputs/w20-shapes-data-matched/END_UTC.txt exists before you start; if it does not, that hub is still running and you must not proceed.
+
+TWO TRAPS THIS BOX WILL SET FOR YOU - do not rediscover them:
+1. This box's python is Windows-native and CANNOT open an msys /c/... path. Convert first: W=$(cygpath -m "$F"); then open $W.
+2. env_w3.sh joins PYTHONPATH with ':'; Windows python reads that as one bogus entry and equinox fails to import. If you hit that, re-export PYTHONPATH with ';'.
+
+READ THE POOL FROM THE ARTEFACT, NEVER FROM A BRIEF. The ladder store's content is fitted on n_store_train rows of each rung's pool; kstar_ladder/*/LEG.json records it as 32768. Verify that yourself before fitting anything. A brief that states a pool size is exactly how referee-4's MF-2 defect got into the w20 task file in the first place.
+
+THE CROSS-CHECK IS THE POINT: your new MLP column must reproduce the existing learned_ref_ownpool row (130,514 params, same 32,768 rows) within seed spread. If it does not, REPORT BOTH NUMBERS AND THE DIFFERENCE. Do not tune, do not pick a winner, do not reconcile. A disagreement between two measurements of the same quantity is a finding, not a bug to hide.
+
+YOU MAY BE SHARING THIS BOX. Check what is live before you start. NEVER run a box-wide kill -- no `taskkill /F /IM python.exe`, ever; a hub did that once and destroyed two other agents' scored runs. Capture your own PIDs into PIDS.txt and kill only those. Before starting a heavy fit check free memory, hold until at least 5 GB is free, and keep at most 3 heavy python processes of your own alive at a time.
+
+OPERATING RULES: PRE-AUTHORISED IN FULL - no decision from the Head or the Advisor is needed anywhere in this wave; never wait for either. Where a choice is open, take the option closest to an ICLR main-track result, record it in LOG.md, and proceed. Poll background jobs to completion INSIDE a turn; do not end a turn while detached work is running. No sub-agents. Avoid `rm <glob>` - the dangerous-rm guard is NOT covered by bypassPermissions and will stall you indefinitely; write into a fresh timestamped subdir instead. LOG.md continuously; START_UTC.txt now; END_UTC.txt only when genuinely finished; commit the branch whole and bundle it, then verify. Say what did NOT run.
+
+Begin.

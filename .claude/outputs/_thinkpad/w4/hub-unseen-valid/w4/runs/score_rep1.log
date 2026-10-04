@@ -1,0 +1,132 @@
+[score] cache generation 2 asserted: {"seed_0": {"encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d", "n_rows": 480000, "generation": 2, "matches_decoder": true}}
+  arm factor_aligned_balanced: already fitted, loading
+  arm knn_proto: already fitted, loading
+  arm landscape_removed: already fitted, loading
+  arm landscape_shuffled: already fitted, loading
+  arm basis_head: already fitted, loading
+  cont_mlp: hidden=248 params=573,440 target=572,672 (100.1% of matched)
+    step 1/4000 mse=0.50741 (1s)
+    step 501/4000 mse=0.04684 (20s)
+    step 1001/4000 mse=0.02691 (39s)
+    step 1501/4000 mse=0.01902 (62s)
+    step 2001/4000 mse=0.01586 (85s)
+    step 2501/4000 mse=0.01379 (108s)
+    step 3001/4000 mse=0.01260 (131s)
+    step 3501/4000 mse=0.01168 (155s)
+    step 4000/4000 mse=0.01085 (176s)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  cont_mlp: hidden=55 params=118,153 target=118,784 (99.5% of matched)
+    step 1/4000 mse=0.51327 (1s)
+    step 501/4000 mse=0.14098 (16s)
+    step 1001/4000 mse=0.07683 (31s)
+    step 1501/4000 mse=0.05357 (47s)
+    step 2001/4000 mse=0.04604 (65s)
+    step 2501/4000 mse=0.04186 (82s)
+    step 3001/4000 mse=0.03835 (98s)
+    step 3501/4000 mse=0.03627 (113s)
+    step 4000/4000 mse=0.03413 (128s)
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+[score] seed 0 linear_span_ARM                          e=0.1821
+[score] seed 0 table_interp_knn_proto_RIVAL             e=0.2558
+[score] seed 0 correlation_split_linear_head_ABLATION   e=0.1848
+[score] seed 0 landscape_removed_CONTROL                e=0.2524
+[score] seed 0 landscape_shuffled_CONTROL               e=0.2787
+[score] seed 0 lookup_argmax_FLOOR                      e=0.4059
+[score] seed 0 cont_mlp_ARMMATCHED_RIVAL                e=0.1685
+[score] seed 0 cont_mlp_TABLEMATCHED_RIVAL              e=0.2365
+[score] seed 0 spokeA_table_RIVAL                       e=0.1581
+[score] seed 0 spokeA_cont_mlp_RIVAL                    e=0.3905
+[score] seed 0 valley_ARM                               e=0.1829
+{
+ "spokeA_cont_mlp_RIVAL": {
+  "mean_delta_across_seeds": 0.20287548129756722,
+  "sd_delta_across_seeds": 0.0,
+  "all_seeds_beat_margin": true
+ },
+ "spokeA_table_RIVAL": {
+  "mean_delta_across_seeds": -0.029975928187506527,
+  "sd_delta_across_seeds": 0.0,
+  "all_seeds_beat_margin": false
+ },
+ "cont_mlp_ARMMATCHED_RIVAL": {
+  "mean_delta_across_seeds": -0.015264956215840396,
+  "sd_delta_across_seeds": 0.0,
+  "all_seeds_beat_margin": false
+ },
+ "cont_mlp_TABLEMATCHED_RIVAL": {
+  "mean_delta_across_seeds": 0.05149214843898152,
+  "sd_delta_across_seeds": 0.0,
+  "all_seeds_beat_margin": true
+ },
+ "table_interp_knn_proto_RIVAL": {
+  "mean_delta_across_seeds": 0.07000093171924208,
+  "sd_delta_across_seeds": 0.0,
+  "all_seeds_beat_margin": true
+ },
+ "lookup_argmax_FLOOR": {
+  "mean_delta_across_seeds": 0.21860732106486905,
+  "sd_delta_across_seeds": 0.0,
+  "all_seeds_beat_margin": true
+ },
+ "correlation_split_linear_head_ABLATION": {
+  "mean_delta_across_seeds": 0.0017798452134840889,
+  "sd_delta_across_seeds": 0.0,
+  "all_seeds_beat_margin": false
+ },
+ "valley_ARM": {
+  "mean_delta_across_seeds": 0.0014474539993827723,
+  "sd_delta_across_seeds": 0.0,
+  "all_seeds_beat_margin": false
+ },
+ "landscape_removed_CONTROL": {
+  "mean_delta_across_seeds": 0.03601014978562424,
+  "sd_delta_across_seeds": 0.0,
+  "all_seeds_beat_margin": false
+ },
+ "landscape_shuffled_CONTROL": {
+  "mean_delta_across_seeds": 0.08341972802315828,
+  "sd_delta_across_seeds": 0.0,
+  "all_seeds_beat_margin": true
+ }
+}

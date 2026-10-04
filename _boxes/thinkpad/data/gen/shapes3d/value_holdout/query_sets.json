@@ -1,0 +1,97 @@
+{
+  "condition": "value_holdout",
+  "dataset": "shapes3d",
+  "excluded_record_keys": [
+    "kind",
+    "violated_factor",
+    "reason",
+    "row",
+    "redundant_factor"
+  ],
+  "row_evidence_ranking": {
+    "r5_comp_refusal": {
+      "evidential": true,
+      "rank": 2,
+      "why": "\u2b50 Evidential UNDER THE AMENDED PAIRING ONLY: the accept-leg is row 1, a STORED on-grid request. Both halves are well-formed on-grid requests and differ only in whether the store holds the value. \u26d4 With row 2 as the accept-leg it was free (grid look-up, 1.0000, zero bytes)."
+    },
+    "r6_invalid_refusal": {
+      "evidential": false,
+      "rank": 3,
+      "why": "\u26d4 SANITY CHECK ONLY, and it can never be anything else: out-of-range is decidable from the factor grid alone. Kept as the degenerate-arm guard; \u26d4 a row-6 number is NOT evidence that the store computes a barrier."
+    },
+    "r7_deletion": {
+      "evidential": true,
+      "rank": 1,
+      "why": "\u2b50 THE strongest instrument. Deleting a value from the store does not move the factor grid, so the no-model rule's delta_reject is exactly 0.0. A changed refusal after a deletion, with NO retraining, is not producible by any syntactic rule."
+    }
+  },
+  "schema": {
+    "description": "The registered query sets of this dataset directory.  Every invalid set names, per kind, the valid set that is its STRUCTURAL control; the no-model detector test discovers this file and audits the invalid sets against those controls.",
+    "version": 1
+  },
+  "scope": "SCOPE OF THE VALUE HOLD-OUT (\u26d4 quote no row without this). The hold-out is from the STORE'S FIT POOL, not from the encoder, the decoder or the judge. Those three are frozen, hash-pinned and read-only (charter \u00a7A.4) and were fitted on a train split containing EVERY hue and EVERY shape; re-fitting them on a value hold-out would void every wave-2 number and is out of scope. Therefore 'never trained on' means here: THE STORE NEVER HELD A ROW CARRYING THAT VALUE. The decoder can still render the value and the judge can still recognise it \u2014 which is what makes rows 2/5/6/7 scorable at all. \u26d4 Read end-to-end, 'never seen' is false and the claim dies with it.",
+  "sets": {
+    "a7_redundant": {
+      "builder": "chlu.data.gen_splits.build_a7_redundant",
+      "description": "valid requests carrying one redundant (same-value) term.",
+      "file": "a7_redundant.json",
+      "n_records": 512,
+      "n_terms": "n_factors + 1",
+      "role": "valid",
+      "sha256": "bb52ba429400f483afcc5c8ec96432b026c651d9663aedc89cf7e11060cee191"
+    },
+    "base": {
+      "builder": "chlu.data.gen_splits.build_base_requests",
+      "derived_from": "factor_index.npz",
+      "derived_from_sha256": "3e29316fcd6793edbff9aa4932d5a9c732d9178854556c943d9824a8062f0baf",
+      "description": "A and B: one term per factor, the plain valid request.",
+      "n_records": 480000,
+      "n_terms": "n_factors",
+      "role": "valid"
+    },
+    "c_invalid": {
+      "builder": "chlu.data.gen_splits.build_c_invalid",
+      "control_note": "\u2b50 AMENDMENT 1: out_of_range is re-controlled onto ROW 1 (the accept side of the refusal pair, which is now row 1 for BOTH refusal rows); duplicate_factor keeps a7_redundant because it carries n_factors+1 terms and a 6-term control would restore the R26.1 term-count giveaway.",
+      "controls": {
+        "duplicate_factor": "a7_redundant",
+        "out_of_range": "row1_seen"
+      },
+      "description": "structurally invalid requests (the C set).",
+      "file": "c_invalid.json",
+      "n_records": 512,
+      "role": "invalid",
+      "sha256": "9146b899839aa77c47eedf2e7c0d98105c9512256805228ced5369569c27678b"
+    },
+    "row1_seen": {
+      "builder": "chlu.data.gen_value_holdout.build_row1_seen",
+      "description": "row 1 (seen): an ON-GRID request whose EVERY value is STORED \u2014 it denotes a train row. \u2b50 AMENDMENT 1: this is the accept-leg of BOTH refusal rows. It is structurally matched to row5_held_out (same record-key set, same term count, same id shape, same per-kind count, axis value constant per kind), so the two differ only in whether the store holds the value.",
+      "file": "row1_seen.json",
+      "n_records": 512,
+      "n_terms": "n_factors",
+      "role": "valid",
+      "sha256": "215104e723a07edb7734cd63094b4ab5ce657b68fae604c1449f146966537d20"
+    },
+    "row2_unseen": {
+      "builder": "chlu.data.gen_value_holdout.build_row2_unseen",
+      "description": "row 2 (unseen-valid): an OFF-GRID hue strictly between two RETAINED, grid-adjacent stored values. The correct answer is ACCEPT, which is what makes it the control the refusal rows are scored against.",
+      "file": "row2_unseen.json",
+      "n_records": 512,
+      "n_terms": "n_factors",
+      "role": "valid",
+      "sha256": "7a7908fe35fa5ff28e38c15d87dfe3499535a8d13f5c2ef81bb2609a88dee343"
+    },
+    "row5_held_out": {
+      "builder": "chlu.data.gen_value_holdout.build_row5_held_out",
+      "controls": {
+        "held_out_hue": "row1_seen",
+        "held_out_shape": "row1_seen"
+      },
+      "description": "row 5 (compositional refusal): an ON-GRID value the STORE never held. \u26d4 'invalid' here means 'the correct answer is refuse', NOT 'unsatisfiable' \u2014 the image exists and the frozen judge recognises it.",
+      "file": "row5_held_out.json",
+      "n_records": 512,
+      "n_terms": "n_factors",
+      "role": "invalid",
+      "sha256": "e0b6ea401fb675c550b4442da05467b2a3958870e65c2ca23b78e0e975304d82"
+    }
+  }
+}

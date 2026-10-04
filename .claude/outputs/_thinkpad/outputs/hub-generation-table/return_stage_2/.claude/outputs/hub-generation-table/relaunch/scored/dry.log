@@ -1,0 +1,70 @@
+[15:17:00]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[15:17:01]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[15:17:01] *** DRY RUN: B and MS are TRAIN-SPLIT corners. Every number below is a wiring check and is NOT a result. eval_a and eval_b were not read. ***
+[15:17:01] rows: pool=32768 B=72 MS=72 fit=32256 val=512
+[15:17:01] cache coverage: 32903/32903 rows cached, shortfall=0 (cache scope=full, n_rows=480000)
+[15:17:07]   ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+[15:17:07]   ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+[15:17:10] shipped store: K=5 wells=[303, 305, 573, 501, 366] deployed=524288 B
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:17:14]   clu_argmax_shipped     B=0.5579 tuples=12/72  MS=0.6597  bytes=524288
+[15:17:17]   clu_argmax_store_removed B=0.1944 tuples= 1/72  MS=0.3611  bytes=524288
+[15:17:21]   clu_linear             B=0.7014 tuples=40/72  MS=0.8611  bytes=598528
+[15:17:24]   clu_linear_store_removed B=0.2014 tuples= 2/72  MS=0.3287  bytes=598528
+[15:17:25]     [corr] 1.5s
+[15:17:26]     [dead] 0.3s
+[15:17:28]     [linkage_ward] 2.1s
+[15:17:28]     [linkage_avg] 0.1s
+[15:17:29]   channel geometry computed and cached -> chan_geom_scored_s0.npz
+[15:20:29]   arm                    B=0.7593 tuples=52/72  MS=0.8935  bytes=408576
+[15:20:29]   C.4 nearest-atom/spread = 2.7826/0.8563 = 3.249
+[15:21:09]   control_kmeans         B=0.7708 tuples=51/72  MS=0.8750  bytes=408576
+[15:21:48]   control_atoms_medoid   B=0.7245 tuples=55/72  MS=0.8611  bytes=408576
+[15:22:02]   control_atoms_kpp      B=0.7616 tuples=52/72  MS=0.9051  bytes=408576
+[15:22:06]   control_atoms_random   B=0.7176 tuples=55/72  MS=0.9005  bytes=408576
+[15:22:12]   control_pca_affine     B=0.7593 tuples=55/72  MS=0.8912  bytes=408576
+[15:22:16]   control_random         B=0.6042 tuples=35/72  MS=0.7847  bytes=408576
+[15:22:20]   control_mean           B=0.3773 tuples=15/72  MS=0.4167  bytes=408576
+[15:22:23]   knn_proto_recheck      B=0.7801 tuples=53/72  MS=0.9144  bytes=475136
+[15:22:23] done in 325.6s -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-generation-table\relaunch\scored\dry

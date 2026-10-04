@@ -1,0 +1,151 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+    [B] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04922 (lambda* = 0.05469)
+    [B] N=512 r=128 store=4,194,304 B coupling=4,194,304 B total=8,388,608 B = 2.00x budget (PREREG §3 match: True)
+    [B] sigma per well = 3.2317 3.7288 7.1006 5.1012 3.8283
+  tau=     1.0  d/spread=  20.226  oor=0.6119 dup=0.4704
+  tau=     2.0  d/spread=  17.843  oor=0.6440 dup=0.3854
+  tau=     4.0  d/spread=  14.899  oor=0.6506 dup=0.3385
+  tau=     8.0  d/spread=  11.214  oor=0.6358 dup=0.3588
+  tau=    16.0  d/spread=   7.517  oor=0.6253 dup=0.4271
+  tau=    32.0  d/spread=   4.800  oor=0.6196 dup=0.4733
+  tau=    64.0  d/spread=   3.005  oor=0.6231 dup=0.4979
+  tau=1000000000.0  d/spread=   0.000  oor=0.6219 dup=0.5266
+
+{
+ "identification_budget": {
+  "n_atoms": 512,
+  "n_wells": 5,
+  "log_N_nats": 6.238324625039508,
+  "val": {
+   "mean_entropy_nats": 5.595259662659652,
+   "mean_deficit_log_N_minus_H": 0.6430649623798557,
+   "frac_of_log_N_realised": 0.10308295913276284,
+   "mean_effective_atoms_expH": 292.2742716577819,
+   "mean_max_posterior": 0.01867671804924016
+  },
+  "syn_valid": {
+   "mean_entropy_nats": 5.597557859996138,
+   "mean_deficit_log_N_minus_H": 0.6407667650433693,
+   "frac_of_log_N_realised": 0.10271455936605917,
+   "mean_effective_atoms_expH": 292.5524064695858,
+   "mean_max_posterior": 0.018387426595566348
+  },
+  "syn_a7": {
+   "mean_entropy_nats": 5.451016939856447,
+   "mean_deficit_log_N_minus_H": 0.7873076851830607,
+   "frac_of_log_N_realised": 0.12620498811859676,
+   "mean_effective_atoms_expH": 263.69522007594657,
+   "mean_max_posterior": 0.02300542409367174
+  },
+  "syn_dup": {
+   "mean_entropy_nats": 5.609767659950669,
+   "mean_deficit_log_N_minus_H": 0.6285569650888387,
+   "frac_of_log_N_realised": 0.10075733516109833,
+   "mean_effective_atoms_expH": 295.1846389807066,
+   "mean_max_posterior": 0.017495997718019046
+  },
+  "syn_oor_1": {
+   "mean_entropy_nats": 5.53115432221486,
+   "mean_deficit_log_N_minus_H": 0.7071703028246477,
+   "frac_of_log_N_realised": 0.11335900988322953,
+   "mean_effective_atoms_expH": 278.6425988292252,
+   "mean_max_posterior": 0.021116423224631836
+  },
+  "syn_oor_2": {
+   "mean_entropy_nats": 5.430281209750776,
+   "mean_deficit_log_N_minus_H": 0.8080434152887319,
+   "frac_of_log_N_realised": 0.12952891422889276,
+   "mean_effective_atoms_expH": 260.2723911746236,
+   "mean_max_posterior": 0.02559597079452196
+  },
+  "syn_oor_3": {
+   "mean_entropy_nats": 5.32275178763513,
+   "mean_deficit_log_N_minus_H": 0.9155728374043779,
+   "frac_of_log_N_realised": 0.14676582134399258,
+   "mean_effective_atoms_expH": 243.52999163761996,
+   "mean_max_posterior": 0.0312670534509996
+  }
+ },
+ "information_per_well_factor": {
+  "names": [
+   "floor_hue",
+   "wall_hue",
+   "object_hue",
+   "scale",
+   "shape",
+   "orientation"
+  ],
+  "cardinalities": [
+   10,
+   10,
+   10,
+   8,
+   4,
+   15
+  ],
+  "I_well_by_factor_nats": [
+   [
+    0.0543,
+    0.6802,
+    0.008,
+    0.0104,
+    0.0181,
+    0.0544
+   ],
+   [
+    0.0276,
+    0.7412,
+    0.01,
+    0.0061,
+    0.0157,
+    0.0649
+   ],
+   [
+    0.0135,
+    0.1071,
+    0.0215,
+    0.0015,
+    0.0042,
+    0.0064
+   ],
+   [
+    0.0902,
+    0.0041,
+    0.1086,
+    0.0047,
+    0.011,
+    0.0011
+   ],
+   [
+    1.0695,
+    0.0137,
+    0.0403,
+    0.0204,
+    0.0135,
+    0.0043
+   ]
+  ],
+  "naive_bayes_budget_per_well_nats": [
+   0.8255,
+   0.8655,
+   0.1544,
+   0.2198,
+   1.1617
+  ],
+  "log_N_nats": 6.238324625039508,
+  "realised_per_well_nats_on_val": [
+   0.82,
+   0.8624,
+   0.1577,
+   0.2157,
+   1.1595
+  ],
+  "note": "sum_f I_kf OVERCOUNTS (naive Bayes ignores dependence). The realised log N - H is the honest figure; the gap is factor redundancy inside one well."
+ }
+}
+wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-refusal\POSTERIOR_ANATOMY_seed0_B.json

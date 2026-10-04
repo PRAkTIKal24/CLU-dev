@@ -1,0 +1,160 @@
+[16:59:32] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[16:59:32]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[16:59:32]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[16:59:32] C08 store_seed=1 (bridge seed FIXED at 0) spec=all -> 64 corners; bytes 469,504
+[17:00:29]   store K=32 M=26 built and cached -> store_s1_c0_K32_M26_n32766.npz
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[17:00:33] [c0] store_seed=1  tuples_valid_novel= 31  agg=0.8866  distinct= 55  (60s)
+[17:01:32]   store K=32 M=26 built and cached -> store_s1_c1_K32_M26_n32761.npz
+[17:01:34] [c1] store_seed=1  tuples_valid_novel= 32  agg=0.9005  distinct= 60  (61s)
+[17:02:23]   store K=32 M=26 built and cached -> store_s1_c2_K32_M26_n32764.npz
+[17:02:25] [c2] store_seed=1  tuples_valid_novel= 29  agg=0.8750  distinct= 56  (52s)
+[17:03:21]   store K=32 M=26 built and cached -> store_s1_c3_K32_M26_n32765.npz
+[17:03:23] [c3] store_seed=1  tuples_valid_novel=  0  agg=0.8009  distinct= 49  (58s)
+[17:04:18]   store K=32 M=26 built and cached -> store_s1_c4_K32_M26_n32766.npz
+[17:04:21] [c4] store_seed=1  tuples_valid_novel= 18  agg=0.8611  distinct= 44  (57s)
+[17:05:33]   store K=32 M=26 built and cached -> store_s1_c5_K32_M26_n32764.npz
+[17:05:36] [c5] store_seed=1  tuples_valid_novel= 10  agg=0.7037  distinct= 55  (75s)
+[17:06:33]   store K=32 M=26 built and cached -> store_s1_c6_K32_M26_n32762.npz
+[17:06:35] [c6] store_seed=1  tuples_valid_novel= 30  agg=0.8611  distinct= 49  (59s)
+[17:07:25]   store K=32 M=26 built and cached -> store_s1_c7_K32_M26_n32761.npz
+[17:07:27] [c7] store_seed=1  tuples_valid_novel= 22  agg=0.8634  distinct= 41  (52s)
+[17:07:27] [c8] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.6, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:07:27] [c9] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:08:16]   store K=32 M=26 built and cached -> store_s1_c10_K32_M26_n32759.npz
+[17:08:18] [c10] store_seed=1  tuples_valid_novel=  0  agg=0.8287  distinct= 30  (51s)
+[17:09:05]   store K=32 M=26 built and cached -> store_s1_c11_K32_M26_n32765.npz
+[17:09:07] [c11] store_seed=1  tuples_valid_novel= 14  agg=0.8264  distinct= 58  (49s)
+[17:09:52]   store K=32 M=26 built and cached -> store_s1_c12_K32_M26_n32757.npz
+[17:09:54] [c12] store_seed=1  tuples_valid_novel=  9  agg=0.7870  distinct= 43  (47s)
+[17:10:43]   store K=32 M=26 built and cached -> store_s1_c13_K32_M26_n32766.npz
+[17:10:46] [c13] store_seed=1  tuples_valid_novel=  2  agg=0.6806  distinct= 41  (51s)
+[17:11:34]   store K=32 M=26 built and cached -> store_s1_c14_K32_M26_n32763.npz
+[17:11:36] [c14] store_seed=1  tuples_valid_novel=  0  agg=0.6597  distinct= 46  (50s)
+[17:12:24]   store K=32 M=26 built and cached -> store_s1_c15_K32_M26_n32762.npz
+[17:12:26] [c15] store_seed=1  tuples_valid_novel=  6  agg=0.8056  distinct= 60  (50s)
+[17:13:14]   store K=32 M=26 built and cached -> store_s1_c16_K32_M26_n32761.npz
+[17:13:16] [c16] store_seed=1  tuples_valid_novel= 19  agg=0.8287  distinct= 35  (50s)
+[17:14:05]   store K=32 M=26 built and cached -> store_s1_c17_K32_M26_n32763.npz
+[17:14:07] [c17] store_seed=1  tuples_valid_novel= 17  agg=0.7963  distinct= 42  (50s)
+[17:14:55]   store K=32 M=26 built and cached -> store_s1_c18_K32_M26_n32763.npz
+[17:14:57] [c18] store_seed=1  tuples_valid_novel= 22  agg=0.8449  distinct= 50  (51s)
+[17:15:45]   store K=32 M=26 built and cached -> store_s1_c19_K32_M26_n32761.npz
+[17:15:47] [c19] store_seed=1  tuples_valid_novel= 40  agg=0.9144  distinct= 58  (50s)
+[17:16:32]   store K=32 M=26 built and cached -> store_s1_c20_K32_M26_n32764.npz
+[17:16:34] [c20] store_seed=1  tuples_valid_novel= 55  agg=0.9606  distinct= 57  (47s)
+[17:17:16]   store K=32 M=26 built and cached -> store_s1_c21_K32_M26_n32764.npz
+[17:17:18] [c21] store_seed=1  tuples_valid_novel= 15  agg=0.8241  distinct= 39  (44s)
+[17:18:01]   store K=32 M=26 built and cached -> store_s1_c22_K32_M26_n32764.npz
+[17:18:03] [c22] store_seed=1  tuples_valid_novel=  0  agg=0.8125  distinct= 42  (45s)
+[17:18:03] [c23] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.0, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:18:44]   store K=32 M=26 built and cached -> store_s1_c24_K32_M26_n32764.npz
+[17:18:46] [c24] store_seed=1  tuples_valid_novel= 17  agg=0.8218  distinct= 57  (43s)
+[17:19:27]   store K=32 M=26 built and cached -> store_s1_c25_K32_M26_n32765.npz
+[17:19:29] [c25] store_seed=1  tuples_valid_novel= 12  agg=0.7870  distinct= 41  (43s)
+[17:19:29] [c26] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.0, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:19:29] [c27] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.0, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:19:29] [c28] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:19:29] [c29] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:20:07]   store K=32 M=26 built and cached -> store_s1_c30_K32_M26_n32760.npz
+[17:20:09] [c30] store_seed=1  tuples_valid_novel=  6  agg=0.7269  distinct= 51  (40s)
+[17:21:12]   store K=32 M=26 built and cached -> store_s1_c31_K32_M26_n32764.npz
+[17:21:15] [c31] store_seed=1  tuples_valid_novel=  2  agg=0.8241  distinct= 46  (66s)
+[17:21:15] [c32] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 1.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:22:08]   store K=32 M=26 built and cached -> store_s1_c33_K32_M26_n32762.npz
+[17:22:10] [c33] store_seed=1  tuples_valid_novel= 61  agg=0.9745  distinct= 62  (55s)
+[17:22:10] [c34] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': True, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:22:10] [c35] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:22:10] [c36] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:22:56]   store K=32 M=26 built and cached -> store_s1_c37_K32_M26_n32761.npz
+[17:22:58] [c37] store_seed=1  tuples_valid_novel= 33  agg=0.8866  distinct= 60  (47s)
+[17:23:46]   store K=32 M=26 built and cached -> store_s1_c38_K32_M26_n32765.npz
+[17:23:47] [c38] store_seed=1  tuples_valid_novel= 19  agg=0.8171  distinct= 45  (50s)
+[17:23:47] [c39] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:24:35]   store K=32 M=26 built and cached -> store_s1_c40_K32_M26_n32762.npz
+[17:24:37] [c40] store_seed=1  tuples_valid_novel= 20  agg=0.8403  distinct= 60  (49s)
+[17:24:37] [c41] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.4, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:24:37] [c42] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.4, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:25:24]   store K=32 M=26 built and cached -> store_s1_c43_K32_M26_n32763.npz
+[17:25:26] [c43] store_seed=1  tuples_valid_novel=  5  agg=0.7083  distinct= 49  (49s)
+[17:26:13]   store K=32 M=26 built and cached -> store_s1_c44_K32_M26_n32764.npz
+[17:26:15] [c44] store_seed=1  tuples_valid_novel= 33  agg=0.8519  distinct= 61  (49s)
+[17:27:02]   store K=32 M=26 built and cached -> store_s1_c45_K32_M26_n32763.npz
+[17:27:04] [c45] store_seed=1  tuples_valid_novel=  9  agg=0.7685  distinct= 37  (49s)
+[17:27:50]   store K=32 M=26 built and cached -> store_s1_c46_K32_M26_n32761.npz
+[17:27:52] [c46] store_seed=1  tuples_valid_novel=  0  agg=0.8264  distinct= 45  (48s)
+[17:28:35]   store K=32 M=26 built and cached -> store_s1_c47_K32_M26_n32760.npz
+[17:28:37] [c47] store_seed=1  tuples_valid_novel= 14  agg=0.8588  distinct= 36  (45s)
+[17:28:37] [c48] ⛔ REFUSED: ⛔ DEV corner {'hue_lo': 0.4, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[17:29:21]   store K=32 M=26 built and cached -> store_s1_c49_K32_M26_n32759.npz
+[17:29:23] [c49] store_seed=1  tuples_valid_novel=  6  agg=0.7685  distinct= 43  (46s)
+[17:30:08]   store K=32 M=26 built and cached -> store_s1_c50_K32_M26_n32761.npz
+[17:30:10] [c50] store_seed=1  tuples_valid_novel=  0  agg=0.8032  distinct= 41  (46s)
+[17:30:56]   store K=32 M=26 built and cached -> store_s1_c51_K32_M26_n32766.npz
+[17:30:58] [c51] store_seed=1  tuples_valid_novel=  4  agg=0.7292  distinct= 48  (48s)
+[17:31:39]   store K=32 M=26 built and cached -> store_s1_c52_K32_M26_n32761.npz
+[17:31:41] [c52] store_seed=1  tuples_valid_novel= 23  agg=0.8333  distinct= 53  (43s)
+[17:32:19]   store K=32 M=26 built and cached -> store_s1_c53_K32_M26_n32764.npz
+[17:32:21] [c53] store_seed=1  tuples_valid_novel=  0  agg=0.6921  distinct= 52  (40s)
+[17:32:59]   store K=32 M=26 built and cached -> store_s1_c54_K32_M26_n32763.npz
+[17:33:00] [c54] store_seed=1  tuples_valid_novel= 16  agg=0.7870  distinct= 58  (39s)
+[17:33:34]   store K=32 M=26 built and cached -> store_s1_c55_K32_M26_n32765.npz
+[17:33:36] [c55] store_seed=1  tuples_valid_novel= 22  agg=0.8333  distinct= 55  (35s)
+[17:34:17]   store K=32 M=26 built and cached -> store_s1_c56_K32_M26_n32760.npz
+[17:34:19] [c56] store_seed=1  tuples_valid_novel=  1  agg=0.7060  distinct= 60  (43s)
+[17:35:12]   store K=32 M=26 built and cached -> store_s1_c57_K32_M26_n32766.npz
+[17:35:14] [c57] store_seed=1  tuples_valid_novel=  0  agg=0.8032  distinct= 56  (55s)
+[17:35:53]   store K=32 M=26 built and cached -> store_s1_c58_K32_M26_n32764.npz
+[17:35:54] [c58] store_seed=1  tuples_valid_novel= 36  agg=0.9097  distinct= 55  (40s)
+[17:36:36]   store K=32 M=26 built and cached -> store_s1_c59_K32_M26_n32763.npz
+[17:36:38] [c59] store_seed=1  tuples_valid_novel= 14  agg=0.8333  distinct= 48  (43s)
+[17:37:21]   store K=32 M=26 built and cached -> store_s1_c60_K32_M26_n32766.npz
+[17:37:23] [c60] store_seed=1  tuples_valid_novel= 17  agg=0.8727  distinct= 56  (45s)
+[17:38:04]   store K=32 M=26 built and cached -> store_s1_c61_K32_M26_n32758.npz
+[17:38:06] [c61] store_seed=1  tuples_valid_novel= 12  agg=0.7639  distinct= 55  (43s)
+[17:38:46]   store K=32 M=26 built and cached -> store_s1_c62_K32_M26_n32759.npz
+[17:38:48] [c62] store_seed=1  tuples_valid_novel=  0  agg=0.8125  distinct= 44  (42s)
+[17:39:28]   store K=32 M=26 built and cached -> store_s1_c63_K32_M26_n32761.npz
+[17:39:30] [c63] store_seed=1  tuples_valid_novel=  0  agg=0.7130  distinct= 63  (42s)
+[17:39:30] C08 done: 49 corners, 15 refused [8, 9, 23, 26, 27, 28, 29, 32, 34, 35, 36, 39, 41, 42, 48], 2401.2s

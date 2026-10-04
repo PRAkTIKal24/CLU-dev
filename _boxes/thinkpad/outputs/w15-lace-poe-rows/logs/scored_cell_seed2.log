@@ -1,0 +1,90 @@
+chlu.__file__ = C:\chlu\worktrees\CHLU-w15-lace-poe-rows\chlu\__init__.py
+seed 2: cache coverage {'seed': 2, 'n_needed': 33039, 'n_shortfall': 0, 'cache_scope': 'full', 'cache_n_rows': 480000, 'bridge_dir': 'C:\\chlu\\outputs\\spoke-a-rivals\\cache_generation2\\shapes3d_recon\\seed_2'}
+  ⭐ PRECONDITION 1/2: classifier_gate.json gate=PASS (floor 0.95, 3 seeds)
+  ⭐ PRECONDITION 2/2: refusal_scores.json status=complete (not_run=[])
+[     0.0s] seed 2 · condition=recomb2element · frozen bridge C:\chlu\outputs\spoke-a-rivals\cache_generation2\shapes3d_recon\seed_2
+[     0.3s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=2d7eea75add77044… (hash + recipe asserted)
+[     0.9s]   ⭐ external classifier ad16c4e532731958… (978873 params) — THE instrument, identical across every arm in this seed
+[     7.6s]   ⭐ row split: mode=stratified — val realises floor_hue 10/10 · wall_hue 10/10 · object_hue 10/10 · scale 8/8 · shape 4/4 · orientation 15/15 · max per-value count ratio 1.091
+[     7.9s] rows: store_train=32768 B=72 MS=199 fit=32256 val=512
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[    25.8s]   ⭐ cache re-encode check: 64 rows, 2/131072 elements differ (0.002%), max |delta| = 9.53674e-07 = 1.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+[    25.8s]   ⚠ NOT ENFORCED (enforced=false): w15/lace-poe-rows launcher: n_shortfall == 0 measured for seeds [2] ({2: 33039} rows needed, all in the frozen cache) -- this run cannot extend the cache (no-extension ruling, hub-generation-table REENCODE-VERDICT-iter2.md)
+[    25.8s]   ⭐ (the check was not enforced, and it would have PASSED anyway)
+[    25.8s] cache 480000 rows (scope=full), D=2048; re-encode check within 1 ULP of the cache dtype on 64 rows
+[    69.4s]   ⚠ this seed's encoder differs from the plan's (154d49861064… vs 98d326028316…), so the grouping is re-derived on its own channels — ⛔ the plan's label vector would be a size-matched RANDOM partition here
+[    69.7s]   ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_2\store_s2.pkl (⛔ not re-trained)
+[    81.5s] ⭐ byte ledger: store 524288 B + addressing head 74240 B (⛔ coupling 163840 B EXCLUDED; ⛔ not 688128)
+[    95.6s] ⭐ no-bypass: pure codebook gather, 30 bits/read (R20's declared design constant) · ⭐ request-only path asserted on all four legs (⛔ no feature argument on ANY CLU call; gen_store.soft_read NOT imported)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[   141.6s] ⭐ DECODER ceiling on IMAGES: external in-corner balacc=0.9514 · probe=0.9653
+[   188.9s]   ⭐ [clu] IMAGE-space in-corner shape balacc=0.6858 (AUROC 0.7621, TPR 0.708 / TNR 0.663) · distinct on B: 10 vectors / 10 factor-tuples of 72 · probe companion 0.6858
+[   231.6s]   ⭐ [store_removed] IMAGE-space in-corner shape balacc=0.5000 (AUROC 0.4956, TPR 0.000 / TNR 1.000) · distinct on B: 1 vectors / 1 factor-tuples of 72 · probe companion 0.5000
+[   270.1s]   ⭐ [knn_proto] IMAGE-space in-corner shape balacc=0.8844 (AUROC 0.9777, TPR 1.000 / TNR 0.769) · distinct on B: 72 vectors / 60 factor-tuples of 72 · probe companion 0.8819
+[   270.1s]   ⭐ [lace] inheriting the SELECTED configuration from disk: sigma=0.03 form=both shrinkage=ledoit_wolf (gate fired=True, 36 trials inherited, ⛔ not re-selected)
+[   339.1s]   [lace] whitening shrinkage=ledoit_wolf: |diag-1|=0.1414 |offdiag|=0.006634
+[  2875.0s]   [lace] classifier: 12600 steps, loss 2.3733 -> 0.0017; its own val per-factor mean 0.9941
+[  3446.7s]   ⭐ [lace] IMAGE-space in-corner shape balacc=0.6139 (AUROC 0.7380, TPR 0.333 / TNR 0.894) · distinct on B: 72 vectors / 72 factor-tuples of 72 · probe companion 0.6253
+[  3471.3s]   ⭐ [lace/ld_published] IMAGE-space in-corner shape balacc=0.5148 (AUROC 0.6817, TPR 0.125 / TNR 0.905) · distinct on B: 72 vectors / 47 factor-tuples of 72 · probe companion 0.5238
+[  3497.1s]   ⭐ [lace/ld_corrected] IMAGE-space in-corner shape balacc=0.6746 (AUROC 0.7564, TPR 0.500 / TNR 0.849) · distinct on B: 72 vectors / 72 factor-tuples of 72 · probe companion 0.6492
+[  4599.4s]   [ebm] 6 independent experts trained; their OWN val accuracy per factor [1.0, 1.0, 1.0, 0.9824, 1.0, 1.0] (mean 0.9971)
+[  4599.4s]   [ebm] tuning budget: 36 trials (⭐ the SAME budget every arm is entitled to: 36)
+[  4619.3s]   [ebm] trial 1/36 {'step_size': 0.003, 'prior_sigma': 0.5, 'n_steps': 50, 'clip': True}: val agg=0.1380
+[  4716.5s]   [ebm] trial 6/36 {'step_size': 0.003, 'prior_sigma': 1.0, 'n_steps': 50, 'clip': False}: val agg=0.1354
+[  4858.9s]   [ebm] trial 12/36 {'step_size': 0.003, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': False}: val agg=0.1615
+[  4992.7s]   [ebm] trial 18/36 {'step_size': 0.01, 'prior_sigma': 1.0, 'n_steps': 50, 'clip': False}: val agg=0.1634
+[  5162.2s]   [ebm] trial 24/36 {'step_size': 0.01, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': False}: val agg=0.1738
+[  5302.1s]   [ebm] trial 30/36 {'step_size': 0.03, 'prior_sigma': 1.0, 'n_steps': 50, 'clip': False}: val agg=0.1751
+[  5467.2s]   [ebm] trial 36/36 {'step_size': 0.03, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': False}: val agg=0.1966
+[  5467.2s]   ⭐ [ebm] SELECTED (validation aggregate, ⛔ C never enters): {'step_size': 0.03, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': False, 'val_aggregate': 0.19661458333333334, 'val_compositional': 0.30859375}
+[  5527.1s]   ⭐ [ebm_compose] IMAGE-space in-corner shape balacc=0.5603 (AUROC 0.6193, TPR 0.236 / TNR 0.884) · distinct on B: 72 vectors / 72 factor-tuples of 72 · probe companion 0.5360
+[  5598.9s]   ⭐ [kstar] CovContentStore K=32 A=63 on 32768 store rows: wells 64..64 · dead 42 · rank/width 0.9688..0.9844 (71.5s)
+[  6656.7s]   ⭐ [kstar] address book fitted in 1057.9s · FOUR-PART LEDGER atoms 516,096 | cov+count 560,608 | address 1,072,304 | coupling 6,610 = 2,155,618 B = 4.1115x the 524,288 B REFERENCE
+[  6726.0s]   ⭐ [kstar] VAL GATE: arm 0.9186 · controls {'landscape_removed': 0.123046875, 'landscape_shuffled': 0.12369791666666667, 'landscape_shuffled_across_wells': 0.11165364583333333, 'random_atoms': 0.12174479166666667} · PASS=True
+[  6751.1s]   ⭐ [kstar] IMAGE-space in-corner shape balacc=0.7500 (AUROC 0.7814, TPR 0.500 / TNR 1.000) · distinct on B: 72 vectors / 48 factor-tuples of 72 · probe companion 0.7500
+[  6778.9s]   ⭐ [kstar/landscape_removed] IMAGE-space in-corner shape balacc=0.5000 (AUROC 0.4975, TPR 0.000 / TNR 1.000) · distinct on B: 1 vectors / 1 factor-tuples of 72 · probe companion 0.5000
+[  6805.5s]   ⭐ [kstar/landscape_shuffled] IMAGE-space in-corner shape balacc=0.4925 (AUROC 0.4439, TPR 0.000 / TNR 0.985) · distinct on B: 72 vectors / 25 factor-tuples of 72 · probe companion 0.5000
+[  6835.2s]   ⭐ [kstar/landscape_shuffled_across_wells] IMAGE-space in-corner shape balacc=0.5000 (AUROC 0.6524, TPR 0.000 / TNR 1.000) · distinct on B: 72 vectors / 7 factor-tuples of 72 · probe companion 0.5000
+[  6863.5s]   ⭐ [kstar/random_atoms] IMAGE-space in-corner shape balacc=0.5284 (AUROC 0.5626, TPR 0.569 / TNR 0.487) · distinct on B: 72 vectors / 25 factor-tuples of 72 · probe companion 0.4975
+[  6863.5s] seed 2 done in 6864s

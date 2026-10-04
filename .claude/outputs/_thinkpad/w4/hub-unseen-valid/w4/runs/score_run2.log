@@ -1,0 +1,62 @@
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[run2] seed 0 cont_mlp_notune_572k         e=0.1680  distinct_tuples=4053
+[run2] seed 0 cont_mlp_notune              e=0.2397  distinct_tuples=3961
+[run2] seed 0 table                        e=0.2558  distinct_tuples=3946
+[run2] seed 0 cont_mlp                     e=0.2154  distinct_tuples=4022
+  judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+[run2] seed 1 cont_mlp_notune_572k         e=0.1756  distinct_tuples=4044
+[run2] seed 1 cont_mlp_notune              e=0.2507  distinct_tuples=3988
+[run2] seed 1 table                        e=0.2523  distinct_tuples=3974
+[run2] seed 1 cont_mlp                     e=0.2123  distinct_tuples=4007
+  judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+[run2] seed 2 cont_mlp_notune_572k         e=0.1787  distinct_tuples=4053
+[run2] seed 2 cont_mlp_notune              e=0.2508  distinct_tuples=3926
+[run2] seed 2 table                        e=0.2392  distinct_tuples=3991
+[run2] seed 2 cont_mlp                     e=0.2118  distinct_tuples=4005
+
+cont_mlp_notune_572k         ARM_minus_leg -0.0170 sd 0.0024  seeds 3  (NEGATIVE = the leg BEATS my arm)
+cont_mlp_notune              ARM_minus_leg +0.0534 sd 0.0016  seeds 3  (NEGATIVE = the leg BEATS my arm)
+table                        ARM_minus_leg +0.0544 sd 0.0124  seeds 3  (NEGATIVE = the leg BEATS my arm)
+cont_mlp                     ARM_minus_leg +0.0223 sd 0.0058  seeds 3  (NEGATIVE = the leg BEATS my arm)

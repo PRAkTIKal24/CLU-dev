@@ -1,0 +1,76 @@
+== seed 0 · bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0 · K pinned 5
+  frozen: enc 98d326028316ae2c · dec_old 47c0f83196cd220d · dec_new 01ef91f75eeaae7b · probe c03bfb8916d00932
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+  cache scope=full rows=480000 reencode max|d|=0.0
+  rows: store=32768 a=1024 b=72 ms=198
+  eval_a: 1/1024 rows inside the Montero colour corner
+  ceiling old 0.947591 (shipped 0.947591) -> new 0.989258
+  ⭐ GATE[baseline_decoder] balacc=0.6843 auroc=0.8717 tpr=0.5000 tnr=0.8687
+  ⭐ GATE[v1_decoder] balacc=0.9223 auroc=0.9720 tpr=0.9306 tnr=0.9141
+  [correlation] labels reproduced exactly; wells [303, 305, 573, 501, 366]
+  [correlation] re-materialising the store (1200 steps) …
+  [correlation] ⭐ BIT-IDENTICAL re-materialisation: rel_mse 0.28266923706753433, read agg 0.5973307291666666
+  [correlation] READ old agg 0.5973 shape 0.5674  ->  new agg 0.6050 shape 0.5742
+  [correlation] corner-store[baseline_decoder] balacc=0.6641 auroc=0.7768
+  [correlation] corner-store[v1_decoder] balacc=0.5972 auroc=0.7004
+    [correlation] well 0: OLD leak agg -0.0715 shape -0.6121  |  NEW leak agg -0.0647 shape -0.1474
+    [correlation] well 1: OLD leak agg +0.1601 shape +1.0000  |  NEW leak agg +0.0917 shape +0.3115
+    [correlation] well 2: OLD leak agg -0.0321 shape -0.1905  |  NEW leak agg +0.0323 shape -0.0116
+    [correlation] well 3: OLD leak agg -2.8077 shape +nan  |  NEW leak agg +0.7158 shape +0.5007
+    [correlation] well 4: OLD leak agg +nan shape +nan  |  NEW leak agg +0.8888 shape +0.4989
+  [correlation] ⭐ POOLED corrected leakage +0.2439 (old -0.1592); cells in [-0.5534, +1.0000] (old [-0.6121, +1.0000])
+  [random] labels reproduced exactly; wells [303, 305, 573, 501, 366]
+  [random] re-materialising the store (1200 steps) …
+  [random] ⭐ BIT-IDENTICAL re-materialisation: rel_mse 0.4185249337141173, read agg 0.44921875
+  [random] READ old agg 0.4492 shape 0.3574  ->  new agg 0.4673 shape 0.3965
+  [random] corner-store[baseline_decoder] balacc=0.5398 auroc=0.4893
+  [random] corner-store[v1_decoder] balacc=0.5461 auroc=0.5679
+    [random] well 0: OLD leak agg +0.2527 shape +1.0000  |  NEW leak agg +0.0444 shape +0.0206
+    [random] well 1: OLD leak agg +0.0462 shape +0.0906  |  NEW leak agg +0.0192 shape -0.1752
+    [random] well 2: OLD leak agg +0.2335 shape +1.0000  |  NEW leak agg +0.2187 shape +0.1073
+    [random] well 3: OLD leak agg +0.0638 shape +1.0000  |  NEW leak agg +0.3565 shape +0.4522
+    [random] well 4: OLD leak agg +1.0000 shape +1.0000  |  NEW leak agg +0.8914 shape +0.4920
+  [random] ⭐ POOLED corrected leakage +0.2951 (old +0.1823); cells in [-0.2630, +1.0000] (old [-0.4348, +1.0000])
+== seed 0 done in 5287s -> /Users/user/Desktop/CHLU/.claude/outputs/gen-r0-rescore/rescore_seed_0.json

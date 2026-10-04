@@ -1,0 +1,49 @@
+w21 CLU cfg C:/chlu/outputs/w21-maze-t-clu-improve/smoke/cfg_smoke.json sha256 e5ece2f930c4bb5e7adff671d76bbfbb60095948ef9d6ced705a3f8b3998f2a7
+[BOTH_val seed 0] config {'latent': 128, 'K': 2, 'n_atoms': 6, 'ridge': 1.0} rival_steps 60 / 600
+  CODEC latent 128  loss 0.07921  [20.3s]
+  across-wells derangement [1, 0] (no fixed point: asserted)
+  MATCHED PARAMETERS (target 5520 = CLU read floats, obs 954, out 21)
+    mlp          width   5  params    5690  (+3.08%)
+    lstm         width   5  params    5880  (+6.52%)
+    transformer  width   4  params    5025  (-8.97%)  n_layers=2 heads=2
+  MATCHED PARAMETERS (target 55200 = CLU read floats, obs 954, out 21)
+    mlp          width  52  params   54805  (-0.72%)
+    lstm         width  41  params   54804  (-0.72%)
+    transformer  width  40  params   53685  (-2.74%)  n_layers=1 heads=2
+    TRAIN rival: mlp   params    5690  loss 2.5855  [11.8s]
+    TRAIN rival@10x-steps: mlp params    5690  loss 0.7177  [26.3s]
+    TRAIN diagnostic@10x-read-floats: mlp params   54805  loss 2.2337  [9.9s]
+    TRAIN rival: lstm  params    5880  loss 3.4666  [12.6s]
+    TRAIN rival@10x-steps: lstm params    5880  loss 1.2188  [26.0s]
+    TRAIN diagnostic@10x-read-floats: lstm params   54804  loss 2.3652  [14.3s]
+    TRAIN rival: transformer params    5025  loss 3.3580  [34.2s]
+    TRAIN rival@10x-steps: transformer params    5025  loss 0.1411  [51.1s]
+    TRAIN diagnostic@10x-read-floats: transformer params   53685  loss 2.1499  [26.2s]
+  MATCHED PARAMETERS (target 5520 = CLU read floats, obs 1032, out 21)
+    mlp          width   4  params    5005  (-9.33%)
+    lstm         width   4  params    5129  (-7.08%)
+    transformer  width   4  params    5337  (-3.32%)  n_layers=2 heads=2
+  MATCHED PARAMETERS (target 55200 = CLU read floats, obs 1032, out 21)
+    mlp          width  49  params   55360  (+0.29%)
+    lstm         width  39  params   54584  (-1.12%)
+    transformer  width  34  params   56247  (+1.90%)  n_layers=2 heads=2
+    TRAIN diagnostic+rel@8k: mlp +rel params    5005  loss 2.2804  [10.8s]
+    TRAIN diagnostic+rel@80k: mlp +rel params    5005  loss 1.3790  [33.6s]
+    TRAIN diagnostic+rel@8k: lstm +rel params    5129  loss 3.7270  [18.1s]
+    TRAIN diagnostic+rel@80k: lstm +rel params    5129  loss 2.0398  [28.1s]
+    TRAIN diagnostic+rel@8k: transformer +rel params    5337  loss 3.3299  [23.5s]
+    TRAIN diagnostic+rel@80k: transformer +rel params    5337  loss 0.1024  [43.7s]
+  row seen  diag+rel best 0.8000 (never a bar)
+  row seen  n=150   CLU 0.9933 best-rival8k 0.0000 best-rival80k 0.8133 worst-ctl 0.6333 bseq 0.8867 bcol 0.6200
+  row pair  diag+rel best 0.0933 (never a bar)
+  row pair  n=150   CLU 0.8333 best-rival8k 0.0000 best-rival80k 0.0800 worst-ctl 0.4000 bseq 0.5733 bcol 0.1667
+  row nway  diag+rel best 0.1400 (never a bar)
+  row nway  n=150   CLU 0.9067 best-rival8k 0.0000 best-rival80k 0.1400 worst-ctl 0.5800 bseq 0.1133 bcol 0.0000
+  row value diag+rel best 0.3333 (never a bar)
+  row value n=150   CLU 0.5000 best-rival8k 0.0000 best-rival80k 0.3333 worst-ctl 0.3000 bseq 0.4600 bcol 0.2600
+  rollout CLU validity 0.0000 per-step 0.9315
+    TRAIN mlp retrain-without params    5690  loss 2.5776  [9.9s]
+    TRAIN mlp as-trained params    5690  loss 2.5855  [9.9s]
+    TRAIN mlp retrain-without params    5690  loss 2.5995  [13.2s]
+    TRAIN mlp as-trained params    5690  loss 2.5855  [10.7s]
+[BOTH_val seed 0] wrote C:/chlu/outputs/w21-maze-t-clu-improve/smoke\BOTH_val_seed0_SMOKE.json [2488.8s]

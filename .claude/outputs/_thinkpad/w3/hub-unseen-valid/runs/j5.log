@@ -1,0 +1,62 @@
+[00:50:33] 512 requests; oracle midpoints built (rot px 0.0955)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[00:50:41] all three judged
+[00:50:41] 
+[00:50:41] REGISTERED statistic  cdist(h_hat, h_REQUESTED) / Delta
+[00:50:41]   oracle (perfect render)     0.3130   <- the FLOOR
+[00:50:41]   real lo image (lookup)      0.5000
+[00:50:41]   real hi image (lookup)      0.5000
+[00:50:41]   => usable range             0.3130 .. 0.5000  (span 0.1870 D)
+[00:50:41] 
+[00:50:41] PROPOSED statistic    cdist(h_hat, h_hat_ORACLE) / Delta
+[00:50:41]   oracle                      0.0000   <- 0 by construction
+[00:50:41]   real lo image (lookup)      0.5092
+[00:50:41]   real hi image (lookup)      0.4907
+[00:50:41]   mean of the two (lookup)    0.5000  <- the CEILING of the scale
+[00:50:41]   => usable range             0.0000 .. 0.5000 D
+[00:50:41] 
+[00:50:41] SNAPFRAC null: oracle 0.6680 | perfect lookup 1.0000
+[00:50:41] mean t: oracle 0.5092 (sd 0.3452) | lookup-lo 0.0000
+[00:50:41] per-corner mean t at the oracle over 48 corners: mean 0.5017 sd 0.2667 (corner sizes 2-18)
+[00:50:41] wrote runs/j5_scale.json

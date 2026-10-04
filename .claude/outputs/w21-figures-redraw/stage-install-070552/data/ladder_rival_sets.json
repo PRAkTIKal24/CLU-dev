@@ -1,0 +1,77 @@
+{
+ "_doc": "Rival column sets for fig_ladder. One entry = one panel. To add a set: append an entry with status 'landed', its artefact, a reader and the arm map; add its caption line to the draft. No code change. Readers: 'ladder_csv' (w12 LADDER.csv layout: rung,k,seed,arm,mean_distinct_valid_novel_tuples) and 'json_path' (value = the JSON leaf at path_template with {n}, {seed}, {arm} substituted). Every set is drawn beside the same store and floor.",
+ "store": {
+  "label": "CLU, K* = 32",
+  "source": "w12b-nr6-and-kstar/KSTAR-LADDER.json",
+  "reader": "json_path",
+  "path_template": "by_rung.{n}.kstar_K32.store.per_seed.{seed}",
+  "mean_template": "by_rung.{n}.kstar_K32.store.mean"
+ },
+ "floor": {
+  "label": "Lookup table (floor)",
+  "source": "w12-composition-ladder/LADDER.csv",
+  "reader": "ladder_csv",
+  "arm": "rival_table"
+ },
+ "rungs": [
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "sets": [
+  {
+   "id": "combination_split_32256",
+   "status": "landed",
+   "title": "Read-path rivals, 32,256-row pool",
+   "pool_rows": 32256,
+   "pool_note": "combination-split pool; carries the held-out values",
+   "pool_source": "_thinkpad/w4/spoke-a-rivals/rivals/seed_0/mlp.rival.json",
+   "source": "w12-composition-ladder/LADDER.csv",
+   "reader": "ladder_csv",
+   "arms": {
+    "mlp": "rival_mlp",
+    "lstm": "rival_lstm",
+    "transformer": "rival_transformer",
+    "cont_mlp": "rival_cont_mlp"
+   },
+   "constant_for_n_ge_3": true,
+   "pool_path": "population.n_rows_fit"
+  },
+  {
+   "id": "data_matched_mlp_32768",
+   "status": "landed",
+   "title": "Data-matched MLP, 32,768-row pool",
+   "pool_rows": 32768,
+   "pool_note": "the store's own content rows of each rung",
+   "pool_source": "w12-composition-ladder/runs/shipped_seed0/rows_learned_ref_ownpool.json",
+   "source": "w12-composition-ladder/LADDER.csv",
+   "reader": "ladder_csv",
+   "arms": {
+    "mlp": "learned_ref_ownpool"
+   },
+   "constant_for_n_ge_3": false,
+   "pool_path": "summary.n_fit_rows"
+  },
+  {
+   "id": "data_matched_131072",
+   "status": "not_landed",
+   "title": "Data-matched rivals, 131,072-row pool",
+   "pool_rows": 131072,
+   "awaiting": "w20 shapes-data-matched (the four naive units refit on 131,072 rows); no artefact on this machine at build time"
+  },
+  {
+   "id": "ladder_rivals_32k",
+   "status": "not_landed",
+   "title": "Data-matched rivals, 32,768-row pool",
+   "pool_rows": 32768,
+   "awaiting": "spoke/ladder-rivals-32k"
+  }
+ ]
+}

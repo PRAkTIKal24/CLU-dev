@@ -1,0 +1,901 @@
+{
+  "across_repeats": {
+    "judge_in_corner_balacc": [
+      0.5481574539363484,
+      0.5595337800111669
+    ],
+    "mean": 0.5538456169737577,
+    "note": "two independent runs, each with its own expert fit and sampler keys; the spread is the arm's own noise floor",
+    "sd": 0.008044277312493523
+  },
+  "arm": "poe_ebm",
+  "byte_ledger": {
+    "byte_multiple": 27.13520050048828,
+    "deployed_bytes": 14226660,
+    "note": "this arm runs at its OWN budget, not the store's; the multiple belongs beside every number it produces",
+    "param_count": 3556665,
+    "store_reference_bytes": 524288
+  },
+  "byte_multiple": 27.13520050048828,
+  "callable": {
+    "available": false,
+    "reason": "The product-of-experts EBM's output is an SGLD draw from a noise initialisation, not a function of the request alone, and its experts are conditioned on a FULL factor assignment. It is not offered as a request->features callable. Hubs needing it on their own corners should ask this spoke to score those corners."
+  },
+  "repeats": 2,
+  "runs": [
+    {
+      "byte_ledger": {
+        "byte_multiple": 27.13520050048828,
+        "deployed_bytes": 14226660,
+        "note": "this arm runs at its OWN budget, not the store's; the multiple belongs beside every number it produces",
+        "param_count": 3556665,
+        "store_reference_bytes": 524288
+      },
+      "experts": {
+        "deployed_bytes": 14226660,
+        "depth": 2,
+        "fit": [
+          {
+            "epochs": 20,
+            "factor": "floor_hue",
+            "loss_final": 1.9837165154967806e-07,
+            "loss_first": 2.309913158416748
+          },
+          {
+            "epochs": 20,
+            "factor": "wall_hue",
+            "loss_final": 9.778878506949695e-08,
+            "loss_first": 2.317249298095703
+          },
+          {
+            "epochs": 20,
+            "factor": "object_hue",
+            "loss_final": 4.144377783177333e-07,
+            "loss_first": 2.302119255065918
+          },
+          {
+            "epochs": 20,
+            "factor": "scale",
+            "loss_final": 1.1144789823447354e-05,
+            "loss_first": 2.0871963500976562
+          },
+          {
+            "epochs": 20,
+            "factor": "shape",
+            "loss_final": 4.559949229587801e-05,
+            "loss_first": 1.3916563987731934
+          },
+          {
+            "epochs": 20,
+            "factor": "orientation",
+            "loss_final": 0.00021344464039430022,
+            "loss_first": 2.699812412261963
+          }
+        ],
+        "hidden": 256,
+        "n": 6,
+        "own_val_accuracy_mean": 0.9993489583333334,
+        "own_val_accuracy_per_factor": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.998046875,
+          0.998046875
+        ],
+        "param_count": 3556665
+      },
+      "method": "Du, Li & Mordatch 2020 \u2014 compositional visual generation with energy-based models: independent per-factor experts, AND = sum of energies, SGLD in the data space with the prior score explicit. \u26d4 NOT LACE (one trunk, whitened coordinates, prior score omitted under an exactness identity).",
+      "repeat_index": 0,
+      "scores": {
+        "distinct_counts_B": {
+          "factor_tuples": 72,
+          "feature_vectors": 72,
+          "images": 72,
+          "n": 72,
+          "note": "feature_vectors/images are trivially N for a continuous rival; factor_tuples is the comparable diversity count"
+        },
+        "external": {
+          "composition_B": {
+            "aggregate": 0.18750000000000003,
+            "compositional_factor": "shape",
+            "exact_match": 0.0,
+            "n": 72,
+            "per_factor": {
+              "floor_hue": 0.19444444444444445,
+              "object_hue": 0.25,
+              "orientation": 0.09722222222222222,
+              "scale": 0.25,
+              "shape": 0.16666666666666666,
+              "wall_hue": 0.16666666666666666
+            }
+          },
+          "in_corner": {
+            "auroc": 0.5824958123953099,
+            "balanced_accuracy": 0.5481574539363484,
+            "detection_rate": 0.16666666666666666,
+            "n_neg": 199,
+            "n_pos": 72,
+            "sufficient": true,
+            "target": 1,
+            "tnr": 0.9296482412060302,
+            "tpr": 0.16666666666666666
+          }
+        },
+        "generation": 2,
+        "probe": {
+          "composition_B": {
+            "aggregate": 0.1273148148148148,
+            "compositional_factor": "shape",
+            "exact_match": 0.0,
+            "n": 72,
+            "per_factor": {
+              "floor_hue": 0.08333333333333333,
+              "object_hue": 0.1527777777777778,
+              "orientation": 0.1527777777777778,
+              "scale": 0.2638888888888889,
+              "shape": 0.027777777777777776,
+              "wall_hue": 0.08333333333333333
+            }
+          },
+          "in_corner": {
+            "auroc": 0.5728643216080402,
+            "balanced_accuracy": 0.4988135120044668,
+            "detection_rate": 0.027777777777777776,
+            "n_neg": 199,
+            "n_pos": 72,
+            "sufficient": true,
+            "target": 1,
+            "tnr": 0.9698492462311558,
+            "tpr": 0.027777777777777776
+          }
+        }
+      },
+      "standardiser": {
+        "clip_nonnegative_selected": true,
+        "mode": "diagonal, fitted on the fit rows",
+        "note": "\u2b50 post-ReLU features are non-negative by construction; BOTH clip and no-clip are in the grid and validation chooses \u2014 \u26d4 never us"
+      },
+      "tuning": {
+        "budget": 36,
+        "selected": {
+          "clip": true,
+          "n_steps": 200,
+          "prior_sigma": 2.0,
+          "step_size": 0.03,
+          "val_aggregate": 0.20703125,
+          "val_compositional": 0.3359375
+        },
+        "selection_criterion": "validation aggregate probe accuracy (\u26d4 C never enters)",
+        "trials": [
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.003,
+            "val_aggregate": 0.15104166666666666,
+            "val_compositional": 0.3203125
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.003,
+            "val_aggregate": 0.13997395833333334,
+            "val_compositional": 0.29296875
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.003,
+            "val_aggregate": 0.154296875,
+            "val_compositional": 0.30078125
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.003,
+            "val_aggregate": 0.15559895833333334,
+            "val_compositional": 0.30859375
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.14973958333333334,
+            "val_compositional": 0.30078125
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.14778645833333334,
+            "val_compositional": 0.3046875
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.15690104166666666,
+            "val_compositional": 0.3125
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.171875,
+            "val_compositional": 0.33203125
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.15299479166666666,
+            "val_compositional": 0.28125
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.13346354166666666,
+            "val_compositional": 0.28125
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.15494791666666666,
+            "val_compositional": 0.29296875
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.150390625,
+            "val_compositional": 0.28125
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.01,
+            "val_aggregate": 0.14388020833333334,
+            "val_compositional": 0.265625
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.01,
+            "val_aggregate": 0.15169270833333334,
+            "val_compositional": 0.29296875
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.01,
+            "val_aggregate": 0.15104166666666666,
+            "val_compositional": 0.29296875
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.01,
+            "val_aggregate": 0.14973958333333334,
+            "val_compositional": 0.28125
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.16341145833333334,
+            "val_compositional": 0.32421875
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.16080729166666666,
+            "val_compositional": 0.3515625
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.16927083333333334,
+            "val_compositional": 0.31640625
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.17513020833333334,
+            "val_compositional": 0.3203125
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.15299479166666666,
+            "val_compositional": 0.328125
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.14453125,
+            "val_compositional": 0.26171875
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.16666666666666666,
+            "val_compositional": 0.33203125
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.17317708333333334,
+            "val_compositional": 0.34765625
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.03,
+            "val_aggregate": 0.150390625,
+            "val_compositional": 0.3046875
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.03,
+            "val_aggregate": 0.15169270833333334,
+            "val_compositional": 0.29296875
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.03,
+            "val_aggregate": 0.14518229166666666,
+            "val_compositional": 0.30859375
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.03,
+            "val_aggregate": 0.14908854166666666,
+            "val_compositional": 0.3046875
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.173828125,
+            "val_compositional": 0.37109375
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.15625,
+            "val_compositional": 0.296875
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.18619791666666666,
+            "val_compositional": 0.328125
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.17643229166666666,
+            "val_compositional": 0.35546875
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.17317708333333334,
+            "val_compositional": 0.3984375
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.1796875,
+            "val_compositional": 0.375
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.20703125,
+            "val_compositional": 0.3359375
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.19596354166666666,
+            "val_compositional": 0.3828125
+          }
+        ]
+      },
+      "wall_clock_s": 676.6258964538574
+    },
+    {
+      "byte_ledger": {
+        "byte_multiple": 27.13520050048828,
+        "deployed_bytes": 14226660,
+        "note": "this arm runs at its OWN budget, not the store's; the multiple belongs beside every number it produces",
+        "param_count": 3556665,
+        "store_reference_bytes": 524288
+      },
+      "experts": {
+        "deployed_bytes": 14226660,
+        "depth": 2,
+        "fit": [
+          {
+            "epochs": 20,
+            "factor": "floor_hue",
+            "loss_final": 1.5273681697181019e-07,
+            "loss_first": 2.3047282695770264
+          },
+          {
+            "epochs": 20,
+            "factor": "wall_hue",
+            "loss_final": 1.7881369274164172e-07,
+            "loss_first": 2.310422420501709
+          },
+          {
+            "epochs": 20,
+            "factor": "object_hue",
+            "loss_final": 3.920820574876416e-07,
+            "loss_first": 2.3120977878570557
+          },
+          {
+            "epochs": 20,
+            "factor": "scale",
+            "loss_final": 0.04913456365466118,
+            "loss_first": 2.078005790710449
+          },
+          {
+            "epochs": 20,
+            "factor": "shape",
+            "loss_final": 2.9693119358853437e-05,
+            "loss_first": 1.388762354850769
+          },
+          {
+            "epochs": 20,
+            "factor": "orientation",
+            "loss_final": 3.7036284084024373e-06,
+            "loss_first": 2.7161319255828857
+          }
+        ],
+        "hidden": 256,
+        "n": 6,
+        "own_val_accuracy_mean": 0.9967447916666666,
+        "own_val_accuracy_per_factor": [
+          1.0,
+          1.0,
+          1.0,
+          0.982421875,
+          0.998046875,
+          1.0
+        ],
+        "param_count": 3556665
+      },
+      "method": "Du, Li & Mordatch 2020 \u2014 compositional visual generation with energy-based models: independent per-factor experts, AND = sum of energies, SGLD in the data space with the prior score explicit. \u26d4 NOT LACE (one trunk, whitened coordinates, prior score omitted under an exactness identity).",
+      "repeat_index": 1,
+      "scores": {
+        "distinct_counts_B": {
+          "factor_tuples": 72,
+          "feature_vectors": 72,
+          "images": 72,
+          "n": 72,
+          "note": "feature_vectors/images are trivially N for a continuous rival; factor_tuples is the comparable diversity count"
+        },
+        "external": {
+          "composition_B": {
+            "aggregate": 0.21064814814814814,
+            "compositional_factor": "shape",
+            "exact_match": 0.0,
+            "n": 72,
+            "per_factor": {
+              "floor_hue": 0.20833333333333334,
+              "object_hue": 0.2777777777777778,
+              "orientation": 0.08333333333333333,
+              "scale": 0.3611111111111111,
+              "shape": 0.19444444444444445,
+              "wall_hue": 0.1388888888888889
+            }
+          },
+          "in_corner": {
+            "auroc": 0.553461753210497,
+            "balanced_accuracy": 0.5595337800111669,
+            "detection_rate": 0.19444444444444445,
+            "n_neg": 199,
+            "n_pos": 72,
+            "sufficient": true,
+            "target": 1,
+            "tnr": 0.9246231155778895,
+            "tpr": 0.19444444444444445
+          }
+        },
+        "generation": 2,
+        "probe": {
+          "composition_B": {
+            "aggregate": 0.16203703703703703,
+            "compositional_factor": "shape",
+            "exact_match": 0.0,
+            "n": 72,
+            "per_factor": {
+              "floor_hue": 0.2222222222222222,
+              "object_hue": 0.18055555555555555,
+              "orientation": 0.08333333333333333,
+              "scale": 0.375,
+              "shape": 0.06944444444444445,
+              "wall_hue": 0.041666666666666664
+            }
+          },
+          "in_corner": {
+            "auroc": 0.547250139586823,
+            "balanced_accuracy": 0.5322096594081519,
+            "detection_rate": 0.06944444444444445,
+            "n_neg": 199,
+            "n_pos": 72,
+            "sufficient": true,
+            "target": 1,
+            "tnr": 0.9949748743718593,
+            "tpr": 0.06944444444444445
+          }
+        }
+      },
+      "standardiser": {
+        "clip_nonnegative_selected": false,
+        "mode": "diagonal, fitted on the fit rows",
+        "note": "\u2b50 post-ReLU features are non-negative by construction; BOTH clip and no-clip are in the grid and validation chooses \u2014 \u26d4 never us"
+      },
+      "tuning": {
+        "budget": 36,
+        "selected": {
+          "clip": false,
+          "n_steps": 50,
+          "prior_sigma": 1.0,
+          "step_size": 0.03,
+          "val_aggregate": 0.18880208333333334,
+          "val_compositional": 0.3671875
+        },
+        "selection_criterion": "validation aggregate probe accuracy (\u26d4 C never enters)",
+        "trials": [
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.003,
+            "val_aggregate": 0.14127604166666666,
+            "val_compositional": 0.2890625
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.003,
+            "val_aggregate": 0.142578125,
+            "val_compositional": 0.26953125
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.003,
+            "val_aggregate": 0.15690104166666666,
+            "val_compositional": 0.31640625
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.003,
+            "val_aggregate": 0.15299479166666666,
+            "val_compositional": 0.28515625
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.146484375,
+            "val_compositional": 0.30859375
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.14453125,
+            "val_compositional": 0.265625
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.17447916666666666,
+            "val_compositional": 0.33984375
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.15885416666666666,
+            "val_compositional": 0.296875
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.14388020833333334,
+            "val_compositional": 0.30859375
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.14388020833333334,
+            "val_compositional": 0.3046875
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.1484375,
+            "val_compositional": 0.31640625
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.003,
+            "val_aggregate": 0.17252604166666666,
+            "val_compositional": 0.34765625
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.01,
+            "val_aggregate": 0.15755208333333334,
+            "val_compositional": 0.2890625
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.01,
+            "val_aggregate": 0.15755208333333334,
+            "val_compositional": 0.2890625
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.01,
+            "val_aggregate": 0.162109375,
+            "val_compositional": 0.33984375
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.01,
+            "val_aggregate": 0.15494791666666666,
+            "val_compositional": 0.3046875
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.15169270833333334,
+            "val_compositional": 0.2421875
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.16796875,
+            "val_compositional": 0.30078125
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.16861979166666666,
+            "val_compositional": 0.3359375
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.177734375,
+            "val_compositional": 0.3359375
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.14973958333333334,
+            "val_compositional": 0.3125
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.15299479166666666,
+            "val_compositional": 0.3203125
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.17057291666666666,
+            "val_compositional": 0.3203125
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.01,
+            "val_aggregate": 0.18033854166666666,
+            "val_compositional": 0.31640625
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.03,
+            "val_aggregate": 0.14973958333333334,
+            "val_compositional": 0.3046875
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 0.5,
+            "step_size": 0.03,
+            "val_aggregate": 0.15625,
+            "val_compositional": 0.30078125
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.03,
+            "val_aggregate": 0.150390625,
+            "val_compositional": 0.28125
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 0.5,
+            "step_size": 0.03,
+            "val_aggregate": 0.16471354166666666,
+            "val_compositional": 0.30078125
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.166015625,
+            "val_compositional": 0.3125
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 1.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.18880208333333334,
+            "val_compositional": 0.3671875
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.17643229166666666,
+            "val_compositional": 0.3046875
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 1.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.17252604166666666,
+            "val_compositional": 0.2890625
+          },
+          {
+            "clip": true,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.16927083333333334,
+            "val_compositional": 0.30078125
+          },
+          {
+            "clip": false,
+            "n_steps": 50,
+            "prior_sigma": 2.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.17708333333333334,
+            "val_compositional": 0.30859375
+          },
+          {
+            "clip": true,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.18619791666666666,
+            "val_compositional": 0.3203125
+          },
+          {
+            "clip": false,
+            "n_steps": 200,
+            "prior_sigma": 2.0,
+            "step_size": 0.03,
+            "val_aggregate": 0.18815104166666666,
+            "val_compositional": 0.3125
+          }
+        ]
+      },
+      "wall_clock_s": 602.1853289604187
+    }
+  ]
+}

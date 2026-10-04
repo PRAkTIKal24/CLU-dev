@@ -1,0 +1,2495 @@
+{
+ "seed_index": 2,
+ "tolerance_used": null,
+ "scored_runs_spent": 0,
+ "k_colours": 4,
+ "banks": {
+  "train": {
+   "generator_seeds_tried": 90,
+   "seed0": 2800000,
+   "n_mazes": 90,
+   "n_rows": 36717,
+   "n_natural_rows": 13500,
+   "per_tuple": 2,
+   "door_tint": {
+    "p_door_tint": 1.0,
+    "self_tint_prob": 0.6,
+    "door_cells": 360,
+    "tinted": 354,
+    "self_tinted": 215,
+    "reverted_to_preserve_the_oracle": 6,
+    "opt_len_mean_before": 40.044444444444444,
+    "opt_len_mean_after": 40.1
+   },
+   "seed_block": [
+    2800000,
+    3000000
+   ]
+  },
+  "val": {
+   "generator_seeds_tried": 45,
+   "seed0": 3000000,
+   "n_mazes": 45,
+   "n_rows": 18055,
+   "n_natural_rows": 6750,
+   "per_tuple": 2,
+   "door_tint": {
+    "p_door_tint": 1.0,
+    "self_tint_prob": 0.6,
+    "door_cells": 180,
+    "tinted": 178,
+    "self_tinted": 102,
+    "reverted_to_preserve_the_oracle": 2,
+    "opt_len_mean_before": 44.06666666666667,
+    "opt_len_mean_after": 44.06666666666667
+   },
+   "seed_block": [
+    3000000,
+    3100000
+   ]
+  },
+  "test_RESERVED_NOT_EVALUATED": {
+   "seed_block": [
+    3100000,
+    3200000
+   ],
+   "note": "reserved for wave 16; this spoke spends ZERO scored runs and never builds or evaluates it"
+  },
+  "maze_disjointness": "train and val mazes come from disjoint generator seed blocks, so every val maze is a random maze never seen at train and a within-maze lookup cannot transfer",
+  "seconds": 41.23494362831116
+ },
+ "ACCEPT_1_independent_replay": {
+  "transitions_replayed": 54772,
+  "disagreements": 0,
+  "detail": [],
+  "pass": true,
+  "drivers": [
+   "step_ref (rules-written, set-based state, no array of trits)",
+   "judge_ref (the w9 second replay, driven from inst.start over prefix+action; it never sees s_t)"
+  ]
+ },
+ "ACCEPT_2_no_impossible_example": {
+  "rows_checked": 54772,
+  "rows_with_no_accepting_emission": 0,
+  "pass": true,
+  "definition": "an example is IMPOSSIBLE iff no emission exists that the exact transition judge accepts; this audit constructs the accepting emission for every row and checks the judge takes it"
+ },
+ "ACCEPT_3b_words_determine_transition": {
+  "distinct_word_tuples": 1117,
+  "rows": 54772,
+  "word_tuples_with_two_outcomes": 0,
+  "pass": true
+ },
+ "ACCEPT_4_rule_b_bites": {
+  "stratified_bank_train": {
+   "n_transitions": 36717,
+   "rule_b_renders_the_action_ILLEGAL": 2629,
+   "fraction": 0.0716017103793883,
+   "fraction_of_move_actions": 0.07758595248635089,
+   "n_move_actions": 33885,
+   "illegal_fraction_overall": 0.4144674129149985,
+   "n_door_eq_pocket_eq_tint": 462,
+   "note": "fraction of transitions the engine makes ILLEGAL under RULES A+B that would be LEGAL under RULE A alone.  REPORTED COLUMN, never an abort condition."
+  },
+  "stratified_bank_val": {
+   "n_transitions": 18055,
+   "rule_b_renders_the_action_ILLEGAL": 1271,
+   "fraction": 0.07039601218499031,
+   "fraction_of_move_actions": 0.07626305052202088,
+   "n_move_actions": 16666,
+   "illegal_fraction_overall": 0.4132373303793963,
+   "n_door_eq_pocket_eq_tint": 226,
+   "note": "fraction of transitions the engine makes ILLEGAL under RULES A+B that would be LEGAL under RULE A alone.  REPORTED COLUMN, never an abort condition."
+  },
+  "natural_distribution_train": {
+   "n_transitions": 13500,
+   "rule_b_renders_the_action_ILLEGAL": 164,
+   "fraction": 0.012148148148148148,
+   "fraction_of_move_actions": 0.015145917990395271,
+   "n_move_actions": 10828,
+   "illegal_fraction_overall": 0.5659259259259259,
+   "n_door_eq_pocket_eq_tint": 11,
+   "note": "fraction of transitions the engine makes ILLEGAL under RULES A+B that would be LEGAL under RULE A alone.  REPORTED COLUMN, never an abort condition."
+  },
+  "natural_distribution_val": {
+   "n_transitions": 6750,
+   "rule_b_renders_the_action_ILLEGAL": 70,
+   "fraction": 0.01037037037037037,
+   "fraction_of_move_actions": 0.01303538175046555,
+   "n_move_actions": 5370,
+   "illegal_fraction_overall": 0.5665185185185185,
+   "n_door_eq_pocket_eq_tint": 9,
+   "note": "fraction of transitions the engine makes ILLEGAL under RULES A+B that would be LEGAL under RULE A alone.  REPORTED COLUMN, never an abort condition."
+  },
+  "which_is_which": "the stratified bank caps rows per WORD TUPLE, which is what gives the rare configurations enough rows to score; the natural distribution is a uniform sample of (reachable state, action) pairs.  Both are printed; neither is a gate."
+ },
+ "holdout": {
+  "value_colour": 4,
+  "pairs": [
+   [
+    0,
+    1,
+    3,
+    1
+   ],
+   [
+    0,
+    2,
+    3,
+    3
+   ],
+   [
+    0,
+    1,
+    2,
+    3
+   ],
+   [
+    0,
+    3,
+    3,
+    1
+   ],
+   [
+    0,
+    1,
+    3,
+    3
+   ],
+   [
+    0,
+    2,
+    2,
+    1
+   ],
+   [
+    0,
+    2,
+    3,
+    2
+   ],
+   [
+    0,
+    1,
+    2,
+    1
+   ]
+  ],
+  "nway": [
+   [
+    2,
+    2,
+    2,
+    1
+   ],
+   [
+    2,
+    2,
+    2,
+    3
+   ],
+   [
+    2,
+    2,
+    2,
+    2
+   ],
+   [
+    1,
+    1,
+    1,
+    0
+   ],
+   [
+    3,
+    0,
+    3,
+    2
+   ],
+   [
+    2,
+    0,
+    2,
+    2
+   ],
+   [
+    3,
+    0,
+    3,
+    3
+   ],
+   [
+    3,
+    0,
+    3,
+    0
+   ],
+   [
+    1,
+    2,
+    0,
+    2
+   ],
+   [
+    1,
+    3,
+    0,
+    3
+   ],
+   [
+    3,
+    1,
+    0,
+    1
+   ],
+   [
+    2,
+    3,
+    0,
+    0
+   ],
+   [
+    3,
+    5,
+    3,
+    0
+   ],
+   [
+    3,
+    5,
+    3,
+    1
+   ],
+   [
+    1,
+    5,
+    1,
+    2
+   ],
+   [
+    2,
+    5,
+    2,
+    2
+   ],
+   [
+    1,
+    0,
+    2,
+    2
+   ],
+   [
+    1,
+    0,
+    2,
+    1
+   ],
+   [
+    1,
+    0,
+    2,
+    0
+   ],
+   [
+    3,
+    0,
+    1,
+    0
+   ]
+  ],
+  "n_train_rows_by_class": {
+   "seen": 17618,
+   "value": 13486,
+   "nway": 1372,
+   "pair": 4241
+  },
+  "n_val_rows_by_class_BEFORE_CAP": {
+   "seen": 9122,
+   "value": 6097,
+   "pair": 2129,
+   "nway": 707
+  },
+  "n_val_rows_by_class_SCORED": {
+   "seen": 4000,
+   "value": 4000,
+   "pair": 2129,
+   "nway": 707
+  },
+  "max_rows_per_class": 4000,
+  "cap_rule": "uniform seeded subsample per class; every arm on a row sees the same rows"
+ },
+ "ACCEPT_3_holdout_disjointness": {
+  "value_holdout_colour": 4,
+  "n_train_rows": 17618,
+  "train_rows_mentioning_the_held_out_colour": 0,
+  "n_nway_combos_held_out": 20,
+  "nway_combos_present_in_train": 0,
+  "n_pair_combos_held_out": 8,
+  "pair_combos_present_in_train": 0,
+  "pair_leak_detail": [],
+  "rows_misclassified_into_their_own_split": {
+   "value": 0,
+   "pair": 0,
+   "nway": 0
+  },
+  "distinct_word_tuples_in_train": 342,
+  "pass": true
+ },
+ "next_state_code": {
+  "code_dim": 22,
+  "blocks": {
+   "legal": [
+    0,
+    2
+   ],
+   "disp": [
+    2,
+    6
+   ],
+   "event": [
+    8,
+    9
+   ],
+   "pocket": [
+    17,
+    5
+   ]
+  },
+  "n_distinct_codes_in_train": 31,
+  "n_distinct_codes_in_val": 45,
+  "why_this_matters": "the emission target is a SMALL DISCRETE SET.  A random projection of a few dozen well-separated points into a handful of dimensions preserves their separation (Johnson-Lindenstrauss), so a RANDOM-ATOM store can be decodable even though its content was never fitted.  That is why the charter-C controls are measured here rather than assumed, and why they are part of the selection bar."
+ },
+ "frozen_state_encoder": {
+  "feat_dim": 12,
+  "width": 32,
+  "steps": 1500,
+  "params_encoder": 17068,
+  "params_decoder": 17071,
+  "final_bce": 7.70539409131743e-05,
+  "pixel_accuracy": 0.9999999403953552,
+  "on_pixel_recall": 1.0,
+  "n_images": 90,
+  "seconds": 126.7996997833252,
+  "restarts_run": 1,
+  "restart_bce": [
+   7.70539409131743e-05
+  ],
+  "accept_bce": 0.01,
+  "independence": {
+   "loss_arguments": [
+    "ae",
+    "X"
+   ],
+   "loss_identifiers": [
+    "X",
+    "ae",
+    "dec",
+    "enc",
+    "jax",
+    "logits",
+    "mean",
+    "optax",
+    "sigmoid_binary_cross_entropy",
+    "vmap",
+    "x"
+   ],
+   "sees_actions": false,
+   "sees_judge": false,
+   "trained_on": "maze images only",
+   "frozen_before_any_arm_is_trained": true,
+   "params": 17068
+  }
+ },
+ "clu_val_sweep": [
+  {
+   "latent": 32,
+   "K": 4,
+   "n_atoms": 2,
+   "ridge": 1.0,
+   "val_seen_exact": 0.899,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.0,
+    "landscape_shuffled": 0.31,
+    "landscape_shuffled_across_wells": 0.56725,
+    "random_atoms": 0.40875
+   },
+   "worst_control": 0.56725,
+   "read_floats": 2608,
+   "span_fraction": 0.25,
+   "clears_bar": false
+  },
+  {
+   "latent": 48,
+   "K": 4,
+   "n_atoms": 2,
+   "ridge": 1.0,
+   "val_seen_exact": 0.878,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.0,
+    "landscape_shuffled": 0.3175,
+    "landscape_shuffled_across_wells": 0.358,
+    "random_atoms": 0.52675
+   },
+   "worst_control": 0.52675,
+   "read_floats": 2640,
+   "span_fraction": 0.16666666666666666,
+   "clears_bar": false
+  },
+  {
+   "latent": 64,
+   "K": 4,
+   "n_atoms": 2,
+   "ridge": 1.0,
+   "val_seen_exact": 0.75125,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.0,
+    "landscape_shuffled": 0.29475,
+    "landscape_shuffled_across_wells": 0.2135,
+    "random_atoms": 0.47625
+   },
+   "worst_control": 0.47625,
+   "read_floats": 2672,
+   "span_fraction": 0.125,
+   "clears_bar": false
+  },
+  {
+   "latent": 64,
+   "K": 4,
+   "n_atoms": 3,
+   "ridge": 1.0,
+   "val_seen_exact": 0.93225,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.0,
+    "landscape_shuffled": 0.353,
+    "landscape_shuffled_across_wells": 0.40525,
+    "random_atoms": 0.47
+   },
+   "worst_control": 0.47,
+   "read_floats": 4008,
+   "span_fraction": 0.1875,
+   "clears_bar": true
+  },
+  {
+   "latent": 64,
+   "K": 8,
+   "n_atoms": 2,
+   "ridge": 1.0,
+   "val_seen_exact": 0.91775,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.0,
+    "landscape_shuffled": 0.5325,
+    "landscape_shuffled_across_wells": 0.4985,
+    "random_atoms": 0.417
+   },
+   "worst_control": 0.5325,
+   "read_floats": 5216,
+   "span_fraction": 0.25,
+   "clears_bar": true
+  },
+  {
+   "latent": 64,
+   "K": 8,
+   "n_atoms": 3,
+   "ridge": 1.0,
+   "val_seen_exact": 0.98625,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.0,
+    "landscape_shuffled": 0.8695,
+    "landscape_shuffled_across_wells": 0.63675,
+    "random_atoms": 0.891
+   },
+   "worst_control": 0.891,
+   "read_floats": 7824,
+   "span_fraction": 0.375,
+   "clears_bar": false
+  },
+  {
+   "latent": 64,
+   "K": 8,
+   "n_atoms": 6,
+   "ridge": 1.0,
+   "val_seen_exact": 0.99625,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.0,
+    "landscape_shuffled": 0.986,
+    "landscape_shuffled_across_wells": 0.98625,
+    "random_atoms": 0.971
+   },
+   "worst_control": 0.98625,
+   "read_floats": 15648,
+   "span_fraction": 0.75,
+   "clears_bar": false
+  },
+  {
+   "latent": 64,
+   "K": 8,
+   "n_atoms": 2,
+   "ridge": 0.1,
+   "val_seen_exact": 0.91775,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.0,
+    "landscape_shuffled": 0.5325,
+    "landscape_shuffled_across_wells": 0.4985,
+    "random_atoms": 0.41625
+   },
+   "worst_control": 0.5325,
+   "read_floats": 5216,
+   "span_fraction": 0.25,
+   "clears_bar": true
+  },
+  {
+   "latent": 96,
+   "K": 8,
+   "n_atoms": 2,
+   "ridge": 1.0,
+   "val_seen_exact": 0.899,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.0,
+    "landscape_shuffled": 0.6785,
+    "landscape_shuffled_across_wells": 0.275,
+    "random_atoms": 0.48375
+   },
+   "worst_control": 0.6785,
+   "read_floats": 5280,
+   "span_fraction": 0.16666666666666666,
+   "clears_bar": false
+  },
+  {
+   "latent": 96,
+   "K": 8,
+   "n_atoms": 3,
+   "ridge": 1.0,
+   "val_seen_exact": 0.96625,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.0,
+    "landscape_shuffled": 0.83325,
+    "landscape_shuffled_across_wells": 0.6015,
+    "random_atoms": 0.65
+   },
+   "worst_control": 0.83325,
+   "read_floats": 7920,
+   "span_fraction": 0.25,
+   "clears_bar": false
+  },
+  {
+   "latent": 128,
+   "K": 4,
+   "n_atoms": 3,
+   "ridge": 1.0,
+   "val_seen_exact": 0.90475,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.056,
+    "landscape_shuffled": 0.47225,
+    "landscape_shuffled_across_wells": 0.1745,
+    "random_atoms": 0.57975
+   },
+   "worst_control": 0.57975,
+   "read_floats": 4200,
+   "span_fraction": 0.09375,
+   "clears_bar": true
+  },
+  {
+   "latent": 128,
+   "K": 8,
+   "n_atoms": 2,
+   "ridge": 1.0,
+   "val_seen_exact": 0.8815,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.056,
+    "landscape_shuffled": 0.51775,
+    "landscape_shuffled_across_wells": 0.32275,
+    "random_atoms": 0.17925
+   },
+   "worst_control": 0.51775,
+   "read_floats": 5344,
+   "span_fraction": 0.125,
+   "clears_bar": false
+  },
+  {
+   "latent": 128,
+   "K": 8,
+   "n_atoms": 3,
+   "ridge": 1.0,
+   "val_seen_exact": 0.952,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.056,
+    "landscape_shuffled": 0.66225,
+    "landscape_shuffled_across_wells": 0.5385,
+    "random_atoms": 0.52275
+   },
+   "worst_control": 0.66225,
+   "read_floats": 8016,
+   "span_fraction": 0.1875,
+   "clears_bar": true
+  },
+  {
+   "latent": 128,
+   "K": 8,
+   "n_atoms": 6,
+   "ridge": 1.0,
+   "val_seen_exact": 0.99625,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.056,
+    "landscape_shuffled": 0.949,
+    "landscape_shuffled_across_wells": 0.9555,
+    "random_atoms": 0.685
+   },
+   "worst_control": 0.9555,
+   "read_floats": 16032,
+   "span_fraction": 0.375,
+   "clears_bar": false
+  },
+  {
+   "latent": 128,
+   "K": 8,
+   "n_atoms": 3,
+   "ridge": 0.1,
+   "val_seen_exact": 0.952,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.056,
+    "landscape_shuffled": 0.66225,
+    "landscape_shuffled_across_wells": 0.539,
+    "random_atoms": 0.52275
+   },
+   "worst_control": 0.66225,
+   "read_floats": 8016,
+   "span_fraction": 0.1875,
+   "clears_bar": true
+  },
+  {
+   "latent": 256,
+   "K": 8,
+   "n_atoms": 3,
+   "ridge": 1.0,
+   "val_seen_exact": 0.95125,
+   "val_seen_exact_controls": {
+    "landscape_removed": 0.056,
+    "landscape_shuffled": 0.4515,
+    "landscape_shuffled_across_wells": 0.58025,
+    "random_atoms": 0.6455
+   },
+   "worst_control": 0.6455,
+   "read_floats": 8400,
+   "span_fraction": 0.09375,
+   "clears_bar": true
+  }
+ ],
+ "config_A": {
+  "config": {
+   "latent": 128,
+   "K": 8,
+   "n_atoms": 3,
+   "ridge": 1.0
+  },
+  "val_seen_exact": 0.952,
+  "selection_rule": "val `exact` on the `seen` row only; the held-out rows and the rollout row were not consulted.  Ties broken by the fewest read floats.",
+  "bar": "seen >= 0.90 AND every charter-C control collapses on `seen` (control <= CLU - 0.15)",
+  "bar_met": true
+ },
+ "frozen_codec": {
+  "steps": 2500,
+  "latent": 128,
+  "code_dim": 22,
+  "final_loss": 2.1893176381126978e-05,
+  "params": 29142,
+  "seconds": 8.770979642868042,
+  "objective": "per-block softmax cross-entropy on the next-state code; no request, no arm, no judge enters the loss"
+ },
+ "pipeline_ceiling_codec_roundtrip_on_train": {
+  "label": "codec ceiling (train)",
+  "n": 17618,
+  "exact": 1.0,
+  "failure_modes": {}
+ },
+ "pipeline_ceiling_codec_roundtrip_on_val": {
+  "seen": {
+   "label": "codec ceiling (seen)",
+   "n": 4000,
+   "exact": 1.0,
+   "failure_modes": {}
+  },
+  "value": {
+   "label": "codec ceiling (value)",
+   "n": 4000,
+   "exact": 0.53425,
+   "failure_modes": {
+    "pocket": 1761,
+    "keystate": 82,
+    "incoherent-key-event": 20
+   }
+  },
+  "pair": {
+   "label": "codec ceiling (pair)",
+   "n": 2129,
+   "exact": 0.9581963363081258,
+   "failure_modes": {
+    "keystate": 89
+   }
+  },
+  "nway": {
+   "label": "codec ceiling (nway)",
+   "n": 707,
+   "exact": 0.9943422913719944,
+   "failure_modes": {
+    "keystate": 4
+   }
+  }
+ },
+ "clu_ledger": {
+  "read_floats": 8016,
+  "store_atom_floats": 384,
+  "head_floats": 7632,
+  "deployed_bytes_float32": 32064,
+  "statistic_floats_float64": 1224,
+  "statistic_bytes_float64": 9792,
+  "byte_convention": "deployed bytes = 4 x (atom floats + address-book floats), the object that produces a read; the float64 sufficient statistic is what buys EXACT deletion and is declared beside it, never netted in",
+  "K": 8,
+  "n_atoms": 3,
+  "dim": 128,
+  "design_width": 318,
+  "dead_channels": 0,
+  "well_widths": [
+   16,
+   16,
+   16,
+   16,
+   16,
+   16,
+   16,
+   16
+  ],
+  "span_fraction_n_atoms_over_d_k": [
+   0.1875,
+   0.1875,
+   0.1875,
+   0.1875,
+   0.1875,
+   0.1875,
+   0.1875,
+   0.1875
+  ],
+  "deployed_rank_per_well": [
+   2,
+   2,
+   2,
+   2,
+   2,
+   2,
+   2,
+   2
+  ]
+ },
+ "clu_request_only": {
+  "assert_head_request_only": true
+ },
+ "learned_blind_arms": {
+  "BLIND-COLOUR (learned: colour identity removed from the request)": {
+   "read_floats": 2832,
+   "design_width": 102
+  },
+  "BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+   "read_floats": 1056,
+   "design_width": 28
+  }
+ },
+ "matched_parameters": {
+  "target_floats": 8016,
+  "target_definition": "the CLU's READ-PATH float count = store atom floats + address-book floats.  The float64 sufficient statistic is printed separately and is NEVER matched.",
+  "achieved": {
+   "mlp": {
+    "width": 11,
+    "params": 8249,
+    "residual_pct": 2.906686626746507,
+    "extra": {}
+   },
+   "lstm": {
+    "width": 10,
+    "params": 8288,
+    "residual_pct": 3.3932135728542914,
+    "extra": {}
+   },
+   "transformer": {
+    "width": 10,
+    "params": 8418,
+    "residual_pct": 5.014970059880239,
+    "extra": {
+     "n_layers": 1,
+     "heads": 2
+    }
+   }
+  }
+ },
+ "rival_training": {
+  "mlp": {
+   "kind": "mlp",
+   "width": 11,
+   "extra": {},
+   "params": 8249,
+   "steps": 8000,
+   "final_loss": 0.22953768074512482,
+   "loss_curve": [
+    [
+     0,
+     6.317872524261475
+    ],
+    [
+     400,
+     3.3768210411071777
+    ],
+    [
+     800,
+     2.293529510498047
+    ],
+    [
+     1200,
+     2.05753231048584
+    ],
+    [
+     1600,
+     1.5897326469421387
+    ],
+    [
+     2000,
+     1.5370875597000122
+    ],
+    [
+     2400,
+     1.4469950199127197
+    ],
+    [
+     2800,
+     1.6691709756851196
+    ],
+    [
+     3200,
+     0.8491238355636597
+    ],
+    [
+     3600,
+     1.5379009246826172
+    ],
+    [
+     4000,
+     1.1703014373779297
+    ],
+    [
+     4400,
+     1.235053300857544
+    ],
+    [
+     4800,
+     1.0619951486587524
+    ],
+    [
+     5200,
+     1.4259520769119263
+    ],
+    [
+     5600,
+     1.038191795349121
+    ],
+    [
+     6000,
+     1.2052143812179565
+    ],
+    [
+     6400,
+     0.8260490894317627
+    ],
+    [
+     6800,
+     0.963387668132782
+    ],
+    [
+     7200,
+     0.9248749613761902
+    ],
+    [
+     7600,
+     1.0713776350021362
+    ],
+    [
+     7999,
+     0.22953768074512482
+    ]
+   ],
+   "seconds": 24.82245135307312,
+   "examples_seen": 1920000
+  },
+  "lstm": {
+   "kind": "lstm",
+   "width": 10,
+   "extra": {},
+   "params": 8288,
+   "steps": 8000,
+   "final_loss": 0.4415465295314789,
+   "loss_curve": [
+    [
+     0,
+     6.3030829429626465
+    ],
+    [
+     400,
+     3.6466622352600098
+    ],
+    [
+     800,
+     3.009366989135742
+    ],
+    [
+     1200,
+     2.637906551361084
+    ],
+    [
+     1600,
+     2.395472764968872
+    ],
+    [
+     2000,
+     2.532512903213501
+    ],
+    [
+     2400,
+     2.033719062805176
+    ],
+    [
+     2800,
+     2.4594011306762695
+    ],
+    [
+     3200,
+     1.7741727828979492
+    ],
+    [
+     3600,
+     2.3683547973632812
+    ],
+    [
+     4000,
+     1.9228436946868896
+    ],
+    [
+     4400,
+     2.1523325443267822
+    ],
+    [
+     4800,
+     1.7278270721435547
+    ],
+    [
+     5200,
+     2.275655746459961
+    ],
+    [
+     5600,
+     1.773294448852539
+    ],
+    [
+     6000,
+     1.887782335281372
+    ],
+    [
+     6400,
+     1.3717118501663208
+    ],
+    [
+     6800,
+     1.538338541984558
+    ],
+    [
+     7200,
+     1.3212887048721313
+    ],
+    [
+     7600,
+     1.421919584274292
+    ],
+    [
+     7999,
+     0.4415465295314789
+    ]
+   ],
+   "seconds": 26.545472383499146,
+   "examples_seen": 1920000
+  },
+  "transformer": {
+   "kind": "transformer",
+   "width": 10,
+   "extra": {
+    "n_layers": 1,
+    "heads": 2
+   },
+   "params": 8418,
+   "steps": 8000,
+   "final_loss": 0.005545610561966896,
+   "loss_curve": [
+    [
+     0,
+     6.067176342010498
+    ],
+    [
+     400,
+     1.6754419803619385
+    ],
+    [
+     800,
+     1.309476613998413
+    ],
+    [
+     1200,
+     1.0225024223327637
+    ],
+    [
+     1600,
+     1.1413226127624512
+    ],
+    [
+     2000,
+     0.7084294557571411
+    ],
+    [
+     2400,
+     0.8116613030433655
+    ],
+    [
+     2800,
+     0.9783828854560852
+    ],
+    [
+     3200,
+     0.6108682751655579
+    ],
+    [
+     3600,
+     0.8087397217750549
+    ],
+    [
+     4000,
+     0.9332764148712158
+    ],
+    [
+     4400,
+     0.6310219764709473
+    ],
+    [
+     4800,
+     0.6360560059547424
+    ],
+    [
+     5200,
+     0.5901412963867188
+    ],
+    [
+     5600,
+     0.4083474278450012
+    ],
+    [
+     6000,
+     0.7118634581565857
+    ],
+    [
+     6400,
+     0.42841169238090515
+    ],
+    [
+     6800,
+     0.7798306941986084
+    ],
+    [
+     7200,
+     0.470225989818573
+    ],
+    [
+     7600,
+     0.6729459166526794
+    ],
+    [
+     7999,
+     0.005545610561966896
+    ]
+   ],
+   "seconds": 35.41003775596619,
+   "examples_seen": 1920000
+  }
+ },
+ "lookup_tables": {
+  "cross_maze_words": {
+   "size": 342
+  },
+  "cross_maze_raw_r1": {
+   "size": 11043
+  },
+  "cross_maze_frag_r1": {
+   "size": 10665
+  },
+  "within_maze_raw_r1": {
+   "size": 5258,
+   "built_from": "the VAL mazes' NATURAL-distribution rows -- a different sample of the same mazes, so the scored row is not in the table by construction",
+   "WARNING": "this is NOT transfer.  It is printed only as the ceiling a lookup reaches when the maze REPEATS, so the cross-maze floor can be read against it.  Every scored maze in this harness is a random maze never seen at train."
+  }
+ },
+ "ROWS": {
+  "seen": {
+   "CLU (single design)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.952,
+    "failure_modes": {
+     "keystate": 120,
+     "pocket": 40,
+     "displacement": 32
+    }
+   },
+   "control: landscape_removed": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.056,
+    "failure_modes": {
+     "legality": 1772,
+     "displacement": 1714,
+     "pocket": 281,
+     "keystate": 9
+    }
+   },
+   "control: landscape_shuffled": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.66225,
+    "failure_modes": {
+     "displacement": 1083,
+     "legality": 190,
+     "keystate": 78
+    }
+   },
+   "control: landscape_shuffled_across_wells": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.5385,
+    "failure_modes": {
+     "pocket": 1194,
+     "displacement": 520,
+     "legality": 122,
+     "incoherent-key-event": 10
+    }
+   },
+   "control: random_atoms": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.52275,
+    "failure_modes": {
+     "incoherent-key-event": 790,
+     "pocket": 593,
+     "displacement": 526
+    }
+   },
+   "arm: BLIND-COLOUR (learned: colour identity removed from the request)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.577,
+    "failure_modes": {
+     "pocket": 1452,
+     "keystate": 121,
+     "legality": 100,
+     "displacement": 19
+    }
+   },
+   "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.94175,
+    "failure_modes": {
+     "legality": 223,
+     "displacement": 10
+    }
+   },
+   "rival: mlp": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.74275,
+    "failure_modes": {
+     "legality": 875,
+     "displacement": 72,
+     "keystate": 41,
+     "pocket": 39,
+     "incoherent-key-event": 2
+    }
+   },
+   "rival: lstm": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.6395,
+    "failure_modes": {
+     "legality": 843,
+     "displacement": 439,
+     "pocket": 120,
+     "keystate": 40
+    }
+   },
+   "rival: transformer": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.842,
+    "failure_modes": {
+     "legality": 532,
+     "keystate": 53,
+     "displacement": 27,
+     "incoherent-key-event": 12,
+     "pocket": 8
+    }
+   },
+   "floor: lookup cross-maze WORDS": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.997,
+    "failure_modes": {
+     "legality": 7,
+     "pocket": 5
+    },
+    "coverage": 0.9955,
+    "table_size": 342
+   },
+   "floor: lookup cross-maze raw r1": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.3955,
+    "failure_modes": {
+     "legality": 1519,
+     "pocket": 899
+    },
+    "coverage": 0.27549999999999997,
+    "table_size": 11043
+   },
+   "floor: fragment cross-maze r1": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.302,
+    "failure_modes": {
+     "legality": 1434,
+     "pocket": 1339,
+     "keystate": 12,
+     "incoherent-key-event": 7
+    },
+    "coverage": 0.30600000000000005,
+    "table_size": 10665
+   },
+   "floor: lookup WITHIN-maze raw r1": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.31575,
+    "failure_modes": {
+     "legality": 1766,
+     "pocket": 971
+    },
+    "coverage": 0.19299999999999995,
+    "table_size": 5258
+   },
+   "column: ORACLE (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 1.0,
+    "failure_modes": {}
+   },
+   "column: BLIND-A (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.99075,
+    "failure_modes": {
+     "legality": 37
+    }
+   },
+   "column: BLIND-B (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.91775,
+    "failure_modes": {
+     "legality": 310,
+     "keystate": 19
+    }
+   },
+   "column: BLIND-COLOUR (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.87825,
+    "failure_modes": {
+     "legality": 487
+    }
+   },
+   "column: BLIND-SEQUENTIAL (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.99275,
+    "failure_modes": {
+     "legality": 29
+    }
+   },
+   "column: BLIND-FACTOR (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.99175,
+    "failure_modes": {
+     "legality": 33
+    }
+   },
+   "column: CODEC CEILING": {
+    "label": "codec ceiling (seen)",
+    "n": 4000,
+    "exact": 1.0,
+    "failure_modes": {}
+   }
+  },
+  "pair": {
+   "CLU (single design)": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.43400657585721,
+    "failure_modes": {
+     "legality": 663,
+     "displacement": 542
+    }
+   },
+   "control: landscape_removed": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.0,
+    "failure_modes": {
+     "displacement": 929,
+     "legality": 886,
+     "pocket": 285,
+     "keystate": 29
+    }
+   },
+   "control: landscape_shuffled": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.13433536871770785,
+    "failure_modes": {
+     "displacement": 1035,
+     "legality": 808
+    }
+   },
+   "control: landscape_shuffled_across_wells": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.25270079849694693,
+    "failure_modes": {
+     "legality": 833,
+     "displacement": 423,
+     "pocket": 293,
+     "incoherent-key-event": 42
+    }
+   },
+   "control: random_atoms": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.28135274776890556,
+    "failure_modes": {
+     "legality": 638,
+     "displacement": 617,
+     "pocket": 233,
+     "incoherent-key-event": 42
+    }
+   },
+   "arm: BLIND-COLOUR (learned: colour identity removed from the request)": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.1982151244715829,
+    "failure_modes": {
+     "pocket": 854,
+     "legality": 777,
+     "displacement": 76
+    }
+   },
+   "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.5645843118835134,
+    "failure_modes": {
+     "legality": 730,
+     "displacement": 197
+    }
+   },
+   "rival: mlp": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.5007045561296384,
+    "failure_modes": {
+     "legality": 889,
+     "keystate": 109,
+     "displacement": 45,
+     "pocket": 20
+    }
+   },
+   "rival: lstm": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.3250352278064819,
+    "failure_modes": {
+     "legality": 887,
+     "displacement": 479,
+     "keystate": 50,
+     "pocket": 21
+    }
+   },
+   "rival: transformer": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.5105683419445749,
+    "failure_modes": {
+     "legality": 887,
+     "keystate": 122,
+     "pocket": 22,
+     "displacement": 11
+    }
+   },
+   "floor: lookup cross-maze WORDS": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.0,
+    "failure_modes": {
+     "legality": 1243,
+     "pocket": 886
+    },
+    "coverage": 0.0,
+    "table_size": 342
+   },
+   "floor: lookup cross-maze raw r1": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.02724283701268201,
+    "failure_modes": {
+     "legality": 1205,
+     "pocket": 866
+    },
+    "coverage": 0.03193987787693753,
+    "table_size": 11043
+   },
+   "floor: fragment cross-maze r1": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.0615312353217473,
+    "failure_modes": {
+     "pocket": 1113,
+     "legality": 882,
+     "incoherent-key-event": 3
+    },
+    "coverage": 0.22029121653358386,
+    "table_size": 10665
+   },
+   "floor: lookup WITHIN-maze raw r1": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.09065288868013152,
+    "failure_modes": {
+     "legality": 1117,
+     "pocket": 819
+    },
+    "coverage": 0.09253170502583374,
+    "table_size": 5258
+   },
+   "column: ORACLE (planner)": {
+    "label": "",
+    "n": 2129,
+    "exact": 1.0,
+    "failure_modes": {}
+   },
+   "column: BLIND-A (planner)": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.742132456552372,
+    "failure_modes": {
+     "legality": 549
+    }
+   },
+   "column: BLIND-B (planner)": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.8083607327383748,
+    "failure_modes": {
+     "legality": 321,
+     "keystate": 87
+    }
+   },
+   "column: BLIND-COLOUR (planner)": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.31986848285580083,
+    "failure_modes": {
+     "legality": 1448
+    }
+   },
+   "column: BLIND-SEQUENTIAL (planner)": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.9788633161108502,
+    "failure_modes": {
+     "legality": 45
+    }
+   },
+   "column: BLIND-FACTOR (planner)": {
+    "label": "",
+    "n": 2129,
+    "exact": 0.7759511507750118,
+    "failure_modes": {
+     "legality": 477
+    }
+   },
+   "column: CODEC CEILING": {
+    "label": "codec ceiling (pair)",
+    "n": 2129,
+    "exact": 0.9581963363081258,
+    "failure_modes": {
+     "keystate": 89
+    }
+   }
+  },
+  "nway": {
+   "CLU (single design)": {
+    "label": "",
+    "n": 707,
+    "exact": 0.44413012729844414,
+    "failure_modes": {
+     "legality": 337,
+     "displacement": 56
+    }
+   },
+   "control: landscape_removed": {
+    "label": "",
+    "n": 707,
+    "exact": 0.0,
+    "failure_modes": {
+     "displacement": 354,
+     "legality": 338,
+     "keystate": 15
+    }
+   },
+   "control: landscape_shuffled": {
+    "label": "",
+    "n": 707,
+    "exact": 0.1074964639321075,
+    "failure_modes": {
+     "legality": 337,
+     "displacement": 294
+    }
+   },
+   "control: landscape_shuffled_across_wells": {
+    "label": "",
+    "n": 707,
+    "exact": 0.4582743988684583,
+    "failure_modes": {
+     "legality": 173,
+     "displacement": 160,
+     "incoherent-key-event": 50
+    }
+   },
+   "control: random_atoms": {
+    "label": "",
+    "n": 707,
+    "exact": 0.2263083451202263,
+    "failure_modes": {
+     "legality": 164,
+     "displacement": 146,
+     "incoherent-key-event": 139,
+     "pocket": 98
+    }
+   },
+   "arm: BLIND-COLOUR (learned: colour identity removed from the request)": {
+    "label": "",
+    "n": 707,
+    "exact": 0.0,
+    "failure_modes": {
+     "legality": 373,
+     "pocket": 315,
+     "displacement": 19
+    }
+   },
+   "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+    "label": "",
+    "n": 707,
+    "exact": 0.4328147100424328,
+    "failure_modes": {
+     "legality": 392,
+     "displacement": 9
+    }
+   },
+   "rival: mlp": {
+    "label": "",
+    "n": 707,
+    "exact": 0.3635077793493635,
+    "failure_modes": {
+     "legality": 379,
+     "keystate": 47,
+     "displacement": 21,
+     "pocket": 3
+    }
+   },
+   "rival: lstm": {
+    "label": "",
+    "n": 707,
+    "exact": 0.16124469589816123,
+    "failure_modes": {
+     "legality": 381,
+     "displacement": 158,
+     "keystate": 40,
+     "pocket": 14
+    }
+   },
+   "rival: transformer": {
+    "label": "",
+    "n": 707,
+    "exact": 0.39603960396039606,
+    "failure_modes": {
+     "legality": 360,
+     "keystate": 57,
+     "displacement": 6,
+     "pocket": 4
+    }
+   },
+   "floor: lookup cross-maze WORDS": {
+    "label": "",
+    "n": 707,
+    "exact": 0.0,
+    "failure_modes": {
+     "legality": 369,
+     "pocket": 338
+    },
+    "coverage": 0.0,
+    "table_size": 342
+   },
+   "floor: lookup cross-maze raw r1": {
+    "label": "",
+    "n": 707,
+    "exact": 0.0014144271570014145,
+    "failure_modes": {
+     "legality": 372,
+     "pocket": 334
+    },
+    "coverage": 0.007072135785007094,
+    "table_size": 11043
+   },
+   "floor: fragment cross-maze r1": {
+    "label": "",
+    "n": 707,
+    "exact": 0.005657708628005658,
+    "failure_modes": {
+     "pocket": 375,
+     "legality": 327,
+     "incoherent-key-event": 1
+    },
+    "coverage": 0.11032531824611036,
+    "table_size": 10665
+   },
+   "floor: lookup WITHIN-maze raw r1": {
+    "label": "",
+    "n": 707,
+    "exact": 0.10183875530410184,
+    "failure_modes": {
+     "legality": 327,
+     "pocket": 308
+    },
+    "coverage": 0.1018387553041018,
+    "table_size": 5258
+   },
+   "column: ORACLE (planner)": {
+    "label": "",
+    "n": 707,
+    "exact": 1.0,
+    "failure_modes": {}
+   },
+   "column: BLIND-A (planner)": {
+    "label": "",
+    "n": 707,
+    "exact": 0.521923620933522,
+    "failure_modes": {
+     "legality": 338
+    }
+   },
+   "column: BLIND-B (planner)": {
+    "label": "",
+    "n": 707,
+    "exact": 0.9236209335219236,
+    "failure_modes": {
+     "legality": 54
+    }
+   },
+   "column: BLIND-COLOUR (planner)": {
+    "label": "",
+    "n": 707,
+    "exact": 0.5544554455445545,
+    "failure_modes": {
+     "legality": 315
+    }
+   },
+   "column: BLIND-SEQUENTIAL (planner)": {
+    "label": "",
+    "n": 707,
+    "exact": 0.9236209335219236,
+    "failure_modes": {
+     "legality": 54
+    }
+   },
+   "column: BLIND-FACTOR (planner)": {
+    "label": "",
+    "n": 707,
+    "exact": 0.5841584158415841,
+    "failure_modes": {
+     "legality": 294
+    }
+   },
+   "column: CODEC CEILING": {
+    "label": "codec ceiling (nway)",
+    "n": 707,
+    "exact": 0.9943422913719944,
+    "failure_modes": {
+     "keystate": 4
+    }
+   }
+  },
+  "value": {
+   "CLU (single design)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.44425,
+    "failure_modes": {
+     "pocket": 1500,
+     "legality": 427,
+     "displacement": 241,
+     "keystate": 55
+    }
+   },
+   "control: landscape_removed": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.031,
+    "failure_modes": {
+     "displacement": 1869,
+     "legality": 1490,
+     "pocket": 506,
+     "keystate": 11
+    }
+   },
+   "control: landscape_shuffled": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.31975,
+    "failure_modes": {
+     "pocket": 1169,
+     "displacement": 957,
+     "legality": 538,
+     "keystate": 55,
+     "incoherent-key-event": 2
+    }
+   },
+   "control: landscape_shuffled_across_wells": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.26775,
+    "failure_modes": {
+     "pocket": 1817,
+     "displacement": 532,
+     "legality": 446,
+     "incoherent-key-event": 134
+    }
+   },
+   "control: random_atoms": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.24425,
+    "failure_modes": {
+     "pocket": 1530,
+     "displacement": 754,
+     "legality": 392,
+     "incoherent-key-event": 347
+    }
+   },
+   "arm: BLIND-COLOUR (learned: colour identity removed from the request)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.28125,
+    "failure_modes": {
+     "pocket": 2425,
+     "legality": 367,
+     "keystate": 55,
+     "displacement": 28
+    }
+   },
+   "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.45725,
+    "failure_modes": {
+     "pocket": 1571,
+     "legality": 490,
+     "displacement": 110
+    }
+   },
+   "rival: mlp": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.57775,
+    "failure_modes": {
+     "legality": 1143,
+     "pocket": 324,
+     "displacement": 169,
+     "keystate": 52,
+     "incoherent-key-event": 1
+    }
+   },
+   "rival: lstm": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.3,
+    "failure_modes": {
+     "legality": 993,
+     "pocket": 967,
+     "displacement": 796,
+     "keystate": 44
+    }
+   },
+   "rival: transformer": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.5905,
+    "failure_modes": {
+     "legality": 997,
+     "pocket": 475,
+     "keystate": 95,
+     "displacement": 49,
+     "incoherent-key-event": 22
+    }
+   },
+   "floor: lookup cross-maze WORDS": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.058,
+    "failure_modes": {
+     "legality": 2510,
+     "pocket": 1258
+    },
+    "coverage": 0.0,
+    "table_size": 342
+   },
+   "floor: lookup cross-maze raw r1": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.07375,
+    "failure_modes": {
+     "legality": 2452,
+     "pocket": 1253
+    },
+    "coverage": 0.016750000000000043,
+    "table_size": 11043
+   },
+   "floor: fragment cross-maze r1": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.11425,
+    "failure_modes": {
+     "legality": 1846,
+     "pocket": 1687,
+     "incoherent-key-event": 7,
+     "keystate": 3
+    },
+    "coverage": 0.22299999999999998,
+    "table_size": 10665
+   },
+   "floor: lookup WITHIN-maze raw r1": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.16425,
+    "failure_modes": {
+     "legality": 2210,
+     "pocket": 1133
+    },
+    "coverage": 0.10975000000000001,
+    "table_size": 5258
+   },
+   "column: ORACLE (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 1.0,
+    "failure_modes": {}
+   },
+   "column: BLIND-A (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.9555,
+    "failure_modes": {
+     "legality": 178
+    }
+   },
+   "column: BLIND-B (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.8755,
+    "failure_modes": {
+     "legality": 461,
+     "keystate": 37
+    }
+   },
+   "column: BLIND-COLOUR (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.549,
+    "failure_modes": {
+     "legality": 1804
+    }
+   },
+   "column: BLIND-SEQUENTIAL (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.99325,
+    "failure_modes": {
+     "legality": 27
+    }
+   },
+   "column: BLIND-FACTOR (planner)": {
+    "label": "",
+    "n": 4000,
+    "exact": 0.95925,
+    "failure_modes": {
+     "legality": 163
+    }
+   },
+   "column: CODEC CEILING": {
+    "label": "codec ceiling (value)",
+    "n": 4000,
+    "exact": 0.53425,
+    "failure_modes": {
+     "pocket": 1761,
+     "keystate": 82,
+     "incoherent-key-event": 20
+    }
+   }
+  }
+ },
+ "evaluate_seconds": 3.898890733718872,
+ "ROLLOUT": {
+  "n_rollouts": 45,
+  "route_length": "the FULL optimal route per maze (mean 44.1 steps)",
+  "action_source": "the engine's own optimal route; no arm chooses the actions, so a rollout generated correctly at every step reaches the goal within budget by construction",
+  "chaining": "the state fed to step t+1 is the ARM'S OWN generated state, never the engine's; the moment a step is wrong the rollout is dead and nothing re-synchronises it",
+  "seconds": 0.6070282459259033,
+  "arms": {
+   "CLU (single design)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.9160447761194029,
+    "steps_attempted": 536,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 10.911111111111111
+   },
+   "control: landscape_removed": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.27419354838709675,
+    "steps_attempted": 62,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 0.37777777777777777
+   },
+   "control: landscape_shuffled": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.47674418604651164,
+    "steps_attempted": 86,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 0.9111111111111111
+   },
+   "control: landscape_shuffled_across_wells": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.8235294117647058,
+    "steps_attempted": 255,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 4.666666666666667
+   },
+   "control: random_atoms": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.27419354838709675,
+    "steps_attempted": 62,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 0.37777777777777777
+   },
+   "arm: BLIND-COLOUR (learned: colour identity removed from the request)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.9160447761194029,
+    "steps_attempted": 536,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 10.911111111111111
+   },
+   "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.9160447761194029,
+    "steps_attempted": 536,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 10.911111111111111
+   },
+   "rival: mlp": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.7471910112359551,
+    "steps_attempted": 178,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 2.9555555555555557
+   },
+   "rival: lstm": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.7680412371134021,
+    "steps_attempted": 194,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 3.311111111111111
+   },
+   "rival: transformer": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.875,
+    "steps_attempted": 360,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 7.0
+   },
+   "floor: lookup cross-maze WORDS": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.044444444444444446,
+    "goal_reached_rate": 0.044444444444444446,
+    "all_steps_exact_rate": 0.044444444444444446,
+    "per_step_exactness": 0.9122448979591836,
+    "steps_attempted": 490,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 9.209302325581396
+   },
+   "floor: lookup cross-maze raw r1": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.5544554455445545,
+    "steps_attempted": 101,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 1.2444444444444445
+   },
+   "floor: fragment cross-maze r1": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.4642857142857143,
+    "steps_attempted": 84,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 0.8666666666666667
+   },
+   "floor: lookup WITHIN-maze raw r1": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.6017699115044248,
+    "steps_attempted": 113,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 1.511111111111111
+   },
+   "column: ORACLE (planner)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 1.0,
+    "goal_reached_rate": 1.0,
+    "all_steps_exact_rate": 1.0,
+    "per_step_exactness": 1.0,
+    "steps_attempted": 1983,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": null
+   },
+   "column: BLIND-A (planner)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 1.0,
+    "goal_reached_rate": 1.0,
+    "all_steps_exact_rate": 1.0,
+    "per_step_exactness": 1.0,
+    "steps_attempted": 1983,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": null
+   },
+   "column: BLIND-B (planner)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.0,
+    "per_step_exactness": 0.9664179104477612,
+    "steps_attempted": 1340,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 28.77777777777778
+   },
+   "column: BLIND-COLOUR (planner)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.15555555555555556,
+    "goal_reached_rate": 0.15555555555555556,
+    "all_steps_exact_rate": 0.15555555555555556,
+    "per_step_exactness": 0.9551886792452831,
+    "steps_attempted": 848,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 15.447368421052632
+   },
+   "column: BLIND-SEQUENTIAL (planner)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.28888888888888886,
+    "goal_reached_rate": 0.28888888888888886,
+    "all_steps_exact_rate": 0.28888888888888886,
+    "per_step_exactness": 0.9792880258899677,
+    "steps_attempted": 1545,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": 31.375
+   },
+   "column: BLIND-FACTOR (planner)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 1.0,
+    "goal_reached_rate": 1.0,
+    "all_steps_exact_rate": 1.0,
+    "per_step_exactness": 1.0,
+    "steps_attempted": 1983,
+    "mean_rollout_length": 44.06666666666667,
+    "mean_first_error_step": null
+   }
+  }
+ },
+ "ROLLOUT_L8_DIAGNOSTIC": {
+  "L": 8,
+  "arms": {
+   "CLU (single design)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.6222222222222222,
+    "per_step_exactness": 0.9455128205128205,
+    "steps_attempted": 312,
+    "mean_rollout_length": 8.0,
+    "mean_first_error_step": 4.176470588235294
+   },
+   "rival: mlp": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.06666666666666667,
+    "per_step_exactness": 0.732484076433121,
+    "steps_attempted": 157,
+    "mean_rollout_length": 8.0,
+    "mean_first_error_step": 2.1666666666666665
+   },
+   "floor: lookup cross-maze WORDS": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.5333333333333333,
+    "per_step_exactness": 0.925,
+    "steps_attempted": 280,
+    "mean_rollout_length": 8.0,
+    "mean_first_error_step": 3.1904761904761907
+   },
+   "column: BLIND-COLOUR (planner)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.8222222222222222,
+    "per_step_exactness": 0.9772727272727273,
+    "steps_attempted": 352,
+    "mean_rollout_length": 8.0,
+    "mean_first_error_step": 6.0
+   },
+   "column: BLIND-SEQUENTIAL (planner)": {
+    "label": "",
+    "n_rollouts": 45,
+    "validity": 0.0,
+    "goal_reached_rate": 0.0,
+    "all_steps_exact_rate": 0.9555555555555556,
+    "per_step_exactness": 0.9943342776203966,
+    "steps_attempted": 353,
+    "mean_rollout_length": 8.0,
+    "mean_first_error_step": 3.5
+   }
+  },
+  "note": "a DIAGNOSTIC, never the scored rollout row: an 8-step prefix of a ~45-step optimal route cannot reach the goal, so `validity` is 0 for every arm by construction and the readable number is `all_steps_exact_rate`."
+ },
+ "DELETION": {
+  "deleted_colour": 1,
+  "note": "colour 1 is an ordinary TRAIN colour; the value HOLD-OUT colour 4 is already absent from train and could not be deleted from it",
+  "frozen_objects_declared_outside_the_deletable_object": [
+   "Codec (next-state code <-> latent)",
+   "w9_harness state encoder (conv AE on maze images)"
+  ],
+  "post_deletion_adaptation": "the head's retained statistics A and Mx are downdated and the SAME closed form is re-solved.  Light and DATA-FREE -- no pass over the retained pool, no item kept.  NOT 'no changes'.",
+  "value": {
+   "n_rows_deleted": 6937,
+   "n_rows_kept": 10681,
+   "clu_downdate_receipt": {
+    "op": "delete_rows",
+    "n_rows_removed": 6937,
+    "n_before": [
+     17618,
+     17618,
+     17618,
+     17618,
+     17618,
+     17618,
+     17618,
+     17618
+    ],
+    "n_after": [
+     10681,
+     10681,
+     10681,
+     10681,
+     10681,
+     10681,
+     10681,
+     10681
+    ],
+    "refit": false,
+    "passes_over_retained_data": 0,
+    "items_kept": false,
+    "basis_change_bytes_deployed": 0,
+    "mechanism": "S_k -= x x^T, t_k -= x, n_k -= 1; the atoms are re-derived from the statistic and the address book is carried across the basis change by W_k <- W_k R_k, R_k = U_k^T U'_k. The pool is never touched.",
+    "head_statistic_downdated": true,
+    "seconds": 0.07477164268493652,
+    "mechanism_head": "A -= Phi_d^T Phi_d, Mx -= Phi_d^T X_d, then the same closed form is re-solved; the pool is never touched",
+    "frozen_objects_touched": []
+   },
+   "clu_adaptation_cost": {
+    "seconds": 0.07781338691711426,
+    "passes_over_retained_data": 0,
+    "items_kept": false,
+    "gradient_steps": 0,
+    "examples_seen": 0
+   },
+   "store_scoped_exactness": {
+    "statement": "the store after deletion equals the store fitted without the rows, per-well sufficient statistic S_k",
+    "max_abs_delta": 54161.63454401752,
+    "scale": 58092.10604612232,
+    "max_relative_delta": 0.9323406953264151,
+    "bar": 1e-05,
+    "pass": false,
+    "n_after_per_well_downdated": [
+     10681,
+     10681,
+     10681,
+     10681,
+     10681,
+     10681,
+     10681,
+     10681
+    ],
+    "n_after_per_well_fitted_without": [
+     10681,
+     10681,
+     10681,
+     10681,
+     10681,
+     10681,
+     10681,
+     10681
+    ]
+   },
+   "composition_on_surviving_colours": {
+    "seen": {
+     "n": 2529,
+     "CLU after deletion (downdate)": 0.9727164887307236,
+     "CLU fitted WITHOUT the rows": 0.988928430209569
+    },
+    "pair": {
+     "n": 802,
+     "CLU after deletion (downdate)": 0.03740648379052369,
+     "CLU fitted WITHOUT the rows": 0.02493765586034913
+    },
+    "nway": {
+     "n": 378,
+     "CLU after deletion (downdate)": 0.013227513227513227,
+     "CLU fitted WITHOUT the rows": 0.20634920634920634
+    }
+   },
+   "rival_retrain_without_cost": {
+    "seconds": 20.561927795410156,
+    "gradient_steps": 8000,
+    "examples_seen": 1920000,
+    "passes_over_retained_data": "all of them -- the whole surviving pool is re-read every batch",
+    "items_kept": true,
+    "note": "the rival has no other way to delete"
+   },
+   "rival_composition_on_surviving_colours": {
+    "seen": {
+     "n": 2529,
+     "rival retrain-without": 0.7667062079873468,
+     "rival as-trained": 0.7481217872676947
+    },
+    "pair": {
+     "n": 802,
+     "rival retrain-without": 0.5324189526184538,
+     "rival as-trained": 0.5286783042394015
+    },
+    "nway": {
+     "n": 378,
+     "rival retrain-without": 0.0582010582010582,
+     "rival as-trained": 0.12169312169312169
+    }
+   }
+  },
+  "conjunction_colour_AND_tinted_floor": {
+   "n_rows_deleted": 2238,
+   "n_rows_kept": 15380,
+   "clu_downdate_receipt": {
+    "op": "delete_rows",
+    "n_rows_removed": 2238,
+    "n_before": [
+     17618,
+     17618,
+     17618,
+     17618,
+     17618,
+     17618,
+     17618,
+     17618
+    ],
+    "n_after": [
+     15380,
+     15380,
+     15380,
+     15380,
+     15380,
+     15380,
+     15380,
+     15380
+    ],
+    "refit": false,
+    "passes_over_retained_data": 0,
+    "items_kept": false,
+    "basis_change_bytes_deployed": 0,
+    "mechanism": "S_k -= x x^T, t_k -= x, n_k -= 1; the atoms are re-derived from the statistic and the address book is carried across the basis change by W_k <- W_k R_k, R_k = U_k^T U'_k. The pool is never touched.",
+    "head_statistic_downdated": true,
+    "seconds": 0.06617283821105957,
+    "mechanism_head": "A -= Phi_d^T Phi_d, Mx -= Phi_d^T X_d, then the same closed form is re-solved; the pool is never touched",
+    "frozen_objects_touched": []
+   },
+   "clu_adaptation_cost": {
+    "seconds": 0.06617283821105957,
+    "passes_over_retained_data": 0,
+    "items_kept": false,
+    "gradient_steps": 0,
+    "examples_seen": 0
+   },
+   "store_scoped_exactness": {
+    "statement": "the store after deletion equals the store fitted without the rows, per-well sufficient statistic S_k",
+    "max_abs_delta": 83615.6724561542,
+    "scale": 77584.57685665162,
+    "max_relative_delta": 1.077735754242056,
+    "bar": 1e-05,
+    "pass": false,
+    "n_after_per_well_downdated": [
+     15380,
+     15380,
+     15380,
+     15380,
+     15380,
+     15380,
+     15380,
+     15380
+    ],
+    "n_after_per_well_fitted_without": [
+     15380,
+     15380,
+     15380,
+     15380,
+     15380,
+     15380,
+     15380,
+     15380
+    ]
+   },
+   "composition_on_surviving_colours": {
+    "seen": {
+     "n": 2529,
+     "CLU after deletion (downdate)": 0.9561091340450771,
+     "CLU fitted WITHOUT the rows": 0.9561091340450771
+    },
+    "pair": {
+     "n": 802,
+     "CLU after deletion (downdate)": 0.03740648379052369,
+     "CLU fitted WITHOUT the rows": 0.13341645885286782
+    },
+    "nway": {
+     "n": 378,
+     "CLU after deletion (downdate)": 0.013227513227513227,
+     "CLU fitted WITHOUT the rows": 0.013227513227513227
+    }
+   },
+   "rival_retrain_without_cost": {
+    "seconds": 21.118127822875977,
+    "gradient_steps": 8000,
+    "examples_seen": 1920000,
+    "passes_over_retained_data": "all of them -- the whole surviving pool is re-read every batch",
+    "items_kept": true,
+    "note": "the rival has no other way to delete"
+   },
+   "rival_composition_on_surviving_colours": {
+    "seen": {
+     "n": 2529,
+     "rival retrain-without": 0.7255832344800316,
+     "rival as-trained": 0.7481217872676947
+    },
+    "pair": {
+     "n": 802,
+     "rival retrain-without": 0.513715710723192,
+     "rival as-trained": 0.5286783042394015
+    },
+    "nway": {
+     "n": 378,
+     "rival retrain-without": 0.10052910052910052,
+     "rival as-trained": 0.12169312169312169
+    }
+   }
+  },
+  "seconds": 86.95021176338196
+ },
+ "seconds_total": 634.9300639629364
+}

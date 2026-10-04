@@ -1,0 +1,64 @@
+⭐ seed 0: running
+  ⭐ artefact roots present: bridge_root, store_runs, declift_dir, data_root
+  ⭐ plan (VERBATIM): K=5 n_modes=64 D=2048 store_bytes=524,288 (method 'ward')
+  feature cache verified: 480000 rows (scope=full), D=2048, float16, encoder 98d32602…
+  ⭐ cache coverage: 3144/3144 rows cached (seed 0, scope='full') — 0 shortfall
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+  ⭐ decoder: recipe 'v1_capacity_schedule' asserted by NAME and by param hash 01ef91f7… (seed 0)
+  rows: store_train=2048 eval=1024
+  ⚠ 93/2048 coordinates are DEAD (constant post-ReLU)
+  ⭐ inherited partition (method 'ward', ⛔ NOT k-means — k-means++ seeds the MODES): well sizes [374, 268, 279, 371, 756]
+⭐⭐ [random_dmatched] the D-matched random-placement FLOOR — measured FIRST, before any learned objective runs
+  [random_dmatched] well sizes [374, 268, 279, 371, 756] · store 524,288 B (= M·D·4, matches plan: True) · 30.0 bits/read
+  [random_dmatched] fitting the delivered store (30 steps, store-only objective, identical call in every arm) …
+  ⭐ floor filed at /Users/user/Desktop/CHLU/.claude/outputs/gen-wells-route-b/smoke/runs/shapes3d_recon/seed_0/floor_first/floor_s0.json — learned arms may now run
+  [correlation] the inherited partition (route A's) — a CONTEXT row
+  [correlation] well sizes [374, 268, 279, 371, 756] · store 524,288 B (= M·D·4, matches plan: True) · 30.0 bits/read
+  [correlation] fitting the delivered store (30 steps, store-only objective, identical call in every arm) …
+⭐ [learned_label_free] learning the placement with the store in the loop (300 steps)
+  ⭐ [learned_label_free] LABEL-FREE proven: loss and gradients bit-identical under a label permutation, and the signature admits no labels
+    [learned_label_free] step 1/300  loss=206.19174  tau=1.000  rec=206.58760  occ_H=3.9771  MI=0.00185
+    [learned_label_free] step 60/300  loss=137.84509  tau=0.761  rec=137.84509  occ_H=0.0000  MI=0.00000
+    [learned_label_free] step 120/300  loss=117.32598  tau=0.576  rec=117.32598  occ_H=0.0000  MI=0.00000

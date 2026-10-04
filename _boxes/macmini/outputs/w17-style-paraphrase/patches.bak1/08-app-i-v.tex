@@ -1,0 +1,325 @@
+@@@ 1434 1442
+\noindent The factor-probe margins over random initialisation (aggregate / exact-match, per seed,
+never pooled) are: frozen $+0.0001$ / $-0.0034$, $-0.0160$ / $-0.1003$, $+0.0095$ / $+0.0432$; adapter
+$+0.0007$ / $-0.0024$, $-0.0064$ / $-0.0449$, $+0.0077$ / $+0.0308$; anchor $-0.0016$ / $-0.0178$,
+$-0.0059$ / $-0.0371$, $+0.0088$ / $+0.0381$. The anchor arm's distance from the frozen encoder
+(reported, never tuned) is a feature relative $L_2^2$ of 0.002146448940038681 / 0.002392713911831379 /
+0.0017106134910136461. % SRC: w13-encoder-adapt/CROSS-ARM.md
+Two pre-registration amendments were made before any number, and neither moved a bar; the first
+corrected the description after a measurement showed that the encoder cannot train through the
+store. % SRC: w13-advisor-report.md
+@@@ 1475 1485
+\noindent The pre-declared success bar fails on both rows, and the falsifier (net $\Delta\le0$ on two
+or more seeds) fires on row 3. The matched learner sits at or within 0.02 of zero (0.006 on row 3).
+The instrument retains no statistic and makes no deletion claim. % SRC: w13-seeds-and-tables/TABLES.md
+The longer leg (4,000 joint steps, 1,800 decoder-refit steps, 4,000 warm steps, 32,768 training
+images) is a separate table. Equal compute passes on all three seeds. Its equal-seconds control is
+short by 41.2 / 27.8 / 18.6 s, because it was sized from another arm's seconds per step, which
+biases it toward the treatment. Its probe margins over random init are \texttt{alone} $-0.0505$ / $+0.0242$ /
+$-0.0862$, $A'$ $+0.0666$ / $-0.0066$ / $+0.1108$ (inconsistent) and $A''$ $+0.0100$ / $+0.0129$ /
+$+0.0075$ (consistent), and \texttt{alone} probes worse than an untrained encoder on two of three
+seeds, the same instability that another harness found in its own encoder. Its scoring stages were
+not run. % SRC: w8-BAR-D-fold.md
+@@@ 1519 1531
+\noindent Ceilings (pipeline / store span) are: unseen pair 0.6319 / 0.6365; $n$-way 0.5255 / 0.5230
+(per route; the conjunction row's denominators are 183 / 192 / 191 against per-route 389 / 403 /
+414, so the conjunction is never read as a fraction of the per-route ceiling); budget interpolation
+0.5573 / 0.5566. The store span tracks the pipeline ceiling within 0.0138 on every cell, so the
+binding constraint is the address book, not the atoms. Caveat columns on this split:
+BLIND-SEQUENTIAL 0.9037 (0.9077 / 0.8905 / 0.9128) on unseen pairs and 0.9001 on $n$-way;
+BLIND-FACTOR 0.4762 and 0.4720; ORACLE 1.0000; the budget-interpolation row has no blind column on
+any seed and is declared not measured. Fragment lookup: cross-maze 0.0006 ($r=1$) and 0.0000
+($r=2$); same-maze, a different quantity that reads the true maze, 0.0741 and 0.5114 (unweighted
+seed mean; pooled 0.51044). % SRC: w13-seeds-and-tables/TABLES.md
+The audits find the judge exact in all four parts with no tolerance; 0 of 750 stepper
+disagreements; 0 impossible examples seen by a non-refuser arm; a request-only read on 8 checks
+per seed; and 0 plan-map collisions. % SRC: w13-seeds-and-tables/TABLES.md
+@@@ 1533 1545
+\paragraph{The mechanism, isolated on the scored legs (analysis, not a row).} Every piece of every
+answer is already written: the coverage of a held-out unseen-pair route by the training routes of
+the same maze has mean 1.000 and median 1.000, with 194 of 195 pairs at or above 0.95 (seed 0). The
+factorisation is also right: coverage is 0.838 by same-agent plans, 0.885 by same-target plans and
+0.997 by their union, complete for 99.1\% of pairs. Composition, however, is destroyed by where it
+is performed: the same two halves score 1.0000 / 1.0000 / 1.0000 overlaid in plan space,
+0.1649 / 0.0950 / 0.1449 averaged in latent space, 0.2835 / 0.1900 / 0.2523 for the agent half alone
+and 0.1701 / 0.1750 / 0.2523 for the target half alone; letting the agent's plan win reads 0.5722 / 0.4250 / 0.4252, and a random
+training plan in place of the agent half 0.3557 / 0.3700 / 0.4065. % SRC: _thinkpad/w9/w9-maze/LOG.md
+The plan-space overlay is a reference, not an arm: it keeps whole written items and is not matched
+in bytes. Its perfection on CMAZE-2 was itself a statement that CMAZE-2's routes decompose
+additively, the same property that left blind-sequential near 0.90. On CMAZE-2b, as predicted, the
+fixed overlay reaches 0.9710 to 1.0000 and is no longer perfect. % SRC: w14-read-verb/FINAL-REPORT.md
+@@@ 1576 1578
+\noindent At this tier the published blind-sequential tripwire (0.4980) reproduces (0.5317), and
+the supervised refuser refuses 0.8317 of impossible and 0.7850 of possible requests.
+% SRC: w13-seeds-and-tables/TABLES.md
+@@@ 1587 1595
+The fix lands below 0.4980, not at it, and that is where it should land. The value 0.4980 is a
+mixture over CMAZE-1's own key counts, whose one-key routes score 0.6532 and whose two- and
+three-key routes score 0.1351 and 0.0000; CMAZE-2b is entirely multi-key and sits in CMAZE-1's
+multi-key band. CMAZE-1 itself reproduces a third time at its defaults (0.5200 against the
+published 0.4980), and 28 of 28 independent verification checks pass.
+% SRC: w14-request-layer-fix/FINAL-REPORT.md
+Two costs are declared. First, routes are longer, so the budget words are re-derived per seed by
+a rule on route lengths only. Second, all six agent words now sit in one component, so direction
+is a constant of the split rather than a balanced factor. % SRC: w14-request-layer-fix/FINAL-REPORT.md
+@@@ 1634 1638
+\paragraph{The go/no-go reference, validation, whole written training plans (a reference, not an
+arm).} With the target's plan winning, the fixed overlay reaches 0.9710 / 1.0000 / 1.0000 on unseen
+pairs and 0.9844 / 1.0000 / 0.9855 on $n$-way, whereas letting the agent win reads 0.5797 / 0.5965 /
+0.6557. Validity equals score in every cell, so wherever the overlay is valid it is optimal; plan
+coverage is 1.0000 / 1.0000 / 0.9975. % SRC: w14-read-verb/FINAL-REPORT.md
+@@@ 1646 1654
+\paragraph{The bars.} BAR 1 (store \texttt{MERGE}$-$\texttt{AVG} $\ge+0.10$) passes on all seeds.
+BAR 2 (store gain minus transformer gain $\ge+0.05$) passes its arithmetic ($+0.2111$ / $+0.2424$
+/ $+0.1442$) but fails the claim it was written to protect, because the lookup's gain is larger
+still. BAR 3 (controls at most half the store on the seen row) fails on every seed. BAR 5 (store
+\texttt{MERGE} above the lookup's) fails: 0.5126 / 0.6667 / 0.5769 against 0.9648 / 0.9646 /
+0.9808. Under \texttt{MERGE}, the transformer reads 0.2965 / 0.3990 / 0.4279, below both the store
+and the ceiling, and the lookup on $n$-way reads 0.9674 / 0.9626 / 0.9683, exceeding the
+single-decode ceiling by $+0.4118$ / $+0.3915$ / $+0.4022$. The low-rank store
+(rank/width 0.1875) scores 0.0000 on every held-out row. % SRC: w14-read-verb/FINAL-REPORT.md
+@@@ 1656 1662
+\paragraph{Disclosures.} On the seen row the nearest-atom test classifies the read as a lookup
+($0.0445$ / $0.0412$ / $0.0420$, below 0.05), so that row's validity is a lookup verdict and not a
+generalisation result; by construction, the seen row is identical on validation and TEST. The
+scored budget condition departs from the gate file's declared primary; the encoder pool is built
+from two-key routes; and the split's two blocks are agent-index halves. \texttt{FULL} reproduces
+the earlier read's band (0.1594 against 0.1590 on a validation leg) but is not a bit-level
+replication. % SRC: w14-read-verb/FINAL-REPORT.md
+@@@ 1668 1681
+On CMAZE-2 the store never saw an impossible example; the only comparator is a supervised
+refuser trained on 552 / 562 / 522 of them. The store refuses budget-infeasible requests at 0.9601,
+walled targets at 0.9801, the reachable-but-unwritten novelty control at 0.9781, and
+grounded-possible requests (false refusals) at 0.8182, against the refuser's 0.4972 / 0.2995 /
+0.2008 / 0.2248. Deleting the green target from the store raises refusal on green requests from
+0.7604 to 0.9950; removing the move-left action from the interface (no atom touched) raises
+refusal on routes that need it from 0.8182 to 0.9850 and leaves 0.7766 on routes that do not.
+% SRC: w13-seeds-and-tables/TABLES.md
+Refusal here is novelty detection, not wall detection, and no refusal win is claimed. The displays
+are retired: across all six seed and tier runs, a ridge probe on the observation at $t=0$ separates
+possible from impossible requests at AUC 0.4822 to 0.5518, i.e.\ at chance (three of six point estimates above 0.50, three below, 200 test requests each). The retired object is a learned
+refusal score on a route request. The Shapes3D coupling hole (\S\ref{sec:hole}), in contrast, is a
+structural hole at one byte per hole, with zero data rows read and no refit, and the retirement
+leaves it untouched. % SRC: w14-refusal-displays-closeout/FINDINGS.md; w14-advisor-report.md
+@@@ 1687 1694
+\paragraph{The derivation.} The content is an orthonormal basis $U_k$ of the per-well atom span,
+through which the read renders the request's address, $x_k=U_k c_k$. For a basis, the store's
+energy is the distance to its span,
+$E_{\text{store},k}=\tfrac12\operatorname{dist}^2(x_k,\operatorname{span}G_k)$, which is zero
+everywhere on the span; the request enters as a basin at the address, $E_{\text{req},k}=\tfrac12\beta\lVert
+x_k-a_k\rVert^2$, which is zero at the address. Since $a_k\in\operatorname{span}(G_k)$ by
+construction of the renderer, both terms attain their minima at the same point, and an in-well
+settle has nowhere to go.
+@@@ 1764 1780
+\noindent Of the 192,975 rows, 41,493 / 41,405 / 41,358 lie in the 49 scored corners. In the fitted
+one-parameter form $n=C/(\varepsilon\mu)^2$, $C$ is fitted with sight of the held-out measurements
+(0.200699 / 0.206008 / 0.201184). % SRC: w10-physics-section-evidence/EVIDENCE.md
+The error by $h/h^\star$ bucket is 0.0008 / 0.0264 / 0.1482 / 0.0454 / 0.0262. The instrument was
+named in advance: deep in the underdamped regime, the envelope and first-crossing half-lives differ
+by 9.24 times, and first-crossing's error is 1.0088 to 1.0180 against the envelope's 0.0284 to 0.0296.
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+Because the law concerns the dynamics, its error is identical across arms (0.0428 to 0.0435); the
+arms separate only in the curvature spectrum (field $[0.2727, 1.0000]$, removed $[1.0000, 1.0000]$).
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+A second, independent reproduction through a different code path matches the theory's floor
+(27.026815 against 27.03), the stability limit to \sci{3.3}{-16}, and a simulated envelope to
+\sci{4}{-13} to \sci{8}{-11} over about seven orders of magnitude of $n_{1/2}$. The asymptotic
+half-life form is already 2.4\% off at $h=0.30h^\star$ and is never quoted; only the exact root is.
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+The seed-0 leg replicates bit-exactly from a clean checkout, and two of the three scored runs were
+returned unspent. % SRC: w10-physics-section-evidence/EVIDENCE.md
+@@@ 1782 1803
+\paragraph{The same dynamics cost composition.} Against the static store on row 4, the zero-step
+arm is $0.000$ / $0.000$ / $0.000$, the gentlest moving setting $-0.531$ / $-0.510$ / $-0.388$, one
+step $-2.735$ / $-3.796$ / $-2.959$, and full settling $-39.959$ / $-46.918$ / $-39.061$ (row 3:
+$-15.800$ / $-25.533$ / $-20.350$), while paying 81,312 B more on the read side.
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+The reason (analysis, not a row) is that the settle does not leave the principal subspace (off-span
+at most 2e$-$7; the orthogonal fraction predicts the loss at chance, AUC 0.457 to 0.559); what breaks
+the read is motion inside it. The answers form a dense lattice whose one-factor spacing is 1.71 / 1.89 /
+2.00 against a state norm of 31.3 / 32.3 / 32.8; the judge's decision cells are that lattice's
+cells; and the settle places 0.78 to 0.86 of its step in the 51 answer-changing directions, against
+an isotropic 0.407. Displacement in lattice units predicts the loss at AUC 0.904.
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+
+\paragraph{Lifetimes and symbolic refusal.} A scheduled lifetime is strictly worse than instant
+eviction. Its composition cost differs from eviction's by $+0.0562$ / $+0.0337$ / $+0.0112$ against a
+declared margin of 1.0 and is paid before refusal arrives ($t_{\text{pay}}(50\%)$ = 7.992 / 5.994 /
+7.992 half-lives); 96.30\% to 99.83\% of the cost is paid through a continuous weight while the
+discrete liveness bit has not yet flipped. % SRC: w6-advisor-report.md; w10-physics-section-evidence/EVIDENCE.md
+Two clocks a decade apart give 16 of 16 horizons byte-identical, so no curvature can trade refusal
+against composition. An 8-byte rule ties the field store exactly on the two symbolic refusal rows,
+and a table-absence rule is the same bitmap at a byte multiple of 59,392; we make no claim on those
+rows. % SRC: w10-physics-section-evidence/EVIDENCE.md
+@@@ 1809 1813
+The laws below are this paper's own theory. Each carries a status label:
+\begin{itemize}[leftmargin=*,nosep]
+\item \textsc{confirmed [this study]}: measured on this study's own store;
+\item \textsc{confirmed [prior derivation]}: derived and validated on designed or small trained
+  testbeds outside this study's store, and not re-run here;
+\item \textsc{refuted} and \textsc{untested}: as stated.
+\end{itemize}
+Status discipline is part of the section.
+@@@ 1816 1826
+\paragraph{Store-level exact deletion in a designed store (\textsc{confirmed [prior
+derivation]}).} With an order-independent waitlist, store-level deletion is exact at every load
+measured (0.29 to 1.71 times lattice capacity), with a membership signal of AUC 0.5000 $\pm$ 0.0000 on all
+six statistics and byte equality 1.0000, under three stated conditions (budget at least the number
+of cells, zero leak, priority- or attribute-based eviction; recency-based eviction is excluded as
+intrinsically history-dependent). % SRC: shorts-evidence-inventory.md
+The placement rule is the Blelloch--Golovin stable-matching table with a global priority order;
+the theorems follow from theirs, and the fix-up cascade is theirs. Its scoping is the one this
+paper adopts in \S\ref{sec:object}: a store-level guarantee only, with the frozen encoder and any
+residue of past writes in a learned landscape as separate channels, and no certified
+$(\varepsilon,\delta)$ unlearning claimed. % SRC: shorts-evidence-inventory.md
+@@@ 1828 1837
+\paragraph{The damping optimum (\textsc{confirmed [prior derivation]}; \textsc{refuted} as a
+rollout prediction on this store).} On the exact one-step Jacobian, the emergent retention
+half-life is a V-curve in the damping, with its argmin at $0.902\pm0.003$ of
+$\gamma_{\text{crit}}$ and slopes $-1.0020$ and $+1.116$ on three of three emergent seeds: one
+damping-optimum curve at two values of the curvature, rather than two laws.
+% SRC: shorts-evidence-inventory.md
+The result holds only with fluctuation--dissipation-consistent noise and a Newtonian kinetic term.
+On this study's field store, the rollout misses the same argmin on all three seeds (above), and the
+failing step is named: the pure-exponential envelope is invalid at the defective point.
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+@@@ 1839 1844
+\paragraph{Interference is degree-bounded (\textsc{confirmed [prior derivation]}).} Cross-unit
+basin displacement is exactly zero off the coupling graph (0 of 4656 off-graph entries nonzero
+across 72 runs, three topologies). Interference is therefore the degree times the per-edge
+displacement, flat in the number of units at fixed degree, whereas a shared-potential monolith
+grows as $N^{1.18\pm0.17}$. The firewall is parameter separation, not block structure.
+% SRC: shorts-evidence-inventory.md
+@@@ 1846 1854
+\paragraph{Asserted, not derived (\textsc{untested}).} Eight further statements of the theory,
+including a lifetime trilemma whose consequence is measured, have neither a derivation nor an
+impossibility argument, and are carried as untested. A certificate family for reach and escape is
+likewise untested on this store, with its own measured limit: unit Jacobian determinant and zero
+energy change are not sufficient for bounded dynamics (a certified excursion of 0.09 against
+104.83 blind). % SRC: w13-draft-revise/DRAFT-v1.md; w10-physics-section-evidence/EVIDENCE.md
+A law that this programme planned against, namely that a Mexican-hat width or separation sets
+the interpolation floor and the refusal gap, does not exist in its own derivations, and the
+nearest derived object inverts it: the retention floor is curvature-independent. % SRC: w10-physics-section-evidence/EVIDENCE.md
+@@@ 1857 1893
+The results below were derived and validated on designed or small trained testbeds before this
+study and were not re-run on this study's store; their content enters here as this paper's own
+theory, each with the rider that must travel with it. % SRC: shorts-evidence-inventory.md
+\begin{itemize}[leftmargin=*,itemsep=1pt]
+\item \emph{Retention triad (qualitative).} A latch with infinite lifetime, a $\mu^{-2}$ budget
+  law and bounded drift are qualitatively absent from learned recurrent baselines (median lifetime 5.6
+  / 56 / 69 map-steps for three recurrent families; the emergent unit 263 steps, bounded 0.35 rad).
+  Rider: a per-step compute factor of 6.2 against an LSTM inverts retention per unit of compute, so
+  no ``longer'' claim is made on compute. % SRC: shorts-evidence-inventory.md
+\item \emph{GMOR on trained checkpoints.} With a linear ambient spurion, the three objects satisfy
+  $\mu^2F^2=\delta\Sigma$ to a maximum absolute deviation of \sci{1.33}{-15} on 8 trained SO(2)
+  checkpoints. Rider: designed SO(2), probe-only, float64. % SRC: shorts-evidence-inventory.md
+\item \emph{Erosion law and anchor cure.} Contrastive wake--sleep training inverts a designed
+  vacuum if and only if the flat direction is unconstrained by the wake phase; an anchor cures the
+  inversion, and under the cure every headline law survives past the erosion horizon. % SRC: shorts-evidence-inventory.md
+\item \emph{Friction preserves, temperature erases.} The coset diffusion law is verified to
+  $1.0068\pm0.0219$ over 25 cells, and damping of 0.05 to 0.2 lengthens the coset half-life
+  $3.77\pm0.23$ times. Rider: two observables, two signs; a figure that does not name the initial
+  condition is meaningless. % SRC: shorts-evidence-inventory.md
+\item \emph{The friction-hole vault.} $107.77\pm4.78$ times (the $\hat D$-estimator number; raw
+  first-passage $86.97\pm2.94$), against a scalar friction of the same strength at
+  $13.28\pm0.12$. % SRC: shorts-evidence-inventory.md
+\item \emph{Priced channel.} Sync time lies within 7.5\% of a registered prediction; the half-life
+  claim is ranking-only; and the price law holds at $N\in\{2,4,8,16\}$. % SRC: shorts-evidence-inventory.md
+\item \emph{Reversible O(1)-memory training.} At zero damping, recompute-backwards training
+  matches stored-activation gradients to \sci{2.1}{-6} relative in float32, with a peak activation
+  memory of 6.3 KB against 6.00 MB at $T=1024$; the match is exact only at zero damping. % SRC: shorts-evidence-inventory.md
+\item \emph{Hard read isolation (designed store only).} A sub-barrier particle cannot read a
+  foreign item; the sweep brackets the predicted threshold mass of 0.36 (crossing at 0.34,
+  confining at 0.38). Rider: it does not transfer to a trained block. % SRC: shorts-evidence-inventory.md
+\item \emph{The trilemma.} With a quadratic payload channel, an anti-decoration guard and a fixed
+  read budget, a store cannot simultaneously have exact value fidelity, amplitude-independent
+  address hold and amplitude-independent read latency; both proposed fixes are refuted.
+  % SRC: shorts-evidence-inventory.md
+\end{itemize}
+The binding scope for every item is that these laws govern the store; end-to-end performance
+additionally depends on the encoder, which is measured separately. % SRC: shorts-evidence-inventory.md
+@@@ 1899 1900
+Each requirement below is forced by a measured negative of this programme; the list does not
+claim that no benchmark has them. % SRC: w10-physics-section-evidence/EVIDENCE.md
+@@@ 1978 1990
+The frozen encoder is the primary object: a harness on top of a large encoder that is never
+unfrozen. Light adaptation is optional; this subsection reports what it buys. At $\Kstar$, three
+seeds, with equal steps and images across arms (400 steps, 25,600 images; encoder parameters in the
+optimiser 0 / 131,072 / 428,576), the margin of the single design over the best learned
+baseline grows from the frozen encoder under the \emph{anchor} arm (full unfreeze with a
+penalty on distance from the frozen weights) on all three seeds: $+0.5688\to+1.3303$,
+$-0.0275\to-0.0092$, $+1.1009\to+1.3028$. The low-rank \emph{adapter} grows it on two of
+three ($+1.6239$, $+0.3670$, and $+0.3028$, a loss of $0.7982$ on seed 2).
+% SRC: w13-encoder-adapt/CROSS-ARM.md
+The comparator here is a 180k-parameter MLP, a different opponent from that of
+Table~\ref{tab:t7}, so the two tables are never merged. A factor probe measured as a margin over
+random initialisation buys nothing ($+0.0001$ to $-0.0160$ aggregate, per seed, never pooled).
+% SRC: w13-encoder-adapt/CROSS-ARM.md; w13-advisor-report.md
+@@@ 1994 2007
+An earlier CPU leg (shortened decoder, 400 joint steps, 8,192 training images, 3 seeds; a
+different instrument, reported in its own table, Appendix~\ref{app:encloop}) asked whether
+training the encoder through the store improves composition. The net effect is a wash because two
+real effects cancel. Unfreezing the encoder with the store on the gradient path hurts ($A'$
+negative on 5 of 6 seed-rows), and a swap loss repairs that damage ($A''$ positive on 4 of 6;
+the four two-sided sign-test $p$-values are 0.0001751, 0.000198, 0.000346 and 0.0001564, three
+of them at or below 0.0003). The store's margin over
+the matched-parameter learner does not grow ($+12.078\to+10.311$ on row 3; $+24.687\to+26.048$
+on row 4), so this is a finding about the encoder, not about the store, and ``the store shapes
+the representation'' is not supported. % SRC: w13-seeds-and-tables/TABLES.md; w13-draft-revise/DRAFT-v1.md
+A longer leg at ten times the steps (4,000 joint steps, 256,000 images per arm) corroborates
+the direction of the swap-loss ingredient on its probe margin, with $A''$ positive on all three
+seeds ($+0.0100$ / $+0.0129$ / $+0.0075$); its equal-seconds control, however, is short by 41.2 /
+27.8 / 18.6 s and is biased toward the treatment. % SRC: w8-BAR-D-fold.md
+@@@ 2019 2057
+\paragraph{Retention on the store (\textsc{confirmed [this study]}).} When switched on, the field
+store's relaxation obeys a curvature--retention relationship (CRR) whose prediction is a
+\emph{time}, not a score. On the damped velocity-Verlet map that the store deploys, the slow
+multiplier gives $n_{1/2}=\ln2/(-\ln\lvert\lambda_{\text{slow}}\rvert)$ with nothing fitted. On 49
+held-out corners and three seeds, the median $\lvert\log_{10}(n_{\text{meas}}/n_{\text{pred}})\rvert$ is
+0.0433 / 0.0435 / 0.0431 against a pre-registered bar of 0.10, a factor of 1.105 at the median
+corner, with a seed spread of 0.0004; and it beats a one-parameter functional form \emph{fitted with sight
+of the held-out measurements} on 49 of 49 corners on every seed (mean paired $\Delta$ $-0.5968$ /
+$-0.5796$ / $-0.5982$; that fitted form's own median error is 0.640132 / 0.623155 / 0.641281).
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+On an exact quadratic, where the law holds by construction, the same measurement chain recovers it
+only to a median of 0.0349 (p90 0.0749, max 0.1601 over 17 cells); the 0.10 bar is therefore about
+three times the instrument's floor. % SRC: w10-physics-section-evidence/EVIDENCE.md
+The law also predicts where its own simplest form stops: the median error is 0.0008 at $h/h^\star<0.1$
+and 0.1482 in the one bucket straddling the exceptional point, where the $2\times2$ map is
+defective. % SRC: w10-physics-section-evidence/EVIDENCE.md
+One of the six pre-registered bars missed on all three seeds: the V-curve argmin sits at 0.3362 /
+0.3301 / 0.3520 of $\gamma_{\text{crit}}$ against a factor-2 bar, a miss pre-registered with its
+cause before the run. The stricter reading of a second bar, its maximum over $\gamma$, is
+printed and not moved: 59.1158 / 0.1612 / 1883.2934 against 0.10.
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+\emph{This is a dynamics result about our own store. It occupies no row of the evaluation, it
+beats no model, and we make no capability claim from it}; since no arm of ours fails the law, the
+law distinguishes nothing, which is why it is theory and not a result row.
+
+\paragraph{Deletion commutes with decay (\textsc{confirmed [this study]}) and its companion
+(\textsc{refuted}).} On a learned store with scheduled per-item decay,
+$\text{evict}\circ\text{decay}^n=\text{decay}^n\circ\text{evict}$, with 0 bytes differing in a
+2,054,866-byte image, 12 of 12 cells per seed, three seeds, zero tolerance.
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+Its companion, that the post-delete store is byte-identical to the store built from the
+never-inserted history, fails as pre-registered: 1,339,083 / 1,338,974 / 1,343,641 bytes differ
+(65.17\% / 65.16\% / 65.39\% of the image), and the break-out shows that placement accounts for
+only 16.5\% of the obstruction, while 83.5\% arises because the address book and coupling table
+are fitted on the pool. % SRC: w10-physics-section-evidence/EVIDENCE.md
+This falsifies the precondition (canonical Blelloch--Golovin placement) on this store, not the
+law. Two consequences derived before measurement were then exact: the refusal horizon is $19.9316$
+half-lives for every curvature, measured at 539 steps $=19.9432$ half-lives on all three seeds.
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+@@@ 2064 2075
+\item \emph{The unseen-valid row belongs to a generic learner.} A parameter-matched
+  continuous-input MLP beats an earlier arm of this store class by $-0.0192\pm0.0028$ (573,440
+  parameters, 100.1\% of the arm) and, when built independently, by $-0.0170\pm0.0024$, on 3 of 3
+  seeds. % SRC: w4-advisor-report.md
+\item \emph{Placement is exhausted as a dial.} Row 4 against the label-derived partition reads
+  $+1.388$ / $-12.755$ / $+2.163$ (mean $-3.068$, seed spread 14.918); the bar was not met.
+  % SRC: w4-advisor-report.md
+\item \emph{Comparators not run.} The approximate unlearners are measured on the fit pool and
+  not scored; an extra abstain output for the non-sequence rivals is not built; the refusal
+  head-to-head on the same post-deletion requests is not run; \texttt{pca\_tensor} is not run at
+  $\Kstar$; and a $1\times$-matched LSTM, transformer and continuous MLP are not fitted
+  (Appendix~\ref{app:notrun}).

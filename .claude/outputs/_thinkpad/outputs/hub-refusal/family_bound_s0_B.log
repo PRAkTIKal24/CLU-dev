@@ -1,0 +1,77 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+    [B] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04922 (lambda* = 0.05469)
+    [B] N=512 r=128 store=4,194,304 B coupling=4,194,304 B total=8,388,608 B = 2.00x budget (PREREG §3 match: True)
+    [B] sigma per well = 3.2317 3.7288 7.1006 5.1012 3.8283
+  posteriors built for 7 sets
+  full store: dup 0.00450  oor 0.01185  selfcheck 0.00366
+  shuffle 1/16: dup 0.00671  oor 0.02036
+  shuffle 2/16: dup 0.00666  oor 0.01831
+  shuffle 3/16: dup 0.00680  oor 0.01820
+  shuffle 4/16: dup 0.00664  oor 0.01819
+  shuffle 5/16: dup 0.00680  oor 0.01863
+  shuffle 6/16: dup 0.00679  oor 0.01945
+  shuffle 7/16: dup 0.00667  oor 0.01876
+  shuffle 8/16: dup 0.00671  oor 0.01781
+  shuffle 9/16: dup 0.00688  oor 0.01873
+  shuffle 10/16: dup 0.00665  oor 0.01771
+  shuffle 11/16: dup 0.00685  oor 0.01799
+  shuffle 12/16: dup 0.00664  oor 0.01779
+  shuffle 13/16: dup 0.00660  oor 0.01749
+  shuffle 14/16: dup 0.00670  oor 0.01920
+  shuffle 15/16: dup 0.00673  oor 0.01838
+  shuffle 16/16: dup 0.00673  oor 0.01922
+
+{
+ "full_store": {
+  "dup_vs_a7_A7_CONTROLLED": {
+   "energy_distance": 0.14021517047967968,
+   "E_xy": 15.585788252834213,
+   "E_xx": 16.29262624129051,
+   "E_yy": 14.738735093898237,
+   "ratio_scale_free": 0.004498173855729822
+  },
+  "oor_pooled_vs_syn_valid": {
+   "energy_distance": 0.3703288393116111,
+   "E_xy": 15.628561744329948,
+   "E_xx": 15.372822458331832,
+   "E_yy": 15.513972191016453,
+   "ratio_scale_free": 0.011847822127521319
+  },
+  "SELFCHECK_synvalid_vs_val": {
+   "energy_distance": 0.11304611082776717,
+   "E_xy": 15.456363456239341,
+   "E_xx": 15.426858343319083,
+   "E_yy": 15.372822458331832,
+   "ratio_scale_free": 0.003656943987757137
+  }
+ },
+ "verdict_dup": {
+  "full_store_ratio": 0.004498173855729822,
+  "null_mean": 0.006723482837016951,
+  "null_std": 8.130227883528592e-05,
+  "null_min": 0.006602915135425482,
+  "null_max": 0.006883326289664486,
+  "full_exceeds_every_shuffle": false,
+  "n_shuffles_at_least_as_separated": 16,
+  "one_sided_rank_p": 1.0,
+  "z_vs_null": -27.3708069831042
+ },
+ "verdict_oor": {
+  "full_store_ratio": 0.011847822127521319,
+  "null_mean": 0.01851351217945454,
+  "null_std": 0.000758516376858814,
+  "null_min": 0.017488598852353175,
+  "null_max": 0.020355039825915945,
+  "full_exceeds_every_shuffle": false,
+  "n_shuffles_at_least_as_separated": 16,
+  "one_sided_rank_p": 1.0,
+  "z_vs_null": -8.787799782962281
+ },
+ "READING": "If the full store does NOT separate valid from invalid read points more than its own landscape-removed control does, then NO criterion f(x_read) can be a CHLU refusal claim on this read: whatever separation f finds, the section C.2 control finds as much, and the charter voids it."
+}
+wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-refusal\FAMILY_BOUND_seed0_B.json

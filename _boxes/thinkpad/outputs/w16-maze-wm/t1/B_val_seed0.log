@@ -1,0 +1,24 @@
+[B seed 0 leg val] config {'latent': 64, 'K': 2, 'n_atoms': 6, 'ridge': 1.0} iface match
+  train(seen) 20218 rows; val rows {'seen': 4000, 'value': 4000, 'pair': 812, 'nway': 752}
+  CODEC latent 64  loss 0.00020  [4.3s]
+ENCODER (reconstruction only, 1 restart(s), best of ['0.0001']): 90 imgs, 17068 params, BCE 0.00012 -> pixel acc 1.00000, on-pixel recall 1.0000  [104.3s]
+  MATCHED PARAMETERS (target 5592 = CLU read floats, obs 638, out 21)
+    mlp          width   7  params    5478  (-2.04%)
+    lstm         width   7  params    5842  (+4.47%)
+    transformer  width   6  params    5471  (-2.16%)  n_layers=2 heads=2
+    TRAIN mlp          params    5478  loss 0.4433  [23.3s]
+    TRAIN lstm         params    5842  loss 1.1642  [24.6s]
+    TRAIN transformer  params    5471  loss 0.1317  [34.9s]
+  MATCHED PARAMETERS (target 55920 = CLU read floats, obs 638, out 21)
+    mlp          width  74  params   55929  (+0.02%)
+    lstm         width  51  params   55958  (+0.07%)
+    transformer  width  50  params   55125  (-1.42%)  n_layers=1 heads=2
+    TRAIN 10x mlp      params   55929  loss 0.0583  [18.0s]
+    TRAIN 10x lstm     params   55958  loss 0.0100  [22.4s]
+    TRAIN 10x transformer params   55125  loss 0.0026  [33.0s]
+  row seen  n=4000  CLU 0.9745 best-rival 0.8492 worst-ctl 0.4047 bseq 0.9742
+  row pair  n=812   CLU 0.8264 best-rival 0.4064 worst-ctl 0.4557 bseq 0.8325
+  row nway  n=752   CLU 0.9029 best-rival 0.8564 worst-ctl 0.6755 bseq 0.9029
+  row value n=4000  CLU 0.4750 best-rival 0.4185 worst-ctl 0.2030 bseq 0.5000
+  rollout CLU validity 0.0000 per-step 0.9176
+[B seed 0 leg val] wrote C:/chlu/outputs/w16-maze-wm/t1\B_val_seed0.json [539.1s]

@@ -1,0 +1,76 @@
+  seed 0: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0 · cache scope='full' rows=480000
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    gathering SPREAD_train: 12288 rows
+    gathering SPREAD: 4096 rows
+    gathering CORNER_B: 72 rows
+    gathering CORNER_MS: 198 rows
+  ⭐ store store_s0.pkl hash=3e3424a1ea40017e… K=5 M=64 30 bits/read (hash + channels asserted)
+  ⭐ grouping ORDER asserted: UNWHITENED features (asserted channel-for-channel) · well sizes [303, 305, 573, 501, 366]
+    [leg1]    floor_hue well4 VE=0.7849 rank_frac_median=0.0027 top10%=0.999 n_val=10
+    [leg1]     wall_hue well1 VE=0.6911 rank_frac_median=0.0033 top10%=0.997 n_val=10
+    [leg1]   object_hue well3 VE=0.3128 rank_frac_median=0.0040 top10%=0.996 n_val=10
+    [leg1]        scale well3 VE=0.0207 rank_frac_median=0.0200 top10%=0.976 n_val=8
+    [leg1]        shape well3 VE=0.0409 rank_frac_median=0.0100 top10%=0.992 n_val=4
+    [leg1]  orientation well2 VE=0.0618 rank_frac_median=0.0105 top10%=0.981 n_val=15
+  ⭐ LEG 1 PREMISE: HOLDS (direction True, share True)
+      [    encoder] d=2048 loss 2.361->0.007 train_agg=0.9998 SPREAD=0.9860 CORNER_B=0.9236 CORNER_MS=0.9655
+  arm identity
+    [identity] round-trip max|Δ| 0.000e+00 (rel 0.000e+00) · deployed 0 B (0.00× the store budget) · fit-time-only 0 B
+    [identity] codebook re-fitted: 1200 steps, loss 47.49073 -> 31.64705
+    [identity] distinct-of-72 on CORNER_B (request side) = 9 · distinct codes on SPREAD = 3598
+  arm pca_whiten
+    [pca_whiten] round-trip max|Δ| 1.192e-07 (rel 2.033e-08) · deployed 3,600,672 B (6.87× the store budget) · fit-time-only 0 B
+    [pca_whiten] codebook re-fitted: 1200 steps, loss 701.17267 -> 468.33493
+    [pca_whiten] distinct-of-72 on CORNER_B (request side) = 4 · distinct codes on SPREAD = 399
+      [code/shipped] d= 320 loss 2.311->0.655 train_agg=0.7115 SPREAD=0.6559 CORNER_B=0.5486 CORNER_MS=0.6843
+      [code/identity] d= 320 loss 2.311->0.655 train_agg=0.7115 SPREAD=0.6559 CORNER_B=0.5486 CORNER_MS=0.6843
+      [code/pca_whiten] d= 320 loss 2.303->1.810 train_agg=0.2554 SPREAD=0.2367 CORNER_B=0.2500 CORNER_MS=0.3207
+      [code_random] d= 320 loss 2.315->2.083 train_agg=0.2131 SPREAD=0.1202 CORNER_B=0.1250 CORNER_MS=0.1347
+  ⭐ knn_proto laundering control: BIT-IDENTICAL (max |Δ| = 0.0)
+⭐ LEG 1 premise: HOLDS
+⭐ falsifier (a) probe rises: NO · (b) distinct rises: NO · pre-registered pass: NO
+⭐ NOT the flat-total case — the total moved beyond seed spread, so the metric changed how much is retained overall, not merely its distribution.

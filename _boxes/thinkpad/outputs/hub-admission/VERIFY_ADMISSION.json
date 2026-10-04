@@ -1,0 +1,177 @@
+{
+  "schema": "verify-admission/1",
+  "verifier": "adversarial sub-agent of hub/admission (Opus), FORGIS_14",
+  "object": "shapes3d/recon, seed 0, rung A (N=64/well, K=5, 524,288 B)",
+  "method": "every gate number recomputed in float64 numpy from PREREG-1 SS1; admission_lib not used for any verification number",
+  "scripts": [
+    "scorer/verify_core.py",
+    "scorer/verify_liveset.py",
+    "scorer/verify_launch.py",
+    "scorer/verify_fairness.py"
+  ],
+  "data": [
+    "VERIFY_CORE.json",
+    "VERIFY_LIVESET.json",
+    "VERIFY_LAUNCH.json",
+    "VERIFY_FAIRNESS.json"
+  ],
+  "constraints_honoured": {
+    "eval_b_untouched": true,
+    "no_row_re_encoded": true,
+    "no_manifest_pinned_file_edited": true,
+    "no_hub_file_modified": true,
+    "nothing_deleted": true,
+    "gate_never_moved_off_zero": true,
+    "sigma_never_scaled": true
+  },
+  "claims": [
+    {
+      "claim": "1. The gate E_k > 0 refuses 0.0000 of real encoded images, even after every atom carrying that value is deleted from the store (UNIT 4, hybrid exemplar)",
+      "my_number": 0.0,
+      "your_number": 0.0,
+      "verdict": "CONFIRMED",
+      "note": "Independent float64 gate, independently drawn query rows (different 256 images/factor). Refuse = 0.0000 on all six rebuilds; the closest any held-out exemplar query came to the gate is max_k E_k = -9.88 (wall_hue -10.41), against a gate at 0.0. Not a near miss."
+    },
+    {
+      "claim": "1a. The rebuilt store really contains no atom carrying the held-out value",
+      "my_number": 0,
+      "your_number": 0,
+      "verdict": "CONFIRMED",
+      "note": "Re-derived via store_r.atom_rows -> Pk -> grid.factor_indices_of: 0 leaking atoms on all six. Stronger, and not checked by u4: the rebuilds share only 0-1 of 64 atoms with the full store, and the nearest rebuilt atom is 2.72-12.56 in L2 from ANY deleted row. The deletion is not a no-op."
+    },
+    {
+      "claim": "1b. The hybrid query vectors differ from the R8 embedding in exactly the assigned wells and carry the genuine cached feature there",
+      "my_number": "bit-exact on all six factors",
+      "your_number": "asserted",
+      "verdict": "CONFIRMED",
+      "note": "X_hybrid[:, assigned] == X_cache[held_idx][:, assigned] bit-exactly and X_hybrid[:, other] == R8_embed[:, other] bit-exactly, all six factors. Real image occupies 366/1181/1074/1440/1074/608 channels = 17.9%-70.3% of 2048. Request and image index the same row. No mis-indexing, no overwrite."
+    },
+    {
+      "claim": "1d. STRONGEST VARIANT (under-tested): the FULL unmodified 2048-dim cached feature of a held-out-value image, gated against the rebuilt store",
+      "my_number": 0.0006510416666666666,
+      "your_number": "not measured",
+      "verdict": "CONFIRMED (the claim is NOT too strong)",
+      "note": "Mean refusal 0.0007 = 1 query of 1536 (wall_hue, grazing at max_k E_k = +0.04). In-vocab full features: 0.0000. The SAME held-out images against the FULL undamaged store: 0.0013 -- i.e. they refuse LESS against the damaged store than against the intact one, and both sit at your own generic real-feature false-refusal floor (0.0005-0.0007). min_k d/sigma_k: held-out 0.819 vs in-vocab 0.782. Not materially non-zero and not discriminative."
+    },
+    {
+      "claim": "2. The data manifold sits at d/sigma_k ~ 0.79 (real features, store_train)",
+      "my_number": 0.7852,
+      "your_number": 0.787,
+      "verdict": "CONFIRMED",
+      "note": "val rows: mine 0.7934 vs yours 0.793. R8 affine valid: mine 0.7753 vs yours 0.775."
+    },
+    {
+      "claim": "2. The zero level set sits at ~2.0-2.4 sigma_k (per well)",
+      "my_number": [2.09, 2.038, 2.41, 2.342, 1.901],
+      "your_number": [2.093, 2.043, 2.419, 2.343, 1.892],
+      "verdict": "CONFIRMED",
+      "note": "My estimator is pure bisection (60 iterations), not a 400-point grid, and reports d to the NEAREST atom at the crossing rather than arc length from the start atom. No sign error, no missing sqrt, no factor of 2: writing E_k = m/2 - sigma^2 log S with m = min_i d^2 and S >= 1 makes the certified radius sigma*sqrt(2 log N) fall out algebraically. sigma_k reproduced from atom_bandwidths' nn_median rule to max rel delta 4.5e-08. float16 vs float32 cast of the cache: identical to 16 digits (0.7933935315067281 both)."
+    },
+    {
+      "claim": "2b. (my own extra) the zero crossing along the ray from the nearest atom TOWARDS a real val feature -- the data direction, not a random direction",
+      "my_number": [2.191, 2.153, 2.408, 2.37, 2.036],
+      "your_number": "not measured",
+      "verdict": "CONFIRMED and STRENGTHENED",
+      "note": "The obvious objection to 256 random rays in a 303-573-dim well is that a random direction is not where the data is. Measured in the data direction the level set is if anything FURTHER out. The 2.6x gap between the manifold (0.79) and the zero level set is real in the direction that matters."
+    },
+    {
+      "claim": "3. accept_A7 = 0.8056 but accept_A7D = 1.0000, so the A7 false-refusal is R8's additive double-count of a duplicated term",
+      "my_number": {"accept_A7": 0.8055555555555556, "accept_A7D": 1.0},
+      "your_number": {"accept_A7": 0.8056, "accept_A7D": 1.0},
+      "verdict": "CONFIRMED",
+      "note": "Airtight. 72/72 same requests (ids match by '-dedup' suffix, same row); 7 terms -> 6; exactly ONE duplicated factor term per request in 72/72, at exactly the same value in 72/72, matching the declared redundant_factor in 72/72. embed(A7)-embed(A7D) equals ONE (mu_{k,v} - mu_global) to max abs delta 2.98e-07 (float32 epsilon). The 14 refused A7 are a strict superset of the 0 refused A7D. min_k d/sigma_k 0.8871 -> 0.7798, landing exactly on the valid val mean 0.7753. Extra deviation norm 6.47 against embedding norm 33.46."
+    },
+    {
+      "claim": "4. Fairness of the rival: is knn_factored advantaged or disadvantaged by the 'refuse if ANY of 5 wells exceeds' reduction at q=0.95 (realised 21% refusal on valid data)?",
+      "my_number": {"rival_score_at_your_q095": 0.8241, "rival_best_score_over_q": 0.8621, "best_q": 0.98, "familywise_5pct_q": 0.98979, "score_there": 0.8571, "delta_at_rival_best": -0.1772},
+      "your_number": {"rival_score": 0.8241, "delta": -0.1383},
+      "verdict": "FAIR -- and CONSERVATIVE: it errs in the ARM's favour by 0.0389",
+      "note": "The ANY-of-5 reduction at q=0.95 per column gives a family-wise refusal of 21.6% on calibration, which HANDICAPS the rival rather than helping it: its score peaks at 0.8621 at q=0.98 (family-wise 9.4%). At the rival's own best operating point Delta = 0.6857 - 0.8621 = -0.1772, against the -0.1383 you report. Your LOSS is understated by 0.0389. Nothing about the comparison is unfair to the rival or generous to the arm."
+    },
+    {
+      "claim": "4b. (operating-point-free) how much of the arm's deficit is the RADIUS and how much is the SIGNAL?",
+      "my_number": {"arm_at_derived_zero": 0.6857, "arm_statistic_best_threshold": 0.7994, "rival_best": 0.8629, "loss_from_radius": 0.1137, "loss_from_signal": 0.0634},
+      "your_number": {"fitted_alternative": 0.7982, "rival": 0.8241},
+      "verdict": "CONFIRMED",
+      "note": "Max over ALL thresholds of 0.5*(refuse_oor + accept_val). Both halves of your reading are right: the radius is the bigger term (0.114) but it is not the only term (0.063). NEW: the CLU's own per-well DISTANCE max_k d_k/sigma_k reaches 0.8488 best score and AUROC 0.9107, BETTER than the ENERGY max_k E_k it is built from (0.7994 / 0.8619) and within 0.014 AUROC of the fitted rival (0.9198). The logsumexp over 64 atoms destroys separation relative to the plain nearest-atom distance in the same wells."
+    },
+    {
+      "claim": "5. paired_bootstrap: is the CI on Delta correct and genuinely paired, and is score = 1/2(refuse + accept) right?",
+      "my_number": {"delta": -0.13834635416666663, "ci95": [-0.15634847, -0.11979167]},
+      "your_number": {"delta": -0.1383, "ci95": [-0.15612061, -0.12044189]},
+      "verdict": "CONFIRMED",
+      "note": "Delta reproduced exactly. score = 0.5*(refuse + accept) is computed correctly. The pairing is genuinely implemented (one ia and one ir shared by both arms, admission_ctrl.py:240-242). CAVEAT, not a bug: the pairing is INERT here -- an unpaired bootstrap gives sd 0.00917 vs paired 0.00927 and the same interval -- because the arm's accept_val is constant at 1.0 (zero variance) and the dominant variance is the RIVAL's accept_val over only 512 val rows, which pairing cannot cancel."
+    },
+    {
+      "claim": "6. Is there a shipped, request-only, non-fitted launch point at which E_k > 0 is LIVE-SET sensitive?",
+      "my_number": {"settled_state_refuse_valid_val": 0.1094, "exemplar_separation_floor_hue": -0.0391, "exemplar_separation_wall_hue": -0.0469, "oov_symbol_separation_floor_hue": -0.0547, "oov_symbol_separation_wall_hue": 0.2266},
+      "your_number": "no such point (clamp_atom, prior_atom, posterior_mean, r8_affine, raw features all tested)",
+      "verdict": "NO SUCH POINT -- your conclusion STANDS; but one launch point was UNTESTED and it is NOT vacuous",
+      "note": "The SETTLED STATE (gen_landscape.settle_chain at the shipped SettleCfg: 1000 steps, step 0.2, sigma 4->1, T=0, metropolis, launched from the shipped clamp_atom state) is shipped, request-only and non-fitted, and you did not test it. There the gate is LIVE (refuse not identically 0) -- but it refuses 0.1094 of VALID val requests while refusing 0.0000 of out_of_range at w=2 and w=3 and only 0.0234 at w=4 (0.1641 at w=7, 0.3359 at w=13), so it is strictly dominated by gate@r8_affine on both legs. Live-set: settling from YOUR hybrid exemplar launch on YOUR rebuilt stores gives NEGATIVE separation on both factors tested (-0.0391 floor_hue, -0.0469 wall_hue); OOV-symbol disagrees in sign between factors (-0.0547 vs +0.2266). It does not rescue the live-set claim."
+    },
+    {
+      "claim": "6b. MECHANISM of the settled-state behaviour (a shipped-code fact for the coordinator)",
+      "my_number": {"weight_on_E_store_in_the_settling_dynamics": -5, "mean_max_k_E_launch": -36.9, "mean_max_k_E_settled": -24.7, "d_over_sigma_launch": 0.0, "d_over_sigma_settled": 0.849},
+      "your_number": "not measured",
+      "verdict": "NEW FINDING",
+      "note": "total_energy = E_store + beta*sum_t(E_t - E_store), so at beta=1 with T requested terms the store's own free energy enters the settling dynamics with weight (1 - T). With the six factor terms of a shapes3d request that weight is -5: settling actively pushes the state AWAY from the atoms. Measured on VALID val over 1000 steps: mean max_k E_k rises -36.9 -> -24.7 and min_k d/sigma_k rises 0.000 -> 0.849. This is why the settled-state gate false-refuses valid data. read_settled(...,'atom_mixture') on the settled state refuses 0.0000 (convex hull of the atoms), dead as expected."
+    }
+  ],
+  "bugs_found": [
+    {
+      "file": "scorer/u4_liveset.py",
+      "line": 99,
+      "severity": "vacuous assertion, correct conclusion",
+      "finding": "shortfall = setdiff1d(pool[keep], pool).size + setdiff1d(pool[held_mask], pool).size is IDENTICALLY 0 -- both arguments are subsets of pool by construction. Falsifier SS5.6 was therefore never actually tested. rec['shortfall_total'] (line 72) is never re-assigned, so rec['F5_6_fires'] (line 206) is hard-wired False.",
+      "does_it_change_any_result": "No. I verified the conclusion by a different route: the rebuilt landscape is built from X_pool[keep], a slice of the array gather_features already returned, so gather_features is never re-entered and no row can be encoded."
+    },
+    {
+      "file": "scorer/u4_liveset.py",
+      "line": "161-168",
+      "severity": "inefficiency",
+      "finding": "rates() is invoked three times per population (twice for the scalar keys, once for detail_*), so every gate in UNIT 4 is computed 3x.",
+      "does_it_change_any_result": "No."
+    },
+    {
+      "file": "scorer/admission_lib.py",
+      "line": "57-65 (per_well_nearest)",
+      "severity": "precision note",
+      "finding": "The nearest-atom distance is computed in the float32 Gram form; max abs delta vs my float64 computation is 0.011 on d ~ 4-10 (about 0.2%). per_well_energy is fine (max rel delta 1.8e-06) and there were 0 accept/refuse disagreements over 1024 probes.",
+      "does_it_change_any_result": "No, but d/sigma_k should not be quoted past 3 decimals."
+    },
+    {
+      "file": "LOG.md",
+      "line": "UNIT 0c, 'THE SS0c ANSWER' table",
+      "severity": "wording",
+      "finding": "'Accept rate on valid val is 1.0000 at every launch point' is false as written: at the settled state it is 0.8906.",
+      "does_it_change_any_result": "No -- suggest 'at every launch point tested', with the settled state added as a measured negative."
+    }
+  ],
+  "self_checks_reproduced": {
+    "sum_k E_k vs shipped gen_landscape.store_energy, max_rel_delta": 2.6464197418812404e-07,
+    "identity worst max_i E_k(a_ki), mine": -30.3937,
+    "identity worst max_i E_k(a_ki), yours": -30.394,
+    "my E_k vs admission_lib.per_well_energy, max_rel_delta": 1.776236367508012e-06,
+    "refuse/accept disagreements between my gate and yours over 1024 probes": 0
+  },
+  "summary": {
+    "OVERTURNED": [],
+    "UNCERTAIN": [],
+    "CONFIRMED": [
+      "1 -- live-set refusal is 0.0000, including the full-2048-dim-feature variant (0.0007)",
+      "1a -- the hold-out is real",
+      "1b -- the hybrid is bit-exact and correctly indexed",
+      "2 -- the data manifold at 0.785/0.793 and the zero level set at 1.90-2.41 sigma_k",
+      "2b -- and the level set is no closer in the data direction (2.04-2.41)",
+      "3 -- accept_A7 0.8056 -> accept_A7D 1.0000 is exactly one duplicated (mu_kv - mu_global)",
+      "4 -- the DEV_TABLE pair comparison is fair, and conservative by 0.0389",
+      "5 -- paired_bootstrap is correct and genuinely paired",
+      "6 -- no launch point makes the gate live-set sensitive"
+    ],
+    "CORRECTIONS_OWED": [
+      "The reported loss to knn_factored is UNDERSTATED: Delta = -0.1772 at the rival's own best operating point, not -0.1383.",
+      "'The derived gate never fires' is too strong as a sentence about the object: at the SETTLED state it fires on 10.9%-39% of everything, valid included, without discriminating. Report it as a measured negative, as you did for posterior_mean and clamp_atom.",
+      "SS5.6's shortfall test in u4_liveset.py cannot fail; say so, or replace it with the gather_features argument."
+    ]
+  }
+}

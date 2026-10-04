@@ -1,0 +1,86 @@
+########## TEST SEED 0 : fit ##########
+[19:52:57] ===== stage fit =====
+[19:52:57] stage fit: condition=test pool=131,072 wells=[777, 939, 216, 58, 58]
+[19:52:57]   coupling layout == gen_field's: 1322 pairs, 60 indices checked
+[19:53:26]   store: 64 atoms x 2048 f32 = 524,288 B on 131,072 rows; ranks [63, 63, 63, 13, 40] rank/d [0.0811, 0.0671, 0.2917, 0.2241, 0.6897]
+[19:53:26]   hole punched at pair-000 (object_hue=0.0 AND shape=1.0): 1 B, value unchanged=True
+[19:53:26]   ⛔ LEDGER, printed separately and never netted:
+[19:53:26]      store            524,288 B  (pin 524,288 B, matches=True)
+[19:53:26]      covariance    12,310,672 B  float64 d_k^2 per well [603729, 881721, 46656, 3364, 3364]
+[19:53:26]      counts            11,488 B
+[19:53:26]      coupling           5,288 B + 1,322 B of holes
+[19:53:26]      HONEST SUM    12,869,482 B = 24.5466x the pin  ⛔ OVER, and printed not netted
+[19:53:26]   DOWNDATE-READY-test.json -> status='partial' condition='test'
+[19:53:26] done
+########## TEST SEED 0 : assertions ##########
+[19:53:38] ===== stage assertions =====
+[19:53:38] stage assertions: deletions -- pinned value object_hue=0.0 (11,044 rows) and a random 64 rows
+[19:54:34]   [A1/pinned_value_object_hue_0.0] max abs dev per well ['0.000e+00', '0.000e+00', '0.000e+00', '8.624e-12', '2.365e-14']
+[19:54:34]            worst 8.624e-12 (7.234e-05 float32 ulp @1.0), 3/5 wells bit-identical, ranks agree=True, counts equal=True, term/pair counts equal=True/True
+[19:55:00]   [A1/negative control] nudged one atom by 1e-3 -> max abs dev 1.000e-03, check FIRED=True ✓
+[19:55:54]   [A1/random_64_rows] max abs dev per well ['4.547e-13', '0.000e+00', '0.000e+00', '5.480e-12', '1.912e-14']
+[19:55:54]            worst 5.480e-12 (4.597e-05 float32 ulp @1.0), 2/5 wells bit-identical, ranks agree=True, counts equal=True, term/pair counts equal=True/True
+[19:56:12]   [A2/full_pool] corpus 131,072 rows; delete(64) consumed 320 row-reads = 64 rows x 5 wells, with 5 tripwires armed on the corpus
+[19:56:27]   [A2/half_pool] corpus 65,536 rows; delete(64) consumed 320 row-reads = 64 rows x 5 wells, with 5 tripwires armed on the corpus
+[19:57:12]   [A3] 26 arrays, every shape explained by (A, d_k, K, T, NC); object bytes 12,885,866 at 131,072 rows and 12,885,866 at 65,536 rows -- grew by 0 B
+[19:57:12]   DOWNDATE-READY-test.json -> status='partial' condition='test'
+[19:57:12] done
+########## TEST SEED 1 : fit ##########
+[19:57:30] ===== stage fit =====
+[19:57:30] stage fit: condition=test pool=131,072 wells=[813, 882, 208, 73, 72]
+[19:57:30]   coupling layout == gen_field's: 1322 pairs, 60 indices checked
+[19:58:00]   store: 64 atoms x 2048 f32 = 524,288 B on 131,072 rows; ranks [63, 63, 63, 29, 63] rank/d [0.0775, 0.0714, 0.3029, 0.3973, 0.875]
+[19:58:00]   hole punched at pair-000 (object_hue=0.0 AND shape=1.0): 1 B, value unchanged=True
+[19:58:00]   ⛔ LEDGER, printed separately and never netted:
+[19:58:00]      store            524,288 B  (pin 524,288 B, matches=True)
+[19:58:00]      covariance    11,941,360 B  float64 d_k^2 per well [660969, 777924, 43264, 5329, 5184]
+[19:58:00]      counts            11,488 B
+[19:58:00]      coupling           5,288 B + 1,322 B of holes
+[19:58:00]      HONEST SUM    12,500,170 B = 23.8422x the pin  ⛔ OVER, and printed not netted
+[19:58:00]   DOWNDATE-READY-test.json -> status='partial' condition='test'
+[19:58:00] done
+########## TEST SEED 1 : assertions ##########
+[19:58:13] ===== stage assertions =====
+[19:58:14] stage assertions: deletions -- pinned value object_hue=0.0 (11,044 rows) and a random 64 rows
+[19:59:14]   [A1/pinned_value_object_hue_0.0] max abs dev per well ['0.000e+00', '0.000e+00', '0.000e+00', '1.619e-09', '1.089e-15']
+[19:59:14]            worst 1.619e-09 (1.358e-02 float32 ulp @1.0), 3/5 wells bit-identical, ranks agree=True, counts equal=True, term/pair counts equal=True/True
+[19:59:41]   [A1/negative control] nudged one atom by 1e-3 -> max abs dev 1.000e-03, check FIRED=True ✓
+[20:00:39]   [A1/random_64_rows] max abs dev per well ['1.137e-13', '0.000e+00', '0.000e+00', '2.592e-09', '7.078e-16']
+[20:00:39]            worst 2.592e-09 (2.175e-02 float32 ulp @1.0), 2/5 wells bit-identical, ranks agree=True, counts equal=True, term/pair counts equal=True/True
+[20:01:08]   [A2/full_pool] corpus 131,072 rows; delete(64) consumed 320 row-reads = 64 rows x 5 wells, with 5 tripwires armed on the corpus
+[20:01:24]   [A2/half_pool] corpus 65,536 rows; delete(64) consumed 320 row-reads = 64 rows x 5 wells, with 5 tripwires armed on the corpus
+[20:02:08]   [A3] 26 arrays, every shape explained by (A, d_k, K, T, NC); object bytes 12,516,554 at 131,072 rows and 12,516,554 at 65,536 rows -- grew by 0 B
+[20:02:08]   DOWNDATE-READY-test.json -> status='partial' condition='test'
+[20:02:08] done
+########## TEST SEED 2 : fit ##########
+[20:02:21] ===== stage fit =====
+[20:02:21] stage fit: condition=test pool=131,072 wells=[839, 847, 225, 65, 72]
+[20:02:21]   coupling layout == gen_field's: 1322 pairs, 60 indices checked
+[20:02:49]   store: 64 atoms x 2048 f32 = 524,288 B on 131,072 rows; ranks [63, 63, 63, 25, 63] rank/d [0.0751, 0.0744, 0.28, 0.3846, 0.875]
+[20:02:49]   hole punched at pair-000 (object_hue=0.0 AND shape=1.0): 1 B, value unchanged=True
+[20:02:49]   ⛔ LEDGER, printed separately and never netted:
+[20:02:49]      store            524,288 B  (pin 524,288 B, matches=True)
+[20:02:49]      covariance    11,850,912 B  float64 d_k^2 per well [703921, 717409, 50625, 4225, 5184]
+[20:02:49]      counts            11,488 B
+[20:02:49]      coupling           5,288 B + 1,322 B of holes
+[20:02:49]      HONEST SUM    12,409,722 B = 23.6697x the pin  ⛔ OVER, and printed not netted
+[20:02:50]   DOWNDATE-READY-test.json -> status='partial' condition='test'
+[20:02:50] done
+########## TEST SEED 2 : assertions ##########
+[20:03:03] ===== stage assertions =====
+[20:03:03] stage assertions: deletions -- pinned value object_hue=0.0 (11,044 rows) and a random 64 rows
+[20:03:58]   [A1/pinned_value_object_hue_0.0] max abs dev per well ['7.105e-15', '0.000e+00', '0.000e+00', '3.921e-06', '0.000e+00']
+[20:03:58]            worst 3.921e-06 (3.290e+01 float32 ulp @1.0), 3/5 wells bit-identical, ranks agree=True, counts equal=True, term/pair counts equal=True/True
+[20:04:23]   [A1/negative control] nudged one atom by 1e-3 -> max abs dev 1.000e-03, check FIRED=True ✓
+[20:05:18]   [A1/random_64_rows] max abs dev per well ['2.842e-14', '0.000e+00', '0.000e+00', '4.227e-06', '0.000e+00']
+[20:05:18]            worst 4.227e-06 (3.546e+01 float32 ulp @1.0), 3/5 wells bit-identical, ranks agree=True, counts equal=True, term/pair counts equal=True/True
+[20:05:47]   [A2/full_pool] corpus 131,072 rows; delete(64) consumed 320 row-reads = 64 rows x 5 wells, with 5 tripwires armed on the corpus
+[20:06:02]   [A2/half_pool] corpus 65,536 rows; delete(64) consumed 320 row-reads = 64 rows x 5 wells, with 5 tripwires armed on the corpus
+[20:06:42]   [A3] 26 arrays, every shape explained by (A, d_k, K, T, NC); object bytes 12,426,106 at 131,072 rows and 12,426,106 at 65,536 rows -- grew by 0 B
+[20:06:43]   DOWNDATE-READY-test.json -> status='partial' condition='test'
+[20:06:43] done
+########## GATE ##########
+[20:06:55] ===== stage gate =====
+[20:06:55]   DOWNDATE-READY-test.json: status=partial seeds=[0, 1, 2] all_three=False worst_dev=4.227075351082021e-06
+[20:06:55] done
+########## ALL TEST SEEDS DONE ##########

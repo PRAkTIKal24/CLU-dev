@@ -1,0 +1,216 @@
+=== chlu startup 2026-09-15T16:22:08Z on chlu-det-ref ===
+job=det-ref image=us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:94002e3018510f1d60eb6252b0d9e2696d165f64d447a4e382258856888f1dc6 remote=gs://chlu-cloud-forgisprova/jobs zone=us-central1-a args=[--steps 600 --size 2048 --seed 0 --ckpt-every-s 15 --step-sleep-s 0.5]
+Tue Sep 15 16:22:12 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA L4                      Off |   00000000:00:03.0 Off |                    0 |
+| N/A   71C    P0             35W /   72W |       0MiB /  23034MiB |      4%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+name, driver_version, memory.total [MiB]
+NVIDIA L4, 580.178.04, 23034 MiB
+Get:1 file:/var/cudnn-local-repo-ubuntu2404-9.13.0  InRelease [1572 B]
+Hit:2 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy InRelease
+Get:3 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+Get:1 file:/var/cudnn-local-repo-ubuntu2404-9.13.0  InRelease [1572 B]
+Get:4 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-backports InRelease [127 kB]
+Hit:5 http://packages.cloud.google.com/apt apt-transport-artifact-registry-stable InRelease
+Get:6 https://us-apt.pkg.dev/projects/gce-ai-infra gpudirect-gib-apt InRelease [1239 B]
+Hit:7 https://nvidia.github.io/libnvidia-container/stable/deb/amd64  InRelease
+Get:8 http://security.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
+Get:9 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages [3796 kB]
+Get:10 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main Translation-en [563 kB]
+Get:11 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages [1282 kB]
+Get:12 https://us-apt.pkg.dev/projects/gce-ai-infra gpudirect-gib-apt/main amd64 Packages [11.5 kB]
+Get:13 http://security.ubuntu.com/ubuntu jammy-security/main amd64 Packages [3526 kB]
+Get:14 http://security.ubuntu.com/ubuntu jammy-security/main Translation-en [495 kB]
+Get:15 http://security.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages [6306 kB]
+Get:16 http://security.ubuntu.com/ubuntu jammy-security/restricted Translation-en [1211 kB]
+Get:17 http://security.ubuntu.com/ubuntu jammy-security/universe amd64 Packages [1048 kB]
+Get:18 http://security.ubuntu.com/ubuntu jammy-security/multiverse amd64 Packages [69.4 kB]
+Get:19 http://security.ubuntu.com/ubuntu jammy-security/multiverse Translation-en [12.9 kB]
+Fetched 18.7 MB in 3s (5405 kB/s)
+Reading package lists...
+W: http://packages.cloud.google.com/apt/dists/apt-transport-artifact-registry-stable/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+W: https://us-apt.pkg.dev/projects/gce-ai-infra/dists/gpudirect-gib-apt/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  bridge-utils containerd dns-root-data dnsmasq-base pigz runc ubuntu-fan
+Suggested packages:
+  ifupdown aufs-tools cgroupfs-mount | cgroup-lite debootstrap docker-buildx
+  docker-compose-v2 docker-doc rinse zfs-fuse | zfsutils
+The following NEW packages will be installed:
+  bridge-utils containerd dns-root-data dnsmasq-base docker.io pigz runc
+  ubuntu-fan
+0 upgraded, 8 newly installed, 0 to remove and 18 not upgraded.
+Need to get 74.0 MB of archives.
+After this operation, 279 MB of additional disk space will be used.
+Get:1 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy/universe amd64 pigz amd64 2.6-1 [63.6 kB]
+Get:2 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy/main amd64 bridge-utils amd64 1.7-1ubuntu3 [34.4 kB]
+Get:3 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 runc amd64 1.3.4-0ubuntu1~22.04.1 [9569 kB]
+Get:4 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 containerd amd64 2.2.1-0ubuntu1~22.04.2 [28.3 MB]
+Get:5 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 dns-root-data all 2024071801~ubuntu0.22.04.1 [6132 B]
+Get:6 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 dnsmasq-base amd64 2.91-0ubuntu0.22.04.1 [379 kB]
+Get:7 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 docker.io amd64 29.1.3-0ubuntu3~22.04.2 [35.7 MB]
+Get:8 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy/universe amd64 ubuntu-fan all 0.12.16 [35.2 kB]
+Preconfiguring packages ...
+Fetched 74.0 MB in 2s (48.7 MB/s)
+Selecting previously unselected package pigz.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 71520 files and directories currently installed.)
+Preparing to unpack .../0-pigz_2.6-1_amd64.deb ...
+Unpacking pigz (2.6-1) ...
+Selecting previously unselected package bridge-utils.
+Preparing to unpack .../1-bridge-utils_1.7-1ubuntu3_amd64.deb ...
+Unpacking bridge-utils (1.7-1ubuntu3) ...
+Selecting previously unselected package runc.
+Preparing to unpack .../2-runc_1.3.4-0ubuntu1~22.04.1_amd64.deb ...
+Unpacking runc (1.3.4-0ubuntu1~22.04.1) ...
+Selecting previously unselected package containerd.
+Preparing to unpack .../3-containerd_2.2.1-0ubuntu1~22.04.2_amd64.deb ...
+Unpacking containerd (2.2.1-0ubuntu1~22.04.2) ...
+Selecting previously unselected package dns-root-data.
+Preparing to unpack .../4-dns-root-data_2024071801~ubuntu0.22.04.1_all.deb ...
+Unpacking dns-root-data (2024071801~ubuntu0.22.04.1) ...
+Selecting previously unselected package dnsmasq-base.
+Preparing to unpack .../5-dnsmasq-base_2.91-0ubuntu0.22.04.1_amd64.deb ...
+Unpacking dnsmasq-base (2.91-0ubuntu0.22.04.1) ...
+Selecting previously unselected package docker.io.
+Preparing to unpack .../6-docker.io_29.1.3-0ubuntu3~22.04.2_amd64.deb ...
+Unpacking docker.io (29.1.3-0ubuntu3~22.04.2) ...
+Selecting previously unselected package ubuntu-fan.
+Preparing to unpack .../7-ubuntu-fan_0.12.16_all.deb ...
+Unpacking ubuntu-fan (0.12.16) ...
+Setting up dnsmasq-base (2.91-0ubuntu0.22.04.1) ...
+Setting up runc (1.3.4-0ubuntu1~22.04.1) ...
+Setting up dns-root-data (2024071801~ubuntu0.22.04.1) ...
+Setting up bridge-utils (1.7-1ubuntu3) ...
+Setting up pigz (2.6-1) ...
+Setting up containerd (2.2.1-0ubuntu1~22.04.2) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/containerd.service → /lib/systemd/system/containerd.service.
+Setting up ubuntu-fan (0.12.16) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/ubuntu-fan.service → /lib/systemd/system/ubuntu-fan.service.
+Setting up docker.io (29.1.3-0ubuntu3~22.04.2) ...
+Adding group `docker' (GID 122) ...
+Done.
+Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /lib/systemd/system/docker.service.
+Created symlink /etc/systemd/system/sockets.target.wants/docker.socket → /lib/systemd/system/docker.socket.
+Processing triggers for dbus (1.12.20-2ubuntu4.1) ...
+Processing triggers for man-db (2.10.2-1) ...
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+time="2026-09-15T16:22:36Z" level=info msg="Config file does not exist; using empty config"
+time="2026-09-15T16:22:36Z" level=info msg="Wrote updated config to /etc/docker/daemon.json"
+time="2026-09-15T16:22:36Z" level=info msg="It is recommended that docker daemon be restarted."
+Adding credentials for: us-central1-docker.pkg.dev
+Docker configuration file updated.
+us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:94002e3018510f1d60eb6252b0d9e2696d165f64d447a4e382258856888f1dc6: Pulling from forgisprova/chlu/chlu-cuda
+dbaa5c62f0ed: Pulling fs layer
+d23f984c2dbe: Pulling fs layer
+5916320cd9ac: Pulling fs layer
+7e6ff95ee769: Pulling fs layer
+904b20ec1a3d: Pulling fs layer
+882a85d46148: Pulling fs layer
+6128e8861235: Pulling fs layer
+1e78c12ca36c: Pulling fs layer
+268809fa06ff: Pulling fs layer
+a804560546bd: Pulling fs layer
+36792c4a1cd6: Pulling fs layer
+34a7997cc5fe: Pulling fs layer
+94bc42c001d6: Pulling fs layer
+7e6ff95ee769: Download complete
+6128e8861235: Download complete
+36792c4a1cd6: Download complete
+34a7997cc5fe: Download complete
+94bc42c001d6: Download complete
+5916320cd9ac: Download complete
+a804560546bd: Download complete
+882a85d46148: Download complete
+904b20ec1a3d: Download complete
+1e78c12ca36c: Download complete
+dbaa5c62f0ed: Download complete
+268809fa06ff: Download complete
+dbaa5c62f0ed: Pull complete
+5916320cd9ac: Pull complete
+6128e8861235: Pull complete
+882a85d46148: Pull complete
+1e78c12ca36c: Pull complete
+7e6ff95ee769: Pull complete
+94bc42c001d6: Pull complete
+268809fa06ff: Pull complete
+d23f984c2dbe: Download complete
+d23f984c2dbe: Pull complete
+a804560546bd: Pull complete
+36792c4a1cd6: Pull complete
+34a7997cc5fe: Pull complete
+904b20ec1a3d: Pull complete
+Digest: sha256:94002e3018510f1d60eb6252b0d9e2696d165f64d447a4e382258856888f1dc6
+Status: Downloaded newer image for us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:94002e3018510f1d60eb6252b0d9e2696d165f64d447a4e382258856888f1dc6
+us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:94002e3018510f1d60eb6252b0d9e2696d165f64d447a4e382258856888f1dc6
+image digests: us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:94002e3018510f1d60eb6252b0d9e2696d165f64d447a4e382258856888f1dc6
++ ENVARGS=()
++ '[' -n 'XLA_FLAGS=--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0' ']'
++ IFS=';'
++ read -ra _kvs
++ for kv in "${_kvs[@]}"
++ '[' -n 'XLA_FLAGS=--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0' ']'
++ ENVARGS+=(-e "$kv")
++ echo '[runtime] extra container env: XLA_FLAGS=--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'
+[runtime] extra container env: XLA_FLAGS=--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0
++ docker run --rm --name chlu-job --gpus all --network host --shm-size=1g -v /var/chlu:/var/chlu -e 'XLA_FLAGS=--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0' -e CHLU_JOB=det-ref us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:94002e3018510f1d60eb6252b0d9e2696d165f64d447a4e382258856888f1dc6 python /opt/chlu/scripts/cloud/payload_smoke.py --job det-ref --out /var/chlu/out --remote gs://chlu-cloud-forgisprova/jobs --require-gpu --steps 600 --size 2048 --seed 0 --ckpt-every-s 15 --step-sleep-s 0.5
+[payload] jax 0.9.0 backend=gpu devices=['cuda:0']
+[payload] config fingerprint d3edc6458310e7a2 :: {'steps': 600, 'seed': 0, 'size': 2048, 'dtype': 'float32', 'payload': 'matmul-tanh-sum-v1'}
+[payload] no checkpoint -> starting from step 0
+[payload] step 1/600 checkpointed (chain f31d734c2f04e533...)
+[payload] step 27/600 checkpointed (chain cea444c54d333c28...)
+[payload] step 53/600 checkpointed (chain cf3e8705fb337c69...)
+[payload] step 79/600 checkpointed (chain e5e22dabc079bb51...)
+[payload] step 103/600 checkpointed (chain 023b475b95bed910...)
+[payload] step 127/600 checkpointed (chain 8e87ef8fc2404e22...)
+[payload] step 150/600 checkpointed (chain e1d651d5dc289911...)
+[payload] step 173/600 checkpointed (chain 04f3550a754d5f61...)
+[payload] step 197/600 checkpointed (chain a389147d3164a563...)
+[payload] step 220/600 checkpointed (chain 7469636ec8e3424f...)
+[payload] step 244/600 checkpointed (chain 81ac9ceeb6b23a71...)
+[payload] step 268/600 checkpointed (chain ac9dda52e0ba8a8b...)
+[payload] step 292/600 checkpointed (chain eec112b982c046d3...)
+[payload] step 316/600 checkpointed (chain cbd68a6ac69655af...)
+[payload] step 340/600 checkpointed (chain 1c29dcd8dcdbd633...)
+[payload] step 364/600 checkpointed (chain 3abde5037aaec9e9...)
+[payload] step 388/600 checkpointed (chain 5ad71e0895ba2748...)
+[payload] step 412/600 checkpointed (chain 618007f2fddf7f08...)
+[payload] step 435/600 checkpointed (chain ec428a561508fc1b...)
+[payload] step 458/600 checkpointed (chain 5a15fa50569d2877...)
+[payload] step 482/600 checkpointed (chain 98e87ab7acdaf1a7...)
+[payload] step 506/600 checkpointed (chain 14c303384ad36e4b...)
+[payload] step 530/600 checkpointed (chain ed8aafada71aaa6f...)
+[payload] step 553/600 checkpointed (chain d749673353c141d7...)
+[payload] step 577/600 checkpointed (chain 0f5d7c7cc2eeb830...)
+[payload] RESULT {"acc_first": -552.1762084960938, "acc_last": 514.4844970703125, "acc_sum": -57979.22265625, "backend": "gpu", "chain": "664526ada28ee37e39d9988cf48b85a266e0e424a40e438f64e138b9ba9d28a7", "config": {"dtype": "float32", "payload": "matmul-tanh-sum-v1", "seed": 0, "size": 2048, "steps": 600}, "devices": ["cuda:0"], "fingerprint": "d3edc6458310e7a2", "jax_version": "0.9.0", "job": "det-ref", "resumed_from": 0, "steps": 600, "xla_flags": "--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"}
+[payload] DONE chain=664526ada28ee37e39d9988cf48b85a266e0e424a40e438f64e138b9ba9d28a7
++ RC=0
++ set +x
+payload exited rc=0
+=== finishing rc=0 2026-09-15T16:32:17Z ===

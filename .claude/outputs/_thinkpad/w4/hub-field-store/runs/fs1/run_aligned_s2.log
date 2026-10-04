@@ -1,0 +1,52 @@
+[    0.3s]   partitions: already on disk, skipping
+[   78.3s]     step 1/1200  loss=39.38087  tau=1.000
+[   93.1s]     step 300/1200  loss=30.28596  tau=0.563
+[  108.3s]     step 600/1200  loss=27.75717  tau=0.317
+[  123.9s]     step 900/1200  loss=27.60800  tau=0.178
+[  139.1s]     step 1200/1200  loss=26.01302  tau=0.100
+[  270.4s]   gram(seed 2): accumulated over 131072 rows
+[  273.1s]   aligned_w3(seed 2): fitted in 264.5s; store 524,288 B + head 1,766,400 B
+[  273.5s]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[  703.3s]   aligned_w3(seed 2): 85 corners in 392.0s

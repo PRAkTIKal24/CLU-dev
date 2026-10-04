@@ -1,0 +1,480 @@
+[scored] wave-5 leg present: rival set, incumbent, content and address book in place
+[leg] classifier root -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[leg] cache root -> /c/chlu/outputs/spoke-a-rivals/cache_generation2 (generation 2)
+[leg] scored run authorised by /c/chlu/outputs/w6-compose-physics/PREREG-w6-compose-physics-1.md + the ledger row
+[leg] condition=test seed=2 leg=/c/chlu/outputs/w6-compose-physics/scored/test_seed2 arms=pca_settle_zerostep pca_settle_f05_conv pca_settle_onestep pca_settle pca_settle_lookup pca_settle_removed pca_settle_shuffled
+  "pre_existing_unchanged": true
+ }
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:38:51] stage=prepare arm=None out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:38:51]   partitions: already on disk, skipping
+[09:38:51] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- pca_settle_zerostep ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:38:54] stage=fit arm=pca_settle_zerostep out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:38:55]   address book: reused the INCUMBENT's own address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[09:39:02]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 63) (131072, 64)
+[09:39:03]   coupling: rank 16, 10 pairs, 81,664 B, lambda_used=0.225000 (declared 1.0, lambda*=0.250000, clipped=True) in 8.7s
+[09:39:03]   arm pca_settle_zerostep: BIT-IDENTICAL to the incumbent read on 256 requests -- the harness change is a proven no-op
+[09:39:03]   arm pca_settle_zerostep: fitted in 8.8s; store 524,288 B + address 195,064 B + coupling 81,664 B
+[09:39:03] {"arm": "pca_settle_zerostep", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.967792, 0.953257, 0.952672, 1.0, 0.998808]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:39:07] stage=run arm=pca_settle_zerostep out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:39:07]   arm pca_settle_zerostep: already fitted, loading
+[09:39:07]   arm pca_settle_zerostep: already fitted, loading
+[09:39:07]   judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[09:41:01]   arm pca_settle_zerostep: r1_seen accept=1.0000 valid=0.9414
+[09:41:04]   arm pca_settle_zerostep: r2_unseen_valid accept=1.0000 valid=0.9453
+[09:41:08]   arm pca_settle_zerostep: r5_comp_refusal accept=0.0000 valid=0.0000
+[09:41:12]   arm pca_settle_zerostep: r6_invalid_refusal accept=0.0000 valid=0.0000
+[09:41:47]   arm pca_settle_zerostep: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[09:41:47]   arm pca_settle_zerostep: all rows done in 154.7s
+[09:41:47]   arm pca_settle_zerostep: launch->settled relative displacement median=0.000000; C.4 NOT a lookup: the settled state sits strictly between atoms (min ratio 1.6866)
+[09:41:47] {"incomplete": false, "n_done": 109}
+[leg] ---- pca_settle_f05_conv ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:41:54] stage=fit arm=pca_settle_f05_conv out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:41:54]   address book: reused the INCUMBENT's own address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[09:41:54]   coupling: reused span_coupling_r16.pkl
+[09:41:54]   arm pca_settle_f05_conv: fitted in 0.1s; store 524,288 B + address 195,064 B + coupling 81,664 B
+[09:41:54] {"arm": "pca_settle_f05_conv", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.967792, 0.953257, 0.952672, 1.0, 0.998808]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:41:57] stage=run arm=pca_settle_f05_conv out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:41:57]   arm pca_settle_f05_conv: already fitted, loading
+[09:41:57]   arm pca_settle_f05_conv: already fitted, loading
+[09:41:57]   judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[09:44:08]   arm pca_settle_f05_conv: r1_seen accept=1.0000 valid=0.9395
+[09:44:12]   arm pca_settle_f05_conv: r2_unseen_valid accept=1.0000 valid=0.9355
+[09:44:17]   arm pca_settle_f05_conv: r5_comp_refusal accept=0.0000 valid=0.0000
+[09:44:20]   arm pca_settle_f05_conv: r6_invalid_refusal accept=0.0000 valid=0.0000
+[09:44:56]   arm pca_settle_f05_conv: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[09:44:56]   arm pca_settle_f05_conv: all rows done in 172.7s
+[09:44:56]   arm pca_settle_f05_conv: launch->settled relative displacement median=0.009749; C.4 NOT a lookup: the settled state sits strictly between atoms (min ratio 1.7103)
+[09:44:56] {"incomplete": false, "n_done": 109}
+[leg] ---- pca_settle_onestep ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:45:03] stage=fit arm=pca_settle_onestep out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:45:03]   address book: reused the INCUMBENT's own address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[09:45:03]   coupling: reused span_coupling_r16.pkl
+[09:45:03]   arm pca_settle_onestep: fitted in 0.1s; store 524,288 B + address 195,064 B + coupling 81,664 B
+[09:45:03] {"arm": "pca_settle_onestep", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.967792, 0.953257, 0.952672, 1.0, 0.998808]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:45:06] stage=run arm=pca_settle_onestep out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:45:06]   arm pca_settle_onestep: already fitted, loading
+[09:45:06]   arm pca_settle_onestep: already fitted, loading
+[09:45:06]   judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[09:46:53]   arm pca_settle_onestep: r1_seen accept=1.0000 valid=0.9121
+[09:46:57]   arm pca_settle_onestep: r2_unseen_valid accept=1.0000 valid=0.9277
+[09:47:01]   arm pca_settle_onestep: r5_comp_refusal accept=0.0000 valid=0.0000
+[09:47:04]   arm pca_settle_onestep: r6_invalid_refusal accept=0.0000 valid=0.0000
+[09:47:42]   arm pca_settle_onestep: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[09:47:42]   arm pca_settle_onestep: all rows done in 150.1s
+[09:47:42]   arm pca_settle_onestep: launch->settled relative displacement median=0.047717; C.4 NOT a lookup: the settled state sits strictly between atoms (min ratio 1.8341)
+[09:47:42] {"incomplete": false, "n_done": 109}
+[leg] ---- pca_settle ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:47:48] stage=fit arm=pca_settle out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:47:48]   address book: reused the INCUMBENT's own address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[09:47:48]   coupling: reused span_coupling_r16.pkl
+[09:47:48]   arm pca_settle: fitted in 0.1s; store 524,288 B + address 195,064 B + coupling 81,664 B
+[09:47:48] {"arm": "pca_settle", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.967792, 0.953257, 0.952672, 1.0, 0.998808]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:47:52] stage=run arm=pca_settle out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:47:52]   arm pca_settle: already fitted, loading
+[09:47:52]   arm pca_settle: already fitted, loading
+[09:47:52]   judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[09:50:06]   arm pca_settle: r1_seen accept=1.0000 valid=0.3008
+[09:50:11]   arm pca_settle: r2_unseen_valid accept=1.0000 valid=0.2852
+[09:50:15]   arm pca_settle: r5_comp_refusal accept=0.0000 valid=0.0000
+[09:50:20]   arm pca_settle: r6_invalid_refusal accept=0.0000 valid=0.0000
+[09:51:06]   arm pca_settle: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[09:51:07]   arm pca_settle: all rows done in 187.8s
+[09:51:07]   arm pca_settle: launch->settled relative displacement median=0.394761; C.4 NOT a lookup: the settled state sits strictly between atoms (min ratio 3.1323)
+[09:51:07] {"incomplete": false, "n_done": 109}
+[leg] ---- pca_settle_lookup ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:51:13] stage=fit arm=pca_settle_lookup out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:51:13]   address book: reused the INCUMBENT's own address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[09:51:13]   coupling: reused span_coupling_r16.pkl
+[09:51:13]   arm pca_settle_lookup: fitted in 0.1s; store 524,288 B + address 195,064 B + coupling 81,664 B
+[09:51:13] {"arm": "pca_settle_lookup", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.967792, 0.953257, 0.952672, 1.0, 0.998808]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:51:17] stage=run arm=pca_settle_lookup out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:51:17]   arm pca_settle_lookup: already fitted, loading
+[09:51:17]   arm pca_settle_lookup: already fitted, loading
+[09:51:17]   judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[09:53:17]   arm pca_settle_lookup: r1_seen accept=1.0000 valid=0.0000
+[09:53:21]   arm pca_settle_lookup: r2_unseen_valid accept=1.0000 valid=0.0000
+[09:53:25]   arm pca_settle_lookup: r5_comp_refusal accept=0.0000 valid=0.0000
+[09:53:29]   arm pca_settle_lookup: r6_invalid_refusal accept=0.0000 valid=0.0000
+[09:54:08]   arm pca_settle_lookup: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[09:54:08]   arm pca_settle_lookup: all rows done in 165.1s
+[09:54:08]   arm pca_settle_lookup: launch->settled relative displacement median=0.394761; C.4 NOT a lookup: the settled state sits strictly between atoms (min ratio 3.1323)
+[09:54:08] {"incomplete": false, "n_done": 109}
+[leg] ---- pca_settle_removed ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:54:13] stage=fit arm=pca_settle_removed out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:54:14]   address book: reused the INCUMBENT's own address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[09:54:14]   coupling: reused span_coupling_r16.pkl
+[09:54:14]   arm pca_settle_removed: fitted in 0.2s; store 524,288 B + address 195,064 B + coupling 81,664 B
+[09:54:14] {"arm": "pca_settle_removed", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.967792, 0.953257, 0.952672, 1.0, 0.998808]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:54:16] stage=run arm=pca_settle_removed out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:54:16]   arm pca_settle_removed: already fitted, loading
+[09:54:16]   arm pca_settle_removed: already fitted, loading
+[09:54:17]   judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[09:56:25]   arm pca_settle_removed: r1_seen accept=1.0000 valid=0.0000
+[09:56:29]   arm pca_settle_removed: r2_unseen_valid accept=1.0000 valid=0.0000
+[09:56:34]   arm pca_settle_removed: r5_comp_refusal accept=0.0000 valid=0.0000
+[09:56:38]   arm pca_settle_removed: r6_invalid_refusal accept=0.3672 valid=0.0000
+[09:57:21]   arm pca_settle_removed: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[09:57:21]   arm pca_settle_removed: all rows done in 178.6s
+[09:57:21] {"incomplete": false, "n_done": 109}
+[leg] ---- pca_settle_shuffled ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:57:29] stage=fit arm=pca_settle_shuffled out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:57:29]   address book: reused the INCUMBENT's own address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[09:57:29]   coupling: reused span_coupling_r16.pkl
+[09:57:29]   arm pca_settle_shuffled: fitted in 0.1s; store 524,288 B + address 195,064 B + coupling 81,664 B
+[09:57:29] {"arm": "pca_settle_shuffled", "address_bytes": {"address_bytes": 195064, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 163328, "normalisation_bytes": 2552, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.967792, 0.953257, 0.952672, 1.0, 0.998808]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[09:57:33] stage=run arm=pca_settle_shuffled out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[09:57:33]   arm pca_settle_shuffled: already fitted, loading
+[09:57:33]   arm pca_settle_shuffled: already fitted, loading
+[09:57:33]   judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[09:59:52]   arm pca_settle_shuffled: r1_seen accept=1.0000 valid=0.0000
+[09:59:57]   arm pca_settle_shuffled: r2_unseen_valid accept=1.0000 valid=0.0000
+[10:00:02]   arm pca_settle_shuffled: r5_comp_refusal accept=0.0000 valid=0.0000
+[10:00:07]   arm pca_settle_shuffled: r6_invalid_refusal accept=0.0000 valid=0.0000
+[10:00:50]   arm pca_settle_shuffled: row7 delete object_hue=0.0 -- accept on its requests 1.0000 -> 0.0000, 40 survivor corners, modes untouched=True
+[10:00:50]   arm pca_settle_shuffled: all rows done in 189.1s
+[10:00:50]   arm pca_settle_shuffled: launch->settled relative displacement median=0.394761; C.4 NOT a lookup: the settled state sits strictly between atoms (min ratio 5.4476)
+[10:00:50] {"incomplete": false, "n_done": 109}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[10:00:57] stage=table arm=None out=C:\chlu\outputs\w6-compose-physics\scored\test_seed2 seed=2 cond=test
+[10:01:04]   arms with rows: ['span_head', 'oracle_span', 'rival_table', 'rival_mlp', 'rival_mlp_180k', 'rival_cont_mlp', 'rival_transformer', 'rival_lstm', 'oracle_span_field', 'oracle_content_pool', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_lookup_argmax', 'pca_lookup_convex', 'pca_settle', 'pca_settle_onestep', 'pca_settle_zerostep', 'pca_settle_removed', 'pca_settle_shuffled', 'pca_settle_lookup', 'pca_settle_f05_conv']
+[10:01:04]   declared NOT-RUN: ['rival_lace', 'rival_poe_ebm']
+[10:01:09]   table written -> C:\chlu\outputs\w6-compose-physics\scored\test_seed2\READ-TABLE.json
+[10:01:09]     span_head                ABLATION (the deployed read)                   r4= 46.041 r3= 13.883
+[10:01:09]     oracle_span              NOT AN ARM (ceiling)                           r4= 53.000 r3= 24.700
+[10:01:09]     rival_table              RIVAL                                          r4= 14.122 r3=  6.183
+[10:01:09]     rival_mlp                RIVAL                                          r4= 52.755 r3= 23.333
+[10:01:09]     rival_mlp_180k           RIVAL                                          r4= 59.857 r3= 29.033
+[10:01:09]     rival_cont_mlp           RIVAL                                          r4= 18.327 r3=  6.533
+[10:01:09]     rival_transformer        RIVAL                                          r4= 53.755 r3= 24.250
+[10:01:09]     rival_lstm               RIVAL                                          r4= 51.510 r3= 23.750
+[10:01:09]     oracle_span_field        NOT AN ARM (ceiling, FIELD store)              r4= 54.204 r3= 22.400
+[10:01:09]     oracle_content_pool      NOT AN ARM (ceiling, BEST REALISABLE content @524,288 B) r4= 68.408 r3= 32.950
+[10:01:09]     oracle_content_fine      NOT AN ARM (ceiling, ABSOLUTE content @524,288 B, fine K) r4= 70.735 r3= 34.967
+[10:01:09]     oracle_true_feature      NOT AN ARM (ceiling of EVERY store, any budget) r4= 70.735 r3= 34.967
+[10:01:09]     oracle_content_items     NOT AN ARM (ceiling, 64 REAL ITEMS @524,288 B) r4= 41.776 r3= 20.467
+[10:01:09]     pca_tensor               ARM                                            r4= 67.653 r3= 31.450
+[10:01:09]     pca_tensor_sum           ABLATION (same rank, address summed not multiplied) r4= 19.837 r3=  7.600
+[10:01:09]     pca_landscape_removed    CONTROL (charter C.2, atoms zeroed)            r4=  0.000 r3=  0.000
+[10:01:09]     pca_landscape_shuffled   CONTROL (charter C.2, atom values permuted)    r4=  0.000 r3=  0.000
+[10:01:09]     pca_random_refit         CONTROL (random atoms, address book REFIT)     r4=  1.224 r3=  0.933
+[10:01:09]     pca_lookup_argmax        FLOOR (charter C.1/C.4, matched-bytes lookup)  r4=  0.000 r3=  0.000
+[10:01:09]     pca_lookup_convex        FLOOR (charter C.1, the mixture)               r4=  0.000 r3=  0.000
+[10:01:09]     pca_settle               ARM (the PHYSICS read: settled state, cross-well relaxation) r4= 28.592 r3= 11.100
+[10:01:09]     pca_settle_onestep       ABLATION (ONE settle step; identical beta, lambda, W) r4= 64.694 r3= 30.467
+[10:01:09]     pca_settle_zerostep      ABLATION (ZERO settle steps; asserted identical to pca_tensor) r4= 67.653 r3= 31.450
+[10:01:09]     pca_settle_removed       CONTROL (charter C.2, atoms zeroed)            r4=  0.000 r3=  0.000
+[10:01:09]     pca_settle_shuffled      CONTROL (charter C.2, atom values permuted)    r4=  0.000 r3=  0.000
+[10:01:09]     pca_settle_lookup        FLOOR (charter C.1/C.4, nearest atom to the settled state) r4=  0.000 r3=  0.000
+[10:01:09]     pca_settle_f05_conv      ABLATION (the gentlest dynamics: lambda = 0.05 x certified-safe, converged) r4= 67.265 r3= 31.417
+[leg] done: /c/chlu/outputs/w6-compose-physics/scored/test_seed2

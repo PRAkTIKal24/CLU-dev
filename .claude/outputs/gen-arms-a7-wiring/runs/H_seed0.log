@@ -1,0 +1,173 @@
+[gen-baselines] dataset=shapes3d pretext=recon condition=recomb2element stage=baselines arm=all seed=0 out=/Users/user/Desktop/CHLU/.claude/outputs/gen-arms-a7-wiring/runs/historical_688128/seed_0
+[gen-baselines] ⛔ no CLU number and no kill-rule verdict is produced here; ⭐ these arms are built to WIN if they can.
+== seed 0 · shapes3d/recon/recomb2element · out /Users/user/Desktop/CHLU/.claude/outputs/gen-arms-a7-wiring/runs/historical_688128/seed_0
+  ⭐ byte-match target: 688128 B = store 524288 + coupling 163840 (K(K-1)/2 * M^2 * 4). ⛔ The read channel is UNCHANGED at K*log2(M) bits.  ⚠ assertion DISABLED (expect_byte_target_bytes=None)
+  ⚠ include_coupling_bytes=True reproduces the SUPERSEDED (R26.3) budget: the kNN arm carries a declared byte ADVANTAGE and is ⛔ NOT byte-matched.
+  ⭐ no-leak: 32768 fit/val rows checked, 0 leaked (of 72 held-out)
+  ⭐ decoder: v1_capacity_schedule (gen-decoder-lift winner) param_hash=01ef91f75eeaae7b… params=1516227 — asserted
+  cache: 480000 rows (scope=full), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+  rows: fit=32256 val=512 A=1024 B=72 matched_seen=198
+  ⭐ DECODER ceiling (real features): A aggregate=0.9893 · in-corner shape balacc=0.9223 (AUROC 0.9720)
+  ⭐ STORE ceiling (R22/R23, quoted): 0.6866 balanced accuracy
+  C set: 72 records read VERBATIM from /Users/user/Desktop/CHLU/.claude/data/gen/shapes3d/c_invalid.json (⛔ never regenerated)
+  ⭐ A7 controls: {'duplicate_factor': 'a7_redundant', 'out_of_range': 'base'} — A7=72 records, 7 terms, A7D=72 records, 6 terms
+  ⭐ R8 embedding: 57 prototypes (475136 B); C has 36/468 off-grid terms, max 17.14 outside the range
+  [knn] store fp32: 84 entries, 688128 B of 688128 B (slack 0)
+  [knn] store fp16: 168 entries, 688128 B of 688128 B (slack 0)
+  [knn] store int8: 328 entries, 688128 B of 688128 B (slack 0)
+  [knn] tuning budget: 36 trials
+  [knn] trial 1/36 k=1 euclidean none fp32: val agg=0.2031 (AUROC(B vs C)=0.6892, oracle-only)
+  [knn] trial 2/36 k=3 euclidean none fp32: val agg=0.3792 (AUROC(B vs C)=0.6892, oracle-only)
+  [knn] trial 3/36 k=5 euclidean none fp32: val agg=0.3750 (AUROC(B vs C)=0.6892, oracle-only)
+  [knn] trial 4/36 k=1 cosine none fp32: val agg=0.2051 (AUROC(B vs C)=0.6489, oracle-only)
+  [knn] trial 5/36 k=3 cosine none fp32: val agg=0.3740 (AUROC(B vs C)=0.6489, oracle-only)
+  [knn] trial 6/36 k=5 cosine none fp32: val agg=0.3711 (AUROC(B vs C)=0.6489, oracle-only)
+  [knn] trial 7/36 k=1 euclidean zscore fp32: val agg=0.2031 (AUROC(B vs C)=0.7031, oracle-only)
+  [knn] trial 8/36 k=3 euclidean zscore fp32: val agg=0.3724 (AUROC(B vs C)=0.7031, oracle-only)
+  [knn] trial 9/36 k=5 euclidean zscore fp32: val agg=0.3509 (AUROC(B vs C)=0.7031, oracle-only)
+  [knn] trial 10/36 k=1 cosine zscore fp32: val agg=0.2012 (AUROC(B vs C)=0.4660, oracle-only)
+  [knn] trial 11/36 k=3 cosine zscore fp32: val agg=0.3714 (AUROC(B vs C)=0.4660, oracle-only)
+  [knn] trial 12/36 k=5 cosine zscore fp32: val agg=0.3551 (AUROC(B vs C)=0.4660, oracle-only)
+  [knn] trial 13/36 k=1 euclidean none fp16: val agg=0.2666 (AUROC(B vs C)=0.6784, oracle-only)
+  [knn] trial 14/36 k=3 euclidean none fp16: val agg=0.4720 (AUROC(B vs C)=0.6784, oracle-only)
+  [knn] trial 15/36 k=5 euclidean none fp16: val agg=0.4430 (AUROC(B vs C)=0.6784, oracle-only)
+  [knn] trial 16/36 k=1 cosine none fp16: val agg=0.2646 (AUROC(B vs C)=0.6441, oracle-only)
+  [knn] trial 17/36 k=3 cosine none fp16: val agg=0.4704 (AUROC(B vs C)=0.6441, oracle-only)
+  [knn] trial 18/36 k=5 cosine none fp16: val agg=0.4421 (AUROC(B vs C)=0.6441, oracle-only)
+  [knn] trial 19/36 k=1 euclidean zscore fp16: val agg=0.2591 (AUROC(B vs C)=0.6603, oracle-only)
+  [knn] trial 20/36 k=3 euclidean zscore fp16: val agg=0.4609 (AUROC(B vs C)=0.6603, oracle-only)
+  [knn] trial 21/36 k=5 euclidean zscore fp16: val agg=0.4508 (AUROC(B vs C)=0.6603, oracle-only)
+  [knn] trial 22/36 k=1 cosine zscore fp16: val agg=0.2666 (AUROC(B vs C)=0.4618, oracle-only)
+  [knn] trial 23/36 k=3 cosine zscore fp16: val agg=0.4593 (AUROC(B vs C)=0.4618, oracle-only)
+  [knn] trial 24/36 k=5 cosine zscore fp16: val agg=0.4554 (AUROC(B vs C)=0.4618, oracle-only)
+  [knn] trial 25/36 k=1 euclidean none int8: val agg=0.2822 (AUROC(B vs C)=0.6316, oracle-only)
+  [knn] trial 26/36 k=3 euclidean none int8: val agg=0.4333 (AUROC(B vs C)=0.6316, oracle-only)
+  [knn] trial 27/36 k=5 euclidean none int8: val agg=0.4974 (AUROC(B vs C)=0.6316, oracle-only)
+  [knn] trial 28/36 k=1 cosine none int8: val agg=0.2839 (AUROC(B vs C)=0.5953, oracle-only)
+  [knn] trial 29/36 k=3 cosine none int8: val agg=0.4323 (AUROC(B vs C)=0.5953, oracle-only)
+  [knn] trial 30/36 k=5 cosine none int8: val agg=0.4932 (AUROC(B vs C)=0.5953, oracle-only)
+  [knn] trial 31/36 k=1 euclidean zscore int8: val agg=0.3047 (AUROC(B vs C)=0.6372, oracle-only)
+  [knn] trial 32/36 k=3 euclidean zscore int8: val agg=0.4456 (AUROC(B vs C)=0.6372, oracle-only)
+  [knn] trial 33/36 k=5 euclidean zscore int8: val agg=0.4831 (AUROC(B vs C)=0.6372, oracle-only)
+  [knn] trial 34/36 k=1 cosine zscore int8: val agg=0.3304 (AUROC(B vs C)=0.4383, oracle-only)
+  [knn] trial 35/36 k=3 cosine zscore int8: val agg=0.4691 (AUROC(B vs C)=0.4383, oracle-only)
+  [knn] trial 36/36 k=5 cosine zscore int8: val agg=0.5068 (AUROC(B vs C)=0.4383, oracle-only)
+  ⭐ [knn] SELECTED (pre-registered, validation aggregate): k=5 cosine zscore int8 — val agg 0.5068 val shape 0.2812
+  ⭐ [knn] SELECTED (declared 2nd rule, validation `shape`): k=5 cosine zscore int8 — val agg 0.5068 val shape 0.2812
+  [knn] refusal-reduction sensitivity (declared, not tuned): min=0.4383 mean=0.3891
+  ⭐ [knn] in-corner shape balacc=0.4621 (AUROC 0.5020) · B aggregate=0.4167 · refusal AUROC(B vs C)=0.4383
+      ⭐ A7 duplicate_factor: 0.2137(vs B) -> 0.4317(vs a7_redundant) · out_of_range: 0.6628(vs B) -> 0.6628(vs base)
+  ⭐ [knn_proto] in-corner shape balacc=0.8763 (AUROC 0.9945) · B aggregate=0.7963 · refusal AUROC(B vs C)=0.4383
+      ⭐ A7 duplicate_factor: 0.2137(vs B) -> 0.4317(vs a7_redundant) · out_of_range: 0.6628(vs B) -> 0.6628(vs base)
+  [lace] whitening shrinkage=none: lambda=0 eig[7.21e-07, 72.1] |diag-1|=0.05702 |offdiag|=0.0074
+  [lace] whitening shrinkage=ledoit_wolf: lambda=0.0003488 eig[7.77e-05, 72.1] |diag-1|=0.1502 |offdiag|=0.006541  ⚠ p0(u)=N(0,I) is NOT near-exact at this intensity — the ODE drift's licence to omit the prior score is weakened
+  [lace] whitening shrinkage=1e-3: lambda=0.001 eig[0.000223, 72] |diag-1|=0.2382 |offdiag|=0.006037  ⚠ p0(u)=N(0,I) is NOT near-exact at this intensity — the ODE drift's licence to omit the prior score is weakened
+  [lace] tuning budget: 36 trials (short schedule, 6 epochs)
+  [lace] tuning classifier (shrinkage=none): 1512 steps, loss 2.3488 -> 0.0215
+  [lace] tuning classifier (shrinkage=ledoit_wolf): 1512 steps, loss 2.3728 -> 0.0162
+  [lace] tuning classifier (shrinkage=1e-3): 1512 steps, loss 2.3816 -> 0.0153
+  [lace] trial 1/36 sigma=0.03 categorical shrink=none: val agg=0.1738 (AUROC(B vs C)=0.9948, oracle-only)
+  [lace] trial 2/36 sigma=0.1 categorical shrink=none: val agg=0.1790 (AUROC(B vs C)=0.9983, oracle-only)
+  [lace] trial 3/36 sigma=0.3 categorical shrink=none: val agg=0.1751 (AUROC(B vs C)=0.9981, oracle-only)
+  [lace] trial 4/36 sigma=1.0 categorical shrink=none: val agg=0.1849 (AUROC(B vs C)=0.9977, oracle-only)
+  [lace] trial 5/36 sigma=0.03 continuous shrink=none: val agg=0.1836 (AUROC(B vs C)=0.3889, oracle-only)
+  [lace] trial 6/36 sigma=0.1 continuous shrink=none: val agg=0.1595 (AUROC(B vs C)=0.6491, oracle-only)
+  [lace] trial 7/36 sigma=0.3 continuous shrink=none: val agg=0.1413 (AUROC(B vs C)=0.9253, oracle-only)
+  [lace] trial 8/36 sigma=1.0 continuous shrink=none: val agg=0.1217 (AUROC(B vs C)=0.9666, oracle-only)
+  [lace] trial 9/36 sigma=0.03 both shrink=none: val agg=0.2109 (AUROC(B vs C)=0.5461, oracle-only)
+  [lace] trial 10/36 sigma=0.1 both shrink=none: val agg=0.2266 (AUROC(B vs C)=0.7741, oracle-only)
+  [lace] trial 11/36 sigma=0.3 both shrink=none: val agg=0.1803 (AUROC(B vs C)=0.9892, oracle-only)
+  [lace] trial 12/36 sigma=1.0 both shrink=none: val agg=0.1641 (AUROC(B vs C)=0.9979, oracle-only)
+  [lace] trial 13/36 sigma=0.03 categorical shrink=ledoit_wolf: val agg=0.1810 (AUROC(B vs C)=0.9961, oracle-only)
+  [lace] trial 14/36 sigma=0.1 categorical shrink=ledoit_wolf: val agg=0.1615 (AUROC(B vs C)=0.9998, oracle-only)
+  [lace] trial 15/36 sigma=0.3 categorical shrink=ledoit_wolf: val agg=0.1764 (AUROC(B vs C)=0.9992, oracle-only)
+  [lace] trial 16/36 sigma=1.0 categorical shrink=ledoit_wolf: val agg=0.1940 (AUROC(B vs C)=0.9992, oracle-only)
+  [lace] trial 17/36 sigma=0.03 continuous shrink=ledoit_wolf: val agg=0.1810 (AUROC(B vs C)=0.4171, oracle-only)
+  [lace] trial 18/36 sigma=0.1 continuous shrink=ledoit_wolf: val agg=0.1758 (AUROC(B vs C)=0.7710, oracle-only)
+  [lace] trial 19/36 sigma=0.3 continuous shrink=ledoit_wolf: val agg=0.1283 (AUROC(B vs C)=1.0000, oracle-only)
+  [lace] trial 20/36 sigma=1.0 continuous shrink=ledoit_wolf: val agg=0.1126 (AUROC(B vs C)=1.0000, oracle-only)
+  [lace] trial 21/36 sigma=0.03 both shrink=ledoit_wolf: val agg=0.2298 (AUROC(B vs C)=0.5613, oracle-only)
+  [lace] trial 22/36 sigma=0.1 both shrink=ledoit_wolf: val agg=0.2188 (AUROC(B vs C)=0.9842, oracle-only)
+  [lace] trial 23/36 sigma=0.3 both shrink=ledoit_wolf: val agg=0.1849 (AUROC(B vs C)=1.0000, oracle-only)
+  [lace] trial 24/36 sigma=1.0 both shrink=ledoit_wolf: val agg=0.1797 (AUROC(B vs C)=1.0000, oracle-only)
+  [lace] trial 25/36 sigma=0.03 categorical shrink=1e-3: val agg=0.1732 (AUROC(B vs C)=1.0000, oracle-only)
+  [lace] trial 26/36 sigma=0.1 categorical shrink=1e-3: val agg=0.1654 (AUROC(B vs C)=0.9998, oracle-only)
+  [lace] trial 27/36 sigma=0.3 categorical shrink=1e-3: val agg=0.1693 (AUROC(B vs C)=0.9998, oracle-only)
+  [lace] trial 28/36 sigma=1.0 categorical shrink=1e-3: val agg=0.1569 (AUROC(B vs C)=0.9998, oracle-only)
+  [lace] trial 29/36 sigma=0.03 continuous shrink=1e-3: val agg=0.1934 (AUROC(B vs C)=0.3881, oracle-only)
+  [lace] trial 30/36 sigma=0.1 continuous shrink=1e-3: val agg=0.1908 (AUROC(B vs C)=0.6291, oracle-only)
+  [lace] trial 31/36 sigma=0.3 continuous shrink=1e-3: val agg=0.1478 (AUROC(B vs C)=0.9961, oracle-only)
+  [lace] trial 32/36 sigma=1.0 continuous shrink=1e-3: val agg=0.1224 (AUROC(B vs C)=1.0000, oracle-only)
+  [lace] trial 33/36 sigma=0.03 both shrink=1e-3: val agg=0.2259 (AUROC(B vs C)=0.4840, oracle-only)
+  [lace] trial 34/36 sigma=0.1 both shrink=1e-3: val agg=0.2454 (AUROC(B vs C)=0.9230, oracle-only)
+  [lace] trial 35/36 sigma=0.3 both shrink=1e-3: val agg=0.1992 (AUROC(B vs C)=0.9998, oracle-only)
+  [lace] trial 36/36 sigma=1.0 both shrink=1e-3: val agg=0.1654 (AUROC(B vs C)=0.9994, oracle-only)
+  ⭐ [lace] SELECTED (pre-registered, validation aggregate): sigma=0.1 form=both shrinkage=1e-3 — val agg 0.2454
+  ⭐ [lace] SELECTED (declared 2nd rule, validation `shape`): sigma=0.1 form=both shrinkage=1e-3 — val shape 0.4609  (identical to the pre-registered choice)
+  ⚠ [lace] R27.3 GATE FIRED: selected shrinkage=1e-3 has |diag-1|=0.2382 > 0.1 ⇒ p0(u)=N(0,I) is NOT near-exact. Fallback: nearest exact in the grid: same sigma/form, shrinkage swapped
+    lace clf step 1/12600  loss=2.34284
+    lace clf step 2520/12600  loss=0.00356
+    lace clf step 5040/12600  loss=0.00232
+    lace clf step 7560/12600  loss=0.00074
+    lace clf step 10080/12600  loss=0.00181
+    lace clf step 12600/12600  loss=0.00116
+  [lace] classifier (its own supervision): val per-factor mean 0.9867
+  ⭐ [lace] R27.3 FALLBACK leg: sigma=0.1 form=both shrinkage=none (|diag-1|=0.05702) — ⛔ reported BESIDE the pre-registered leg, never instead of it
+  ⭐ [lace/ode] in-corner shape balacc=0.7077 · B aggregate=0.3727 · refusal AUROC(B vs C)=0.7568
+      ⭐ A7 duplicate_factor: 1.0000(vs B) -> 1.0000(vs a7_redundant) · out_of_range: 0.5135(vs B) -> 0.5135(vs base)
+  ⭐ [lace/ld_published] in-corner shape balacc=0.7418 · B aggregate=0.3681 · refusal AUROC(B vs C)=0.6441
+      ⭐ A7 duplicate_factor: 1.0000(vs B) -> 1.0000(vs a7_redundant) · out_of_range: 0.2882(vs B) -> 0.2882(vs base)
+  ⭐ [lace/ld_corrected] in-corner shape balacc=0.6446 · B aggregate=0.3449 · refusal AUROC(B vs C)=0.7766
+      ⭐ A7 duplicate_factor: 0.9402(vs B) -> 0.9120(vs a7_redundant) · out_of_range: 0.6130(vs B) -> 0.6130(vs base)
+  ⭐ [lace/ode_wexact] in-corner shape balacc=0.6370 · B aggregate=0.3171 · refusal AUROC(B vs C)=0.7649
+      ⭐ A7 duplicate_factor: 1.0000(vs B) -> 0.9934(vs a7_redundant) · out_of_range: 0.5297(vs B) -> 0.5297(vs base)
+  ⭐ [lace/ld_published_wexact] in-corner shape balacc=0.6913 · B aggregate=0.2870 · refusal AUROC(B vs C)=0.6736
+      ⭐ A7 duplicate_factor: 0.9988(vs B) -> 1.0000(vs a7_redundant) · out_of_range: 0.3484(vs B) -> 0.3484(vs base)
+  ⭐ [lace/ld_corrected_wexact] in-corner shape balacc=0.6023 · B aggregate=0.2917 · refusal AUROC(B vs C)=0.6480
+      ⭐ A7 duplicate_factor: 0.9062(vs B) -> 0.9317(vs a7_redundant) · out_of_range: 0.3897(vs B) -> 0.3897(vs base)
+  [lace] OR/NOT calibration (⛔ not in the 36): cof=5.0 not_num=0.03
+  ⭐ per-request refusal scores persisted: 8 variants -> /Users/user/Desktop/CHLU/.claude/outputs/gen-arms-a7-wiring/runs/historical_688128/seed_0/refusal_scores.json
+== seed 0 done in 1542 s

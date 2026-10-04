@@ -1,0 +1,832 @@
+{
+  "counts": {
+    "deleted_fraction": 0.010009765625,
+    "n_deleted": 164,
+    "n_fit_after": 16220,
+    "n_fit_before": 16384
+  },
+  "matched_compute": {
+    "gradient_row_visits": 322560,
+    "matched": true,
+    "per_arm": {
+      "cont_mlp/finetune": 322560,
+      "cont_mlp/neggrad": 322560,
+      "lstm/finetune": 322560,
+      "lstm/neggrad": 322560,
+      "mlp/finetune": 322560,
+      "mlp/neggrad": 322560,
+      "transformer/finetune": 322560,
+      "transformer/neggrad": 322560
+    }
+  },
+  "records": {
+    "cont_mlp__as_trained@item-0.01": {
+      "arm": "cont_mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\cont_mlp__as_trained.rival.json",
+      "cost": {
+        "bytes_rewritten": 527564,
+        "data_rows_read": 16384,
+        "gradient_row_visits": 327680,
+        "note": "the arm as trained on the FULL fit pool; it has not deleted anything and its cost is the build cost, printed so the deletion costs below are readable against it",
+        "param_bytes_changed": null,
+        "passes_over_data": 20.0,
+        "seconds": 11.2617
+      },
+      "kind": "as_trained",
+      "name_on_disk": "cont_mlp__as_trained",
+      "param_count": 131891,
+      "param_error": 0.00624847412109375,
+      "smoke": {
+        "forget_feature_mse": 0.1670234203338623,
+        "forget_minus_retain": 0.0023940950632095337,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.16462932527065277
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "cont_mlp__retrain_without__item-0.01": {
+      "arm": "cont_mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\cont_mlp__retrain_without__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "epochs": 20,
+        "gradient_row_visits": 322560,
+        "steps": 1260,
+        "steps_per_epoch": 63
+      },
+      "cost": {
+        "bytes_rewritten": 527564,
+        "data_rows_read": 16220,
+        "gradient_row_visits": 322560,
+        "note": "EXACT REFERENCE: the deleted rows were never in this pool. Every parameter byte is new, so bytes_rewritten is the whole arm; data_rows_read is every surviving row and it is read once per epoch (passes_over_data). 0.33 s of the total is the feature read.",
+        "param_bytes_changed": 527564,
+        "passes_over_data": 20.0,
+        "seconds": 10.6166
+      },
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.1649097502231598,
+        "loss_first": 0.5445679426193237,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "retrain_without",
+      "param_count": 131891,
+      "param_error": 0.00624847412109375,
+      "smoke": {
+        "forget_feature_mse": 0.16721981763839722,
+        "forget_minus_retain": 0.002529352903366089,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.16469046473503113
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "cont_mlp__unlearn_finetune__item-0.01": {
+      "arm": "cont_mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\cont_mlp__unlearn_finetune__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 322560,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 322560,
+          "steps": 1260,
+          "steps_per_epoch": 63
+        },
+        "steps": 1260
+      },
+      "cost": {
+        "bytes_rewritten": 527564,
+        "data_rows_read": 164,
+        "gradient_row_visits": 322560,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 322,560 gradient row-visits the exact retrain of this arm was given, spent on 164 distinct rows instead of 16220. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.01 s of the total is the feature read.",
+        "param_bytes_changed": 527564,
+        "passes_over_data": 1966.8293,
+        "seconds": 13.4252
+      },
+      "fit": {
+        "loss_final": 0.11461135745048523,
+        "loss_first": 0.1671263873577118,
+        "lr": 0.001,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_finetune",
+      "neggrad_ceiling_measured": 0.5439658164978027,
+      "param_count": 131891,
+      "param_error": 0.00624847412109375,
+      "smoke": {
+        "forget_feature_mse": 0.13563784956932068,
+        "forget_minus_retain": 0.004465535283088684,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.131172314286232
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "cont_mlp__unlearn_neggrad__item-0.01": {
+      "arm": "cont_mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\cont_mlp__unlearn_neggrad__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 322560,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 322560,
+          "steps": 1260,
+          "steps_per_epoch": 63
+        },
+        "steps": 1260
+      },
+      "cost": {
+        "bytes_rewritten": 527564,
+        "data_rows_read": 328,
+        "gradient_row_visits": 322560,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 322,560 gradient row-visits the exact retrain of this arm was given, spent on 328 distinct rows instead of 16220. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.01 s of the total is the feature read.",
+        "param_bytes_changed": 527564,
+        "passes_over_data": 983.4146,
+        "seconds": 13.6261
+      },
+      "fit": {
+        "loss_final": 0.3545638918876648,
+        "loss_first": 0.5421099662780762,
+        "lr": 0.001,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_neggrad",
+      "neggrad_ceiling_measured": 0.5439658164978027,
+      "param_count": 131891,
+      "param_error": 0.00624847412109375,
+      "smoke": {
+        "forget_feature_mse": 0.5248209238052368,
+        "forget_minus_retain": 0.08708664774894714,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.4377342760562897
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "lstm__as_trained@item-0.01": {
+      "arm": "lstm",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\lstm__as_trained.rival.json",
+      "cost": {
+        "bytes_rewritten": 522884,
+        "data_rows_read": 16384,
+        "gradient_row_visits": 327680,
+        "note": "the arm as trained on the FULL fit pool; it has not deleted anything and its cost is the build cost, printed so the deletion costs below are readable against it",
+        "param_bytes_changed": null,
+        "passes_over_data": 20.0,
+        "seconds": 19.6061
+      },
+      "kind": "as_trained",
+      "name_on_disk": "lstm__as_trained",
+      "param_count": 130721,
+      "param_error": -0.00267791748046875,
+      "smoke": {
+        "forget_feature_mse": 0.047996871173381805,
+        "forget_minus_retain": -0.002377893775701523,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.05037476494908333
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "lstm__retrain_without__item-0.01": {
+      "arm": "lstm",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\lstm__retrain_without__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "epochs": 20,
+        "gradient_row_visits": 322560,
+        "steps": 1260,
+        "steps_per_epoch": 63
+      },
+      "cost": {
+        "bytes_rewritten": 522884,
+        "data_rows_read": 16220,
+        "gradient_row_visits": 322560,
+        "note": "EXACT REFERENCE: the deleted rows were never in this pool. Every parameter byte is new, so bytes_rewritten is the whole arm; data_rows_read is every surviving row and it is read once per epoch (passes_over_data). 0.28 s of the total is the feature read.",
+        "param_bytes_changed": 522884,
+        "passes_over_data": 20.0,
+        "seconds": 22.2527
+      },
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.046981796622276306,
+        "loss_first": 0.5200793147087097,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "retrain_without",
+      "param_count": 130721,
+      "param_error": -0.00267791748046875,
+      "smoke": {
+        "forget_feature_mse": 0.04835833981633186,
+        "forget_minus_retain": -0.0020831823348999023,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.050441522151231766
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "lstm__unlearn_finetune__item-0.01": {
+      "arm": "lstm",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\lstm__unlearn_finetune__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 322560,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 322560,
+          "steps": 1260,
+          "steps_per_epoch": 63
+        },
+        "steps": 1260
+      },
+      "cost": {
+        "bytes_rewritten": 522884,
+        "data_rows_read": 164,
+        "gradient_row_visits": 322560,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 322,560 gradient row-visits the exact retrain of this arm was given, spent on 164 distinct rows instead of 16220. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.01 s of the total is the feature read.",
+        "param_bytes_changed": 521252,
+        "passes_over_data": 1966.8293,
+        "seconds": 22.5785
+      },
+      "fit": {
+        "loss_final": 0.012670403346419334,
+        "loss_first": 0.047825273126363754,
+        "lr": 0.001,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_finetune",
+      "neggrad_ceiling_measured": 0.5199989676475525,
+      "param_count": 130721,
+      "param_error": -0.00267791748046875,
+      "smoke": {
+        "forget_feature_mse": 0.05945422500371933,
+        "forget_minus_retain": -0.0014392249286174774,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.06089344993233681
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "lstm__unlearn_neggrad__item-0.01": {
+      "arm": "lstm",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\lstm__unlearn_neggrad__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 322560,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 322560,
+          "steps": 1260,
+          "steps_per_epoch": 63
+        },
+        "steps": 1260
+      },
+      "cost": {
+        "bytes_rewritten": 522884,
+        "data_rows_read": 328,
+        "gradient_row_visits": 322560,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 322,560 gradient row-visits the exact retrain of this arm was given, spent on 328 distinct rows instead of 16220. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.01 s of the total is the feature read.",
+        "param_bytes_changed": 521252,
+        "passes_over_data": 983.4146,
+        "seconds": 22.9339
+      },
+      "fit": {
+        "loss_final": 0.03887609392404556,
+        "loss_first": 0.5209584832191467,
+        "lr": 0.001,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_neggrad",
+      "neggrad_ceiling_measured": 0.5199989676475525,
+      "param_count": 130721,
+      "param_error": -0.00267791748046875,
+      "smoke": {
+        "forget_feature_mse": 0.7379082441329956,
+        "forget_minus_retain": 0.38294458389282227,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.35496366024017334
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "mlp__as_trained@item-0.01": {
+      "arm": "mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\mlp__as_trained.rival.json",
+      "cost": {
+        "bytes_rewritten": 522056,
+        "data_rows_read": 16384,
+        "gradient_row_visits": 327680,
+        "note": "the arm as trained on the FULL fit pool; it has not deleted anything and its cost is the build cost, printed so the deletion costs below are readable against it",
+        "param_bytes_changed": null,
+        "passes_over_data": 20.0,
+        "seconds": 11.2719
+      },
+      "kind": "as_trained",
+      "name_on_disk": "mlp__as_trained",
+      "param_count": 130514,
+      "param_error": -0.0042572021484375,
+      "smoke": {
+        "forget_feature_mse": 0.044971127063035965,
+        "forget_minus_retain": -0.0026716627180576324,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.0476427897810936
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "mlp__retrain_without__item-0.01": {
+      "arm": "mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\mlp__retrain_without__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "epochs": 20,
+        "gradient_row_visits": 322560,
+        "steps": 1260,
+        "steps_per_epoch": 63
+      },
+      "cost": {
+        "bytes_rewritten": 522056,
+        "data_rows_read": 16220,
+        "gradient_row_visits": 322560,
+        "note": "EXACT REFERENCE: the deleted rows were never in this pool. Every parameter byte is new, so bytes_rewritten is the whole arm; data_rows_read is every surviving row and it is read once per epoch (passes_over_data). 0.35 s of the total is the feature read.",
+        "param_bytes_changed": 522056,
+        "passes_over_data": 20.0,
+        "seconds": 10.2808
+      },
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.044984519481658936,
+        "loss_first": 0.5136119723320007,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "retrain_without",
+      "param_count": 130514,
+      "param_error": -0.0042572021484375,
+      "smoke": {
+        "forget_feature_mse": 0.045296281576156616,
+        "forget_minus_retain": -0.002515297383069992,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.04781157895922661
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "mlp__unlearn_finetune__item-0.01": {
+      "arm": "mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\mlp__unlearn_finetune__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 322560,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 322560,
+          "steps": 1260,
+          "steps_per_epoch": 63
+        },
+        "steps": 1260
+      },
+      "cost": {
+        "bytes_rewritten": 522056,
+        "data_rows_read": 164,
+        "gradient_row_visits": 322560,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 322,560 gradient row-visits the exact retrain of this arm was given, spent on 164 distinct rows instead of 16220. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.01 s of the total is the feature read.",
+        "param_bytes_changed": 521568,
+        "passes_over_data": 1966.8293,
+        "seconds": 12.404
+      },
+      "fit": {
+        "loss_final": 0.01725035347044468,
+        "loss_first": 0.04541539400815964,
+        "lr": 0.001,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_finetune",
+      "neggrad_ceiling_measured": 0.5123677849769592,
+      "param_count": 130514,
+      "param_error": -0.0042572021484375,
+      "smoke": {
+        "forget_feature_mse": 0.0489266961812973,
+        "forget_minus_retain": -0.0035008415579795837,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.052427537739276886
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "mlp__unlearn_neggrad__item-0.01": {
+      "arm": "mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\mlp__unlearn_neggrad__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 322560,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 322560,
+          "steps": 1260,
+          "steps_per_epoch": 63
+        },
+        "steps": 1260
+      },
+      "cost": {
+        "bytes_rewritten": 522056,
+        "data_rows_read": 328,
+        "gradient_row_visits": 322560,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 322,560 gradient row-visits the exact retrain of this arm was given, spent on 328 distinct rows instead of 16220. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.01 s of the total is the feature read.",
+        "param_bytes_changed": 521568,
+        "passes_over_data": 983.4146,
+        "seconds": 13.1016
+      },
+      "fit": {
+        "loss_final": 0.06984443962574005,
+        "loss_first": 0.5145876407623291,
+        "lr": 0.001,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_neggrad",
+      "neggrad_ceiling_measured": 0.5123677849769592,
+      "param_count": 130514,
+      "param_error": -0.0042572021484375,
+      "smoke": {
+        "forget_feature_mse": 0.5844146013259888,
+        "forget_minus_retain": 0.24085068702697754,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.34356391429901123
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "transformer__as_trained@item-0.01": {
+      "arm": "transformer",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\transformer__as_trained.rival.json",
+      "cost": {
+        "bytes_rewritten": 521732,
+        "data_rows_read": 16384,
+        "gradient_row_visits": 327680,
+        "note": "the arm as trained on the FULL fit pool; it has not deleted anything and its cost is the build cost, printed so the deletion costs below are readable against it",
+        "param_bytes_changed": null,
+        "passes_over_data": 20.0,
+        "seconds": 37.7472
+      },
+      "kind": "as_trained",
+      "name_on_disk": "transformer__as_trained",
+      "param_count": 130433,
+      "param_error": -0.00487518310546875,
+      "smoke": {
+        "forget_feature_mse": 0.0549519807100296,
+        "forget_minus_retain": -0.0023424476385116577,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.05729442834854126
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "transformer__retrain_without__item-0.01": {
+      "arm": "transformer",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\transformer__retrain_without__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "epochs": 20,
+        "gradient_row_visits": 322560,
+        "steps": 1260,
+        "steps_per_epoch": 63
+      },
+      "cost": {
+        "bytes_rewritten": 521732,
+        "data_rows_read": 16220,
+        "gradient_row_visits": 322560,
+        "note": "EXACT REFERENCE: the deleted rows were never in this pool. Every parameter byte is new, so bytes_rewritten is the whole arm; data_rows_read is every surviving row and it is read once per epoch (passes_over_data). 0.35 s of the total is the feature read.",
+        "param_bytes_changed": 521732,
+        "passes_over_data": 20.0,
+        "seconds": 39.6629
+      },
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.056476689875125885,
+        "loss_first": 0.8406413793563843,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "retrain_without",
+      "param_count": 130433,
+      "param_error": -0.00487518310546875,
+      "smoke": {
+        "forget_feature_mse": 0.055472083389759064,
+        "forget_minus_retain": -0.002265114337205887,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.05773719772696495
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "transformer__unlearn_finetune__item-0.01": {
+      "arm": "transformer",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\transformer__unlearn_finetune__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 322560,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 322560,
+          "steps": 1260,
+          "steps_per_epoch": 63
+        },
+        "steps": 1260
+      },
+      "cost": {
+        "bytes_rewritten": 521732,
+        "data_rows_read": 164,
+        "gradient_row_visits": 322560,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 322,560 gradient row-visits the exact retrain of this arm was given, spent on 164 distinct rows instead of 16220. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.01 s of the total is the feature read.",
+        "param_bytes_changed": 520292,
+        "passes_over_data": 1966.8293,
+        "seconds": 42.0831
+      },
+      "fit": {
+        "loss_final": 0.015942111611366272,
+        "loss_first": 0.05544893443584442,
+        "lr": 0.001,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_finetune",
+      "neggrad_ceiling_measured": 0.8341177701950073,
+      "param_count": 130433,
+      "param_error": -0.00487518310546875,
+      "smoke": {
+        "forget_feature_mse": 0.048517998307943344,
+        "forget_minus_retain": -0.0024613142013549805,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.050979312509298325
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    },
+    "transformer__unlearn_neggrad__item-0.01": {
+      "arm": "transformer",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_0\\transformer__unlearn_neggrad__item-0.01.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 322560,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 322560,
+          "steps": 1260,
+          "steps_per_epoch": 63
+        },
+        "steps": 1260
+      },
+      "cost": {
+        "bytes_rewritten": 521732,
+        "data_rows_read": 328,
+        "gradient_row_visits": 322560,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 322,560 gradient row-visits the exact retrain of this arm was given, spent on 328 distinct rows instead of 16220. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.01 s of the total is the feature read.",
+        "param_bytes_changed": 520292,
+        "passes_over_data": 983.4146,
+        "seconds": 43.032
+      },
+      "fit": {
+        "loss_final": 0.04397960007190704,
+        "loss_first": 0.8360931873321533,
+        "lr": 0.001,
+        "steps": 1260,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_neggrad",
+      "neggrad_ceiling_measured": 0.8341177701950073,
+      "param_count": 130433,
+      "param_error": -0.00487518310546875,
+      "smoke": {
+        "forget_feature_mse": 1.323467493057251,
+        "forget_minus_retain": 0.87028369307518,
+        "n_forget": 164,
+        "n_retain": 164,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.4531837999820709
+      },
+      "spec": {
+        "fraction": 0.01,
+        "human": "a random 1% of fit rows",
+        "kind": "item",
+        "label": "item-0.01",
+        "rng_seed": 20260921,
+        "terms": []
+      }
+    }
+  },
+  "refuse_token_NOT_RUN": {
+    "NOT_a_zero": "there is no refusal DISPLAY row for this deletion at all, so a refusal number would be a number about nothing. Reported as a declared NOT-RUN.",
+    "applicability": {
+      "applies": false,
+      "n_certified_impossible": 0,
+      "n_deleted_requests_tested": 164,
+      "reasons": [],
+      "why": "a refusal row needs at least one request the post-deletion pool can never answer. 0 of 164 requests built from the deleted rows are certified impossible -- a item deletion clears no (factor, value) bit and punches no conjunction hole, so nothing becomes impossible and there is no DISPLAY row to print."
+    },
+    "comparator": "refuse_token",
+    "reason": "a refusal row needs at least one request the post-deletion pool can never answer. 0 of 164 requests built from the deleted rows are certified impossible -- a item deletion clears no (factor, value) bit and punches no conjunction hole, so nothing becomes impossible and there is no DISPLAY row to print.",
+    "spec": {
+      "fraction": 0.01,
+      "human": "a random 1% of fit rows",
+      "kind": "item",
+      "label": "item-0.01",
+      "rng_seed": 20260921,
+      "terms": []
+    }
+  },
+  "spec": {
+    "fraction": 0.01,
+    "human": "a random 1% of fit rows",
+    "kind": "item",
+    "label": "item-0.01",
+    "rng_seed": 20260921,
+    "terms": []
+  }
+}

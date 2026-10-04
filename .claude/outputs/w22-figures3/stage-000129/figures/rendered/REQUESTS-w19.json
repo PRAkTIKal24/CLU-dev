@@ -1,0 +1,2036 @@
+{
+ "schema": "w19-success-failure-panels/requests/1",
+ "t7": {
+  "K_star": 32,
+  "selection_rules": "T7 (Shapes3D words -> image, K* = 32) success/failure panels, from the per-request scan.\n\nSELECTION RULES (applied to scan/verdicts.json; nothing is hand-picked)\n* per-arm   for the CLU and each of the four rivals: one held-out seed-0 request the arm\n            renders VALIDLY and one it renders INVALIDLY, each drawn uniformly at random\n            (numpy default_rng(SELECT_SEED), arms in column order, success then failure)\n            from ALL qualifying seed-0 held-out requests.  All six columns are rendered on\n            every row, so each row also shows every other arm on the same request.\n* rival-succeeds-CLU-fails\n            every held-out request at seeds 0, 1, 2 where a rival is valid and the CLU is\n            not is COUNTED (per seed, per rival).  One per rival is drawn (same rng rule)\n            at the lowest seed where that rival has any; a rival with none at any seed is\n            DECLARED.  Each seed renders through its own hash-asserted decoder, one figure\n            per seed, so a figure never mixes seeds.\nSet 1 and set 3 are w17's and are not rebuilt here.\n",
+  "scan_file": "outputs/w19-success-failure-panels/scan/verdicts.json",
+  "scan_sha256": "ab44b38bdceaef873398becf9342a46687d8a9a81df9eff88cf03cda9b4ad4e9",
+  "counts_per_seed": {
+   "0": {
+    "n_heldout_requests": 5688,
+    "n_valid_per_arm": {
+     "cov_tensor": 5177,
+     "mlp__as_trained": 566,
+     "lstm__as_trained": 519,
+     "transformer__as_trained": 134,
+     "cont_mlp__as_trained": 3,
+     "table": 897
+    },
+    "rival_valid_and_CLU_invalid": {
+     "mlp__as_trained": 26,
+     "lstm__as_trained": 13,
+     "transformer__as_trained": 2,
+     "cont_mlp__as_trained": 0,
+     "table": 67
+    },
+    "any_rival_valid_and_CLU_invalid": 30,
+    "note": "'table' is the lookup floor, counted for completeness; it is a floor, never a rival"
+   },
+   "1": {
+    "n_heldout_requests": 5688,
+    "n_valid_per_arm": {
+     "cov_tensor": 5167,
+     "mlp__as_trained": 353,
+     "lstm__as_trained": 505,
+     "transformer__as_trained": 71,
+     "cont_mlp__as_trained": 3,
+     "table": 553
+    },
+    "rival_valid_and_CLU_invalid": {
+     "mlp__as_trained": 11,
+     "lstm__as_trained": 13,
+     "transformer__as_trained": 3,
+     "cont_mlp__as_trained": 1,
+     "table": 26
+    },
+    "any_rival_valid_and_CLU_invalid": 24,
+    "note": "'table' is the lookup floor, counted for completeness; it is a floor, never a rival"
+   },
+   "2": {
+    "n_heldout_requests": 5688,
+    "n_valid_per_arm": {
+     "cov_tensor": 5354,
+     "mlp__as_trained": 891,
+     "lstm__as_trained": 1025,
+     "transformer__as_trained": 335,
+     "cont_mlp__as_trained": 6,
+     "table": 1063
+    },
+    "rival_valid_and_CLU_invalid": {
+     "mlp__as_trained": 3,
+     "lstm__as_trained": 25,
+     "transformer__as_trained": 6,
+     "cont_mlp__as_trained": 0,
+     "table": 46
+    },
+    "any_rival_valid_and_CLU_invalid": 30,
+    "note": "'table' is the lookup floor, counted for completeness; it is a floor, never a rival"
+   }
+  },
+  "selected": {
+   "select_seed": 19,
+   "per_arm": [
+    {
+     "arm": "cov_tensor",
+     "kind": "success",
+     "seed": 0,
+     "corner_id": "nway-016",
+     "family": "nway",
+     "dataset_row": 9451,
+     "index_in_corner": 28,
+     "scan_bits": "100000",
+     "pool_size": 5177,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.0,
+      0.1,
+      0.9,
+      1.1071428571428572,
+      2.0,
+      -25.714285714285715
+     ],
+     "verdict": {
+      "cov_tensor": true,
+      "mlp__as_trained": false,
+      "lstm__as_trained": false,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": false,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       0,
+       1,
+       9,
+       5,
+       2,
+       1
+      ],
+      "mlp__as_trained": [
+       0,
+       1,
+       9,
+       4,
+       2,
+       1
+      ],
+      "lstm__as_trained": [
+       0,
+       1,
+       9,
+       4,
+       2,
+       1
+      ],
+      "transformer__as_trained": [
+       0,
+       1,
+       9,
+       4,
+       2,
+       3
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       8,
+       5,
+       2,
+       2
+      ],
+      "table": [
+       0,
+       1,
+       9,
+       4,
+       2,
+       1
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "cov_tensor",
+     "kind": "failure",
+     "seed": 0,
+     "corner_id": "pair-002/f3-ll",
+     "family": "pair",
+     "dataset_row": 325125,
+     "index_in_corner": 15,
+     "scan_bits": "000000",
+     "pool_size": 511,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.6000000000000001,
+      0.7000000000000001,
+      0.7000000000000001,
+      0.8928571428571428,
+      3.0,
+      -30.0
+     ],
+     "verdict": {
+      "cov_tensor": false,
+      "mlp__as_trained": false,
+      "lstm__as_trained": false,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": false,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       6,
+       7,
+       7,
+       2,
+       2,
+       0
+      ],
+      "mlp__as_trained": [
+       6,
+       7,
+       7,
+       2,
+       2,
+       0
+      ],
+      "lstm__as_trained": [
+       6,
+       7,
+       7,
+       3,
+       2,
+       1
+      ],
+      "transformer__as_trained": [
+       6,
+       7,
+       7,
+       3,
+       3,
+       3
+      ],
+      "cont_mlp__as_trained": [
+       7,
+       7,
+       8,
+       6,
+       3,
+       2
+      ],
+      "table": [
+       6,
+       7,
+       7,
+       2,
+       2,
+       0
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "mlp__as_trained",
+     "kind": "success",
+     "seed": 0,
+     "corner_id": "nway-002",
+     "family": "nway",
+     "dataset_row": 48897,
+     "index_in_corner": 39,
+     "scan_bits": "110100",
+     "pool_size": 566,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.1,
+      0.0,
+      0.1,
+      1.1785714285714286,
+      3.0,
+      21.42857142857143
+     ],
+     "verdict": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": false,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": false,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       1,
+       0,
+       1,
+       6,
+       3,
+       12
+      ],
+      "mlp__as_trained": [
+       1,
+       0,
+       1,
+       6,
+       3,
+       12
+      ],
+      "lstm__as_trained": [
+       1,
+       0,
+       1,
+       7,
+       3,
+       12
+      ],
+      "transformer__as_trained": [
+       1,
+       0,
+       1,
+       6,
+       3,
+       12
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       2,
+       7,
+       2,
+       12
+      ],
+      "table": [
+       1,
+       0,
+       1,
+       5,
+       3,
+       12
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "mlp__as_trained",
+     "kind": "failure",
+     "seed": 0,
+     "corner_id": "nway-043",
+     "family": "nway",
+     "dataset_row": 111451,
+     "index_in_corner": 31,
+     "scan_bits": "100000",
+     "pool_size": 5122,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.2,
+      0.30000000000000004,
+      0.2,
+      0.8214285714285714,
+      2.0,
+      -25.714285714285715
+     ],
+     "verdict": {
+      "cov_tensor": true,
+      "mlp__as_trained": false,
+      "lstm__as_trained": false,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": false,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       2,
+       3,
+       2,
+       1,
+       2,
+       1
+      ],
+      "mlp__as_trained": [
+       2,
+       3,
+       2,
+       2,
+       2,
+       1
+      ],
+      "lstm__as_trained": [
+       2,
+       3,
+       2,
+       2,
+       2,
+       1
+      ],
+      "transformer__as_trained": [
+       2,
+       3,
+       2,
+       2,
+       2,
+       3
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       2,
+       1,
+       1,
+       2
+      ],
+      "table": [
+       2,
+       3,
+       2,
+       2,
+       2,
+       1
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "lstm__as_trained",
+     "kind": "success",
+     "seed": 0,
+     "corner_id": "nway-002",
+     "family": "nway",
+     "dataset_row": 49437,
+     "index_in_corner": 51,
+     "scan_bits": "101000",
+     "pool_size": 519,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.1,
+      0.0,
+      0.2,
+      1.25,
+      3.0,
+      21.42857142857143
+     ],
+     "verdict": {
+      "cov_tensor": true,
+      "mlp__as_trained": false,
+      "lstm__as_trained": true,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": false,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       1,
+       0,
+       2,
+       7,
+       3,
+       12
+      ],
+      "mlp__as_trained": [
+       1,
+       0,
+       2,
+       6,
+       3,
+       12
+      ],
+      "lstm__as_trained": [
+       1,
+       0,
+       2,
+       7,
+       3,
+       12
+      ],
+      "transformer__as_trained": [
+       1,
+       0,
+       2,
+       6,
+       3,
+       12
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       1,
+       7,
+       2,
+       12
+      ],
+      "table": [
+       1,
+       0,
+       2,
+       6,
+       3,
+       12
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "lstm__as_trained",
+     "kind": "failure",
+     "seed": 0,
+     "corner_id": "pair-002/f0-lh",
+     "family": "pair",
+     "dataset_row": 3419,
+     "index_in_corner": 2,
+     "scan_bits": "100000",
+     "pool_size": 5169,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.0,
+      0.0,
+      0.7000000000000001,
+      0.75,
+      3.0,
+      30.0
+     ],
+     "verdict": {
+      "cov_tensor": true,
+      "mlp__as_trained": false,
+      "lstm__as_trained": false,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": false,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       0,
+       0,
+       7,
+       0,
+       3,
+       14
+      ],
+      "mlp__as_trained": [
+       0,
+       0,
+       7,
+       2,
+       3,
+       13
+      ],
+      "lstm__as_trained": [
+       0,
+       0,
+       7,
+       2,
+       3,
+       13
+      ],
+      "transformer__as_trained": [
+       0,
+       0,
+       7,
+       3,
+       3,
+       12
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       8,
+       3,
+       3,
+       12
+      ],
+      "table": [
+       0,
+       0,
+       7,
+       2,
+       3,
+       14
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "transformer__as_trained",
+     "kind": "success",
+     "seed": 0,
+     "corner_id": "nway-041",
+     "family": "nway",
+     "dataset_row": 109907,
+     "index_in_corner": 8,
+     "scan_bits": "101110",
+     "pool_size": 134,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.2,
+      0.2,
+      0.8,
+      1.25,
+      3.0,
+      -21.42857142857143
+     ],
+     "verdict": {
+      "cov_tensor": true,
+      "mlp__as_trained": false,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       2,
+       2,
+       8,
+       7,
+       3,
+       2
+      ],
+      "mlp__as_trained": [
+       2,
+       2,
+       8,
+       6,
+       3,
+       3
+      ],
+      "lstm__as_trained": [
+       2,
+       2,
+       8,
+       7,
+       3,
+       2
+      ],
+      "transformer__as_trained": [
+       2,
+       2,
+       8,
+       7,
+       3,
+       2
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       8,
+       7,
+       3,
+       2
+      ],
+      "table": [
+       2,
+       2,
+       8,
+       5,
+       3,
+       2
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "transformer__as_trained",
+     "kind": "failure",
+     "seed": 0,
+     "corner_id": "pair-000/f2-hl",
+     "family": "pair",
+     "dataset_row": 216316,
+     "index_in_corner": 10,
+     "scan_bits": "100000",
+     "pool_size": 5554,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.4,
+      0.5,
+      0.0,
+      1.1071428571428572,
+      1.0,
+      -25.714285714285715
+     ],
+     "verdict": {
+      "cov_tensor": true,
+      "mlp__as_trained": false,
+      "lstm__as_trained": false,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": false,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       4,
+       5,
+       0,
+       5,
+       1,
+       1
+      ],
+      "mlp__as_trained": [
+       4,
+       5,
+       0,
+       4,
+       1,
+       2
+      ],
+      "lstm__as_trained": [
+       4,
+       5,
+       0,
+       5,
+       1,
+       2
+      ],
+      "transformer__as_trained": [
+       4,
+       5,
+       0,
+       3,
+       1,
+       3
+      ],
+      "cont_mlp__as_trained": [
+       3,
+       7,
+       2,
+       7,
+       1,
+       2
+      ],
+      "table": [
+       4,
+       5,
+       0,
+       4,
+       1,
+       1
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "cont_mlp__as_trained",
+     "kind": "success",
+     "seed": 0,
+     "corner_id": "nway-029",
+     "family": "nway",
+     "dataset_row": 109917,
+     "index_in_corner": 6,
+     "scan_bits": "101010",
+     "pool_size": 3,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.2,
+      0.2,
+      0.8,
+      1.25,
+      3.0,
+      21.42857142857143
+     ],
+     "verdict": {
+      "cov_tensor": true,
+      "mlp__as_trained": false,
+      "lstm__as_trained": true,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": true,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       2,
+       2,
+       8,
+       7,
+       3,
+       12
+      ],
+      "mlp__as_trained": [
+       2,
+       2,
+       8,
+       6,
+       3,
+       12
+      ],
+      "lstm__as_trained": [
+       2,
+       2,
+       8,
+       7,
+       3,
+       12
+      ],
+      "transformer__as_trained": [
+       2,
+       2,
+       8,
+       6,
+       3,
+       12
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       8,
+       7,
+       3,
+       12
+      ],
+      "table": [
+       2,
+       2,
+       8,
+       6,
+       3,
+       12
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "cont_mlp__as_trained",
+     "kind": "failure",
+     "seed": 0,
+     "corner_id": "pair-002/f2-hl",
+     "family": "pair",
+     "dataset_row": 214906,
+     "index_in_corner": 1,
+     "scan_bits": "100001",
+     "pool_size": 5685,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.4,
+      0.4,
+      0.7000000000000001,
+      1.1071428571428572,
+      3.0,
+      -25.714285714285715
+     ],
+     "verdict": {
+      "cov_tensor": true,
+      "mlp__as_trained": false,
+      "lstm__as_trained": false,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": false,
+      "table": true
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       4,
+       4,
+       7,
+       5,
+       3,
+       1
+      ],
+      "mlp__as_trained": [
+       4,
+       4,
+       7,
+       4,
+       3,
+       1
+      ],
+      "lstm__as_trained": [
+       4,
+       4,
+       7,
+       6,
+       3,
+       2
+      ],
+      "transformer__as_trained": [
+       4,
+       4,
+       7,
+       5,
+       3,
+       3
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       1,
+       8,
+       7,
+       3,
+       2
+      ],
+      "table": [
+       4,
+       4,
+       7,
+       5,
+       3,
+       1
+      ]
+     },
+     "rerender_equals_scan": true
+    }
+   ],
+   "rival_succeeds_clu_fails": [
+    {
+     "arm": "mlp__as_trained",
+     "kind": "rival succeeds, CLU fails",
+     "seed": 0,
+     "corner_id": "pair-000/f0-lh",
+     "family": "pair",
+     "dataset_row": 147,
+     "index_in_corner": 6,
+     "scan_bits": "010001",
+     "pool_size": 26,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.0,
+      0.0,
+      0.0,
+      0.8928571428571428,
+      1.0,
+      21.42857142857143
+     ],
+     "verdict": {
+      "cov_tensor": false,
+      "mlp__as_trained": true,
+      "lstm__as_trained": false,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": false,
+      "table": true
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       0,
+       0,
+       0,
+       2,
+       0,
+       12
+      ],
+      "mlp__as_trained": [
+       0,
+       0,
+       0,
+       2,
+       1,
+       12
+      ],
+      "lstm__as_trained": [
+       0,
+       0,
+       0,
+       2,
+       3,
+       12
+      ],
+      "transformer__as_trained": [
+       0,
+       0,
+       0,
+       2,
+       2,
+       12
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       2,
+       3,
+       1,
+       12
+      ],
+      "table": [
+       0,
+       0,
+       0,
+       2,
+       1,
+       12
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "lstm__as_trained",
+     "kind": "rival succeeds, CLU fails",
+     "seed": 0,
+     "corner_id": "nway-030",
+     "family": "nway",
+     "dataset_row": 154707,
+     "index_in_corner": 51,
+     "scan_bits": "011001",
+     "pool_size": 13,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.30000000000000004,
+      0.2,
+      0.2,
+      0.8928571428571428,
+      1.0,
+      21.42857142857143
+     ],
+     "verdict": {
+      "cov_tensor": false,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": false,
+      "table": true
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       3,
+       2,
+       2,
+       1,
+       1,
+       12
+      ],
+      "mlp__as_trained": [
+       3,
+       2,
+       2,
+       2,
+       1,
+       12
+      ],
+      "lstm__as_trained": [
+       3,
+       2,
+       2,
+       2,
+       1,
+       12
+      ],
+      "transformer__as_trained": [
+       3,
+       2,
+       2,
+       2,
+       1,
+       11
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       2,
+       6,
+       1,
+       12
+      ],
+      "table": [
+       3,
+       2,
+       2,
+       2,
+       1,
+       12
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "transformer__as_trained",
+     "kind": "rival succeeds, CLU fails",
+     "seed": 0,
+     "corner_id": "nway-041",
+     "family": "nway",
+     "dataset_row": 110327,
+     "index_in_corner": 14,
+     "scan_bits": "001100",
+     "pool_size": 2,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.2,
+      0.2,
+      0.9,
+      1.1785714285714286,
+      3.0,
+      -21.42857142857143
+     ],
+     "verdict": {
+      "cov_tensor": false,
+      "mlp__as_trained": false,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": false,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       2,
+       2,
+       9,
+       6,
+       3,
+       3
+      ],
+      "mlp__as_trained": [
+       2,
+       2,
+       9,
+       5,
+       3,
+       3
+      ],
+      "lstm__as_trained": [
+       2,
+       2,
+       9,
+       6,
+       3,
+       2
+      ],
+      "transformer__as_trained": [
+       2,
+       2,
+       9,
+       6,
+       3,
+       2
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       8,
+       7,
+       3,
+       2
+      ],
+      "table": [
+       2,
+       2,
+       9,
+       5,
+       3,
+       3
+      ]
+     },
+     "rerender_equals_scan": true
+    },
+    {
+     "arm": "cont_mlp__as_trained",
+     "kind": "rival succeeds, CLU fails",
+     "seed": 1,
+     "corner_id": "nway-024",
+     "family": "nway",
+     "dataset_row": 107007,
+     "index_in_corner": 15,
+     "scan_bits": "000010",
+     "pool_size": 1,
+     "factor_names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+     ],
+     "factor_values": [
+      0.2,
+      0.2,
+      0.2,
+      1.25,
+      1.0,
+      21.42857142857143
+     ],
+     "verdict": {
+      "cov_tensor": false,
+      "mlp__as_trained": false,
+      "lstm__as_trained": false,
+      "transformer__as_trained": false,
+      "cont_mlp__as_trained": true,
+      "table": false
+     },
+     "accepted": {
+      "cov_tensor": true,
+      "mlp__as_trained": true,
+      "lstm__as_trained": true,
+      "transformer__as_trained": true,
+      "cont_mlp__as_trained": true,
+      "table": true
+     },
+     "judged_tuple": {
+      "cov_tensor": [
+       2,
+       2,
+       2,
+       6,
+       1,
+       12
+      ],
+      "mlp__as_trained": [
+       2,
+       2,
+       2,
+       6,
+       1,
+       11
+      ],
+      "lstm__as_trained": [
+       2,
+       2,
+       2,
+       6,
+       1,
+       11
+      ],
+      "transformer__as_trained": [
+       2,
+       2,
+       2,
+       5,
+       1,
+       11
+      ],
+      "cont_mlp__as_trained": [
+       2,
+       2,
+       2,
+       7,
+       1,
+       12
+      ],
+      "table": [
+       2,
+       2,
+       2,
+       6,
+       1,
+       12
+      ]
+     },
+     "rerender_equals_scan": true
+    }
+   ]
+  },
+  "arms_order": [
+   {
+    "key": "cov_tensor",
+    "label": "CLU",
+    "colour": "#2a78d6"
+   },
+   {
+    "key": "mlp__as_trained",
+    "label": "MLP",
+    "colour": "#1baf7a"
+   },
+   {
+    "key": "lstm__as_trained",
+    "label": "LSTM",
+    "colour": "#eda100"
+   },
+   {
+    "key": "transformer__as_trained",
+    "label": "Transformer",
+    "colour": "#e87ba4"
+   },
+   {
+    "key": "cont_mlp__as_trained",
+    "label": "Continuous\nMLP",
+    "colour": "#008300"
+   },
+   {
+    "key": "table",
+    "label": "Lookup table\n(floor)",
+    "colour": "#6b6a66"
+   }
+  ]
+ },
+ "cmazet": {
+  "selection_rules": "CMAZE-T panels: s_t + action, the ENGINE's true s_{t+1}, and one column per arm.\n\nWHAT IS BUILT FROM WHAT\n* The transitions are the scored TEST leg's own rows, re-derived from the deterministic\n  engine exactly as ``scripts/w16_cmaze_t.py::full`` derives them (seed 0: TEST bank\n  generator block 2,300,000.., ``make_holdout(4, seed=0)``, ``split_rows``, ``cap_split``).\n  The re-derivation is ASSERTED against the primary record ``w16-maze-wm/t1/A1_test_seed0.json``\n  (bank meta, hold-out tuples, per-class row counts) before anything is drawn.\n* s_t and the true s_{t+1} come from the engine's own stepper (``outcome_of`` ->\n  ``w9_harness.dynamics.step``); legality is the engine's flag.  No arm is involved.\n* Every ARM column is DECLARED NOT BUILDABLE and drawn hatched: w16 persisted no arm\n  object (no frozen codec, no CLU store, no rival weights) and no per-transition\n  prediction -- ``A1_test_seed*.json`` holds aggregate scores only.  Re-training them here\n  would be a new TEST-leg run with a NEW codec, which the task forbids (zero scored runs;\n  never substitute a codec).  NEEDS-ARTEFACTS.json names what would unblock them.\n\nSELECTION RULES (fixed before drawing; nothing about any arm enters)\n* families      the first TEST n-way row, in the scorer's (capped) order, of each of the\n                five named families ``NWAY_FAMILIES``;\n* door-then-tint  the first TEST n-way row of family ``interaction`` for each move\n                direction that has one (N, E, S, W);\n* deletion      the deleted colour c is the primary record's ``DELETION.deleted_colour``;\n                the transition is the first TEST n-way ``interaction`` row whose pocket is\n                c (else the first n-way row mentioning c).\n",
+  "transitions": {
+   "families": [
+    {
+     "split": "nway (TEST, capped scorer order)",
+     "index_in_split": 29,
+     "family": "interaction",
+     "maze_index_in_test_bank": 1,
+     "maze_generator_seed": 2300001,
+     "prefix_from_start": "NNWWWWWWWWWPEEENNNNNNWWNNNNEESSEEEEEESPNWW",
+     "s_t": {
+      "pos": [
+       3,
+       11
+      ],
+      "keystate": [
+       0,
+       1,
+       2,
+       0
+      ]
+     },
+     "action": "S",
+     "words": {
+      "w_agent": 2,
+      "w_key": 0,
+      "w_door": 2,
+      "w_tint": 2,
+      "w_dir": 2
+     },
+     "true_outcome": {
+      "legal": 1,
+      "displacement": 3,
+      "key_event": 6,
+      "pocket_next": 0,
+      "rule_b_bites": false
+     },
+     "s_t+1": {
+      "pos": [
+       4,
+       11
+      ],
+      "keystate": [
+       0,
+       2,
+       2,
+       0
+      ]
+     },
+     "arm_outputs": "DECLARED NOT BUILDABLE (no persisted arm object or prediction)",
+     "seed": 0
+    },
+    {
+     "split": "nway (TEST, capped scorer order)",
+     "index_in_split": 0,
+     "family": "rule_b",
+     "maze_index_in_test_bank": 0,
+     "maze_generator_seed": 2300000,
+     "prefix_from_start": "WWWWWWPEEEESSEESSSSEENNNNNNWWWWWWWWWWSSEPWWWSS",
+     "s_t": {
+      "pos": [
+       11,
+       1
+      ],
+      "keystate": [
+       1,
+       2,
+       0,
+       0
+      ]
+     },
+     "action": "E",
+     "words": {
+      "w_agent": 1,
+      "w_key": 0,
+      "w_door": 0,
+      "w_tint": 1,
+      "w_dir": 1
+     },
+     "true_outcome": {
+      "legal": 0,
+      "displacement": 0,
+      "key_event": 0,
+      "pocket_next": 1,
+      "rule_b_bites": true
+     },
+     "s_t+1": {
+      "pos": [
+       11,
+       1
+      ],
+      "keystate": [
+       1,
+       2,
+       0,
+       0
+      ]
+     },
+     "arm_outputs": "DECLARED NOT BUILDABLE (no persisted arm object or prediction)",
+     "seed": 0
+    },
+    {
+     "split": "nway (TEST, capped scorer order)",
+     "index_in_split": 482,
+     "family": "rule_a",
+     "maze_index_in_test_bank": 30,
+     "maze_generator_seed": 3100030,
+     "prefix_from_start": "NNWWWWWWNPNEEEEEESSSSE",
+     "s_t": {
+      "pos": [
+       5,
+       8
+      ],
+      "keystate": [
+       0,
+       0,
+       1,
+       0
+      ]
+     },
+     "action": "E",
+     "words": {
+      "w_agent": 3,
+      "w_key": 0,
+      "w_door": 1,
+      "w_tint": 0,
+      "w_dir": 1
+     },
+     "true_outcome": {
+      "legal": 0,
+      "displacement": 0,
+      "key_event": 0,
+      "pocket_next": 3,
+      "rule_b_bites": false
+     },
+     "s_t+1": {
+      "pos": [
+       5,
+       8
+      ],
+      "keystate": [
+       0,
+       0,
+       1,
+       0
+      ]
+     },
+     "arm_outputs": "DECLARED NOT BUILDABLE (no persisted arm object or prediction)",
+     "seed": 2
+    },
+    {
+     "split": "nway (TEST, capped scorer order)",
+     "index_in_split": 34,
+     "family": "open_door_tint",
+     "maze_index_in_test_bank": 2,
+     "maze_generator_seed": 2300002,
+     "prefix_from_start": "WSSWWSSSSWWWWWWWPEEENNWWNNWWSSPNNEESSEESSEEEENNEEEENNNNNNWPESSSSWWWWWWWWWWS",
+     "s_t": {
+      "pos": [
+       8,
+       3
+      ],
+      "keystate": [
+       2,
+       0,
+       1,
+       2
+      ]
+     },
+     "action": "S",
+     "words": {
+      "w_agent": 3,
+      "w_key": 0,
+      "w_door": 5,
+      "w_tint": 3,
+      "w_dir": 2
+     },
+     "true_outcome": {
+      "legal": 0,
+      "displacement": 0,
+      "key_event": 0,
+      "pocket_next": 3,
+      "rule_b_bites": true
+     },
+     "s_t+1": {
+      "pos": [
+       8,
+       3
+      ],
+      "keystate": [
+       2,
+       0,
+       1,
+       2
+      ]
+     },
+     "arm_outputs": "DECLARED NOT BUILDABLE (no persisted arm object or prediction)",
+     "seed": 0
+    },
+    {
+     "split": "nway (TEST, capped scorer order)",
+     "index_in_split": 1,
+     "family": "free",
+     "maze_index_in_test_bank": 0,
+     "maze_generator_seed": 2300000,
+     "prefix_from_start": "WWWWWWWWSSEPWSS",
+     "s_t": {
+      "pos": [
+       11,
+       3
+      ],
+      "keystate": [
+       1,
+       0,
+       0,
+       0
+      ]
+     },
+     "action": "S",
+     "words": {
+      "w_agent": 1,
+      "w_key": 0,
+      "w_door": 0,
+      "w_tint": 2,
+      "w_dir": 2
+     },
+     "true_outcome": {
+      "legal": 1,
+      "displacement": 3,
+      "key_event": 0,
+      "pocket_next": 1,
+      "rule_b_bites": false
+     },
+     "s_t+1": {
+      "pos": [
+       12,
+       3
+      ],
+      "keystate": [
+       1,
+       0,
+       0,
+       0
+      ]
+     },
+     "arm_outputs": "DECLARED NOT BUILDABLE (no persisted arm object or prediction)",
+     "seed": 0
+    }
+   ],
+   "door_then_tint": [
+    {
+     "split": "nway (TEST, capped scorer order)",
+     "index_in_split": 117,
+     "family": "interaction",
+     "maze_index_in_test_bank": 6,
+     "maze_generator_seed": 2300006,
+     "prefix_from_start": "WWWNNEEEENNPSSEEEESSEEN",
+     "s_t": {
+      "pos": [
+       10,
+       13
+      ],
+      "keystate": [
+       0,
+       0,
+       1,
+       0
+      ]
+     },
+     "action": "N",
+     "words": {
+      "w_agent": 3,
+      "w_key": 0,
+      "w_door": 3,
+      "w_tint": 3,
+      "w_dir": 0
+     },
+     "true_outcome": {
+      "legal": 1,
+      "displacement": 1,
+      "key_event": 7,
+      "pocket_next": 0,
+      "rule_b_bites": false
+     },
+     "s_t+1": {
+      "pos": [
+       9,
+       13
+      ],
+      "keystate": [
+       0,
+       0,
+       2,
+       0
+      ]
+     },
+     "arm_outputs": "DECLARED NOT BUILDABLE (no persisted arm object or prediction)",
+     "seed": 0
+    },
+    {
+     "split": "nway (TEST, capped scorer order)",
+     "index_in_split": 29,
+     "family": "interaction",
+     "maze_index_in_test_bank": 1,
+     "maze_generator_seed": 2300001,
+     "prefix_from_start": "NNWWWWWWWWWPEEENNNNNNWWNNNNEESSEEEEEESPNWW",
+     "s_t": {
+      "pos": [
+       3,
+       11
+      ],
+      "keystate": [
+       0,
+       1,
+       2,
+       0
+      ]
+     },
+     "action": "S",
+     "words": {
+      "w_agent": 2,
+      "w_key": 0,
+      "w_door": 2,
+      "w_tint": 2,
+      "w_dir": 2
+     },
+     "true_outcome": {
+      "legal": 1,
+      "displacement": 3,
+      "key_event": 6,
+      "pocket_next": 0,
+      "rule_b_bites": false
+     },
+     "s_t+1": {
+      "pos": [
+       4,
+       11
+      ],
+      "keystate": [
+       0,
+       2,
+       2,
+       0
+      ]
+     },
+     "arm_outputs": "DECLARED NOT BUILDABLE (no persisted arm object or prediction)",
+     "seed": 0
+    },
+    {
+     "split": "nway (TEST, capped scorer order)",
+     "index_in_split": 55,
+     "family": "interaction",
+     "maze_index_in_test_bank": 3,
+     "maze_generator_seed": 2300003,
+     "prefix_from_start": "NNNNEEEEEENNEESSSSPNNNNWWSSWWNNWWWWWWSSSSSSSSEEEENNNNWWNNEEEEEENNEEEEPWWSSSSW",
+     "s_t": {
+      "pos": [
+       9,
+       10
+      ],
+      "keystate": [
+       2,
+       1,
+       0,
+       0
+      ]
+     },
+     "action": "W",
+     "words": {
+      "w_agent": 2,
+      "w_key": 0,
+      "w_door": 2,
+      "w_tint": 2,
+      "w_dir": 3
+     },
+     "true_outcome": {
+      "legal": 1,
+      "displacement": 4,
+      "key_event": 6,
+      "pocket_next": 0,
+      "rule_b_bites": false
+     },
+     "s_t+1": {
+      "pos": [
+       9,
+       9
+      ],
+      "keystate": [
+       2,
+       2,
+       0,
+       0
+      ]
+     },
+     "arm_outputs": "DECLARED NOT BUILDABLE (no persisted arm object or prediction)",
+     "seed": 0
+    }
+   ],
+   "families_fallback": {
+    "rule_a": {
+     "seed_0_rows": 0,
+     "taken_from_seed": 2,
+     "index_in_split": 482
+    }
+   },
+   "deletion": [
+    {
+     "split": "nway (TEST, capped scorer order)",
+     "index_in_split": 85,
+     "family": "interaction",
+     "maze_index_in_test_bank": 5,
+     "maze_generator_seed": 2300005,
+     "prefix_from_start": "NNNNEEEEEEEEEESSSSSSPSSWWWWNNWWNNEENNEEEESS",
+     "s_t": {
+      "pos": [
+       9,
+       13
+      ],
+      "keystate": [
+       1,
+       0,
+       0,
+       0
+      ]
+     },
+     "action": "W",
+     "words": {
+      "w_agent": 1,
+      "w_key": 0,
+      "w_door": 1,
+      "w_tint": 1,
+      "w_dir": 3
+     },
+     "true_outcome": {
+      "legal": 1,
+      "displacement": 4,
+      "key_event": 5,
+      "pocket_next": 0,
+      "rule_b_bites": false
+     },
+     "s_t+1": {
+      "pos": [
+       9,
+       12
+      ],
+      "keystate": [
+       2,
+       0,
+       0,
+       0
+      ]
+     },
+     "arm_outputs": "DECLARED NOT BUILDABLE (no persisted arm object or prediction)",
+     "seed": 0,
+     "deleted_colour": 1,
+     "deleted_colour_source": "/Users/batmac/clu/evidence/outputs/w16-maze-wm/t1/A1_test_seed0.json::DELETION.deleted_colour"
+    }
+   ]
+  },
+  "selection_index": {
+   "families": [
+    29,
+    0,
+    34,
+    1
+   ],
+   "door_then_tint": [
+    117,
+    29,
+    55
+   ],
+   "deletion": [
+    85
+   ]
+  },
+  "re_derivation_check": {
+   "bank_meta_equal": true,
+   "holdout_equal": true,
+   "n_eval_rows_scored": {
+    "seen": 4000,
+    "value": 4000,
+    "nway": 761,
+    "pair": 869
+   },
+   "against": "/Users/batmac/clu/evidence/outputs/w16-maze-wm/t1/A1_test_seed0.json"
+  },
+  "family_counts_per_seed": {
+   "0": {
+    "test_nway_rows_per_family": {
+     "interaction": 70,
+     "rule_b": 316,
+     "rule_a": 0,
+     "open_door_tint": 30,
+     "free": 345
+    },
+    "held_out_tuples_per_family": {
+     "interaction": 4,
+     "rule_b": 4,
+     "rule_a": 4,
+     "open_door_tint": 4,
+     "free": 4
+    },
+    "re_derivation_check": {
+     "bank_meta_equal": true,
+     "holdout_equal": true,
+     "n_eval_rows_scored": {
+      "seen": 4000,
+      "value": 4000,
+      "nway": 761,
+      "pair": 869
+     },
+     "against": "/Users/batmac/clu/evidence/outputs/w16-maze-wm/t1/A1_test_seed0.json"
+    }
+   },
+   "1": {
+    "test_nway_rows_per_family": {
+     "interaction": 79,
+     "rule_b": 307,
+     "rule_a": 0,
+     "open_door_tint": 28,
+     "free": 328
+    },
+    "held_out_tuples_per_family": {
+     "interaction": 4,
+     "rule_b": 4,
+     "rule_a": 4,
+     "open_door_tint": 4,
+     "free": 4
+    },
+    "re_derivation_check": {
+     "bank_meta_equal": true,
+     "holdout_equal": true,
+     "n_eval_rows_scored": {
+      "seen": 4000,
+      "value": 4000,
+      "pair": 1227,
+      "nway": 742
+     },
+     "against": "/Users/batmac/clu/evidence/outputs/w16-maze-wm/t1/A1_test_seed1.json"
+    }
+   },
+   "2": {
+    "test_nway_rows_per_family": {
+     "interaction": 55,
+     "rule_b": 288,
+     "rule_a": 1,
+     "open_door_tint": 33,
+     "free": 309
+    },
+    "held_out_tuples_per_family": {
+     "interaction": 4,
+     "rule_b": 4,
+     "rule_a": 4,
+     "open_door_tint": 4,
+     "free": 4
+    },
+    "re_derivation_check": {
+     "bank_meta_equal": true,
+     "holdout_equal": true,
+     "n_eval_rows_scored": {
+      "seen": 4000,
+      "value": 4000,
+      "pair": 2021,
+      "nway": 686
+     },
+     "against": "/Users/batmac/clu/evidence/outputs/w16-maze-wm/t1/A1_test_seed2.json"
+    }
+   }
+  }
+ },
+ "declared": {
+  "t7_rival_succeeds_clu_fails": [],
+  "t7_per_arm": [],
+  "cmazet_arm_columns": "DECLARED NOT BUILDABLE: every CMAZE-T arm column (CLU, Transformer, MLP, LSTM; and in the deletion panel CLU downdate, rival as trained, rival retrained without). w16 maze-wm persisted no arm object and no per-transition prediction: the frozen codec, frozen state encoder, CLU store, controls and rival weights are trained in-process by scripts/w16_cmaze_t.py::full and never written; w16-maze-wm/t1/A1_test_seed*.json holds aggregate scores only. Re-training here would be a new TEST-leg run with a new codec (forbidden: zero scored runs, never substitute a codec). The panels drawn are the ENGINE's s_t, action and true s_t+1 only. See NEEDS-ARTEFACTS.json.",
+  "cmazet_one_success_one_failure_per_arm": "DECLARED NOT BUILDABLE for the same reason: choosing a transition where an arm succeeds or fails needs that arm's per-transition output.",
+  "cmazet_rule_a_family_seed0": {
+   "rule_a": {
+    "seed_0_rows": 0,
+    "taken_from_seed": 2,
+    "index_in_split": 482
+   }
+  }
+ },
+ "figures": {
+  "t7_per_arm": [
+   "rc_w19_t7_per_arm_success_failure.pdf",
+   "rc_w19_t7_per_arm_success_failure.png"
+  ],
+  "t7_rscf_seed0": [
+   "rc_w19_t7_rival_succeeds_clu_fails.pdf",
+   "rc_w19_t7_rival_succeeds_clu_fails.png"
+  ],
+  "t7_rscf_seed1": [
+   "rc_w19_t7_rival_succeeds_clu_fails_seed1.pdf",
+   "rc_w19_t7_rival_succeeds_clu_fails_seed1.png"
+  ],
+  "cmazet_families": [
+   "rc_w19_cmazet_families.pdf",
+   "rc_w19_cmazet_families.png"
+  ],
+  "cmazet_door_then_tint": [
+   "rc_w19_cmazet_door_then_tint.pdf",
+   "rc_w19_cmazet_door_then_tint.png"
+  ],
+  "cmazet_deletion": [
+   "rc_w19_cmazet_deletion.pdf",
+   "rc_w19_cmazet_deletion.png"
+  ]
+ }
+}

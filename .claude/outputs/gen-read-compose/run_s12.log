@@ -1,0 +1,169 @@
+[gen-compose] dataset=shapes3d pretext=recon condition=recomb2element stage=compose seeds=[1, 2] -> /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon
+[     0.0s] seed 1 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (hash + recipe asserted)
+[     0.5s] rows: store_train=32768 A=512 B=72 matched_seen=199
+[     0.5s] cache 9288 rows (scope=used), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     1.7s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     1.7s]     extending cache coverage: 32199 row(s) encoded through the frozen encoder
+[    69.2s]     extending cache coverage: 196 row(s) encoded through the frozen encoder
+[    71.8s] features gathered: store (32768, 2048) A (512, 2048) B (72, 2048) MS (199, 2048)
+[    74.6s]   ⚠ this seed's encoder differs from the plan's (fc05e2c5f396… vs 98d326028316…), so the grouping is re-derived on its own channels — ⛔ the plan's label vector would be a size-matched RANDOM partition here
+[    74.6s] ⭐ K=5 n_modes=64 pinned from the plan; grouping per_seed (re-derived at the plan's K); well sizes [397, 300, 307, 300, 744]
+[    78.1s] training the modes (1200 steps, store-only objective) …
+[    79.8s]     step 1/1200  loss=45.03409  tau=1.000
+[   226.7s]     step 240/1200  loss=35.24908  tau=0.632
+[   376.4s]     step 480/1200  loss=31.83665  tau=0.399
+[   518.2s]     step 720/1200  loss=33.11850  tau=0.251
+[   662.5s]     step 960/1200  loss=30.77333  tau=0.159
+[   800.9s]     step 1200/1200  loss=29.74180  tau=0.100
+[   802.9s] ⭐ byte ledger: deployed store 524288 B (⛔ coupling 163840 B EXCLUDED — dreaming is off the critical path, R26; ⛔ do NOT inherit 688,128) + addressing head 74240 B, reported beside, never inside
+[   805.4s] ⭐ no-bypass: pure codebook gather, 30 bits/read · ⭐ request-only path asserted (no feature argument on ANY arm; gen_store.soft_read NOT imported)
+[   805.4s] ⭐ channel: read 30 bits · clu_wide 320 weights (entropy 4.27 bits, dof 315) · proto 2048 floats (⛔ unbounded)
+[   805.6s] ⭐ R8 prototype embedding: 57 prototypes (475136 B, reported beside the store by the same convention)
+[   819.8s] ⭐ DECODER ceiling: in-corner shape balacc=0.9365 (AUROC 0.9939) · A aggregate=0.9870 shape=0.9551 · B aggregate=0.9861 shape=0.9583
+[   829.6s] ⭐ STORE ceiling: in-corner shape balacc=0.7001 (AUROC 0.7549) · A aggregate=0.6208 shape=0.6035 · B aggregate=0.6157 shape=0.9028
+[   829.6s] ⚠ metric invariance (R26 standing rule): balacc Δ=0.00e+00 AUROC Δ=0.00e+00 under a re-partition, raw accuracy moves -0.0049 ⇒ ✓ INVARIANT
+[   830.1s] ⭐ request-vs-feature code agreement (diagnostic): A exact-set=0.5039 B exact-set=0.5694 MS exact-set=0.4070
+[   841.0s]   [read] in-corner shape balacc=0.6809 (AUROC 0.7453) · A aggregate=0.6117 shape=0.5957 · B aggregate=0.6250 shape=1.0000
+[   850.8s]   [clu_wide] in-corner shape balacc=0.7889 (AUROC 0.7898) · A aggregate=0.6686 shape=0.6504 · B aggregate=0.6968 shape=1.0000
+[   862.1s]   [store_removed] in-corner shape balacc=0.5000 (AUROC 0.5000) · A aggregate=0.1169 shape=0.2637 · B aggregate=0.1389 shape=0.0000
+[   872.4s]   [proto] in-corner shape balacc=0.8844 (AUROC 1.0000) · A aggregate=0.8145 shape=0.6934 · B aggregate=0.8356 shape=1.0000
+/Users/user/Desktop/CHLU-gen-read/chlu/experiments/exp_gen_compose.py:832: UserWarning: Glyph 11088 (\N{WHITE MEDIUM STAR}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-read/chlu/experiments/exp_gen_compose.py:832: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-read/chlu/experiments/exp_gen_compose.py:833: UserWarning: Glyph 11088 (\N{WHITE MEDIUM STAR}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=140)
+/Users/user/Desktop/CHLU-gen-read/chlu/experiments/exp_gen_compose.py:833: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=140)
+[   873.2s] seed 1 done
+[     0.0s] seed 2 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2
+[     0.4s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=2d7eea75add77044… (hash + recipe asserted)
+[     0.8s] rows: store_train=32768 A=512 B=72 matched_seen=199
+[     0.9s] cache 9288 rows (scope=used), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     2.2s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     2.3s]     extending cache coverage: 32241 row(s) encoded through the frozen encoder
+[    91.7s]     extending cache coverage: 196 row(s) encoded through the frozen encoder
+[    95.2s] features gathered: store (32768, 2048) A (512, 2048) B (72, 2048) MS (199, 2048)
+[    97.9s]   ⚠ this seed's encoder differs from the plan's (154d49861064… vs 98d326028316…), so the grouping is re-derived on its own channels — ⛔ the plan's label vector would be a size-matched RANDOM partition here
+[    97.9s] ⭐ K=5 n_modes=64 pinned from the plan; grouping per_seed (re-derived at the plan's K); well sizes [283, 283, 390, 616, 476]
+[   101.0s] training the modes (1200 steps, store-only objective) …
+[   101.8s]     step 1/1200  loss=51.45226  tau=1.000
+[   239.1s]     step 240/1200  loss=39.51982  tau=0.632
+[   378.0s]     step 480/1200  loss=36.82513  tau=0.399
+[   520.5s]     step 720/1200  loss=35.55385  tau=0.251
+[   671.1s]     step 960/1200  loss=34.37363  tau=0.159
+[   824.6s]     step 1200/1200  loss=34.35460  tau=0.100
+[   828.1s] ⭐ byte ledger: deployed store 524288 B (⛔ coupling 163840 B EXCLUDED — dreaming is off the critical path, R26; ⛔ do NOT inherit 688,128) + addressing head 74240 B, reported beside, never inside
+[   831.4s] ⭐ no-bypass: pure codebook gather, 30 bits/read · ⭐ request-only path asserted (no feature argument on ANY arm; gen_store.soft_read NOT imported)
+[   831.4s] ⭐ channel: read 30 bits · clu_wide 320 weights (entropy 5.12 bits, dof 315) · proto 2048 floats (⛔ unbounded)
+[   831.7s] ⭐ R8 prototype embedding: 57 prototypes (475136 B, reported beside the store by the same convention)
+[   846.2s] ⭐ DECODER ceiling: in-corner shape balacc=0.9653 (AUROC 0.9998) · A aggregate=0.9938 shape=0.9863 · B aggregate=0.9884 shape=0.9306
+[   855.9s] ⭐ STORE ceiling: in-corner shape balacc=0.7624 (AUROC 0.7688) · A aggregate=0.6243 shape=0.6445 · B aggregate=0.6389 shape=0.9167
+[   855.9s] ⚠ metric invariance (R26 standing rule): balacc Δ=0.00e+00 AUROC Δ=0.00e+00 under a re-partition, raw accuracy moves +0.0078 ⇒ ✓ INVARIANT
+[   856.5s] ⭐ request-vs-feature code agreement (diagnostic): A exact-set=0.5254 B exact-set=0.2222 MS exact-set=0.3266
+[   867.7s]   [read] in-corner shape balacc=0.6858 (AUROC 0.7321) · A aggregate=0.6273 shape=0.6445 · B aggregate=0.5903 shape=0.7083
+[   878.6s]   [clu_wide] in-corner shape balacc=0.7415 (AUROC 0.7835) · A aggregate=0.6680 shape=0.6836 · B aggregate=0.6898 shape=0.8750
+[   889.4s]   [store_removed] in-corner shape balacc=0.5000 (AUROC 0.5000) · A aggregate=0.1393 shape=0.2461 · B aggregate=0.0556 shape=0.0000
+[   899.3s]   [proto] in-corner shape balacc=0.8819 (AUROC 0.9796) · A aggregate=0.8281 shape=0.7422 · B aggregate=0.8194 shape=1.0000
+/Users/user/Desktop/CHLU-gen-read/chlu/experiments/exp_gen_compose.py:832: UserWarning: Glyph 11088 (\N{WHITE MEDIUM STAR}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-read/chlu/experiments/exp_gen_compose.py:832: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-read/chlu/experiments/exp_gen_compose.py:833: UserWarning: Glyph 11088 (\N{WHITE MEDIUM STAR}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=140)
+/Users/user/Desktop/CHLU-gen-read/chlu/experiments/exp_gen_compose.py:833: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=140)
+[   899.5s] seed 2 done
+aggregated 2 seed(s)
+⭐ ceilings — decoder 0.9509 · store (measured) 0.7312 · knn_proto 0.8884 (⛔ a number quoted against only one ceiling is incomplete)
+  clu_wide       in-corner shape balacc 0.7652 ± 0.0237 · AUROC 0.7866 · A aggregate 0.6683 · B shape 0.9375
+  proto          in-corner shape balacc 0.8832 ± 0.0013 · AUROC 0.9898 · A aggregate 0.8213 · B shape 1.0000
+  read           in-corner shape balacc 0.6834 ± 0.0025 · AUROC 0.7387 · A aggregate 0.6195 · B shape 0.8542
+  store_removed  in-corner shape balacc 0.5000 ± 0.0000 · AUROC 0.5000 · A aggregate 0.1281 · B shape 0.0000
+⭐ falsifier: read − store_removed = +0.1834 ± 0.0025 (2/2 seeds positive, 74.5× the largest arm spread) ⇒ ✓ the read beats its ablation
+⛔ arm numbers only — no kill-rule verdict is rendered here.

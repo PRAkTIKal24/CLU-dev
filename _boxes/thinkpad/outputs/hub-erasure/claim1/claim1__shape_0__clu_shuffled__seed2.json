@@ -1,0 +1,126 @@
+{
+ "cell": "claim1__shape_0__clu_shuffled__seed2",
+ "condition": "clu_shuffled",
+ "arm": "clu",
+ "pool": "L_deleted",
+ "gated": false,
+ "why": "LANDSCAPE-REMOVED (charter C.2): the deleted store's atoms, coordinate-shuffled. Same bytes, same marginals, the content destroyed",
+ "target": "shape = cube",
+ "seed": 2,
+ "n_fit_rows": 23805,
+ "deployed_bytes": 524288,
+ "byte_ledger": {
+  "n_atoms_per_well": 64,
+  "dim": 2048,
+  "well_sizes": [
+   303,
+   305,
+   573,
+   501,
+   366
+  ],
+  "store_bytes": 524288,
+  "dtype": "float32",
+  "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+  "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72)."
+ },
+ "gate_bytes": 0,
+ "moves": {
+  "M2_weight_read": {
+   "move": "M2_weight_read",
+   "n": 64,
+   "attacked_hit": 0.09375,
+   "heldout_hit": 0.03125,
+   "unanimous_hit": 0.015625,
+   "n_unanimous": 1,
+   "headline": "unanimous_hit",
+   "note": "a gate cannot refuse this move because it never asks; what it finds is what the deployed parameters still CONTAIN",
+   "n_parameters_decoded": 64,
+   "recovering_parameters": [
+    {
+     "kind": "stored_train_row",
+     "factor_index": -1,
+     "value_index": 56
+    }
+   ],
+   "n_recovering_parameters": 1,
+   "any_parameter_recovers": true,
+   "n_targeted_parameters": 0,
+   "targeted_hit": null,
+   "targeted_note": "this arm's parameters carry no value labels, so there is no targeted set and the all-parameter rate is the only statistic",
+   "headline_rate": "unanimous_hit"
+  },
+  "M4a_convex_span_sweep": {
+   "move": "M4a_convex_span_sweep",
+   "n": 96,
+   "attacked_hit": 0.7604166666666666,
+   "heldout_hit": 0.3020833333333333,
+   "unanimous_hit": 0.25,
+   "n_unanimous": 24,
+   "headline": "unanimous_hit",
+   "note": "the attacked judge alone is inflated by adversarial examples; the held-out judges never saw a gradient",
+   "n_basis": 64,
+   "n_candidates": 96,
+   "steps_requested": 100,
+   "steps_done": 100,
+   "lr": 0.2,
+   "seconds": 135.98573565483093,
+   "hit_deadline": false
+  },
+  "M5_read_reachable": {
+   "move": "M5_read_reachable",
+   "n": 256,
+   "attacked_hit": 0.03515625,
+   "heldout_hit": 0.0078125,
+   "unanimous_hit": 0.0078125,
+   "n_unanimous": 2,
+   "headline": "unanimous_hit",
+   "note": "the attacked judge alone is inflated by adversarial examples; the held-out judges never saw a gradient",
+   "n_sampled": 256,
+   "reachable_set_size": "64**5",
+   "gradient_used": false
+  },
+  "M1_direct_request": {
+   "move": "M1",
+   "n": 256,
+   "attacked_hit": 0.015625,
+   "heldout_hit": 0.00390625,
+   "unanimous_hit": 0.00390625,
+   "n_unanimous": 1,
+   "headline": "unanimous_hit",
+   "note": "`unanimous_hit` is what the arm WOULD emit; `unanimous_hit_after_gate` is what the deployed, gated arm actually emits",
+   "n_requests": 256,
+   "gate_served_frac": 1.0,
+   "unanimous_hit_after_gate": 0.00390625
+  },
+  "M3_term_omitted": {
+   "move": "M3",
+   "n": 256,
+   "attacked_hit": 0.01171875,
+   "heldout_hit": 0.00390625,
+   "unanimous_hit": 0.00390625,
+   "n_unanimous": 1,
+   "headline": "unanimous_hit",
+   "note": "`unanimous_hit` is what the arm WOULD emit; `unanimous_hit_after_gate` is what the deployed, gated arm actually emits",
+   "n_requests": 256,
+   "gate_served_frac": 1.0,
+   "unanimous_hit_after_gate": 0.00390625
+  },
+  "M3_offgrid_bracket": {
+   "move": "M3",
+   "applicable": false,
+   "why": "NOT APPLICABLE to `clu`, and this is a property of the interface, not a gap in the adversary: the pinned request is a factor -> GRID VALUE assignment (`atom_posterior` indexes `log_cond[f][value_index]`), so there is no off-grid channel to exploit. Reported as inapplicable, never as 0.0"
+  }
+ },
+ "seconds": 164.60699224472046,
+ "move_recovery": {
+  "M2_weight_read": 0.015625,
+  "M4a_convex_span_sweep": 0.25,
+  "M5_read_reachable": 0.0078125,
+  "M1_direct_request": 0.00390625,
+  "M3_term_omitted": 0.00390625
+ },
+ "best_unanimous_hit": 0.25,
+ "best_move": "M4a_convex_span_sweep",
+ "recovery_rule": "interface moves are read AFTER the gate (what the deployed arm emits); M2 is read at its targeted rate where the parameters carry value labels"
+}

@@ -1,0 +1,149 @@
+  seed 0: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0 · cache scope='full' rows=480000
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    gathering SPREAD_train: 12288 rows
+    gathering SPREAD: 4096 rows
+    gathering CORNER_B: 72 rows
+    gathering CORNER_MS: 198 rows
+  ⭐ store store_s0.pkl hash=3e3424a1ea40017e… K=5 M=64 30 bits/read (hash + channels asserted)
+  ⭐ grouping ORDER asserted: UNWHITENED features (asserted channel-for-channel) · well sizes [303, 305, 573, 501, 366]
+  ⭐ label-free PR = [3.117, 3.463, 12.545, 10.498, 4.067] · d_k = [303, 305, 573, 501, 366] (n=16384 rows, ⛔ a seeded permutation)
+  ⭐ BYTE GATE: ALL ARMS WITHIN THE UNIFORM ARM'S BYTES · reference 524,288 B · max shortfall 0.082 %
+      [    encoder] d=2048 loss 2.361->0.007 train_agg=0.9998 SPREAD=0.9860 CORNER_B=0.9236 CORNER_MS=0.9655
+  arm uniform
+    [uniform] M=[64, 64, 64, 64, 64] · 524,288 B (+0 B vs uniform) · 30.00 bits/read · measured eps=0.2784 (predicted 0.2622) · distinct-of-72=9 · used 320/320 modes
+  arm equal_distortion
+    [equal_distortion] M=[4, 4, 160, 70, 5] · 524,048 B (-240 B vs uniform) · 19.77 bits/read · measured eps=0.3926 (predicted 0.4427) · distinct-of-72=4 · used 243/243 modes
+  arm mse_optimal
+    [mse_optimal] M=[51, 64, 72, 53, 77] · 523,856 B (-432 B vs uniform) · 29.84 bits/read · measured eps=0.2791 (predicted 0.2610) · distinct-of-72=19 · used 317/317 modes
+      [code/shipped] d= 320 loss 2.311->0.655 train_agg=0.7115 SPREAD=0.6559 CORNER_B=0.5486 CORNER_MS=0.6843
+      [random/shipped] d= 320 loss 2.326->2.097 train_agg=0.2137 SPREAD=0.1214 CORNER_B=0.1111 CORNER_MS=0.1355
+      [code/uniform] d= 320 loss 2.311->0.655 train_agg=0.7115 SPREAD=0.6559 CORNER_B=0.5486 CORNER_MS=0.6843
+      [random/uniform] d= 320 loss 2.326->2.097 train_agg=0.2137 SPREAD=0.1214 CORNER_B=0.1111 CORNER_MS=0.1355
+      [code/equal_distortion] d= 243 loss 2.333->0.925 train_agg=0.6179 SPREAD=0.5792 CORNER_B=0.4745 CORNER_MS=0.6136
+      [random/equal_distortion] d= 243 loss 2.324->2.111 train_agg=0.1912 SPREAD=0.1227 CORNER_B=0.1644 CORNER_MS=0.1305
+      [code/mse_optimal] d= 317 loss 2.292->0.649 train_agg=0.7111 SPREAD=0.6576 CORNER_B=0.5810 CORNER_MS=0.6818
+      [random/mse_optimal] d= 317 loss 2.311->2.101 train_agg=0.2109 SPREAD=0.1222 CORNER_B=0.1366 CORNER_MS=0.1313
+    [decoded/shipped] aggregate=0.6102 floor_hue=0.996 wall_hue=0.985 object_hue=0.713 scale=0.199 shape=0.570 orientation=0.197
+    [decoded/uniform] aggregate=0.6102 floor_hue=0.996 wall_hue=0.985 object_hue=0.713 scale=0.199 shape=0.570 orientation=0.197
+    [decoded/equal_distortion] aggregate=0.5311 floor_hue=0.678 wall_hue=0.923 object_hue=0.694 scale=0.162 shape=0.624 orientation=0.105
+    [decoded/mse_optimal] aggregate=0.6084 floor_hue=1.000 wall_hue=0.982 object_hue=0.692 scale=0.198 shape=0.592 orientation=0.186
+  ⭐ knn_proto laundering control: BIT-IDENTICAL (max |Δ| = 0.0)
+  seed 1: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1 · cache scope='used' rows=9288
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32199 row(s) encoded through the frozen encoder
+    gathering SPREAD_train: 12288 rows
+    extending cache coverage: 12048 row(s) encoded through the frozen encoder
+    gathering SPREAD: 4096 rows
+    extending cache coverage: 4002 row(s) encoded through the frozen encoder
+    gathering CORNER_B: 72 rows
+    gathering CORNER_MS: 199 rows
+    extending cache coverage: 196 row(s) encoded through the frozen encoder
+  ⭐ store store_s1.pkl hash=76827ad534ee7e6a… K=5 M=64 30 bits/read (hash + channels asserted)
+  ⭐ grouping ORDER asserted: UNWHITENED features (asserted channel-for-channel) · well sizes [397, 300, 307, 300, 744]
+  ⭐ label-free PR = [5.619, 4.007, 3.371, 3.856, 11.998] · d_k = [397, 300, 307, 300, 744] (n=16384 rows, ⛔ a seeded permutation)
+  ⭐ BYTE GATE: ALL ARMS WITHIN THE UNIFORM ARM'S BYTES · reference 524,288 B · max shortfall 0.123 %
+      [    encoder] d=2048 loss 2.321->0.007 train_agg=0.9999 SPREAD=0.9871 CORNER_B=0.9838 CORNER_MS=0.9832
+  arm uniform
+    [uniform] M=[64, 64, 64, 64, 64] · 524,288 B (+0 B vs uniform) · 30.00 bits/read · measured eps=0.2704 (predicted 0.2233) · distinct-of-72=8 · used 320/320 modes
+  arm equal_distortion
+    [equal_distortion] M=[11, 6, 4, 5, 164] · 523,644 B (-644 B vs uniform) · 17.72 bits/read · measured eps=0.4108 (predicted 0.4278) · distinct-of-72=9 · used 190/190 modes
+  arm mse_optimal
+    [mse_optimal] M=[83, 62, 59, 78, 51] · 524,032 B (-256 B vs uniform) · 30.17 bits/read · measured eps=0.2725 (predicted 0.2216) · distinct-of-72=12 · used 333/333 modes
+      [code/shipped] d= 320 loss 2.304->0.658 train_agg=0.7038 SPREAD=0.6473 CORNER_B=0.5833 CORNER_MS=0.7102
+      [random/shipped] d= 320 loss 2.323->2.088 train_agg=0.2130 SPREAD=0.1190 CORNER_B=0.1157 CORNER_MS=0.1173
+      [code/uniform] d= 320 loss 2.304->0.658 train_agg=0.7038 SPREAD=0.6473 CORNER_B=0.5833 CORNER_MS=0.7102
+      [random/uniform] d= 320 loss 2.323->2.088 train_agg=0.2130 SPREAD=0.1190 CORNER_B=0.1157 CORNER_MS=0.1173
+      [code/equal_distortion] d= 190 loss 2.330->0.935 train_agg=0.5987 SPREAD=0.5681 CORNER_B=0.5787 CORNER_MS=0.5553
+      [random/equal_distortion] d= 190 loss 2.316->2.127 train_agg=0.1810 SPREAD=0.1200 CORNER_B=0.1481 CORNER_MS=0.1323
+      [code/mse_optimal] d= 333 loss 2.324->0.660 train_agg=0.7106 SPREAD=0.6504 CORNER_B=0.5787 CORNER_MS=0.6650
+      [random/mse_optimal] d= 333 loss 2.314->2.090 train_agg=0.2139 SPREAD=0.1220 CORNER_B=0.1134 CORNER_MS=0.1281
+    [decoded/shipped] aggregate=0.6178 floor_hue=1.000 wall_hue=0.985 object_hue=0.645 scale=0.229 shape=0.590 orientation=0.258
+    [decoded/uniform] aggregate=0.6178 floor_hue=1.000 wall_hue=0.985 object_hue=0.645 scale=0.229 shape=0.590 orientation=0.258
+    [decoded/equal_distortion] aggregate=0.4896 floor_hue=0.396 wall_hue=0.969 object_hue=0.687 scale=0.200 shape=0.592 orientation=0.094
+    [decoded/mse_optimal] aggregate=0.6149 floor_hue=0.999 wall_hue=0.991 object_hue=0.625 scale=0.268 shape=0.544 orientation=0.263
+  ⭐ knn_proto laundering control: BIT-IDENTICAL (max |Δ| = 0.0)
+  seed 2: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2 · cache scope='used' rows=9288
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32241 row(s) encoded through the frozen encoder
+    gathering SPREAD_train: 12288 rows
+    extending cache coverage: 12059 row(s) encoded through the frozen encoder
+    gathering SPREAD: 4096 rows
+    extending cache coverage: 4007 row(s) encoded through the frozen encoder
+    gathering CORNER_B: 72 rows
+    gathering CORNER_MS: 199 rows
+    extending cache coverage: 196 row(s) encoded through the frozen encoder
+  ⭐ store store_s2.pkl hash=8449e6057dacafb8… K=5 M=64 30 bits/read (hash + channels asserted)
+  ⭐ grouping ORDER asserted: UNWHITENED features (asserted channel-for-channel) · well sizes [283, 283, 390, 616, 476]
+  ⭐ label-free PR = [3.461, 3.852, 8.453, 13.635, 5.639] · d_k = [283, 283, 390, 616, 476] (n=16384 rows, ⛔ a seeded permutation)
+  ⭐ BYTE GATE: ALL ARMS WITHIN THE UNIFORM ARM'S BYTES · reference 524,288 B · max shortfall 0.192 %
+      [    encoder] d=2048 loss 2.364->0.005 train_agg=1.0000 SPREAD=0.9874 CORNER_B=0.9398 CORNER_MS=0.9690
+  arm uniform
+    [uniform] M=[64, 64, 64, 64, 64] · 524,288 B (+0 B vs uniform) · 30.00 bits/read · measured eps=0.2861 (predicted 0.2743) · distinct-of-72=10 · used 320/320 modes
+  arm equal_distortion
+    [equal_distortion] M=[4, 4, 25, 186, 9] · 523,496 B (-792 B vs uniform) · 19.35 bits/read · measured eps=0.4097 (predicted 0.4632) · distinct-of-72=11 · used 228/228 modes
+  arm mse_optimal
+    [mse_optimal] M=[58, 54, 68, 46, 93] · 523,280 B (-1,008 B vs uniform) · 29.76 bits/read · measured eps=0.2869 (predicted 0.2707) · distinct-of-72=12 · used 319/319 modes
+      [code/shipped] d= 320 loss 2.338->0.606 train_agg=0.7253 SPREAD=0.6723 CORNER_B=0.5856 CORNER_MS=0.6198
+      [random/shipped] d= 320 loss 2.319->2.092 train_agg=0.2094 SPREAD=0.1250 CORNER_B=0.1204 CORNER_MS=0.1181
+      [code/uniform] d= 320 loss 2.338->0.606 train_agg=0.7253 SPREAD=0.6723 CORNER_B=0.5856 CORNER_MS=0.6198
+      [random/uniform] d= 320 loss 2.319->2.092 train_agg=0.2094 SPREAD=0.1250 CORNER_B=0.1204 CORNER_MS=0.1181
+      [code/equal_distortion] d= 228 loss 2.352->0.825 train_agg=0.6369 SPREAD=0.6004 CORNER_B=0.5394 CORNER_MS=0.6692
+      [random/equal_distortion] d= 228 loss 2.312->2.109 train_agg=0.1888 SPREAD=0.1227 CORNER_B=0.1343 CORNER_MS=0.1248
+      [code/mse_optimal] d= 319 loss 2.353->0.634 train_agg=0.7191 SPREAD=0.6631 CORNER_B=0.6088 CORNER_MS=0.6541
+      [random/mse_optimal] d= 319 loss 2.322->2.095 train_agg=0.2116 SPREAD=0.1268 CORNER_B=0.1111 CORNER_MS=0.1231
+    [decoded/shipped] aggregate=0.6395 floor_hue=0.999 wall_hue=0.996 object_hue=0.700 scale=0.196 shape=0.637 orientation=0.309
+    [decoded/uniform] aggregate=0.6395 floor_hue=0.999 wall_hue=0.996 object_hue=0.700 scale=0.196 shape=0.637 orientation=0.309
+    [decoded/equal_distortion] aggregate=0.5293 floor_hue=0.630 wall_hue=0.861 object_hue=0.735 scale=0.167 shape=0.658 orientation=0.124
+    [decoded/mse_optimal] aggregate=0.6193 floor_hue=0.996 wall_hue=0.991 object_hue=0.595 scale=0.228 shape=0.622 orientation=0.284
+  ⭐ knn_proto laundering control: BIT-IDENTICAL (max |Δ| = 0.0)
+⭐ equal_distortion: pre-registered pass = NO — ⛔ LOSS: the allocated arm is worse than the uniform control beyond seed spread.
+⭐ mse_optimal: pre-registered pass = NO — ⛔ LOSS: the allocated arm is worse than the uniform control beyond seed spread.
+⭐ the law, pooled (60 points): slope 0.502 · offset 0.599 · r 0.905

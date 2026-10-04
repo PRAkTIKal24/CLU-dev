@@ -1,0 +1,71 @@
+  ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+  ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+  ⭐ cache coverage: shortfall 0 — nothing will be encoded
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+  ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+CEILING  exact=0.9590 valid=491/512
+NOISE  r=0.02  relerr=0.0200  exact=0.9551 valid= 489/512
+NOISE  r=0.05  relerr=0.0500  exact=0.9551 valid= 489/512
+NOISE  r=0.1   relerr=0.1000  exact=0.9512 valid= 487/512
+NOISE  r=0.15  relerr=0.1500  exact=0.9219 valid= 472/512
+NOISE  r=0.2   relerr=0.2000  exact=0.9004 valid= 461/512
+NOISE  r=0.25  relerr=0.2500  exact=0.8477 valid= 434/512
+NOISE  r=0.3   relerr=0.3000  exact=0.7734 valid= 396/512
+NOISE  r=0.35  relerr=0.3500  exact=0.7559 valid= 387/512
+NOISE  r=0.4   relerr=0.4000  exact=0.6738 valid= 345/512
+NOISE  r=0.5   relerr=0.5000  exact=0.5605 valid= 287/512
+(svd 12s)
+PCA    r=8     relerr=0.4170  exact=0.0078 valid=   4/512  basis=    65536 B
+PCA    r=16    relerr=0.3586  exact=0.0508 valid=  26/512  basis=   131072 B
+PCA    r=32    relerr=0.3069  exact=0.2168 valid= 111/512  basis=   262144 B
+PCA    r=64    relerr=0.2698  exact=0.3438 valid= 176/512  basis=   524288 B
+PCA    r=128   relerr=0.2413  exact=0.3848 valid= 197/512  basis=  1048576 B
+PCA    r=192   relerr=0.2255  exact=0.4336 valid= 222/512  basis=  1572864 B
+PCA    r=256   relerr=0.2147  exact=0.4551 valid= 233/512  basis=  2097152 B
+PCA    r=384   relerr=0.1984  exact=0.4922 valid= 252/512  basis=  3145728 B
+PCA    r=512   relerr=0.1852  exact=0.5254 valid= 269/512  basis=  4194304 B
+PCA    r=768   relerr=0.1621  exact=0.5996 valid= 307/512  basis=  6291456 B
+PCA    r=1024  relerr=0.1406  exact=0.6738 valid= 345/512  basis=  8388608 B
+done

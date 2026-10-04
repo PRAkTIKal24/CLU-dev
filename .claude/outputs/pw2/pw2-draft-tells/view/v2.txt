@@ -1,0 +1,2028 @@
+37: \documentclass{article} 
+38: \makeatletter
+39: \def\input@path{{iclr2027/}{./}}
+40: \makeatother
+41: \RequirePackage{iclr2027/fancyhdr,iclr2027/natbib}\usepackage{iclr2027_conference,times} 
+42: 
+44: \input{math_commands.tex}
+45: 
+46: \PassOptionsToPackage{hyphens}{url}\usepackage{hyperref}
+47: \usepackage{url}
+48: \usepackage{amsmath,amssymb}
+49: \usepackage{booktabs}
+50: \usepackage{multirow}
+51: \usepackage{array}
+52: \usepackage{xcolor}
+53: \usepackage{graphicx}
+54: \usepackage{enumitem}
+55: \usepackage{tabularx}
+56: \usepackage{longtable}
+57: \usepackage{adjustbox}
+58: 
+62: \newcommand{\PLACEHOLDER}[1]{{\color{red}\textbf{[PLACEHOLDER:}~#1\textbf{]}}}
+64: \newcommand{\TODO}[1]{{\color{orange}\textbf{[TODO:}~#1\textbf{]}}}
+66: \newcommand{\sci}[2]{\ensuremath{#1\times10^{#2}}}
+67: \newcommand{\Kstar}{\ensuremath{K^{\star}}}
+68: \newcommand{\figslot}[3]{
+69:   \begin{figure}[t]\centering
+70:   \IfFileExists{figures/#1.pdf}{\includegraphics[width=0.92\linewidth]{figures/#1.pdf}}
+71:   {\fbox{\parbox{0.9\linewidth}{\centering\small Figure pending (\texttt{figures/\detokenize{#1}.pdf} not yet
+72:   available).}}}
+73:   \caption{#2}\label{#3}\end{figure}}
+74: 
+75: \title{naive-CLU: Deletable Compositional\\ Generation on a Frozen Encoder}
+76: 
+79: \author{Anonymous authors}
+80: 
+82: \begin{document}
+83: 
+84: \maketitle
+85: 
+87: \begin{abstract}
+88: A world model that is to be trusted with requests it has never seen needs three things at
+89: once: its outputs must be \emph{valid} under the task's judge, it must \emph{compose}
+90: held-out combinations of factors from factors it has seen, and it must be able to
+91: \emph{forget} specific training rows. Compositional generation is a crowded area
+92: and machine unlearning is an established one. We work at the level of a single \emph{naive unit} and
+93: compare it only with other naive units (an MLP, an LSTM, a transformer and a continuous-input MLP):
+94: we do not claim the best compositional-generation or unlearning system, and systems built on top of
+95: units, such as sharded retraining or compositional diffusion, are out of scope.
+96: We study the simplest object that has all three properties, the \emph{naive-CLU} (n-CLU): a
+97: label-free set of per-well principal subspaces computed on the latents of a frozen
+98: encoder, read by a request-indexed address book and rendered by a frozen decoder, whose
+99: content is derived from a retained sufficient statistic. Deleting rows downdates the
+100: statistic, not the truncated factors, so the n-CLU after deletion equals the n-CLU fitted
+101: without those rows. On a Shapes3D value hold-out, at the finest partition on a validation plateau
+102: that the seeds do not resolve, 
+103: the n-CLU composes held-out pairs and held-out combinations of every factor, with every landscape
+104: control collapsing. 
+110: Against read-path-matched baselines fitted on the n-CLU's own rows, each also trained far beyond
+111: its selected optimiser steps, the n-CLU produces about seven more distinct
+112: valid novel tuples per held-out combination than the strongest, an MLP, and on every rung of an $n$-way ladder
+113: it stays ahead of the strongest baseline fitted on the rung's own rows.
+116: After a value, a conjunction or a random subset of items is deleted, the n-CLU matches an n-CLU that
+117: was never fitted on the deleted rows, and its address book likewise, to floating-point roundoff; the frozen encoder and decoder are outside the
+118: object. Deletion has limits, which we print: the book's retained statistic is 
+119: as large as its fit data and its refit is slower than retraining a baseline; the deletable object is several times 
+120: the earlier design's byte reference in its footprint breakdown; and deleting the conjunction red sphere 
+121: changes what the book knows about the shared value: survivors fall by about six tuples per 
+122: combination, far more than after a random item deletion. 
+127: \TODO{CMAZE-T sentence reserved for the Head: the six-seed symmetric-input condition table
+128: (\S\ref{sec:maze-wm}, Table~\ref{tab:cmazet-sym}) replaces the earlier asymmetric-input sentence; no
+129: number is written here.}
+130: We close with what the naive unit cannot do and with the measured clue toward a
+131: dynamical successor: the n-CLU is exactly the zero-dynamics limit of a settling unit, with
+132: the zero-step arm bit-identical to the static read. 
+133: \end{abstract}
+134: 
+136: \section{Introduction}
+137: \label{sec:intro}
+139: 
+140: \subsection{Positioning among naive units}
+141: \label{sec:positioning}
+142: 
+143: The naive-CLU (n-CLU) is a \emph{naive AI unit}: one model with no system built around it, in the sense
+144: in which an MLP, an LSTM~\citep{hochreiter_long_1997} or a transformer~\citep{vaswani_attention_2023} is a unit. We compare it only with other naive units, an
+145: MLP, an LSTM, a transformer and a continuous-input MLP, matched on the read path
+146: (Sec.~\ref{sec:object}). We do not claim the best compositional-generation system or the best
+147: unlearning system. Systems built on top of units, such as sharded retraining, compositional
+148: diffusion and physics-informed variants of an MLP, are out of scope by definition; each is cited
+149: in one sentence below, with the unit/system distinction stated.
+150: 
+151: Generating held-out combinations of factors is an old and active problem~\citep{du_compositional_2020,avidan_compositional_2022}. The multilinear
+152: line (\citealp{tenenbaum_separating_2000};
+153: TensorFaces~\citep{goos_multilinear_2002}; \citealp{vlasic_face_2005}; MLC-VAE~\citep{georgopoulos_multilinear_2020}) factorises a data tensor organised by every label combination and
+154: renders linearly; the frozen-generator line (GANSpace~\citep{harkonen_ganspace_2020}; TCA~\citep{oldfield_tensor_2021}; PandA~\citep{oldfield_panda_2023}, and its
+155: 2024 journal version~\citep{oldfield_bilinear_2024}) finds editable directions in a pretrained generator without labels and
+156: without an address book. We do not claim either half. In particular we do not claim
+157: multilinear or bilinear factored generation, a request-indexed tensor head, tensor-product
+158: label conditioning, or the downdate primitive, which follows in one line from the summation
+159: form of~\citet{cao_towards_2015} because a covariance is a summation.
+160: 
+161: Unlearning that matches a retrain without the deleted rows is also established, for $k$-means~\citep{ginart_making_2019}, for bilinear
+162: matrix completion~\citep{xu_netflix_2023}, and for ridge heads on frozen backbones~\citep{ceci_exact_2027}, where the most recent work
+163: restricts itself explicitly to ridge regression and excludes principal-component,
+164: eigendecomposition and generative models. The nearest generative attempts are approximate~\citep{kong_approximate_2022}:
+165: feature unlearning for pretrained GANs and VAEs~\citep{moon_feature_2024} unlearns a feature rather than rows and
+166: fine-tunes the generator; data redaction from pretrained GANs~\citep{kong_data_2023} states that redaction is a
+167: different task from deletion; GAN unlearning by substitution~\citep{sun_generative_2025} is approximate by construction.
+168: 
+169: A systematic screen of both literatures records what we could find. A forward-citation
+170: crawl~\citep{priem_openalex_2022} over every title and abstract citing the canonical works of either side screened
+171: about four thousand unique works: those citing the generation-side anchors, those citing the
+172: deletion-side anchors, those from orthogonal queries that cite neither, and those from
+173: a final targeted sweep. 
+174: Deletion language appears in ten of the generation-side works, most of them
+175: false positives and none deleting training rows; no generation-side work combines frozen-decoder,
+176: tensor-head and label-index language; the highest number of the six claim
+177: atoms reached by any single work is four; and of the deletion-side works none combines
+178: principal-subspace, generative and frozen-model language. 
+180: The orthogonal query that asks the question directly, \emph{compositional} $\wedge$
+181: \emph{generative} $\wedge$ a deletion phrase, returns zero works on the screen.
+183: These are the screen's counts, not a claim that no such model exists: abstract-level screening
+184: cannot see a match buried in a method section, and indexing of preprints younger than about
+185: three months is incomplete (Sec.~\ref{sec:limits}).
+186: Three families of systems built on top of units are out of scope, one sentence each.
+187: SISA training~\citep{bourtoule_machine_2021} is a system that makes any unit, a generator included,
+188: unlearnable in this sense by splitting its data into shards and retraining the unit on the shard that
+189: held the deleted rows, which reads that shard's retained data; we compare with the unit it wraps,
+190: whose only route to that match is the retrain of Sec.~\ref{sec:del-comparators}.
+191: Compartmentalized diffusion models~\citep{golatkar_training_2024} are a system that
+192: trains separate diffusion models on separate data sources, composes them at inference and forgets
+193: a source by dropping its model, so what is composed is models of data sources, not held-out
+194: combinations of factor values within one unit.
+196: Physics-informed variants of an MLP, such as physics-informed neural
+197: networks~\citep{raissi_physics-informed_2019} and Hamiltonian neural networks~\citep{greydanus_hamiltonian_2019}, are
+198: systems that add a physical loss or structure to an MLP unit, and the baseline we compare with is the
+199: plain MLP unit.
+201: 
+202: One distinction is ours and worth a sentence. The decremental-PCA line
+203: (\citealp{hall_adding_2002}, and successors~\citep{jin_evd_2014,lee_fast_2021}) subtracts \emph{deflated} eigenspaces; its
+204: authors describe the result as approximating the refit, report that subtraction tends to
+205: instability, and give no rigorous error analysis. Our route matches the refit, for the opposite reason:
+206: \emph{downdate the statistic, not the truncated factors}. The full, untruncated second-moment
+207: statistic is downdated by subtraction and the content is re-eigendecomposed afterwards, so no
+208: truncation error ever enters the subtraction.
+209: 
+210: \subsection{The three properties}
+211: \label{sec:why}
+212: 
+213: A world model~\citep{ha_world_2018,hafner_mastering_2025} is useful to the extent that it can be asked for states and transitions it
+214: has not seen~\citep{valevski_diffusion_2025}, and trusted with the answer. We name three properties and use them throughout.
+215: \textbf{Rule validity}: an output is valid if the task's judge accepts it (on the maze, the engine's judge, which uses
+216: integer arithmetic with no tolerance)~\citep{vafa_evaluating_2024}; approximate similarity to a training item does not count.
+217: \textbf{Composition}: the model produces valid outputs for held-out combinations of factor
+218: values that it has seen only separately~\citep{zhao_toward_2022}. \textbf{Deletion}: after a set of training rows
+219: is deleted, the deletable object matches, to floating-point roundoff, an object that was never fitted
+220: on those rows. The three pull against each other: a lookup table deletes in this sense but composes
+221: nothing it has not written; a learned generator composes but meets this definition only by retraining
+222: (the whole model, or a shard of it~\citep{bourtoule_machine_2021}); and
+223: approximate unlearning~\citep{guo_certified_2023,golatkar_eternal_2020} is approximate by construction and does not meet it (Sec.~\ref{sec:del-comparators}).
+224: The object we study makes the three properties of one n-CLU, and we measure, row by row, where each
+225: holds and where it does not.
+226: 
+227: \subsection{Contributions}
+228: \label{sec:contrib}
+229: 
+230: \begin{enumerate}
+231: \item \textbf{Composition at a stated partition, against data-matched, read-path-matched baselines.} On a
+232:   Shapes3D~\citep{3dshapes18,kim_disentangling_2019} value hold-out at $\Kstar=32$ wells, three scored seeds, with every 
+233:   pre-declared landscape control collapsing, the n-CLU scores above every read-path-matched baseline
+234:   fitted on its own rows, with each baseline's convergence printed beside it: by about seven tuples 
+235:   per held-out factor combination over the strongest, an MLP, and by more over the transformer 
+236:   (Tab.~\ref{tab:t7}, Sec.~\ref{sec:shapes-t7}). On every rung of an $n$-way ladder it 
+237:   scores above the strongest baseline fitted on the rung's own rows 
+238:   (Tab.~\ref{tab:ladder}, Sec.~\ref{sec:ladder}); for $n\ge3$ the rungs are a training-data axis and not a depth axis.
+241: \item \textbf{Deletion on the n-CLU and on its address book, with its limitations printed.} After
+242:   a value, conjunction or item deletion, the n-CLU matches an n-CLU that was never fitted on the deleted
+243:   rows, and the refit address book matches a book never fitted on them; the match is on the n-CLU and
+244:   its address book, and the frozen encoder and decoder are outside the object. We make no general claim
+245:   about composition after deletion: deleting a conjunction measurably changes what the book knows 
+246:   about the value it shares with the survivors (Sec.~\ref{sec:shapes-del}). The deletion reads no
+247:   training row, but the book's retained statistic is nearly a gigabyte, the size of its fit data, and its refit 
+248:   takes longer than retraining a baseline (Tabs.~\ref{tab:del} and~\ref{tab:rivals-del}), so this is neither a size nor a speed claim. Refusal after deletion is a 
+250:   separate, structural mechanism, a hole in a coupling table (Sec.~\ref{sec:hole}).
+251: \item \textbf{The same properties on a maze.} On a colour-maze transition instrument (CMAZE-T) with
+252:   symmetric inputs, six seeds, the n-CLU is ahead of
+253:   the best matched baseline on three seeds, level with it on two and behind on one
+254:   (Tab.~\ref{tab:cmazet-sym}). A colour-relational request coding lifts the n-CLU on every seed, but baselines handed the 
+256:   same columns close most of that gap, so it is an input-representation result, not an n-CLU result
+257:   (Sec.~\ref{sec:maze-wm}). We offer the transition instrument itself as a minor contribution.
+258: \item \textbf{Two ablations and a leaving note.} A composition-only n-CLU composes and cannot
+259:   forget; an item memory forgets and cannot compose (Sec.~\ref{sec:ablations}). The naive unit's
+260:   limitations, its measured zero-dynamics identity and the theory we carry close the paper
+261:   (Secs.~\ref{sec:limits}--\ref{sec:followup}).
+262: \end{enumerate}
+263: 
+264: \noindent\textbf{Thickness, stated in the introduction.} The positive composition claim rests
+265: on one environment (Shapes3D) at three scored seeds; no Shapes3D row can exceed three seeds,
+266: because seeds 3 and 4 have verified caches but no frozen decoder and no external classifier, so no
+267: combination of theirs can be judged. 
+268: The maze transition instrument, under the engine's judge, prints six seeds on its words-plus-observation rows
+269: (Sec.~\ref{sec:maze-wm}). The rows still pending a run are marked placeholders whose text names the row.
+270: 
+272: \section{Methods}
+273: \label{sec:object}
+275: 
+277: \citet{jawahar2026chlu} introduced the CHLU as a latent dynamics model (defined here as an algorithm
+278: that either enforces or extracts the dynamics of the latent space itself to either design or
+279: approximately understand semantic rules created by the encoder that produced this abstract space
+280: such that downstream tasks can be appropriately dealt with or downstream design choices can be
+281: better informed). \citet{jawahar2026chlu} envision their unit (as the name suggests) as a step that
+282: provides a clue towards developing better latent dynamics models. We build on top of this idea and
+283: drop the complex physics design to construct our naive-CLU as a special case of the CHLU and test it
+284: as a factorized memory unit for compositional generation with additional properties such as deletion
+285: as a virtue of the design itself.
+286: 
+287: \paragraph{The n-CLU.} A frozen encoder maps each training item to a latent. The latent
+288: space is cut, without labels, into $K$ wells by a balanced correlation partition; in each well
+289: the n-CLU keeps the leading principal subspace of the fit pool, with the pool mean as the
+290: first atom. No label enters the content. We write $n$ for the number of factors jointly
+291: composed by a request and $K$ for the number of wells, and never write both as $k$.
+292: 
+293: \paragraph{The read.} A request is a tuple of factor values. A tensor-product address book,
+294: fitted on the fit pool, maps the request to per-well coefficients; the read renders
+295: $x_k=U_k c_k$ in each well's orthonormal basis and the frozen decoder renders the image. The
+296: read is request-only: no feature tensor enters it, which is asserted on the deployed object
+297: (bitwise stable under feature perturbation over 64 checks at $\Kstar$).
+299: Labels therefore touch the model only at the address book. This is the interface split:
+300: unsupervised content, a request-indexed head, and a frozen renderer, with no Cartesian-product
+301: training requirement~\citep{wiedemer_compositional_2023,lachapelle_additive_2023,montero_lost_2022}.
+302: 
+303: \paragraph{The memory footprint, never netted.} Every n-CLU row prints four byte counts
+304: separately: (1) the atoms, (2) the covariance and count statistic, (3) the address book, and
+305: (4) the coupling and hole table used for refusal. We never net them into one number, and every
+306: byte figure names its convention (symmetric-triangle float64 for the statistic, unless marked
+307: otherwise). The 524,288-byte figure that recurs below is a \emph{reference} column: the n-CLU
+308: of the earlier composition-only design was pinned there, and read-path-matched baselines carry
+309: about 131,072 float32 parameters at it. 
+310: It is not a limit the deletable object meets.
+311: 
+314: \paragraph{Why a hold-out draw can remove a whole colour relation.} The hold-out removes word
+315: combinations from training at random. On some draws, for some colour, it removes every training
+316: transition in which the pocket and the target tint share that colour, the combination that decides
+317: whether a move is legal. A model that codes colour by identity then has no training evidence for the
+318: held-out transitions of that colour and cannot answer them, however it is trained. A model that is
+319: also given the relation ``pocket colour equals tint colour'' can: the relation is learned from the
+320: other colours, where it is seen, and applies unchanged to the colour whose rows were removed. This is
+321: what the relational columns add (Fig.~\ref{fig:maze-wm}(c)), and it is why every seed is reported
+322: separately.
+324: 
+325: \paragraph{The judge and the estimand.} On Shapes3D an external classifier, hash-pinned per
+326: seed, judges each rendered image; the metric is the number of \emph{distinct valid novel
+327: factor tuples per held-out combination}, a count, with a fixed ceiling for pair and for six-factor
+328: combinations (Tab.~\ref{tab:t7}). The estimand is paired over combinations with a margin of 1.0 tuple per held-out combination declared
+329: before any number. 
+331: Where an experiment declared its success and falsification criteria before its first
+332: number, we refer to each as a \emph{declared criterion}, labelled as in that
+333: declaration (for example, criterion S1 or criterion S2).
+334: Seed count is a column of every table.
+335: 
+336: \paragraph{The retained statistic and deletion.} Beside the content the n-CLU keeps, per
+337: well, the running covariance, mean and count of the fit rows. Deleting rows subtracts their
+338: contribution from the statistic, and the atoms are re-eigendecomposed from the downdated
+339: statistic. The address book keeps its own retained statistic, per request tuple the count and first
+340: moment of its fit rows; deleting rows downdates it, and the book is refit from it. Neither step
+341: reads a training row, but the book's statistic is as large as its fit data
+342: (Sec.~\ref{sec:shapes-del}). We use one definition of deletion throughout, and state its scope
+343: before any table:
+344: 
+345: \begin{quote}\small
+346: \textsc{The match is on the n-CLU and its address book; the frozen encoder and decoder are outside
+347: the object.} After deleting a set of rows, the n-CLU matches an n-CLU that was never fitted on the
+348: deleted rows, and the address book likewise: content and book equal, to float roundoff, those fitted
+349: from the retained rows alone. Neither frozen network is refit at any point. It is
+350: not retrain-equivalence of the generative model, it is not a claim that the renderer forgets, and it
+351: is not a claim that the answers on the surviving requests are unchanged.
+353: \end{quote}
+354: 
+355: \noindent The frozen encoder and decoder are declared outside the deletable object: they are
+356: frozen, so no deletion touches their weights, which may have been fitted with the deleted rows
+357: present.
+359: The scoping sentence we carry is the one our deletion theory states for its own n-CLU: this is
+360: an n-CLU-level guarantee only; the frozen encoder and any residue of past writes in a learned
+361: landscape are separate channels, measured separately; we do not claim certified
+362: $(\varepsilon,\delta)$ unlearning~\citep{guo_certified_2023}. 
+363: 
+365: \section{Experiments}
+366: \label{sec:experiments}
+368: 
+374: \figslot{fig_task_shapes}{\textbf{The Shapes3D task.} (a) The six factors (floor hue, wall hue,
+375: object hue, scale, shape, orientation), each row varying one factor of real dataset images with the
+376: other five held at the request's values. (b) A request is a tuple of factor values; the answer is an
+377: image rendered by the one frozen decoder, and the judge is the hash-pinned external classifier,
+378: which must read back all six factors. The image shown is the frozen decoder on the encoder's own
+379: feature of that row: it shows the answer format, not any arm's output. (c) The two-way hold-out on
+380: object hue $\times$ shape: grey cells have rows in the scored fit pool; the outlined cells are pair
+381: combinations, whose values are each seen but never together; the hatched value (the held-out object hue
+382: and the cube) is absent from the fit pool altogether. (d) A six-factor combination is absent from the fit
+383: pool although every two-factor projection of it is present (top, left); only the joint slice (bottom)
+384: shows the hole. No score of any arm appears in this figure.}{fig:task-shapes}
+387: \figslot{fig_task_cmazet}{\textbf{The CMAZE-T task.} (a) One generated maze, drawn by the engine:
+388: walls, floor tinted in one of four colours (each mark carries its colour's digit), keys (diamonds),
+389: closed and opened doors, the goal (a cross), and the agent: a black disc whose centre shows the key in
+390: its pocket, white when the pocket is empty (it holds at most one key). Every maze cell is drawn by the
+391: renderer of the result panels (Figs.~\ref{fig:cmazet-families}--\ref{fig:cmazet-door-tint}), so
+392: the symbols here are the symbols there.
+393: Rule A: a door of colour $c$ needs key $c$ and consumes it. Rule B: floor tinted $c$ is forbidden
+394: while holding key $c$. Rule A is applied before rule B. (b)--(d) One transition each: the request is
+395: five words (\texttt{w\_agent}, \texttt{w\_key}, \texttt{w\_door}, \texttt{w\_tint}, \texttt{w\_dir})
+396: and the answer is four facts (\texttt{legal}, \texttt{disp}, \texttt{event}, \texttt{pocket}),
+397: computed by the engine and checked against an independent stepper. (b) A legal move onto floor of
+398: another tint. (c) An illegal move under rule B: the agent does not move, so after equals before and
+399: the verdict is carried by the mark and by \texttt{legal}~$=0$. (d) The same pocket and tint as (c) with a closed door of the
+400: pocket's colour: the door consumes the key first, so the move is legal. Panels (c) and (d) differ
+401: only in the door, which is the pocket $\times$ door $\times$ tint interaction held out on this
+402: instrument. No score of any arm appears in this figure.}{fig:task-cmazet}
+404: 
+405: \subsection{The Shapes3D value hold-out}
+406: \label{sec:shapes}
+407: 
+408: The deletable object is the \emph{single design}: the n-CLU, read and memory footprint of
+409: Sec.~\ref{sec:object} on the Shapes3D value hold-out~\citep{montero2021role,schott_visual_2022}, with the partition fixed on validation
+410: by a rule frozen before the sweep, $\Kstar=\max\{K : v(5)-\text{mean}_{\text{seeds}}\,v(K)\le
+411: 0.02\}$, over $K\in\{5,8,10,12,16,20,24,28,32\}$. Every swept $K$ satisfied the rule, so
+412: $\Kstar=32$, the finest partition swept; the sweep range was not extended to manufacture a
+413: crossover. 
+414: That is the frozen rule's selection; on three seeds, however, the rule cannot separate the plateau
+415: $K=5\ldots32$: the seed standard deviation of validation composition exceeds the rule's 0.02
+416: tolerance at $K=10$, 16, 20, 24 and 28 (0.0211, 0.0203, 0.0285, 0.0235, 0.0276) and at $\Kstar=32$ 
+417: (0.0259), so three seeds do not distinguish $\Kstar$ from its neighbours. 
+418: The finding is the plateau itself: composition is flat across $K$ to within its seed spread, while
+419: the honest four-part footprint falls to its minimum near $K=24$, 2,094,130 / 2,080,090 / 2,085,810 B 
+420: on seeds 0 / 1 / 2, a minimum that is resolvable (seed band 7,060 B against neighbour gaps of 
+421: 12,203 B and 30,507 B; App.~\ref{app:kcurve}, Tab.~\ref{tab:kcurve3}). 
+422: The main text carries this one $K$. The $K=5$ endpoint of the sweep is reported in
+423: App.~\ref{app:k5}, labelled as the endpoint, with its sign stated as a property of $K=5$.
+424: 
+425: \subsection{Baselines and the matching rule}
+426: 
+427: \paragraph{Baselines: naive against naive.} Learned baselines (MLP, LSTM~\citep{hochreiter_long_1997}, transformer~\citep{vaswani_attention_2023}, and a
+428: continuous-input MLP) are matched to the n-CLU's \emph{read path}, and fitted from the same
+429: frozen features. At $\Kstar$ the fitted baselines carry the parameter counts of Tab.~\ref{tab:t7}.
+432: The memory footprint is not a read-path parameter; it is printed, never matched~\citep{borgeaud_improving_2022,khandelwal_generalization_2020,lample_large_2019}. A lookup table
+433: of written items is a printed \emph{floor}, never a baseline. Four controls, which we call the \emph{pre-declared
+434: landscape controls} throughout, \emph{landscape removed} (atoms zeroed), \emph{landscape shuffled} (atom values permuted within each well), \emph{shuffled across wells}
+435: (well blocks dealt to other wells) and \emph{random atoms} (random atoms in place of the fitted ones), must collapse before any
+436: row is claimed for the n-CLU; if they do not, the row is an interface row or nothing.
+437: 
+438: \paragraph{A second, earlier baseline set.} The ladder (Sec.~\ref{sec:ladder}) also prints an earlier set
+439: of read-path-matched baselines, fitted on a smaller combination-split pool, 
+440: with one schedule, the same for 
+441: every family and seed (Tab.~\ref{tab:ladder}). 
+443: The combination-split pool holds out combinations but no factor value, so that set was fitted on
+444: rows carrying the held-out \texttt{object\_hue} and shape values that the value hold-out n-CLU never
+445: saw; its own record states that such a comparison is not like-for-like and flatters whichever arm
+446: saw more, here the baseline. It is printed beside the data-matched set, never in its place.
+448: 
+449: \subsection{The $n$-way ladder protocol}
+450: 
+451: The ladder asks whether the n-CLU keeps composing as more factors are pinned jointly. A rung
+452: $n$ holds out combinations in which $n$ factors are jointly pinned to held-out values; $n=2$ and
+453: $n=6$ are the two ends. Tab.~\ref{tab:ladder} gives the n-CLU at $\Kstar$ on every rung and
+454: seed beside two read-path-matched baseline sets on the same combinations: the data-matched set, all four
+455: families refit on each rung's own pool, and the earlier set, whose features 
+456: are a function of the request alone, so that its scores do not depend on the rung's fit pool and on
+457: rungs $n\ge3$ are exactly constant by construction. 
+458: The landscape controls at $\Kstar$ collapse on every rung--seed leg by the pre-declared margin;
+459: two legs keep a single surviving novel tuple on
+460: landscape shuffled (Tab.~\ref{tab:ladder}), which we print
+461: rather than round away. 
+463: 
+464: \subsection{The deletion protocol}
+465: 
+466: Three deletions are run on the $\Kstar$ object on TEST, on its fit pool (Tab.~\ref{tab:del}), at three 
+468: seeds. \emph{Value}: every fit row carrying red. \emph{Conjunction}: every fit row carrying red
+469: \emph{and} sphere; we call it the red sphere everywhere. The conjunction first named in the design,
+470: red $\wedge$ cube, deletes no rows, because cube is the shape held out of the split entirely; it is
+471: printed as vacuous and never as a deletion result. \emph{Item}: a random 1\% of fit rows, which is
+472: also the control for refit instability. \emph{Forgetting $c$} is three operations on one object:
+473: downdate the n-CLU's content; downdate the address book's statistic and refit the book from it; and punch the
+474: hole for $c$ (Sec.~\ref{sec:hole}). Every deletion row therefore prints four measurements
+475: (Tab.~\ref{tab:del}): (a) the n-CLU's content equals the content refit without the rows, a result; (b) the book
+476: equals the book refit without the rows, a result; (c) requests for $c$ are refused through the hole,
+477: a display row only, because the hole is a flag and symbolic refusal is not claimed; and (d)
+478: composition on the surviving combinations before and after, a result, with the check that the downdated
+479: object and the object refit without the rows compose identically.
+480: 
+481: \subsection{The CMAZE-T transition task}
+482: \label{sec:maze}
+483: 
+484: This section asks the n-CLU to \emph{generate} a world model's transitions on a colour maze, under
+485: the engine's judge. Baselines are matched on read floats, the landscape controls and the blind columns
+486: are printed, and every row prints its seed count (Tabs.~\ref{tab:cmazet} and~\ref{tab:cmazet-sym},
+487: App.~\ref{app:mazewm}).
+489: 
+490: \paragraph{CMAZE-T, a minor contribution: a small world-model task for composition.} We offer the
+491: transition instrument to researchers working on composition, as a small task and not as a benchmark.
+492: Given a colour-maze state and a move, an arm generates the next state; the answer is four facts
+493: (legality, displacement, event, pocket) and the engine's judge scores it with no tolerance
+494: (Fig.~\ref{fig:task-cmazet}). Test mazes are generated at random, so a lookup of training mazes
+495: cannot transfer, and the cross-maze lookup floors are printed. The request is five words; the
+496: held-out families are a never-trained value, unseen two-way word pairs and unseen $n$-way word
+497: combinations; the judge accepts or refuses validity; learned blind arms that drop the interaction
+498: terms or the colour identity are printed as falsifiers. The task is small, its results differ widely from seed to seed, and it has one engine; those are
+499: reasons to report it per seed, not to rank systems on it.
+500: 
+502: \section{Results}
+503: \label{sec:results}
+505: 
+506: \subsection{Composition on Shapes3D}
+507: \label{sec:shapes-t7}
+508: 
+509: Tab.~\ref{tab:t7} is the scored result. Row 3 holds out 60 pair combinations and row 4 holds out
+510: 49 six-factor combinations; the arm is compared with each baseline on all 109 combinations with the combination
+511: as the unit. 
+512: The control check is applied before any margin, and was measured, not assumed, on every seed:
+513: all four landscape controls read exactly 0.000 on both rows on all three seeds, with the
+514: across-wells control a derangement. 
+516: Every baseline is read-path matched (130,433 to 131,891 parameters) and fitted on the n-CLU's exact
+517: 131,072-row pool by one protocol: six short learning-rate and weight-decay trials and two epoch
+518: counts, selected on a fixed 10\% held-out split, then refit on all rows. Every family selected the
+519: largest learning rate and the longer epoch count of the grids, 20,480 optimiser steps, so every
+520: family is also fitted at ten times those steps, and the ten-times fit carries the family wherever
+521: it gained more than one tuple per held-out combination (the MLP at seeds 0 and 1, the continuous MLP at every
+522: seed). Against the strongest baseline, the MLP at ten times its steps, the n-CLU leads by +7.486 /
+523: +8.596 / +5.018 (mean +7.034), every 95\% interval above +3.73, winning 76 / 84 / 69 of the 109
+524: combinations and losing 22 / 16 / 13. The MLP had not stopped improving at seed 0: thirty times its steps
+525: add +1.47, and against that baseline's best fit of any length the margin is +6.018 / +8.596 / +5.018
+526: (mean +6.544). The n-CLU leads the LSTM by +8.422 to +15.046, the continuous MLP by +6.523 to +18.963
+527: and the transformer by +10.468 to +21.936. Because every family selected the edge of both search
+528: grids, the baseline search space may still be truncated; the ten-times column is the instrument we
+529: have for that, and the grids were not widened after the fact.
+531: 
+532: \begin{table}[t]
+533: \centering\small
+536: \caption{\textbf{Composition at $\Kstar=32$ against data-matched baselines, Shapes3D value hold-out, TEST, $n=3$
+537: seeds (0, 1, 2).} Distinct valid novel tuples per held-out combination (ceiling 36 on row 3, 72 on row 4). The n-CLU 
+538: and every baseline are fitted on the same 131,072 rows; baselines are matched on read-path parameters 
+539: (130,433 to 131,891) and each family is printed at its selected schedule and at ten times it 
+540: (optimiser steps in brackets); $\ast$ marks the fit each paired $\Delta$ is taken against: the
+541: selected schedule where ten times the steps moved the family by at most one tuple per held-out combination,
+542: otherwise, and for the MLP on every seed, ten times the steps. ``Paired $\Delta$'' is the n-CLU minus
+543: that fit over all 109 combinations. The table is a floor, never a baseline. LACE~\citep{nie_controllable_2021} and PoE~\citep{hinton_training_2002} are in 
+544: Tab.~\ref{tab:lace-poe}. The n-CLU's row-3 and row-4 means are 32.350~$\pm$~0.815 and 67.177~$\pm$~1.320 
+545: ($\pm$ the sample standard deviation over the three seeds).}
+546: \label{tab:t7}
+547: \setlength{\tabcolsep}{3pt}
+548: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccccc}
+549: \toprule
+552: \midrule
+566: \midrule
+569: \bottomrule
+570: \end{tabular}\end{adjustbox}
+571: \end{table}
+574: 
+575: \noindent Baselines are matched on the read path (Tab.~\ref{tab:t7}); the deletable object
+576: itself is larger, and its memory footprint (Tab.~\ref{tab:ledger-kstar}) is printed, never
+577: matched. Baseline pins, geometry and the stress comparison are in App.~\ref{app:t7more}.
+580: 
+586: \paragraph{What the counts look like.} Figs.~\ref{fig:shapes-per-model} and~\ref{fig:shapes-baseline-wins}
+587: show single held-out requests from Tab.~\ref{tab:t7} as images, at seed 0 and $\Kstar=32$, against the 
+588: four data-matched baselines of that table (MLP and continuous MLP at $10\times$ training steps, LSTM and
+589: Transformer at their selected schedule, all fitted on the same rows) and the lookup table as the 
+590: floor. Every model's output on a request is drawn through the same frozen decoder, and each panel
+591: carries the judge's verdict on that image. Over all held-out requests at seed 0 the judge marks 
+592: the n-CLU valid on about nine in ten, more often than any baseline, and the lookup table 
+593: least often (Fig.~\ref{fig:shapes-per-model}). 
+594: Where the n-CLU is invalid, the image is almost always wrong in one factor only 
+595: (most often the scale or the orientation, less often the shape). 
+596: Requests on which a baseline succeeds and the n-CLU fails exist for every baseline 
+597: and are not confined to the capsule 
+598: (Fig.~\ref{fig:shapes-baseline-wins}). 
+600: The rows of both figures are drawn by a fixed-seed rule, stated in the captions, never by appearance.
+601: 
+602: \begin{figure}[p]\centering
+603: \includegraphics[width=0.9\linewidth]{figures/rendered/rc_pw1_shapes_per_model.pdf}
+604: \caption{\textbf{Each model succeeding and failing on held-out combinations (Shapes3D, seed 0, 
+605: $\Kstar=32$).} Columns: the n-CLU, the four data-matched baselines of Tab.~\ref{tab:t7} (MLP and 
+606: continuous MLP at $10\times$ training steps, LSTM and Transformer at their selected schedule) and the
+607: lookup table as the floor. For each model (bar at left) one held-out request it renders validly
+608: (success) and one it renders invalidly (failure); the framed panel is the model the row was drawn for.
+609: Every model's image on every request comes from the same frozen decoder, and the mark is the judge's
+610: verdict on that image ($\checkmark$ valid, $\times$ invalid). The requested values are printed left of
+611: each row (hues as fractions of the hue circle, scale, orientation in degrees); a request either holds out
+612: the object hue $\times$ shape pair or all six factors jointly. \emph{Selection:} a fixed-seed draw
+613: (seed 20260925) among all qualifying held-out requests, under a diversity rule: the target shape is 
+614: cycled over the rows so the capsule is never drawn more often than any other shape, and among requests
+615: of the target shape the draw prefers object, floor and wall hues not yet shown. The judge's six read-back
+616: values for every panel are listed in the supplementary material. Of the 5,688 held-out requests at seed 0 the 
+617: judge marks valid: n-CLU 5,177, MLP 4,361, LSTM 3,703, Transformer 2,786, continuous MLP 3,110, lookup table 897. 
+618: Of the n-CLU's 511 invalid renders, 497 are wrong in one factor only: scale 329, orientation 125, shape 71.} 
+619: \label{fig:shapes-per-model}
+620: \end{figure}
+621: 
+622: \begin{figure}[t]\centering
+623: \includegraphics[width=\linewidth]{figures/rendered/rc_pw1_shapes_baseline_wins.pdf}
+624: \caption{\textbf{Held-out requests on which a baseline succeeds and the n-CLU fails (seed 0).} Such
+625: requests exist for every baseline: of the 5,688 held-out requests, the MLP is valid and the n-CLU 
+626: invalid on 200, the LSTM on 197, the Transformer on 110 and the continuous MLP on 167 (310 requests have 
+627: at least one such baseline; at seeds 1 and 2 there are 332 and 239). They are not all capsules: of the 
+628: 310 at seed 0, 170 are capsules, 100 cylinders and 40 spheres. One request per baseline is shown; the 
+629: n-CLU's panel and the baseline's panel are framed. Same frozen decoder, judge marks, layout and
+630: fixed-seed diversity rule (seed 20260925) as Fig.~\ref{fig:shapes-per-model}.} 
+631: \label{fig:shapes-baseline-wins}
+632: \end{figure}
+633: 
+634: \begin{table}[t]
+635: \centering\small
+636: \caption{\textbf{The footprint breakdown of the $\Kstar=32$ object, per seed, never netted.}
+637: Covariance counted under the symmetric-triangle float64 convention. Parts 1, 2 and 4 are
+638: arithmetic on the partition shape and are constant across seeds; only the address book varies.
+639: The 524,288-byte figure is a reference column, not a limit the object met.}
+640: \label{tab:ledger-kstar}
+641: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccc}
+642: \toprule
+644: \midrule
+653: \bottomrule
+654: \end{tabular}\end{adjustbox}
+655: \end{table}
+656: 
+657: \subsection{The $n$-way ladder}
+658: \label{sec:ladder}
+659: 
+660: \begin{table}[t]
+661: \centering\small
+662: \caption{\textbf{The ladder at $\Kstar=32$, $n=3$ seeds, distinct valid novel tuples per 
+663: combination, per seed (0 / 1 / 2).} n-CLU rows from the $\Kstar$ replication (a free replication that
+664: used no test run; every row held out). \emph{Data-matched set}: the four read-path-matched families 
+665: refit on each rung's own 131,072-row pool at the selected schedule (20,480 optimiser steps) and, for 
+666: the MLP and the continuous MLP, at ten times it (204,800); the margin row is the n-CLU minus the 
+667: strongest of them, paired per held-out combination. \emph{Earlier set}: fitted on 32,256 rows of a 
+668: combination-split pool that carries the held-out values (Sec.~\ref{sec:shapes-t7}), at 5,040 optimiser 
+669: steps; a baseline of that set does not depend on the rung. \emph{n-CLU-content set}: the same four
+670: families fitted on the rung's first 32,768 rows, exactly the n-CLU's content rows, at the selected 
+671: schedule (5,120 steps) and at ten times it (51,200); its margin row is the n-CLU minus the strongest 
+672: of its selected and ten-times fits, and a second margin row takes the strongest fit step-matched to the
+673: data-matched set (20,480 steps for the LSTM and the transformer, 204,800 for the MLP and the 
+674: continuous MLP), both paired per held-out combination. Every header names its pool and its steps. LACE
+675: and PoE are in Tab.~\ref{tab:lace-poe}. $n=2$: 60 combinations; $n\ge3$: the identical 
+676: 120 combinations (see the inference note). \emph{Inference note:} for $n\ge3$ the rungs differ in 
+677: fit-pool coverage, not in composition depth. \emph{Notes.} Earlier set: 117,878 to 119,858 parameters, 
+678: 40 epochs at batch 256 and learning rate 0.003, the same for every family and seed. 
+679: Landscape controls at $\Kstar$: 0.0000 on 13 of the 15 rung--seed legs; landscape shuffled reads 0.0083 
+680: (one novel tuple over 120 combinations) at $n=3$, seeds 0 and 1. 
+681: Rungs $n=3$--6 probe the same 8,640 rows; $n=2$ probes 60 combinations of 36 rows, $n\ge3$ 120 of 72, disjoint sets. 
+682: Held-out row count at $n=3,4,5,6$: 300,000 / 235,200 / 213,600 / 200,640; every arm fitted on the rung's own 
+683: pool tracks it at $r=-0.96$ to $-0.98$. 
+684: Data-matched margins: lowest 95\% lower bound +2.46 ($n=3$, seed 2); a ten-times spot check moves the LSTM 
+685: from 20.55 to 21.85 at $n=2$, seed 0 (not carried). 
+686: n-CLU-content margins: mean over rungs +10.28 (+10.75 step-matched), against +9.97 for the data-matched set 
+687: and +17.53 for the earlier set; lowest 95\% lower bound +1.98 ($n=2$, seed 2, against the step-matched MLP). 
+688: Two MLP fits with the same rows, width, schedule and 2,560 steps, differing only in the random draw, differ per seed 
+689: by $-2.15$ to $+4.13$; their per-combination interval excludes zero on 12 of 15 rung--seed legs. 
+690: Coverage control (Sec.~\ref{sec:ladder}): on validation (60 combinations of 24 rows, 3 seeds) $n=6$ at $n=3$'s 
+691: coverage reads 22.767 (21.767 / 23.050 / 23.483), equal to $n=3$, against $n=6$'s 23.478 (22.967 / 23.617 / 23.850), 
+692: a rise of +1.200 / +0.567 / +0.367, coverage share 1.00 on every seed, mask channel 0.000; the TEST identity 
+693: check reads acceptance 1.000000 under either rung's bitmap and \texttt{distinct\_valid} $=$ \texttt{distinct\_valid\_novel} 
+694: in 3,600 of 3,600 published TEST rows, on the identical 8,640 combination rows.} 
+695: \label{tab:ladder}
+696: \setlength{\tabcolsep}{2.6pt}
+697: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccccc}
+698: \toprule
+700: \midrule
+706: \midrule
+707: \multicolumn{7}{l}{\emph{data-matched set: each rung's own 131,072 rows; 20,480 steps, and 204,800 for the MLP and the continuous MLP}} \\ 
+718: \midrule
+719: \multicolumn{7}{l}{\emph{earlier set: 32,256 rows of the combination-split pool; 5,040 steps}} \\ 
+727: \midrule
+728: \multicolumn{7}{l}{\emph{n-CLU-content set: the rung's first 32,768 rows, exactly the n-CLU's content rows; 5,120 steps, ten times 51,200}} \\ 
+743: \bottomrule
+744: \end{tabular}\end{adjustbox}
+745: \end{table}
+746: 
+747: \paragraph{The inference note, verbatim in substance.} \emph{We beat the naive fair baselines at
+748: every $n$; the n-CLU's own rise from 2-way to 6-way is not to be inferred, because rungs 3--6
+749: probe the same combinations and differ in fit-pool coverage, not composition depth.} Concretely,
+750: rungs $n=3,4,5,6$ probe the identical combinations and rows; what varies is how
+751: coarsely the hold-out is carved, and with it the held-out row count. Every arm fitted on the rung's own pool tracks that count closely,
+752: inversely, and every arm not fitted on it is exactly constant (Tab.~\ref{tab:ladder}).
+754: Only $n=2$ against $n=6$ is a genuine change of probe, on disjoint sets of combinations
+755: (Tab.~\ref{tab:ladder}). 
+757: On every rung and every seed the n-CLU's score in Tab.~\ref{tab:ladder} exceeds every baseline's
+758: printed score. Paired per held-out combination against the strongest data-matched baseline, the n-CLU's 95\% 
+759: bootstrap interval~\citep{efron_bootstrap_1979} lies above zero on every rung and seed
+760: (Tab.~\ref{tab:ladder}). Two caveats travel with 
+761: the baseline rows. The data-matched set is not proven converged everywhere: a ten-times spot check 
+762: moves the LSTM by about one tuple at one rung and seed (Tab.~\ref{tab:ladder}), printed and not carried. The earlier set's 
+764: transformer and LSTM were fitted before a later dtype repair of the
+765: token families and were not re-fitted on the ladder's rungs. Nothing in this table is a
+766: composition-depth result.
+768: The n-CLU-content set asks whether the data-matched set's rows, four times the n-CLU's
+769: content rows, favour the baselines. They do not: fitted on exactly the n-CLU's content rows, 
+770: the baselines leave the margin where the data-matched set left it 
+771: (Tab.~\ref{tab:ladder}), 
+772: and every 95\% interval of the n-CLU-content 
+773: margins lies above zero. 
+774: The MLP is the strongest n-CLU-content baseline on every rung and seed and is flat from its ten-times fit to its 
+775: step-matched fit; the continuous MLP is still gaining at its step-matched fit and never becomes the strongest 
+776: baseline. One more caveat bears on every single-fit baseline number in this paper: two MLP fits with the
+777: same rows, width and schedule, differing only in the random draw, differ per seed by 
+778: up to about four novel tuples per held-out combination, and their per-combination interval excludes zero on most 
+779: rung--seed legs (Tab.~\ref{tab:ladder}). Family differences smaller than that on a single seed are not read as real.
+781: 
+782: \paragraph{The coverage control.} A direct test of the inference note refits $n=6$ with the
+783: fit pool restricted to $n=3$'s train index, holding depth at 6 and coverage at $n=3$'s.
+784: \textbf{Result.} For $n\ge3$ the ladder's rise is fit-pool
+785: coverage, and by construction it can only be coverage: rungs 3--6 probe the identical combinations (Tab.~\ref{tab:ladder}), 
+787: so $n=6$ refitted on $n=3$'s fit pool \emph{is} rung $n=3$. Its TEST cell is therefore
+788: \emph{derived, not measured}: it is the $n=3$ n-CLU cell of Tab.~\ref{tab:ladder}, and no new
+789: number is measured for it. 
+790: On TEST, $n=6$ at $n=3$'s coverage is therefore the $n=3$ cell of Tab.~\ref{tab:ladder}: 
+791: the whole $n=3\to6$ rise, nearly five tuples per held-out combination, is fit-pool coverage and 
+792: none of it is depth; the coverage share is 1 by construction. That TEST cell is \emph{derived, not
+793: measured} (a new TEST configuration would be a new test run, and the \texttt{composition} target is
+794: declared exhausted); the identity behind it was checked on the instrument: the same pool draw,
+795: full acceptance under either rung's bitmap, \texttt{distinct\_valid} equal to 
+796: \texttt{distinct\_valid\_novel} in every published TEST row, and the identical 
+797: combination rows. Validation, the one measured leg, measures it 
+798: directly: $n=6$ at $n=3$'s coverage equals $n=3$ to every printed decimal on every seed 
+799: (Tab.~\ref{tab:ladder}, caption); the coverage 
+800: share of the rise is complete on every seed and the mask channel contributes nothing. The rise itself 
+801: is below the pre-declared margin on two of three seeds, so the 
+802: declared validation verdict is \textsc{no rise to decompose on val}, and we report it as
+803: that; validation sits near its ceiling. The inference note travels with 
+805: Tab.~\ref{tab:ladder}: \emph{``We beat the naive fair baselines at every $n$; the n-CLU's own 2-way
+806: $\to$ 6-way rise is not to be inferred, because rungs 3--6 share combinations and differ in coverage.''}
+808: 
+811: \figslot{fig_ladder}{\textbf{The ladder at $\Kstar$ against data-matched baselines, 3 seeds.} Distinct
+812: valid novel tuples per held-out combination against $n$, the number of factors jointly held out. The
+813: n-CLU and the four baselines (MLP, LSTM, Transformer, Continuous MLP) are fitted on each rung's own
+814: 131,072-row pool, the same rows for every model. Each baseline is drawn, per seed, at the fit carried 
+815: by the convergence check: 20,480 optimiser steps, or $10\times$ training steps (204,800) where the 
+816: 20,480-step fit had not converged (filled markers). Open markers are the seeds (0, 1, 2); the line is 
+817: their mean. The lookup table is the floor. For $n\ge3$ the rungs probe the same 120 held-out 
+818: combinations, so the horizontal axis is a fit-pool coverage axis, not a depth axis
+819: (Tab.~\ref{tab:ladder}).}{fig:ladder}
+820: 
+824: 
+825: \subsection{Deletion on Shapes3D}
+826: \label{sec:shapes-del}
+827: 
+828: \begin{table}[t]
+829: \centering\small
+830: \caption{\textbf{Deletion on the single design, the four measurements, $\Kstar=32$, rows 3--4, TEST, fit 
+831: pool 131,072 rows, one row per seed ($n=1$ each).} Forgetting $c$ is: downdate the n-CLU's content, downdate 
+832: the address book's statistic and refit the book from it, punch the hole. \textbf{(a) A result}: the
+833: n-CLU content's largest absolute mode deviation from the content refit without the rows. \textbf{(b) A
+834: result}: the book's statistic (per-tuple count and first moment) against that of the rows kept, and
+835: the relative deviation of the rendered features of the refit book from the book refit without the
+836: rows. \textbf{(c) A display, never a result}: refusal through the hole. \textbf{(d) A result}:
+837: composition on the surviving combinations, before $\to$ after, with the paired change, and the downdated
+838: object minus the object refit without the rows. \emph{Notes.} The book's statistic is the per-row first moment 
+839: of its 117,964 fit rows. At seed 0 the red-sphere loss falls on the 20 combinations that request red with 
+840: another shape ($-32.1$ each); the 36 that request a sphere in another colour move by $-1.47$ and the other 53 
+841: by $+0.51$. Probe (Sec.~\ref{sec:shapes-del}): without the address-book carry the read moves 0.610083 relative 
+842: RMS on the 720 red-requesting requests and 0.614277 on the 4,968 others; with it, \sci{6.194}{-08} and 
+843: \sci{6.163}{-08}; the carry rewrites 1,015,808 of the address book's 1,060,864 bytes and reads 0 data rows. 
+844: At $K=5$ (rank/width 0.156) the red deletion's $\cos_{\min}$ is 0.1999, against 0.9976 for a size-matched 
+845: random deletion.}
+846: \label{tab:del}
+847: \setlength{\tabcolsep}{2.6pt}
+848: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccccccc}
+849: \toprule
+852: \midrule
+865: \midrule
+866: \multicolumn{8}{l}{\textbf{(c) requests for $c$ refused through the hole}: a \textsc{display} row, never a result; the hole is a flag} \\
+872: \midrule
+873: \multicolumn{8}{l}{\textbf{cost}, seconds per seed (0 / 1 / 2)} \\
+879: \bottomrule
+880: \end{tabular}\end{adjustbox}
+881: \end{table}
+882: 
+884: \noindent After deletion the n-CLU matches an n-CLU that was never fitted on the deleted rows, and its address
+885: book matches a book refit without them: over every scope and seed the content's largest mode
+886: deviation and the relative deviation of the book's rendered features are at floating-point roundoff, and the book's statistic does not deviate
+887: at all (Tab.~\ref{tab:del}); the frozen encoder and decoder are outside the object. Check (d)
+888: holds as well: the downdated object and the object refit without the rows compose identically on every
+889: combination of every leg.
+892:  The deletion reads no training row: the n-CLU's downdate reads no data rows, and the 
+893: book's refit reads no pool row but reads its retained statistic, nearly a gigabyte (Tab.~\ref{tab:del}). The book sees 
+894: data only through per-tuple aggregates and every Shapes3D tuple is one row, so its statistic is the
+895: per-row first moment of its fit rows, the fit data itself; and its refit (Tab.~\ref{tab:del}) takes 
+896: about as long as refitting the book without the rows. ``Reads no training row'' is 
+898: therefore true of this object and is not a claim about size or speed.
+899: 
+900: \paragraph{Deleting a conjunction changes what the book knows about the shared value.} This is a
+901: measured limitation of the unit. Deleting the red sphere lowers composition on the surviving combinations
+902: by about six tuples per held-out combination, on all three seeds (Tab.~\ref{tab:del}). At seed 0 the loss is concentrated where 
+903: the deleted rows tied red to a shape: the combinations that request red with another shape fall by 
+904: about thirty each, those that request a sphere in another colour by about one, and the others barely move 
+905: (Tab.~\ref{tab:del}, caption). The same pipeline deleting a random 1\% of items moves the survivors by at most about a tenth of a tuple, 
+906: so the loss is the deleted content, not instability of the refit; and since the 
+908: downdated object equals the object refit without the rows on every combination, the loss is what a book
+909: fitted without the red sphere's rows no longer knows about red. An earlier protocol that carried the
+910: book across the basis change instead of refitting it left the survivors unchanged, because it did
+911: not delete from the book at all. A value deletion moves the survivors 
+912: by less than the declared one-tuple margin (Tab.~\ref{tab:del}). 
+914: 
+915: \paragraph{The probe that bounds the claim.} That the match holds on the n-CLU and its address book,
+916: and not beyond, is measurable, not only definitional.
+917: The n-CLU has changed: without the address-book carry, the read moves by about 0.6 relative RMS on
+918: the requests that ask for red; but it moves as much on the requests that do not ask
+919: for red, so the basis change is generic, not targeted. With the carry the read moves
+920: only at roundoff. The carry rewrites nearly all of the
+921: address book's bytes and touches no data rows. 
+922: At $\Kstar$ the value identity
+923: lives in the address book, which the carry rotates and does not refit; this is why the deletion
+924: now also downdates the address book's statistics (measurement (b) of Tab.~\ref{tab:del}). The trade-off moved
+925: rather than vanished: at $K=5$ the same red deletion was concentrated,
+926: with a far lower minimum cosine than a size-matched random deletion of the same number of
+927: rows (Tab.~\ref{tab:del}, caption). 
+929: The targeting of a deletion is a function of rank/width, and it disappears where the memory footprint
+930: is smallest. This is why refusal needs its own mechanism (Sec.~\ref{sec:hole}).
+931: 
+932: \subsection{Deletion against retrained baselines}
+933: \label{sec:del-comparators}
+934: 
+935: A learned baseline's only route to a model never fitted on the rows is to retrain from scratch without them. We ran
+936: that route for every data-matched baseline family on the same deleted rows of the same 
+937: pool, at the baseline's selected schedule, three seeds (Tabs.~\ref{tab:rivals-del}
+938: and~\ref{tab:rivals-del-seeds}, App.~\ref{app:delbase}), which print each retrain's rows read 
+939: and time. After the value and item deletions the n-CLU stays ahead of every 
+940: retrained baseline on every seed, with every 95\% interval above 
+941: zero. After the red-sphere deletion it is ahead on the mean at every seed, but its interval crosses
+942: zero against the MLP at seeds 1 and 2 and against the LSTM at seed 2: 
+943: the n-CLU's own loss on that deletion, about six tuples per held-out combination, is larger than the 
+944: change any retrained baseline shows except the continuous MLP at seed 2, so on 
+945: collateral damage the baselines' crude retrain is cleaner than the n-CLU's deletion. Nor is the
+946: n-CLU's route faster end to end: its downdate takes seconds, but the book's refit takes longer 
+947: than any baseline's retrain (Tabs.~\ref{tab:del} and~\ref{tab:rivals-del}). What the n-CLU's route has that the retrain does not 
+949: is the match with a refit without the rows, by construction, and no pool row read. Two caveats travel with these rows: the baselines
+950: retrain at their selected schedule, so the MLP (seeds 0 and 1) and continuous-MLP convergence flags
+951: of Tab.~\ref{tab:t7} travel with them; and approximate unlearning of the data-matched baselines was not
+952: run (App.~\ref{app:notrun}).
+956: 
+957: \subsection{Refusal through the hole}
+958: \label{sec:hole}
+959: 
+960: Refusal is a second mechanism on the same object: a coupling table with \emph{holes}.
+961: Punching a hole for a deleted value or conjunction marks the request slot as refused. On the
+962: $\Kstar$ object two holes cost a byte each, read no data rows, take no measurable time and refit nothing, in
+963: a coupling table whose layout is asserted equal to the field-mode n-CLU's over every pair
+964: slot (Tabs.~\ref{tab:del} and~\ref{tab:hole}). 
+966: One hole (red $\wedge$ cube) is refusable although no red cube was ever written: refusal does
+967: not need a deleted row to have existed. 
+968: The hole is the only mechanism on this object that refuses, and it is a flag: a request for a
+969: holed value is refused by construction, so refusal is measurement (c) of Tab.~\ref{tab:del}, a
+970: display row, and symbolic refusal is not claimed. An item deletion makes nothing impossible: on the n-CLU's own pool, deleting a random
+971: 1\% of items clears no value bit and punches no hole, so no request becomes certifiably impossible
+972: and the item row has no refusal row at all. 
+973: 
+974: \begin{table}[t]
+975: \centering\small
+976: \caption{\textbf{Refusal DISPLAY rows. A display is never a result.} Our side is a cost line
+977: on the $\Kstar$ object (seed 0). The comparator is the refuse-token transformer (130,479
+978: parameters, 3 seeds), measured at the feature level on its own fit pool: first on its primary
+979: request set, then with off-grid requests included, which a closed-vocabulary input cannot
+980: represent. The two sides are not the same quantity and are not differenced; the head-to-head on
+981: the same post-deletion requests is a declared not-run. Our two holes take 0.0000 s in a 1,322-byte 
+982: coupling table (1,322 pair slots). A free 8-byte value-presence bitmap scores the value deletion 
+983: at 1.0000 with 0 rows read; the comparator's conjunction fit takes 10.48 s.} 
+984: \label{tab:hole}
+985: \setlength{\tabcolsep}{3pt}
+986: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccccc}
+987: \toprule
+989: \midrule
+999: \bottomrule
+1000: \end{tabular}\end{adjustbox}
+1001: \end{table}
+1002: 
+1003: \noindent The comparator's job is to measure what the alternative to a hole requires, not to lose. For a value
+1004: deletion the task is a one-token lookup, and a free value-presence bitmap of a few bytes already scores
+1005: it perfectly with no rows read; for a conjunction the free bitmap cannot express the question at
+1006: all, and the transformer learns the conjunction hole perfectly, at the parameter, row, byte and time
+1007: costs of Tab.~\ref{tab:hole}, where the coupling hole costs one
+1008: byte and no row. 
+1010: \noindent The operation that rewrites only the bytes it names and leaves behaviour unchanged is the
+1011: hole, not deletion in general. On the earlier item memory, evicting red refuses every red request on all three
+1012: seeds and changes composition beyond a declared one-tuple bar on two of them,
+1013: while punching a hole refuses every red request and leaves composition unchanged (Tab.~\ref{tab:ablations}, caption). 
+1015: The claim is a match with a refit without the rows, never erasure without loss.
+1016: 
+1017: \subsection{Two ablations}
+1018: \label{sec:ablations}
+1019: 
+1020: \paragraph{Composition-only n-CLU (composes, cannot forget).} Drop the statistic and keep the
+1021: atoms and address book: this is the earlier \texttt{pca\_tensor} n-CLU. It keeps no sufficient
+1022: statistic, which is the requirement it does not meet and the reason it cannot delete in this sense. At the
+1023: $K=5$ endpoint of the ladder it is bit-identical to the single design at every rung and every
+1024: seed, at just under 1.4 times the reference in bytes (Tab.~\ref{tab:ablations}, caption).
+1026: The statistic is not consulted at generation time, which is why the two reads are equal.
+1027: Whether the equality survives at $\Kstar$ is not measured: \texttt{pca\_tensor} was not run at
+1028: $\Kstar$ (a declared not-run, App.~\ref{app:notrun}). \TODO{no record prints the byte ratio of the composition-only n-CLU to the single design;
+1029: the records give the two totals printed here and in Tab.~\ref{tab:ledger-kstar}, and they are
+1030: not divided here.}
+1031: On its own scored TEST legs, three seeds, the composition-only n-CLU beats a parameter-matched
+1032: learner on both rows beyond a margin declared in advance, at total deployed bytes and parameters each matched to
+1033: within half a percent (App.~\ref{app:w5}), the arm carrying more parameters on two of three seeds.
+1036: 
+1037: \paragraph{Item memory (forgets, loses composition).} An item memory of whole written rows at
+1038: the same byte pin, read by an oracle handed the true feature, deletes by construction and
+1039: composes poorly: on row 4 it sits below the learned
+1040: reference by more than eighteen tuples per held-out combination on the 3-seed mean (Tab.~\ref{tab:ablations}), a lower bound on what an item memory
+1041: loses, because it is a ceiling and not an arm. 
+1043: 
+1044: Tab.~\ref{tab:ablations} (App.~\ref{app:w5}) prints both ablations per seed. The pair shows
+1045: the join the single design is for: one ablation composes and cannot
+1046: forget, the other forgets and cannot compose, and the single design does both on one object at
+1047: the memory cost printed in Tab.~\ref{tab:ledger-kstar}.
+1048: 
+1049: \subsection{Encoder adaptation and generative baselines}
+1050: \label{sec:adapt}\label{sec:bard}
+1051: 
+1052: The frozen encoder is the primary object. Light adaptation at $\Kstar$ with equal steps and
+1053: images grows the n-CLU's margin over the best learned baseline on all three seeds under an
+1054: anchored full unfreeze and on two
+1055: of three under a low-rank adapter (Tab.~\ref{tab:adapt}). 
+1057: Training the encoder through the n-CLU licenses no n-CLU claim: the swap loss helps on both legs,
+1058: and ``unfreezing hurts'' does not survive the longer leg (Apps.~\ref{app:encoder-main}
+1059: and~\ref{app:encloop}).
+1060: 
+1061: \paragraph{LACE and PoE, at their own settings.}
+1062: LACE~\citep{nie_controllable_2021} and PoE~\citep{hinton_training_2002}, re-implemented at their own
+1063: settings in this feature space, score far below one distinct valid novel tuple per held-out combination 
+1065: on rows 3--4, render no exact-match request on the generation table on any seed, and there score at
+1066: the level of our landscape controls; we report them for completeness, not as evidence, in
+1067: Tab.~\ref{tab:lace-poe} (App.~\ref{app:t7more}). \emph{This is LACE and PoE as instantiated in
+1068: this feature space at their own declared settings; it is not a refutation of LACE in general}, and
+1069: the study has no functioning generative baseline (Sec.~\ref{sec:limits-list}).
+1070: 
+1071: \paragraph{The generation table, on the $\Kstar$ single design.}
+1072: The generation table is a second Shapes3D instrument, never merged with Tab.~\ref{tab:t7}: a fixed set of 
+1073: held-out requests per seed, scored as an aggregate under the external classifier. The $\Kstar$ single design was added
+1074: to its arms and scored once, in one of that table's three declared evaluation runs (3 seeds,
+1075: nothing not-run; Tab.~\ref{tab:gentable-kstar}, 
+1076: App.~\ref{app:t7more}). All four landscape controls collapse on every seed (declared criterion S1, 
+1077: \textsc{pass}), so the n-CLU claim stands on this table. Declared criterion S2, against the earlier
+1078: n-CLU's read (every seed, declared margin), \textsc{fails} on seed 0 though its mean is positive, and the 
+1079: declared protocol's falsification clause fires: the claim that $\Kstar$ beats that read is
+1080: \emph{not} made. $\Kstar$ also loses to a nearest-prototype ceiling on the mean 
+1081: (S3 \textsc{lose}) at about four times the reference bytes, and beats LACE 
+1082: and PoE on the mean (S4; Tab.~\ref{tab:gentable-kstar}). 
+1084: 
+1085: \subsection{CMAZE-T conditions and relational coding}
+1086: \label{sec:maze-wm}
+1087: 
+1089: \paragraph{CMAZE-T with symmetric inputs: six seeds.}
+1090: Tab.~\ref{tab:cmazet-sym} gives every input condition, and within a condition every arm receives the
+1091: identical input. The n-CLU here is the base design (Tab.~\ref{tab:cmazet}). On the full word design given 
+1092: to every arm the n-CLU is behind the best matched baseline on all three TEST seeds; on main-effect words alone and on the observation alone it is behind on every seed. On words
+1093: plus observation, TEST, six seeds, against the
+1094: best matched baseline over both step counts it has three
+1095: clear wins (seeds 0, 2 and 3), two ties (seeds 1 and 4) and
+1096: one loss (seed 5; Tab.~\ref{tab:cmazet-sym}). Seed 3's lead is over a set of baselines weakened
+1097: by a matched MLP that did not converge at either step count, and on seed 5 the n-CLU scores nothing on two
+1098: held-out tuples that are fully supported in training and that eight other arms solve. This miss is
+1100: not an effect of the hold-out draw: both tuples share one outcome code (legal, move south, pocket 2),
+1101: and the miss is a content-capacity failure of the 6-atom design on that code: the code decodes at the wrong
+1102: side of a small margin in the deployed span and is already wrong on about a third of the fit rows that carry it; 
+1105: the 10-atom relational
+1106: design (n-CLU-REL, below) scores every row of both tuples valid. 
+1107: Every landscape
+1108: control stays below the n-CLU on every seed (Tab.~\ref{tab:cmazet-sym}).
+1111: 
+1113: \paragraph{A relational request coding for the n-CLU is an input-representation result.} Changing only the
+1114: n-CLU's request coding, adding colour-equality indicators crossed with the door and the direction
+1115: (n-CLU-REL), lifts the n-CLU on every seed (Tab.~\ref{tab:cmazet-sym}). The mechanism is the
+1116: relational request coding carried through the n-CLU's closed-form head, not the n-CLU. Baselines handed
+1117: the same relational columns (the \texttt{+rel} diagnostic, printed beside every seed in
+1118: Tab.~\ref{tab:cmazet-sym}) come close to it, so the n-CLU's lead
+1119: over them is small or absent on every seed but one, and on seeds 3 and 4 the
+1120: columns recover all or nearly all of the n-CLU's margin over the baselines without them. On seed 4 a control
+1121: ties the n-CLU (random atoms, equal on every held-out tuple), so the n-CLU is not load-bearing
+1122: there; on seed 5 a matched baseline ties it (a transformer at $10\times$ training steps). The n-CLU's lead over the
+1123: relational baselines is sizeable only on seed 2. Relational coding has one limit: relations
+1125: reach the n-CLU, colour identity does not. On the never-trained value the never-seen colour's
+1126: relations fire normally, but every column that names the colour is zero, so the value row stays a
+1127: loss: n-CLU-REL stays well behind the best matched baseline (Tab.~\ref{tab:cmazet-sym}) and is 
+1129: behind on all six seeds. We report the configuration as evidence about
+1130: request coding, which any learner can be given.
+1132: 
+1134: \paragraph{CMAZE-T: what is not claimed.} Chained rollouts are not valid: The base n-CLU produces no valid rollout
+1135: on any of the six seeds at a per-step accuracy of about nine in ten, and n-CLU-REL a minority on every seed
+1136: (Tab.~\ref{tab:cmazet-sym}), a limitation of every arm. On unseen two-way pairs a learned
+1138: arm that reads main effects only beats the n-CLU on several seeds, and on the never-trained value the
+1139: n-CLU is below the best matched baseline, so nothing is claimed on either row. The earlier asymmetric
+1140: n-CLU row, in which the n-CLU read the word design and the baselines read only the observation, is
+1141: printed in Tab.~\ref{tab:cmazet} and is not a comparison of like with like. On words plus
+1142: observation, on every seed, the n-CLU after deletion matches an n-CLU that was never fitted on the
+1143: deleted rows: the downdated statistic matches the statistic fitted without the rows to floating-point
+1144: roundoff, the deployed atoms do not change, and the downdated n-CLU reads identically
+1145: to the n-CLU fitted without the rows, in under a second with no gradient step,
+1146: against a minute or more and thousands of gradient steps for a baseline's retrain-without (Tab.~\ref{tab:cmazet-sym}).
+1149: The run count, the configuration ladder and every negative with its failing link are in
+1150: App.~\ref{app:mazewm}.
+1151: 
+1155: \paragraph{Reading the CMAZE-T panel figures.} Figs.~\ref{fig:cmazet-families}--\ref{fig:cmazet-door-tint}
+1156: (App.~\ref{app:mazewm}) draw single held-out transitions with every model's next state. Each panel
+1157: is a $5\times5$ crop of the maze centred on the agent's cell at $s_t$. Walls are dark, tinted cells
+1158: pale in their colour, doors framed in their colour with a bar across while closed, untaken keys are
+1159: diamonds, the goal a cross, and the agent a black disc whose centre shows the colour of the key in its
+1160: pocket (white when the pocket is empty). The first column is $s_t$ with the action (an arrow, or a
+1161: ring for pick-up), the second the engine's $s_{t+1}$, and each further column the $s_{t+1}$ that a
+1162: model's emitted outcome produces. The engine's judge does not score the picture: it scores four
+1163: emitted facts, legality, the move, the key event and the pocket after the move, and a picture need
+1164: not show all four. So a strip under every $s_{t+1}$ prints the emitted facts (under the engine's
+1165: column, the true ones). Its first line reads legal or illegal. Its second line shows the move
+1166: ($\uparrow$ $\rightarrow$ $\downarrow$ $\leftarrow$, or a dot for staying), the key event ($+$ and a
+1167: colour for a key picked up, $-$ and a colour for a key used at a door, blank for none) and the pocket
+1168: after the move (the disc; white is empty). An illegal emission leaves the agent in place and is scored
+1169: on its pocket alone, so only the pocket is shown. The tick or cross on a panel is the judge's verdict
+1170: on all four facts, so two panels that show the same picture and the same strip never carry opposite
+1171: marks.
+1172: 
+1174: \section{Discussion}
+1175: \label{sec:limits}
+1177: 
+1178: \subsection{Limitations}
+1179: \label{sec:limits-list}
+1180: 
+1181: \begin{enumerate}
+1182: \item \textbf{On the maze transition task the n-CLU's lead is small and seed-dependent.}
+1184:   On CMAZE-T with symmetric inputs the n-CLU is ahead of the best matched baseline on three of six seeds,
+1185:   level on two and behind on one, and behind on every seed of the full word design 
+1186:   (Sec.~\ref{sec:maze-wm}, Tab.~\ref{tab:cmazet-sym}).
+1187: \item \textbf{Deleting a conjunction changes what the book knows about the shared value.} After deletion
+1188:   the n-CLU and the address book match those never fitted on the deleted rows, but deleting the red
+1189:   sphere lowers composition on
+1190:   the surviving combinations by 6.13 / 6.43 / 6.30 tuples per held-out combination, 32.1 on the combinations that request red 
+1191:   with another shape at seed 0, while a random 1\% deletion moves them by at most 0.11; retraining a 
+1192:   baseline without the same rows is cleaner on collateral damage (Sec.~\ref{sec:shapes-del},
+1193:   Sec.~\ref{sec:del-comparators}).
+1194: \item \textbf{Deletion is not cheap in memory or time: the address book's refit.} The book's retained statistic is 0.97 GB, 
+1195:   the size of its fit data, and its refit takes 2,367 to 5,913 s, longer than a baseline's 
+1196:   retrain-without; ``reads no training row'' is not a size or a speed claim.
+1197: \item \textbf{Deletability requires a large number of bytes.} The deletable object at $\Kstar$ is 4.0768 to 4.0897
+1198:   times the reference (Tab.~\ref{tab:ledger-kstar}); across nine swept partitions the honest
+1199:   four-part total is U-shaped in $K$, with its minimum 3.9942 times the reference at $K=24$, so
+1200:   $\Kstar$ is not the point of smallest footprint; and on the one configuration at $K\ge36$ whose composition
+1201:   was measured ($K=40$, 7 atoms per well, 0.991 times the pin) composition collapses to 0.0648.
+1202:   No object with a float64 sufficient statistic composes and forgets inside 524,288 bytes at rank
+1203:   64 on any swept partition (the validation sweep labels itself a smoke, not a claim).
+1205: \item \textbf{The baseline search may be truncated.} Every data-matched family selected the largest
+1206:   learning rate and the longer epoch count of its grids, and the MLP at seed 0 still gains 1.47 tuples 
+1207:   per held-out combination from ten to thirty times its steps (Sec.~\ref{sec:shapes-t7}).
+1208: \item \textbf{The encoder loop licenses no n-CLU claim.} Training the encoder through the n-CLU
+1209:   fired the pre-declared falsifier on row 3 of the shortened leg, a falsifier that involves no baseline 
+1210:   (App.~\ref{app:encloop}).
+1211: \item \textbf{No functioning generative baseline.} LACE and PoE, re-implemented at their own settings
+1212:   in this feature space, render no exact-match request on the generation table and score at the level
+1213:   of our landscape controls (Tab.~\ref{tab:lace-poe}); the study compares naive units only and has no
+1214:   working compositional-generation baseline.
+1216: \item \textbf{At most three seeds on Shapes3D.} Seeds 3 and 4 cannot be judged there (no decoder, no
+1217:   external classifier), so no Shapes3D row can exceed three seeds; CMAZE-T prints six.
+1218: \item \textbf{Further limitations} (an unseen-valid row that belongs to a generic learner, an
+1219:   exhausted placement dial, and comparators not run) are listed in App.~\ref{app:morelimits}.
+1220: \item \textbf{Residual novelty risk.} Abstract-level screening cannot catch a match buried in a
+1221:   method section, and very recent preprints and non-indexed workshop papers are incompletely
+1222:   covered; we judge the risk low, not zero. 
+1223: \end{enumerate}
+1224: 
+1225: \subsection{A planned CMAZE suite}
+1226: 
+1228: \paragraph{Toward a CMAZE suite.} CMAZE-T is the first instrument of a planned CMAZE suite on the same
+1229: engine and judge. The transition task will be extended to observation generation, to route planning
+1230: and to the further tasks already prototyped, so that CMAZE as a whole becomes a useful benchmark for
+1231: the world-models community.
+1232: 
+1233: \subsection{The zero-dynamics clue}
+1234: \label{sec:clue}
+1235: 
+1236: The n-CLU we evaluate is the zero-dynamics limit of the CLU~\citep{jawahar2026chlu}: the same content, the same wells,
+1237: the same read, with the settling loop's step count set to zero. Inside a well this is an
+1238: algebraic identity: the n-CLU's energy is the distance to the atom span, the request's basin sits
+1239: at an address inside that span, so both minima coincide and an in-well settle has nowhere to go
+1240: (derivation in App.~\ref{app:clue}). We asserted this in code: the zero-step arm was required to be bit-identical to
+1241: the static read by \texttt{np.array\_equal} over 256 requests, and it was, on all three scored
+1242: seeds, returning the static read's held-out scores to every printed digit. 
+1244: The only place dynamics can act is across wells: with a bilinear low-rank coupling $\lambda W$
+1245: the settled state is $z^\star=(\beta I-\lambda W)^{-1}\beta z_{\text{req}}$, which returns
+1246: $z_{\text{req}}$ exactly at $\lambda=0$. Switching the dynamics on lowers composition at every
+1247: strength at which they move the state: by less than one six-factor tuple per
+1248: held-out combination at the gentlest setting that moves it, and by about forty on the seed mean at full strength, while incurring
+1249: bytes of read-side coupling that the static read does not (App.~\ref{app:physics}). 
+1251: The identity holds under four named conditions (App.~\ref{app:clue}).
+1252: 
+1253: \subsection{The Latent Dynamics Model class}
+1254: \label{sec:theory}
+1255: 
+1256: We call the class of objects that this n-CLU is the static limit of a \emph{Latent Dynamics
+1257: Model}: a memory whose content is read by relaxing a latent state under a designed energy~\citep{hopfield_neural_1982,krotov_dense_2016,ramsauer_hopfield_2021,hoover_energy_2023,kong_reservoir-computing_2024}, of
+1258: which the n-CLU is the member with the relaxation switched off. (The phrase is used in
+1259: reduced-order modelling and in model-based reinforcement learning for a learned surrogate of an
+1260: environment's dynamics; here the dynamics are the read, not a model of the data.) Its laws are this paper's own theory, each with a status label and rider (further laws in App.~\ref{app:shorts}).
+1261: 
+1262: \paragraph{Two laws measured on this study's own n-CLU (\textsc{confirmed [this study]}).}
+1263: Switched on, the field-mode n-CLU's relaxation obeys a curvature--retention relationship whose
+1264: prediction is a \emph{time}, not a score: with nothing fitted, it predicts the settle half-life
+1265: well within its declared bar on the held-out combinations and three seeds (Tab.~\ref{tab:crr}), and beats a one-parameter form fitted with sight of the held-out measurements
+1266: on every combination on every seed; one of six declared criteria (the V-curve argmin) misses on
+1267: all three seeds, and the law predicts where its simplest form stops.
+1269: Deletion commutes with scheduled decay on a learned memory, no byte differing in the memory
+1270: image, while the stronger claim that the post-delete memory equals the never-inserted one is
+1271: \textsc{refuted} (nearly two thirds of the image differs, most of it because the address book
+1272: and coupling table are fitted on the pool; App.~\ref{app:laws}). 
+1274: \emph{These are dynamics results about our own n-CLU. They occupy no row of the evaluation, they
+1275: beat no model, and we make no capability claim from them}; no arm of ours fails the retention law,
+1276: so it distinguishes nothing. The full statements, criteria and misses are in
+1277: App.~\ref{app:physics}.
+1278: 
+1279: \subsection{Summary}
+1280: \label{sec:leaving}
+1281: 
+1282: The naive unit provides deletion by subtraction, matching an n-CLU never fitted on the deleted rows, and, at a stated partition, composition on
+1283: Shapes3D that scores above read-path-matched baselines fitted on its own rows, by about seven tuples per
+1284: held-out combination over the strongest. On the maze transition task its lead over matched
+1285: baselines is small and seed-dependent, and its best configuration is a request coding any learner can be
+1286: given; deleting a conjunction removes what the book knew about the shared value; and it incurs the
+1287: memory and time cost of that match, in bytes and in the book's refit. Switched on, the dynamics lower composition at
+1288: every strength that moves the state, while a law that no arm of ours fails predicts their relaxation:
+1289: so far a \emph{law about the n-CLU}, not a \emph{lever on the task}. The experiment that would make
+1290: the law a claim about a class, a comparator predicted in advance to be mispredicted in the
+1291: $h/h^\star\in[0.5,2]$ bucket, is named and not run. 
+1292: 
+1293: \subsection{Physics follow-up}
+1294: \label{sec:followup}
+1295: 
+1296: The follow-up is a full evaluation of the settling (physics) CLU on the three properties of
+1297: Sec.~\ref{sec:why}, same judges, memory footprint and matching, with this paper's n-CLU as its zero-dynamics
+1298: ablation. What it must contain is fixed by this study's negatives (App.~\ref{app:bench}).
+1299: 
+1300: \paragraph{Deletion.} Improving deletion is also future work, and the measured comparison is
+1301: the clue: after deletion the n-CLU composes above every baseline retrained without the same rows on
+1302: the value and item scopes, and level with the MLP and the LSTM on the red sphere, where its 95\% 
+1303: interval against them includes zero on some seeds (Sec.~\ref{sec:del-comparators}). A deletion that
+1304: removed the conjunction's rows without removing what the address book knows about the shared value
+1305: would close that gap.
+1306: 
+1308: \subsubsection*{AI use statement}
+1309: \TODO{AI use statement --- the authors to confirm which of the venue's required disclosure categories
+1310: apply. This draft, the evidence pipeline and most of the code were produced with substantial LLM-agent
+1311: assistance (implementing methods, designing and critiquing experiments, interpreting results,
+1312: drafting the paper); the statement must say so accurately.}
+1313: 
+1314: \subsubsection*{Ethics statement}
+1315: The study uses a public synthetic image dataset (Shapes3D) and procedurally generated mazes; it
+1316: involves no human subjects and no personal data. Deletion is relevant to data-protection
+1317: requests; we claim only that the n-CLU and its address book match those never fitted on the deleted
+1318: rows (the frozen encoder and decoder are outside the object) and no certified unlearning, and
+1319: we state in Sec.~\ref{sec:shapes-del} a case in which deleting a conjunction changes what the
+1320: model answers about the values that survive it.
+1321: 
+1322: \subsubsection*{Reproducibility statement}
+1323: Each number in this paper is read from the recorded result of a declared run, and nearly every
+1324: one carries its provenance beside it in the source. The verbatim re-check against the cited records
+1325: is partial: an automated check covers every number of three groups of runs and, overall, 1,308 of 
+1326: the 2,293 sourced number tokens of an earlier version of this draft, and it checks that a number is 
+1327: present in its record, not what the number means. The object, judge, estimand and memory footprint are
+1328: defined in Sec.~\ref{sec:object}; every table states its seeds, condition and pins; declared
+1329: not-runs and the per-cell provenance conventions are in
+1330: Apps.~\ref{app:conventions} and~\ref{app:notrun}. An anonymised code archive will accompany the
+1331: submission as supplementary material. \TODO{anonymised code archive not yet built.}
+1332: 
+1334: \IfFileExists{refs_clu_iclr.bib}{
+1335: \bibliography{refs_clu_iclr}
+1336: \bibliographystyle{iclr2027/iclr2027_conference}}{} 
+1337: 
+1339: \clearpage
+1340: \appendix
+1341: \section*{Appendices}
+1342: Appendix-maximalism is in force: every row, corollary, negative and control of the study that
+1343: is not in the main text is here, and nothing is omitted. Tables in different environments,
+1344: step limits or recipes never share a table.
+1346: 
+1347: \section{Reporting conventions}
+1348: \label{app:conventions}
+1349: 
+1350: \paragraph{Provenance.} Nearly every number in the source of this paper carries a comment naming
+1351: the record it was read from; the reproducibility statement gives the scope of the verbatim re-check. Numbers are quoted as the record prints them; none is re-derived.
+1352: Where two records print the same quantity at different precision, the one cited is the one the
+1353: number was taken from.
+1354: 
+1355: \paragraph{Two byte conventions, and which object carries which.} The statistic of every object
+1356: in the main text is counted under the symmetric-triangle float64 convention,
+1357: $\sum_k d_k(d_k+1)/2\times8$ B plus means and counts; the $\Kstar$ object's covariance is
+1358: 549,120 B on it, which closes to the byte. 
+1359: One object is counted under the full-square convention, $8\sum_k d_k^2$: the $K=5$ n-CLU of the
+1360: ladder, on the label-derived partition. We name the two $K=5$ objects apart everywhere:
+1361: \emph{$K=5$ (MI partition, full square)}, the ladder's n-CLU, well widths 777 / 936 / 216 / 60 /
+1362: 59 on seed 0, statistic 12,284,920 B; and \emph{$K=5$ (ward, triangle)}, the crossover and
+1363: bridge n-CLU, five wells of width 409--410, statistic 3,391,552 B. They differ in partition and
+1364: in convention; the convention alone is a factor of about two.
+1366: The ladder's footprint record carries three parts; its coupling table is a declared absence, not a
+1367: zero. 
+1368: 
+1369: \paragraph{Seeds and configurations.} Seed count and configuration count are separate fields. The
+1370: phrase ``nine seeds'' never applies: where nine legs appear they are three configurations times
+1371: three seeds inside one implementation (App.~\ref{app:impl}).
+1372: 
+1374: \section{Tab.~\ref{tab:t7}: what it does and does not claim}
+1375: \label{app:t7more}
+1376: The baselines of Tab.~\ref{tab:t7} are matched on the read path at 130,514 (MLP), 130,721 (LSTM~\citep{hochreiter_long_1997}), 
+1377: 130,433 (transformer~\citep{vaswani_attention_2023}) and 131,891 (continuous MLP) parameters, and are fitted on the n-CLU's own 
+1378: 131,072 rows, which were measured identical to the n-CLU's fit pool. Their selection used six short 
+1379: trials over three learning rates and two weight decays and then two epoch counts, on a fixed 10\%
+1380: held-out split; per-epoch training and held-out losses are recorded for every fit. 
+1381: The deletable object itself is larger than its read path: its memory footprint is printed
+1382: in Tab.~\ref{tab:ledger-kstar} and is never matched. Baselines are matched on read-path
+1383: parameters only; no baseline matched to the memory footprint is printed.
+1384: Per-seed geometry and the selection rule's val/test check are in App.~\ref{app:kcurve}.
+1385: 
+1386: \begin{table}[h]
+1387: \centering\scriptsize
+1388: \caption{\textbf{The generation table, $\Kstar$ single design, one declared evaluation run, 
+1389: generation-2 cache.} A separate instrument from Tab.~\ref{tab:t7}, never merged with it:
+1390: composition-B aggregate under the external classifier over 72 held-out requests, per seed. 
+1391: Byte figures name their convention; no $\Kstar$ row is matched-bytes. Declared criteria: S1
+1392: (controls collapse) \textsc{pass}; S2 (beats the earlier n-CLU's read on every seed, margin 0.020) \textsc{fail}, seed 0; 
+1393: S3 (against the nearest-prototype ceiling) \textsc{lose}; S4 (against LACE~\citep{nie_controllable_2021}, PoE~\citep{hinton_training_2002}) \textsc{win}.}
+1394: \label{tab:gentable-kstar}
+1395: \setlength{\tabcolsep}{2.4pt}
+1396: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccp{4.2cm}}
+1397: \toprule
+1399: \midrule
+1411: \midrule
+1415: \bottomrule
+1416: \end{tabular}\end{adjustbox}
+1417: \end{table}
+1418: 
+1419: \begin{table}[h]
+1420: \centering\scriptsize
+1421: \caption{\textbf{LACE and PoE at their own settings, Shapes3D~\citep{3dshapes18,kim_disentangling_2019} value hold-out, TEST, $n=3$ seeds (0, 1,
+1422: 2).} Distinct valid novel tuples per held-out combination, on the combinations of Tab.~\ref{tab:t7} (upper block) and of
+1423: every rung of Tab.~\ref{tab:ladder} (lower block). Neither is matched on the read path or on bytes;
+1424: both are re-implementations in this feature space, reported for completeness and not as evidence. On
+1425: the generation table (Tab.~\ref{tab:gentable-kstar}) their aggregates, 0.3032 and 0.1968, sit at the 
+1426: level of the n-CLU's four landscape controls (0.1088 to 0.1860) and of the n-CLU-removed arm 
+1427: (0.1204), and neither renders an exact-match request on any seed.} 
+1428: \label{tab:lace-poe}
+1429: \setlength{\tabcolsep}{2.6pt}
+1430: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccc}
+1431: \toprule
+1433: \midrule
+1439: \multicolumn{5}{p{15cm}}{\emph{LACE and PoE are added beside the baselines above, which are not replaced; each runs at its own declared settings (LACE 31.08$\times$, PoE 27.135$\times$ the 524,288 B reference, a parameter count against n-CLU-mode bytes), not on the read-path matching rule. Their $\Delta$ is printed as baseline minus n-CLU, the record's sign; the n-CLU wins 109/109 combinations against each, on every seed. Scope: Sec.~\ref{sec:adapt}.}} \\ 
+1441: \bottomrule
+1442: \end{tabular}\end{adjustbox}
+1443: 
+1444: \medskip
+1445: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccccc}
+1446: \toprule
+1448: \midrule
+1453: \bottomrule
+1454: \end{tabular}\end{adjustbox}
+1455: \end{table}
+1456: 
+1457: \paragraph{LACE and PoE in full.}
+1458: LACE~\citep{nie_controllable_2021} and PoE~\citep{hinton_training_2002} were scored beside the
+1459: learned baselines on rows 3--4 and on every ladder rung (Tab.~\ref{tab:lace-poe}), 3 seeds; no
+1460: learned-baseline column was replaced. They do not beat the
+1461: n-CLU on rows 3--4, nor anywhere on the ladder: on rows 3--4 the $\Kstar$ n-CLU scores 47.50 / 
+1462: 47.40 / 49.12 novel valid tuples per held-out combination against LACE 0.165 / 0.073 / 0.229 and PoE 0.009 / 
+1463: 0.000 / 0.000, and the n-CLU wins 109/109 combinations against each, on every seed; on every rung it 
+1464: wins every combination against both on every seed (60 of 60 at $n=2$, 120 of 120 at $n\ge3$). 
+1465: Their settings are their own and are not byte-matched: LACE 4,073,663 classifier parameters 
+1466: (31.08$\times$ the 524,288 B reference; 63.10$\times$ counting its whitening and mean), PoE six 
+1467: experts with 3,556,665 parameters (27.135$\times$), each fitted on 32,256 rows with 512 validation 
+1468: rows from the rung's own pool and 36 selection trials. 
+1469: \emph{This is LACE and PoE as instantiated in this feature space at their own declared settings,
+1470: and it must be weighed that way; it is not a refutation of LACE in general.} Both render zero
+1471: exact-match requests on the generation table as well; in the words of that experiment's own record, a
+1472: reader should weigh the result as ``LACE/PoE, as re-implemented at these settings, do not produce
+1473: valid full tuples here'', not as ``the n-CLU out-composes LACE in general''. 
+1474: 
+1475: 
+1477: \section{The $K=5$ endpoint of the sweep}
+1478: \label{app:k5}
+1479: The $K=5$ endpoint is printed with the same data-matched baselines as the main text. On rows 3--4 the
+1480: $K=5$ n-CLU fitted on 131,072 rows reads 43.789 / 45.679 / 47.798 and leads the strongest data-matched 
+1481: baseline by +3.780 / +6.872 / +3.697 (mean +4.783). On the ladder, Tab.~\ref{tab:k5} prints the $K=5$ 
+1482: n-CLU rebuilt on the first 32,768 rows of each rung's pool, the rows the earlier $K=5$ ladder n-CLU 
+1483: was fitted from. All four landscape controls, the across-wells control a derangement, read 0.000 on
+1484: every rung and seed. By the one-$K$ rule of this paper it is the sweep's endpoint and its sign is a 
+1485: property of $K=5$, not of the n-CLU.
+1486: 
+1487: \begin{table}[h]
+1488: \centering\small
+1489: \caption{\textbf{Ladder at $K=5$, the sweep's endpoint, rebuilt n-CLU, 3 seeds.} n-CLU fitted on the 
+1490: first 32,768 rows of each rung's pool; paired margin against the strongest data-matched baseline of 
+1491: Tab.~\ref{tab:ladder} (each rung's own 131,072 rows) and against the strongest baseline of the earlier 
+1492: 32,256-row set. $n=2$: 60 combinations; $n\ge3$: the identical 120 combinations. \emph{Inference note, as for 
+1493: Tab.~\ref{tab:ladder}:} for $n\ge3$ the rungs differ in fit-pool coverage, not in composition
+1494: depth, so the n-CLU's own rise from $n=2$ to $n=6$ is not to be inferred.}
+1495: \label{tab:k5}
+1496: \setlength{\tabcolsep}{2.4pt}
+1497: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccccc}
+1498: \toprule
+1500: \midrule
+1508: \bottomrule
+1509: \end{tabular}\end{adjustbox}
+1510: \end{table}
+1511: 
+1512: \noindent At $n=3$, seed 2, the rebuilt $K=5$ n-CLU is behind the strongest data-matched baseline 
+1513: ($-0.342$); it leads on every other rung and seed. 
+1514: 
+1515: \paragraph{Why the earlier $K=5$ ladder arm is replaced.} The earlier arm (the ladder's own
+1516: $K=5$ n-CLU on the label-derived partition, reused as already fitted) carried only two of the four
+1517: landscape controls, and its strong random atoms control, which refits the address book
+1518: against random atoms, reads 1.24 at $n=4$, seed 2 and 2.03 at $n=5$, seed 2, above the 1.0 bar, so 
+1519: its $n=4$ and $n=5$ rows are not claimable. Its footprint is kept for the byte conventions of
+1520: App.~\ref{app:conventions}: on its own full-square convention it is 23.886 to 24.875 times the 
+1521: reference over 18 legs, and \texttt{pca\_tensor} 1.358 to 1.372 times. 
+1526: \section{The $K$-curve: composition and the memory footprint against $K$}
+1527: \label{app:kcurve}
+1528: 
+1529: The geometry of the object varies with the seed more than the first seed showed:
+1530: rank/width at $\Kstar$ is 0.9688--0.9844 on seed 0, 0.5938--0.9844 on seed 1 and
+1531: 0.4375--0.9844 on seed 2, and the controls still collapse, so rank/width is a warning and only the
+1532: control decides. 
+1534: The frozen selection rule's third pre-declared falsification, a val/test gap, does not fire:
+1535: the drop from $K=5$ to $\Kstar$ is $-0.03376$ on validation (three seeds) and $-0.07276$ on
+1536: TEST (paired, seed 0), negative on both, so $\Kstar$ is better than $K=5$ on held-out combinations
+1537: by a wider margin than on the selection set. 
+1538: 
+1539: 
+1540: \begin{table}[h]
+1541: \centering\small
+1542: \caption{\textbf{The $K$-curve, validation, symmetric-triangle convention.} The validation sweep
+1543: labels itself a smoke, not a claim. Seeds: 3 at $K=5$ and $K=32$, 1 elsewhere. Two totals are 
+1544: printed and move in different directions: parts 1+2+4 (no address book) fall monotonically; the
+1545: honest four-part total is U-shaped. The $n=1$ middle rows are superseded by Tab.~\ref{tab:kcurve3},
+1546: which prints $K=5\ldots32$ as a plateau, not a selection. 
+1547: }
+1548: \label{tab:kcurve}
+1549: \setlength{\tabcolsep}{2.4pt}
+1550: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{rcccccccc}
+1551: \toprule
+1553: \midrule
+1565: \bottomrule
+1566: \end{tabular}\end{adjustbox}
+1567: \end{table}
+1568: 
+1569: \noindent Atoms are 524,288 B at every $K$ except $\Kstar$ (516,096 B, where the rank cap binds) and
+1570: the coupling table is 6,610 B throughout. The address book grows 5.4 times and at the fine end it
+1571: grows faster than the covariance falls, so the mechanism sentence ``the covariance shrinks faster
+1572: than the address book grows'' is true from $K=5$ to $K=24$ and false from $K=24$ to $K=32$. The
+1573: crossover threshold of 0.10 is never reached; the largest drop anywhere is $+0.012731$ at $K=10$.
+1574: The $\Kstar$ total here (4.0877 times, 2,143,138 B) is the \emph{validation} pin leg, distinct from
+1575: the three TEST totals of Tab.~\ref{tab:ledger-kstar}. 
+1576: The control check at $\Kstar$ on validation reads 0.0000 on all four controls on all three seeds.
+1578: \textbf{At three seeds (0 test runs).} Tab.~\ref{tab:kcurve3} prints
+1579: every $K$ at $n=3$ and supersedes the $n=1$ middle rows of Tab.~\ref{tab:kcurve}.
+1581: The frozen rule, applied unchanged, still returns $\Kstar=32$ and no crossover: no $K$ drops more
+1582: than 0.1 below $K=5$. Two sentences above are seed-0 statements and do not survive three seeds: at
+1583: $n=3$ every drop is at most zero, the largest drop anywhere is 0.0000, at $K=5$ itself, and the
+1584: $+0.012731$ at $K=10$ printed above is a single-seed (seed 0) value. The rule is not resolvable at $n=3$: the seed sd
+1585: exceeds the frozen 0.02 tolerance at six of the nine $K$, including $K=32$ (0.0259), so $\Kstar=32$
+1586: is what the rule returns, not a $K$ that three seeds distinguish from $K=24$ or $K=28$. The honest
+1587: four-part total is U-shaped at $n=3$, with the per-seed minimum at $K=24$ on all three seeds, and
+1588: that minimum is resolvable: the $K=24$ seed sd of 7,060 B is cleared by both neighbour gaps (12,203
+1589: B and 30,507 B). The floor over the sweep and all three seeds is 3.9675 times the reference, at
+1590: $K=24$, seed 1. The $K=20$ row fails the strict control check:
+1591: shuffled across wells reads 0.0139 on seed 1 (worst of 24 combinations; mean
+1592: 0.000579) against the arm's 0.9213, so no row may be claimed at $K=20$; the primary
+1593: landscape shuffled control collapses at every $K$. The across-wells control here is
+1594: the ladder study's, a uniform permutation with only the identity rejected, so about one well in $K$ keeps its
+1595: own atoms; a derangement version is a declared not-run, kept non-deranged for comparability with
+1596: that study. Seeds 3 and 4 are a declared not-run.
+1598: 
+1599: \begin{table}[h]
+1600: \centering\small
+1601: \caption{\textbf{The $K$-curve at $n=3$ seeds on every row, validation (a smoke, not a claim).} 
+1602: Byte convention: the honest four-part total, summed and never netted: atoms (float32), covariance
+1603: and count (float64, as retained), address book, and the 6,610 B coupling/hole table; 524,288 B is a 
+1604: reference, not a limit. The seed sd is printed beside every mean. $K=20$ fails the strict control check (text). 
+1605: \textbf{$K=5\ldots32$ is a plateau, not a $\Kstar$ selection}: three seeds do not resolve the validation 
+1606: composition across it, $\Kstar=32$ is what the frozen rule returns, and the byte minimum is near $K=24$.} 
+1607: \label{tab:kcurve3}
+1608: \setlength{\tabcolsep}{2.4pt}
+1609: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{rcccccccc}
+1610: \toprule
+1612: \midrule
+1624: \bottomrule
+1625: \end{tabular}\end{adjustbox}
+1626: \end{table} 
+1628: \figslot{fig_crossover}{\textbf{The $K$-curve, validation, 3 seeds at every $K$.} (a)~Validation
+1629: composition against $K$: the n-CLU's mean over seeds 0, 1 and 2 with a band of one seed standard
+1630: deviation, each seed marked, and the highest of the four controls (landscape removed, landscape
+1631: shuffled, shuffled across wells, random atoms). (b)~The memory footprint in its four parts (atoms,
+1632: covariance and count, address book, coupling and hole table; symmetric-triangle convention), the
+1633: seed mean stacked by part and summed, with the seed standard deviation of the total; 524,288~B is a 
+1634: reference line, not a limit. Three seeds do not resolve the validation plateau 
+1635: (Sec.~\ref{sec:shapes}); the values are those of Tab.~\ref{tab:kcurve3}.}{fig:crossover}
+1636: 
+1638: \section{Deletion on Shapes3D: two implementations, and the failure they agree on}
+1639: \label{app:impl}
+1640: 
+1642: \begin{table}[h]
+1643: \centering\small
+1644: \caption{\textbf{Deletion on Shapes3D, matched on the n-CLU, implementations 1 and 2, bands not
+1645: shared.} Seeds and configurations are separate fields; the nine legs of row 2 are 3 configurations
+1646: $\times$ 3 seeds.}
+1647: \label{tab:impl}
+1648: \setlength{\tabcolsep}{2.4pt}
+1649: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{p{3.6cm}cccp{5.2cm}}
+1650: \toprule
+1652: \midrule
+1657: \bottomrule
+1658: \end{tabular}\end{adjustbox}
+1659: \end{table}
+1660: 
+1661: \paragraph{Implementation 1 in full.} Worst maximum absolute deviation over the pinned 11,024-row
+1662: deletion and a random 64-row deletion: \sci{4.5475}{-13} / \sci{1.1255}{-09} / \sci{2.8422}{-14},
+1663: against that leg's own reproducibility floor (the same rows downdated in two orders)
+1664: \sci{2.1268}{-13} / \sci{4.2817}{-09} / \sci{5.6843}{-14}; on two of three legs the residual is below
+1665: its own floor and is not resolvable at all, the best available outcome for a claim that the downdate matches the refit. The
+1666: narrower field over the pinned deletion only is \sci{2.365}{-14} / \sci{1.126}{-09} /
+1667: \sci{7.105}{-15}; the negative control fired on every seed; the record's own worst-over-seeds
+1668: figure is 0.009442 float32 ulp at unit scale. 
+1669: This leg is an assertion battery on the object at 0 test runs; its record states that it is neither a test
+1670: run nor a claim. Two caveats live in the declaration record it cites: the variance-share admission cut is
+1671: marginal on all three seeds, and the separate subspace-level assertion on the pre-cut n-CLU fails on
+1672: seed 2 at 60.36282 ulp, below its own 66.11072-ulp floor, so that failure is a property of the
+1673: content, not of the downdate; the top-level ``all assertions passed'' excludes it.
+1675: Its footprint breakdown: atoms 524,288 B; covariance 12,310,672 / 11,941,360 / 11,850,912 B (full
+1676: square, this implementation's own convention) plus means and counts 16,424 B; request count table
+1677: 11,488 B; coupling 5,288 B plus 1,322 B of holes; honest total 12,869,482 / 12,500,170 / 12,409,722
+1678: B, 24.5466 / 23.8422 / 23.6697 times the pin; the statistic alone is 23.5121 times; a residual of 
+1679: exactly 16,384 B between the serialised object and the honest total is declared, not netted.
+1681: 
+1682: \paragraph{The failure agreement.} The assertion that the downdate matches the refit failed first, on TEST seed 2, on the
+1683: coarse imbalanced 5-well, 64-atom partition. Two implementations, different code, different
+1684: authors and different sign conventions, reproduced the same failure on the same seed in the same
+1685: well: 32.90 (and 35.46) ulp at atom level and 60.36282 ulp at subspace level against a 66.11072-ulp
+1686: floor in the first; 14.377 ulp at atom level and 14.4518 ulp at subspace level against a
+1687: 36.9305-ulp floor in the second. Both implementations' floors exceed their observed deviations
+1688: there, so both conclude that seed 2's content is not a function of its data by any method: a
+1689: statement about content well-posedness. It was closed by a variance-share admission cut with no
+1690: free parameter, $\tau=4.941056\times10^{-16}/1.1920929\times10^{-7}=4.144858\times10^{-9}$, declared
+1691: before the re-run and not moved; the numerator is the failing leg's own worst.
+1693: The cut dropped 3 / 1 / 4 / 5 directions on the validation and three TEST legs, lost at worst a
+1694: variance share of \sci{8.94}{-09}, and shrank the deployed span in one well of TEST seed 2 by a fifth
+1695: (rank over width 0.31 to 0.21); it is the only place the deletion claim removes content.
+1697: 
+1698: \paragraph{Deletion on the $K=5$ (ward) object, validation, seed 0 (a smoke, not a claim).} Value:
+1699: 11,024 rows, 2.4543 s, 4,068,192 B rewritten, 0 rows read, against a reference refit of 23.486 s
+1700: reading 120,048 rows, deviation from the refit \sci{1.455}{-11}, survivor $\Delta$ $+0.1250$, $\cos_{\min}$
+1701: 0.183704. Red sphere: 5,507 rows, 0.6205 s, reference 10.843 s / 125,565 rows, deviation from the refit \sci{2.842}{-14}, survivor $\Delta$ $-0.0833$, $\cos_{\min}$ 0.881141. Item 1\%: 1,311 rows,
+1702: 0.2554 s, reference 11.446 s / 129,761 rows, deviation from the refit \sci{1.455}{-11}, survivor $\Delta$
+1703: $+0.0000$, $\cos_{\min}$ 0.999843. Footprint: 524,288 / 3,391,552 / 195,584 / 6,610 B, total
+1704: 4,118,034 B, 7.8545 times the reference. 
+1705: 
+1707: \section{The earlier composition cell: byte and parameter match, and the ceiling ladder}
+1708: \label{app:w5}
+1709: 
+1710: \begin{table}[h]
+1711: \centering\small
+1712: \caption{\textbf{The two ablations, earlier composition cell, TEST, $n=3$ seeds, one pin
+1713: (524,288-byte n-CLU), $K=5$.} Distinct novel valid tuples per held-out combination. A different cell from 
+1714: Tab.~\ref{tab:t7}; the two are never merged. At the $K=5$ endpoint of the ladder the composition-only n-CLU is 
+1715: 712,072 to 719,352 bytes, 1.358 to 1.372 times the reference. Evicting red from the earlier item memory 
+1716: refuses at 1.0000 on all three seeds and changes composition by $-2.0899$ / $-0.9101$ / $-6.7416$ against a 
+1717: declared $\pm1.0$ bar; punching a hole refuses at 1.0000 and changes it by $+0.0000$.} 
+1718: \label{tab:ablations}
+1719: \setlength{\tabcolsep}{3pt}
+1720: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccc}
+1721: \toprule
+1723: \midrule
+1730: \bottomrule
+1731: \end{tabular}\end{adjustbox}
+1732: \end{table}
+1733: 
+1734: 
+1735: 
+1736: The composition-only n-CLU's own scored cell (TEST, 3 seeds) pins the n-CLU at 524,288 B at
+1737: tolerance 0 and declares the address book beside it (189,344 / 195,064 / 195,064 B); total deployed
+1738: 713,632 / 719,352 / 719,352 B against the baseline's 715,808 B (99.70\% / 100.50\% / 100.50\%);
+1739: parameters 178,408 / 179,838 / 179,838 against 178,952. 
+1740: Mean paired $\Delta$ against that baseline on row 4 is $+10.143$ / $+8.673$ / $+7.796$
+1741: (bootstrap~\citep{efron_bootstrap_1979} 2.5\% quantile $+6.632$ / $+5.816$ / $+5.082$) and on row 3 $+4.033$ / $+2.483$ / $+2.417$
+1742: ($+2.117$ / $+1.033$ / $+1.200$): the bar of $\Delta\ge+1.0$ with the lower bound above $+1.0$ on
+1743: every seed passes on both rows, with row 3 seed 1 clearing by 0.033.
+1745: The informative floor is 64 whole written rows at the same pin read by an oracle, 32.3878 / 39.1224
+1746: / 41.7755 on row 4, which the arm beats by $+31.2245$ / $+25.2041$ / $+25.8776$ while the oracle is
+1747: handed the true feature and the arm is not. 
+1748: Two ceiling rungs (\texttt{oracle\_span} and \texttt{span\_head}) carry an address book of 1,766,400
+1749: B, 9.3 times the arm's own and 3.4 times the n-CLU pin, while every other rung carries 0.
+1751: 
+1756: \figslot{fig_deletion}{\textbf{Deletion on the single design at $\Kstar$, rows 3--4, test, fit pool
+1757: 131,072 rows, seeds 0, 1 and 2.} Deleting a value (red), a conjunction (red sphere) or a random 1\% 
+1758: of items downdates the n-CLU's content, downdates the address book's statistic and refits the book
+1759: from it, and punches the hole (Tab.~\ref{tab:del}). (a)~Composition on the surviving held-out
+1760: combinations (89 for the value, 109 for the others), after minus before, per seed, with its 95\% 
+1761: bootstrap interval. The value deletion moves the n-CLU by under one tuple per held-out combination;
+1762: the red sphere deletion lowers it by 6.13, 6.43 and 6.30 on seeds 0, 1 and 2; deleting a random 1\% 
+1763: of items, the control for refit instability, moves it by 0.02, 0.11 and 0.01. The n-CLU after 
+1764: deletion and an n-CLU refit without the rows compose identically on every surviving combination.
+1765: (b)~The n-CLU after deletion minus each baseline retrained without the same rows of the same pool,
+1766: with 95\% intervals: above zero for every baseline and seed on the value and item deletions; on red 
+1767: sphere the interval includes zero against the MLP at seeds 1 and 2 and against the LSTM at seed 2.}{fig:deletion}
+1768: 
+1769: \section{Deletion comparators in full (fit pool, 0 test runs)}
+1770: \label{app:delbase}
+1771: 
+1772: \paragraph{A sphere hazard, measured.} A damaged render could be judged sphere for rendering
+1773: reasons and score spuriously on the deleted conjunction. On this instrument a degraded render
+1774: is judged cube, the held-out shape, so the judged-sphere excess is negative for both maximally
+1775: degraded arms ($-0.3291$ for landscape removed, $-0.3078$ for
+1776: random atoms) against $+0.0074$ after the red-sphere deletion.
+1778: 
+1779: \begin{table}[h]
+1780: \centering\small
+1781: \caption{\textbf{Deletion cost for the data-matched baselines: retrain without the rows, on the n-CLU's 
+1782: 131,072-row pool, at the selected schedule, seeds 0 / 1 / 2.} The n-CLU's own line is 
+1783: Tab.~\ref{tab:del}.}
+1784: \label{tab:rivals-del}
+1785: \setlength{\tabcolsep}{3pt}
+1786: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccccc}
+1787: \toprule
+1789: \midrule
+1796: \bottomrule
+1797: \end{tabular}\end{adjustbox}
+1798: \end{table}
+1799: 
+1800: \begin{table}[h]
+1801: \centering\scriptsize
+1802: \caption{\textbf{The n-CLU after deletion against each baseline retrained without the same rows, all 
+1803: 109 combinations, seeds 0 / 1 / 2.} Baseline: as trained $\to$ retrained without. n-CLU $-$ baseline: the 
+1804: paired difference after deletion, with the 95\% bootstrap interval where it crosses zero or comes
+1805: closest to it. The n-CLU after deletion reads 50.865 / 50.854 / 52.000 (value, survivor combinations), 
+1806: 41.367 / 40.972 / 42.817 (red sphere) and 47.477 / 47.294 / 49.110 (item). Baseline retrains run at the 
+1807: selected schedule, so the MLP (seeds 0, 1) and continuous-MLP convergence flags of Tab.~\ref{tab:t7} travel with them.}
+1808: \label{tab:rivals-del-seeds}
+1809: \setlength{\tabcolsep}{2.4pt}
+1810: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{llccc}
+1811: \toprule
+1813: \midrule
+1828: \bottomrule
+1829: \end{tabular}\end{adjustbox}
+1830: \end{table}
+1831: 
+1832: \noindent Value and item scopes: every interval lies above zero, the lowest lower bound being 
+1833: +5.34. Approximate unlearning~\citep{guo_certified_2023,golatkar_eternal_2020} (gradient ascent, fine-tuning on the retained rows) was not run 
+1834: against these baselines (App.~\ref{app:notrun}).
+1839: \section{Light encoder adaptation in full}
+1840: \label{app:adapt}
+1841: 
+1842: \begin{table}[h]
+1843: \centering\small
+1844: \caption{\textbf{Encoder adaptation at $\Kstar$, TEST, 3 seeds $\times$ 3 configurations (nine
+1845: arm-runs, three seeds).} Margin = single design minus the best learned baseline (a 180k-parameter 
+1846: MLP in every cell). Equal steps (400) and images (25,600) in every arm-run.} 
+1847: \label{tab:adapt}
+1848: \setlength{\tabcolsep}{3pt}
+1849: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lclccccc}
+1850: \toprule
+1852: \midrule
+1864: \bottomrule
+1865: \end{tabular}\end{adjustbox}
+1866: \end{table}
+1867: 
+1868: \noindent Factor-probe margins over random initialisation, aggregate / exact-match, per seed, never
+1869: pooled: frozen $+0.0001$ / $-0.0034$, $-0.0160$ / $-0.1003$, $+0.0095$ / $+0.0432$; adapter
+1870: $+0.0007$ / $-0.0024$, $-0.0064$ / $-0.0449$, $+0.0077$ / $+0.0308$; anchor $-0.0016$ / $-0.0178$,
+1871: $-0.0059$ / $-0.0371$, $+0.0088$ / $+0.0381$. The anchor arm's distance from the frozen encoder
+1872: (reported, never tuned): feature relative $L_2^2$ 0.002146448940038681 / 0.002392713911831379 /
+1873: 0.0017106134910136461. 
+1874: Two amendments to the declared protocol were made before any number, neither moving a bar; the first
+1875: corrected the description after a measurement showed that the encoder cannot train through the
+1876: n-CLU. 
+1877: 
+1879: \figslot{fig_encoder_adapt}{\textbf{Encoder adaptation margins.} The n-CLU minus the 180k-parameter 
+1880: MLP baseline, in novel tuples per held-out combination, per seed at $\Kstar$, with the frozen encoder,
+1881: an adapter and an anchor (Tab.~\ref{tab:adapt}).}{fig:adapt}
+1882: 
+1884: \section{The encoder loop in full (shortened-decoder instrument, and the longer leg)}
+1885: \label{app:encloop}
+1886: 
+1887: \begin{table}[h]
+1888: \centering\small
+1889: \caption{\textbf{Encoder loop, shortened decoder (400 joint steps, 8,192 images), 3 seeds, one 
+1890: declared test run.} A separate instrument; never merged with Tab.~\ref{tab:t7}. Distinct valid novel
+1891: tuples per held-out combination; composition-only n-CLU in each encoder arm.}
+1892: \label{tab:encloop}
+1893: \setlength{\tabcolsep}{3pt}
+1894: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccc}
+1895: \toprule
+1897: \midrule
+1907: \bottomrule
+1908: \end{tabular}\end{adjustbox}
+1909: \end{table}
+1910: 
+1911: \noindent The falsifier, which involves no baseline (net $\Delta\le0$ on two or more seeds), fires on
+1912: row 3.
+1913: The instrument retains no statistic and makes no deletion claim. 
+1914: The longer leg (4,000 joint steps, 1,800 decoder-refit steps, 4,000 warm steps, 32,768 training
+1915: images) is a separate table: equal compute passes on all three seeds; its equal-seconds control is
+1916: short by 41.2 / 27.8 / 18.6 s because it was sized from another arm's seconds per step, biasing it
+1917: toward the treatment; its probe margins over random init are \texttt{alone} $-0.0505$ / $+0.0242$ /
+1918: $-0.0862$, $A'$ $+0.0666$ / $-0.0066$ / $+0.1108$ (inconsistent) and $A''$ $+0.0100$ / $+0.0129$ /
+1919: $+0.0075$ (consistent); and \texttt{alone} probes worse than an untrained encoder on two of three
+1920: seeds, the same instability another harness found in its own encoder. 
+1921: Criterion D, the declared success bar, in one line: the GPU (longer, full-decoder) leg is \textsc{mixed}; the CPU (shortened-decoder) leg is \textsc{unmeasured} after the scorer defect (registry N359). 
+1922: 
+1923: \begin{table}[h]
+1924: \centering\small
+1925: \caption{\textbf{The unfreezing decomposition on the longer leg only (4,000 joint steps, 
+1926: 32,768 training images, 1,800 decoder-refit steps, 4,000 warm steps), TEST, 3 seeds, 
+1927: one declared test run.} Never shares a table with the shortened-decoder leg
+1928: (Tab.~\ref{tab:encloop}). Distinct valid novel tuples per held-out combination (ceiling 36 on row 3, 72 on
+1929: row 4); n-CLU: the \texttt{pca\_tensor} atom block (524,288 B, float32).} 
+1930: \label{tab:bard-gpu}
+1931: \setlength{\tabcolsep}{2.4pt}
+1932: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcp{4.6cm}p{4.6cm}}
+1933: \toprule
+1935: \midrule
+1941: \bottomrule
+1942: \end{tabular}\end{adjustbox}
+1943: \end{table}
+1944: 
+1947: \section{The zero-dynamics identity: conditions and provenance}
+1948: \label{app:clue}
+1949: 
+1950: \paragraph{The derivation.} The content is an orthonormal basis $U_k$ of the
+1951: per-well atom span, and the read renders the request's address through that basis,
+1952: $x_k=U_k c_k$. The n-CLU's energy for a basis is the distance to its span,
+1953: $E_{\text{content},k}=\tfrac12\operatorname{dist}^2(x_k,\operatorname{span}G_k)$, zero everywhere
+1954: on the span; the request enters as a basin at the address, $E_{\text{req},k}=\tfrac12\beta\lVert
+1955: x_k-a_k\rVert^2$, zero at the address. Because $a_k\in\operatorname{span}(G_k)$ by construction
+1956: of the renderer, both terms attain their minima at the same point, so an in-well settle has
+1957: nowhere to go. 
+1958: 
+1959: \paragraph{The four conditions.} (C1) The n-CLU's energy is distance to the atom span, the atoms
+1960: being a basis: with an atoms-as-points energy on the same content the settle moves (relative
+1961: displacement median 1.7244, max 2.6682 on a synthetic check). (C2) The address lies in the span:
+1962: pushed off the span by $\delta=0.10$ the settle moves by exactly $\delta/(1+\beta)$, measured
+1963: 0.050000 against the closed form 0.050000. (C3) The state is carried in span coordinates; the same
+1964: energy in channel coordinates drifts by \sci{7.447}{-08} relative, float32 rounding, so the paper
+1965: says ``identical'' of the channel form and ``bit-identical'' only of the span form. (C4) No
+1966: cross-well term: at $\lambda=0$ the displacement is exactly 0.0; at
+1967: $\lambda=10^{-4}$, $10^{-2}$, $0.05$, $0.2$ it is \sci{7.875}{-05}, \sci{7.882}{-03},
+1968: \sci{3.971}{-02}, \sci{1.720}{-01}. Two wells of the deployed n-CLU were full rank, where an in-well
+1969: settle is trivially a no-op. The coercivity certificate reproduces from first principles:
+1970: $\lambda^\star=0.25000000$ and a certificate minimum eigenvalue of $-1.50000000$ at the declared
+1971: $\lambda=1$, so the landscape is unbounded below at the declared strength and the used strength is
+1972: 0.225000. 
+1973: The identity is in-well only; a $\lambda=0$, steps$>0$ arm was never run on the deployed n-CLU (the
+1974: synthetic check covers steps 0 / 1 / 10 / 1000); and the \sci{1.9}{-7} off-span residual is the
+1975: renderer's float32 rounding, the same size for the static n-CLU that never moves.
+1977: 
+1978: \paragraph{Provenance of the retention law.} Re-derived from the raw result files, the law's
+1979: headline reproduces: 0.043256 / 0.043516 / 0.043102 and $-0.596831$ / $-0.579639$ / $-0.598172$,
+1980: 49 of 49 on every seed; the integrator is the theory's map to \sci{1.884682}{-08}; the byte pin is
+1981: 524,288 B on every seed; a finite-difference Hessian check reads \sci{3.519263}{-11} /
+1982: \sci{1.202332}{-10} / \sci{2.699430}{-11}. 
+1983: Its sharpest constant does not: the overdamped slope pair ``$+1.1385$ derived against $+1.1368$
+1984: measured'' appears only in prose logs and in no machine-readable record, because the per-cell fit
+1985: windows were not saved, and $1+\gamma/(2-\gamma)=1.1385$ sits at $\gamma=0.243303$, not a grid
+1986: point. The law's qualitative content (the overdamped slope exceeds $+1$ at every finite $\gamma$)
+1987: is verified over the whole band, and $1+\gamma/(2-\gamma)$ is the exact log-derivative (numeric
+1988: $+1.138526$ against $+1.138500$). The underdamped slope is confirmed on the theory's own testbeds
+1989: ($-1.0020\pm0.0003$) and inconclusive on this n-CLU (measured $-1.1090$ against derived $-1.0050$,
+1990: margin 0.0049 / 0.0047 / 0.0043 over the naive $-1$); in that branch the slow multiplier is exactly
+1991: $\sqrt{1-\gamma}$, so a measured floor slope has one degree of freedom, $\gamma$, and one recorded row
+1992: of the underdamped fit window would settle it. A tautological residual field in the records
+1993: (\texttt{d14\_confinement}, exactly 0.0 on 60 cells by construction) is never quoted; the
+1994: finite-difference check above is. 
+1995: 
+1997: \section{The retention law on the field-mode n-CLU in full}
+1998: \label{app:physics}
+1999: 
+2000: \begin{table}[h]
+2001: \centering\small
+2002: \caption{\textbf{Declared criteria of the retention law on the field-mode n-CLU, 49 held-out combinations 
+2003: $\times$ 3 seeds, 192,975 rows, n-CLU pinned at 524,288 B.} Rung-3 theory, not a result row.} 
+2004: \label{tab:crr}
+2005: \setlength{\tabcolsep}{3pt}
+2006: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lclccc}
+2007: \toprule
+2009: \midrule
+2023: \bottomrule
+2024: \end{tabular}\end{adjustbox}
+2025: \end{table}
+2026: 
+2027: \noindent Of the 192,975 rows, 41,493 / 41,405 / 41,358 sit in the 49 scored combinations. The fitted
+2028: one-parameter form $n=C/(\varepsilon\mu)^2$ has $C$ fitted with sight of the held-out measurements
+2029: (0.200699 / 0.206008 / 0.201184). 
+2030: Error by $h/h^\star$ bucket: 0.0008 / 0.0264 / 0.1482 / 0.0454 / 0.0262. The instrument was named in
+2031: advance: deep underdamped the envelope and first-crossing half-lives differ by 9.24 times, and
+2032: first-crossing's error is 1.0088 to 1.0180 against the envelope's 0.0284 to 0.0296.
+2034: The law's error is identical across arms (0.0428 to 0.0435) because it is about the dynamics; the
+2035: arms separate only in the curvature spectrum (field $[0.2727, 1.0000]$, removed $[1.0000, 1.0000]$).
+2037: A second, independent reproduction by a different code path matches the theory's floor
+2038: (27.026815 against 27.03), the stability limit to \sci{3.3}{-16}, and a simulated envelope to
+2039: \sci{4}{-13} to \sci{8}{-11} over about seven orders of magnitude of $n_{1/2}$; the asymptotic
+2040: half-life form is 2.4\% off already at $h=0.30h^\star$ and is never quoted, only the exact root.
+2042: The seed-0 leg replicates bit-exactly from a clean checkout; two of the three declared runs
+2043: were not used. 
+2044: 
+2045: \paragraph{The same dynamics lower composition.} Against the static n-CLU on row 4, the zero-step
+2046: arm is $0.000$ / $0.000$ / $0.000$; the gentlest moving setting $-0.531$ / $-0.510$ / $-0.388$; one
+2047: step $-2.735$ / $-3.796$ / $-2.959$; full settling $-39.959$ / $-46.918$ / $-39.061$ (row 3:
+2048: $-15.800$ / $-25.533$ / $-20.350$), while incurring 81,312 B more read-side.
+2050: Why (analysis, not a row): the settle does not leave the principal subspace (off-span at most
+2051: 2e$-$7; the orthogonal fraction predicts the loss at chance, AUC 0.457 to 0.559); what breaks the
+2052: read is motion inside it. The answers form a dense lattice whose one-factor spacing is 1.71 / 1.89 /
+2053: 2.00 against a state norm of 31.3 / 32.3 / 32.8; the judge's decision cells are that lattice's
+2054: cells; and the settle places 0.78 to 0.86 of its step in the 51 answer-changing directions against
+2055: an isotropic 0.407. Displacement in lattice units predicts the loss at AUC 0.904.
+2057: 
+2058: \paragraph{Lifetimes and symbolic refusal.} A scheduled lifetime is strictly worse than instant
+2059: eviction: its composition loss differs from eviction's by $+0.0562$ / $+0.0337$ / $+0.0112$ against a
+2060: declared margin of 1.0 and is incurred before refusal arrives ($t_{1/2}$ = 7.992 / 5.994 / 
+2061: 7.992 half-lives); 96.30\% to 99.83\% of the loss is incurred through a continuous weight while the
+2062: discrete liveness bit has not flipped. 
+2063: Two clocks a decade apart give 16 of 16 horizons byte-identical, so no curvature can trade refusal
+2064: against composition. An 8-byte rule ties the field-mode n-CLU exactly on the two symbolic refusal rows,
+2065: and a table-absence rule is the same bitmap at a byte multiple of 59,392; no claim is made on those
+2066: rows. 
+2067: 
+2069: \section{Prior derivations}
+2070: \label{app:shorts}
+2071: 
+2072: The laws below
+2073: are this paper's own theory. Each carries a status: \textsc{confirmed [this study]} where it was
+2074: measured on this study's own n-CLU; \textsc{confirmed [prior derivation]} where it was derived and
+2075: validated on designed or small trained testbeds outside this study's n-CLU and was not re-run
+2076: here; \textsc{refuted} and \textsc{untested} as stated. Status discipline is part of the section.
+2077: 
+2078: 
+2079: \paragraph{Memory-level deletion in a designed memory (\textsc{confirmed [prior
+2080: derivation]}).} With an order-independent waitlist, memory-level deletion leaves a memory
+2081: byte-equal to one never written with the deleted items, at every load measured, 0.29 to 1.71 times lattice capacity, a membership signal of AUC 0.5000 $\pm$ 0.0000 on all
+2082: six statistics and byte equality 1.0000, under three stated conditions (capacity at least the number
+2083: of cells, zero leak, priority- or attribute-based eviction; recency-based eviction is excluded as
+2084: intrinsically history-dependent). 
+2085: The placement rule is the~\citet{blelloch_strongly_2007} stable-matching table with a global priority order;
+2086: the theorems follow from theirs and the fix-up cascade is theirs. Its scoping is the one this
+2087: paper adopts in Sec.~\ref{sec:object}: an n-CLU-level guarantee only, the frozen encoder and any
+2088: residue of past writes in a learned landscape being separate channels, and no certified
+2089: $(\varepsilon,\delta)$ unlearning claimed. 
+2090: 
+2091: \paragraph{The damping optimum (\textsc{confirmed [prior derivation]}; \textsc{refuted} as a
+2092: rollout prediction on this n-CLU).} On the exact one-step Jacobian the emergent retention
+2093: half-life is a V-curve in the damping, with its argmin at $0.902\pm0.003$ of
+2094: $\gamma_{\text{crit}}$ and slopes $-1.0020$ and $+1.116$ on three of three emergent seeds, one
+2095: damping-optimum curve at two values of the curvature rather than two laws.
+2097: It holds only with fluctuation--dissipation-consistent noise and a Newtonian kinetic term. On
+2098: this study's field-mode n-CLU the rollout misses the same argmin on all three seeds (above), with the
+2099: failing step named: the pure-exponential envelope is invalid at the defective point.
+2101: 
+2102: \paragraph{Interference is degree-bounded (\textsc{confirmed [prior derivation]}).} Cross-unit
+2103: basin displacement is exactly zero off the coupling graph (0 of 4656 off-graph entries nonzero
+2104: across 72 runs, three topologies), so interference is the degree times the per-edge displacement,
+2105: flat in the number of units at fixed degree, while a shared-potential monolith grows as
+2106: $N^{1.18\pm0.17}$. The firewall is parameter separation, not block structure.
+2108: 
+2109: \paragraph{Asserted, not derived (\textsc{untested}).} Eight further statements of the theory,
+2110: including a lifetime trilemma whose consequence is measured, have no derivation and no
+2111: impossibility argument, and are carried as untested; a certificate family for reach and escape is
+2112: untested on this n-CLU, with its own measured limit that unit Jacobian determinant and zero
+2113: energy change are not sufficient for bounded dynamics (a certified excursion of 0.09 against
+2114: 104.83 blind). 
+2115: A law this study planned against, that a Mexican-hat width or separation sets the
+2116: interpolation floor and the refusal gap, does not exist in its own derivations, and the nearest
+2117: derived object inverts it: the retention floor is curvature-independent. 
+2118: 
+2119: 
+2120: These results were derived and validated on designed or small trained testbeds before this study
+2121: and were not re-run on this study's n-CLU; their content enters here as this paper's own theory,
+2122: each with the rider that must travel with it. 
+2123: \begin{itemize}
+2124: \item \textbf{Retention triad (qualitative).} A latch with infinite lifetime, a $\mu^{-2}$ scaling
+2125: law and bounded drift are qualitatively absent in learned recurrent baselines (median lifetime 5.6
+2126:   / 56 / 69 map-steps for three recurrent families; the emergent unit 263 steps, bounded 0.35 rad).
+2127:   Rider: a per-step compute factor of 6.2 against an LSTM inverts retention per unit of compute, so
+2128:   no ``longer'' claim is made on compute. 
+2129: \item \textbf{GMOR~\citep{gell-mann_behavior_1968} on trained checkpoints.} With a linear ambient spurion the three objects satisfy
+2130:   $\mu^2F^2=\delta\Sigma$ to a maximum absolute deviation of \sci{1.33}{-15} on 8 trained SO(2)
+2131:   checkpoints. Rider: designed SO(2), probe-only, float64. 
+2132: \item \textbf{Erosion law and anchor cure.} Contrastive wake--sleep training inverts a designed
+2133:   vacuum if and only if the flat direction is unconstrained by the wake phase; an anchor cures it,
+2134:   and every headline law survives past the erosion horizon under the cure. 
+2135: \item \textbf{Friction preserves, temperature erases.} The coset diffusion law is verified to
+2136:   $1.0068\pm0.0219$ over 25 cells; damping 0.05 to 0.2 lengthens coset half-life
+2137:   $3.77\pm0.23$ times. Rider: two observables, two signs; a figure that does not name the initial
+2138:   condition is meaningless. 
+2139: \item \textbf{The friction-hole vault.} $107.77\pm4.78$ times (the $\hat D$-estimator number; raw
+2140:   first-passage $86.97\pm2.94$), against a scalar friction of the same strength at
+2141:   $13.28\pm0.12$. 
+2142: \item \textbf{Dissipative channel.} Sync time within 7.5\% of a registered prediction; the half-life
+2143:   claim is ranking-only; the retention law holds at $N\in\{2,4,8,16\}$. 
+2144: \item \textbf{Reversible O(1)-memory training.} At zero damping, recompute-backwards training
+2145:   matches saved-activation gradients to \sci{2.1}{-6} relative in float32, with peak activation
+2146:   memory 6.3 KB against 6.00 MB at $T=1024$; exact only at zero damping. 
+2147: \item \textbf{Hard read isolation (designed memory only).} A sub-barrier particle cannot read a
+2148:   foreign item; the predicted threshold mass 0.36 is bracketed by the sweep (crosses at 0.34,
+2149:   confines at 0.38). Rider: it does not transfer to a trained block. 
+2150: \item \textbf{The trilemma.} With a quadratic payload channel, an anti-decoration guard and a fixed
+2151: read size, a memory cannot have all three of exact value fidelity, amplitude-independent address
+2152:   hold and amplitude-independent read latency; both proposed fixes are refuted.
+2154: \end{itemize}
+2155: Binding scope for every item: these laws govern the memory; end-to-end performance additionally
+2156: depends on the encoder, measured separately. 
+2157: 
+2159: \section{What an evaluation must contain: the ten requirements}
+2160: \label{app:bench}
+2161: 
+2162: Each requirement is forced by a measured negative of this study; the list is not a claim that
+2163: no benchmark has them. 
+2164: \begin{enumerate}
+2165: \item A rule must be able to render a candidate illegal: a composition-blind oracle scored 1.0000
+2166:   while obstacle-blind scored 0.0387 and speed-blind 0.4213. 
+2167: \item Score with an optimality gap: 0.9825 to 0.3900 on a stitched-plan tripwire (1.25 extra steps,
+2168:   39\% exactly optimal). 
+2169: \item The state space must be large against the fragment memory: 1,001,188 B provides 200,238
+2170:   macro-actions against 32,400 states. 
+2171: \item Run a matched-bytes stitching tripwire with a fragment-length sweep before adoption: exact-key
+2172:   lookup scored 0.0000 on a dead gym (and 0.0003 against 0.7027 on another).
+2174: \item Make a rule-blind oracle a mandatory check.
+2175: \item Measure held-out path diversity before adoption (a median of 2.0 against a required 4).
+2177: \item The validity check must use zero tolerance.
+2178: \item Contain a deletion request scored on the same object and metric as composition.
+2179: \item Separate a continuous degradation channel from a discrete liveness channel (96\% to 99.8\% of
+2180:   the loss arrives through the channel a refusal metric cannot see). 
+2181: \item Never score a dynamics prediction as a taxonomy row.
+2182: \end{enumerate}
+2183: 
+2185: \section{Maze world-model rows}
+2186: \label{app:mazewm}
+2187: 
+2193: \figslot{fig_maze_conditions}{\textbf{CMAZE-T: the n-CLU against the best matched baseline under
+2194: four input choices, and six seeds without and with relational coding.} (a)~Unseen $n$-way validity
+2195: under the engine's judge, one row per input choice: the full word design (test, seeds 0--2), the
+2196: observation (validation, seeds 0--2), and words plus observation for the n-CLU and for the n-CLU-REL
+2197: (test, seeds 0--5). Every seed of a row is drawn: circles are the n-CLU (n-CLU-REL in the last row),
+2198: diamonds the row's baseline, and a vertical tick marks the mean over the row's seeds. The baseline of
+2199: the first three rows is the matched baseline with the highest mean over the row's seeds, taken over
+2200: every family and both step limits; it is a Transformer in each row, at its declared training steps
+2201: for the full word design and at $10\times$ training steps otherwise. The baseline of the n-CLU-REL
+2202: row is Transformer-REL, the Transformer given the same relational columns, at $10\times$ training
+2203: steps (hollow diamonds). (b)~Words plus observation, test, seeds 0--5, without relational coding: per
+2204: seed, the n-CLU, the Transformer at $10\times$ training steps of the third row, and the highest of the
+2205: four controls on that seed. (c)~The same with relational coding: the n-CLU-REL, the Transformer-REL of
+2206: the last row, and the highest control. Every arm's per-seed value is in
+2207: Tab.~\ref{tab:cmazet-sym}.}{fig:maze-wm}
+2209: 
+2210: \paragraph{The harness smoke.} The harness shipped ready.
+2212: \emph{CMAZE-T.} An independent replay of 164,767 transitions (55,285 / 54,710 / 54,772 over the
+2213: three seeds), by two drivers written from the rules, finds 0 disagreements with the harness's
+2214: stepper, and 0 of 164,767 rows lacks an accepting emission, so no impossible example reaches a
+2215: non-refuser arm. The seeded validation smoke of the first design reads, for the n-CLU,
+2216: 0.6911 on unseen $n$-way (0.802 / 0.468 / 0.803), 0.3932 on unseen 2-way, 0.9709 seen and 0.5386
+2217: on the value hold-out. On unseen 2-way the across-wells control reads 0.2535 against a bar of
+2218: 0.2432, so that row is an interface claim only. The harness ships three warnings, all printed here: a composition-blind planner scores near the
+2219: n-CLU on unseen $n$-way; a landscape control did not collapse; and the cross-maze lookup floor
+2220: scores near the n-CLU.
+2224: \emph{A control defect this smoke carries.} The harness shipped
+2225: shuffled across wells dealing well blocks with a random permutation, which at
+2226: $K=2$ is the identity half the time; on the world-model runs' first validation run of the first design it was
+2227: the identity on seeds 0 and 1 (the control equal to the n-CLU to every digit, 0.8019 and 0.5689).
+2228: The world-model runs replaced it with a derangement before any test run (deranged, the control
+2229: reads 0.2504 on validation $n$-way, against 0.489 before), and every across-wells cell in
+2230: Tab.~\ref{tab:cmazet} uses the derangement. The harness smoke numbers above
+2231: used the original control and were \emph{not} re-measured; at the CMAZE-T smoke's $K=4$ and $K=8$ a
+2232: random permutation still carries the same partial-identity risk, so its across-wells cells,
+2233: the 0.2535 above included, carry this caveat.
+2235: 
+2236: \begin{table}[h]
+2237: \centering\scriptsize
+2238: \caption{\textbf{Maze world-model rows: CMAZE-T (transition generation), TEST, base n-CLU, 3 seeds 
+2239: (one declared test run per seed).} Given the grid state and an action, generate the next
+2240: state; the engine's transition judge. The inputs are not symmetric: the n-CLU reads a \texttt{[bias | main |
+2241: pair]} word request, the learned blind arms reduced forms of it, and the baselines the observation
+2242: (Sec.~\ref{sec:maze-wm}); the symmetric-input rows are Tab.~\ref{tab:cmazet-sym}, where a matched
+2243: transformer given the n-CLU's own full word design reads ahead of the n-CLU on every TEST seed, so the 
+2244: pair block, not the n-CLU, carries this table's $n$-way margin, and that row is an n-CLU row only
+2245: under this asymmetric input, never an unqualified win. Base n-CLU: latent 128, $K=2$, 6 atoms, one design pinned across seeds. 
+2246: Baselines are matched on read floats (MLP 4,781, $+4.3\%$; LSTM 4,290, $-6.4\%$; transformer 5,129, 
+2247: $+11.9\%$, against the n-CLU's 4,584). 
+2248: Byte convention: deployed bytes $=4\times$(atom $+$
+2249: address-book floats), float32; the float64 sufficient statistic is printed beside it, never netted.
+2250: The across-wells control is the deranged one. Values are mean (seed 0 / 1 / 2).}
+2251: \label{tab:cmazet}\label{tab:cmaze-del}
+2252: \setlength{\tabcolsep}{2pt}
+2253: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{p{1.9cm}p{1.2cm}p{10.0cm}}
+2254: \toprule
+2256: \midrule
+2270: \bottomrule
+2271: \end{tabular}\end{adjustbox}
+2272: \end{table}
+2283: \figslot{fig_cmazet_families}{\textbf{Held-out CMAZE-T transitions, one per rule family, with every
+2284: model's next state (words plus observation, test).} Columns: $s_t$ with the action, the engine's
+2285: $s_{t+1}$, and the $s_{t+1}$ that each model's emitted outcome produces, marked by the engine's judge:
+2286: the n-CLU, the matched baselines at 8,000 and 80,000 training steps, the four controls and the two
+2287: blind arms. Rows 1--5: per rule family, the first held-out $n$-way transition at seed 0 (rule A has
+2288: none at seeds 0 and 1, so its row is from seed 2). Row 6 is drawn by rule among the 199 held-out 
+2289: transitions at seeds 0--2 on which the n-CLU is correct and at least 4 of the 6 matched baselines are
+2290: wrong. Row 7 is drawn by rule among door successes: transitions that open a door with the key in the
+2291: pocket and enter a tint of the same colour, on which the model is correct. The n-CLU is correct on
+2292: none of its 204 such transitions at seeds 0--2 (no per-transition outputs of the n-CLU exist for 
+2293: seeds 3--5), so row 7 is drawn from the n-CLU-REL at seed 2, which is correct on 44 of its 55, and 
+2294: every column of row 7 comes from that run. Both draws are one fixed-seed draw (seed 16), stratified 
+2295: over rule family and colour. The strip under each $s_{t+1}$ is read as described in
+2296: Sec.~\ref{sec:maze-wm}. The models of Tab.~\ref{tab:cmazet} were not persisted:
+2297: \PLACEHOLDER{per-model $s_{t+1}$ for the observation-only input of Tab.~\ref{tab:cmazet}
+2298: (n-CLU, Transformer, MLP, LSTM) with the engine's judge's marks, one success and one failure per model:
+2299: not drawable, those models were not persisted; may remain undrawn, and if drawn may show the n-CLU
+2300: failing where a baseline succeeds}}{fig:cmazet-families}
+2304: \figslot{fig_cmazet_per_arm}{\textbf{Each CMAZE-T model succeeding and failing (words plus
+2305: observation, test, seed 0).} For every model, one held-out $n$-way transition on which its $s_{t+1}$
+2306: is correct and one on which it is not, each drawn uniformly with a fixed seed among the qualifying
+2307: transitions. The landscape-removed control and the blind-colour arm are correct on no held-out
+2308: $n$-way transition at seed 0 and show only a failure. The n-CLU has no door success at seeds 0--2
+2309: (Fig.~\ref{fig:cmazet-families}), so its success row is the uniform draw. Columns: $s_t$ with the
+2310: action, the engine's $s_{t+1}$, and the model's $s_{t+1}$ with the engine's judge's mark. The strip
+2311: under each $s_{t+1}$ is read as described in Sec.~\ref{sec:maze-wm}.}{fig:cmazet-per-arm}
+2314: \figslot{fig_cmazet_rel_per_arm}{\textbf{Each CMAZE-T model succeeding and failing with relational
+2315: coding (words plus observation, test).} As Fig.~\ref{fig:cmazet-per-arm}, for the n-CLU-REL, the
+2316: matched baselines, the controls and the blind arms of the same runs, and for MLP-REL, LSTM-REL and
+2317: Transformer-REL at 8,000 and 80,000 training steps (the baselines given the same relational columns).
+2318: All rows are from seed 0 except the n-CLU-REL success row, which is a door success drawn by rule
+2319: among the 44 at seed 2 (Fig.~\ref{fig:cmazet-families}). Every panel is re-read from the runs' 
+2320: persisted models; the re-read reproduces all 132 test scores of seeds 0--5. The strip under each 
+2321: $s_{t+1}$ is read as described in Sec.~\ref{sec:maze-wm}.}{fig:cmazet-rel-per-arm}
+2325: \figslot{fig_cmazet_door_then_tint}{\textbf{Door-then-tint transitions: the move opens a door with
+2326: the key in the pocket and enters a tint of the same colour (words plus observation, test).} Columns as
+2327: in Fig.~\ref{fig:cmazet-families}. Rows 1--3: the first such held-out transition at seed 0 for each
+2328: move direction present (north, south, west); the n-CLU is wrong on all three, as on every one of its
+2329: door-then-tint transitions at seeds 0--2. Rows 4--6: door successes drawn by rule from the n-CLU-REL
+2330: at seed 2, one per move direction among its successes (east, south, west; it is wrong on every
+2331: northward one), with every column of these rows from that run; fixed-seed draw (seed 16). The strip 
+2332: under each $s_{t+1}$ is read as described in Sec.~\ref{sec:maze-wm}. For the models of
+2333: Tab.~\ref{tab:cmazet}:
+2334: \PLACEHOLDER{per-model $s_{t+1}$ on the door-then-tint transitions for the
+2335: observation-only input of Tab.~\ref{tab:cmazet}, with the engine's judge's marks: not drawable, those
+2336: models were not persisted; may remain undrawn, and if drawn may show every model, the n-CLU included,
+2337: failing}}{fig:cmazet-door-tint}
+2342: 
+2345: \begin{table}[h]
+2346: \centering\scriptsize
+2347: \caption{\textbf{CMAZE-T with symmetric inputs: every condition, unseen $n$-way, the engine's judge.} Within a 
+2348: condition every arm receives the identical input; the instrument, banks, hold-outs, controls
+2349: (across-wells a derangement) and floors are those of Tab.~\ref{tab:cmazet}. Values are per seed; the
+2350: seeds column gives how many. ``Best matched baseline'' is the best baseline matched on read floats over both
+2351: step counts (8,000 and 80,000 steps) on that seed. 
+2352: \texttt{+rel}: baselines handed the relational request columns of
+2353: n-CLU-REL, a diagnostic, never a bar. VAL rows are marked. This table contains no row of
+2354: Tab.~\ref{tab:cmazet}.}
+2355: \label{tab:cmazet-sym}
+2356: \setlength{\tabcolsep}{2pt}
+2357: \begin{adjustbox}{max width=\linewidth}\begin{tabular}{p{2.2cm}p{0.6cm}p{10.3cm}}
+2358: \toprule
+2360: \midrule
+2369: \midrule
+2370: \textbf{words + observation, n-CLU (TEST)} & 6 & n-CLU \textbf{0.800 / 0.566 / 0.808 / 0.674 / 0.533 / 0.682} against the best matched baseline 0.627 / 0.567 / 0.784 / 0.412 / 0.531 / 0.867; n-CLU $-$ baseline \textbf{+0.173 / $-0.001$ / +0.023 / +0.262 / +0.001 / $-0.185$}, mean \textbf{+0.046}: three clear wins, two ties, one loss. Seed 3's matched MLP did not converge at either step count;
+2371: seed 5: two held-out tuples fully supported in training score 0, their outcome code decoding at the wrong side of a 0.04 margin and wrong on 106 of its 317 fit rows \\ 
+2379: \midrule
+2385: \bottomrule
+2386: \end{tabular}\end{adjustbox}
+2387: \end{table}
+2388: 
+2389: 
+2391: 
+2393: \paragraph{Configuration ladder and run count.} Every configuration was measured on validation first,
+2394: and three seeds were used only after its validation criteria passed. \emph{CMAZE-T}: a sweep of
+2395: 53 configurations on three seeds left 25/53 eligible under the control check, and the crossover rule picked
+2396: $\Kstar=2$, the base design (latent 128, 6 atoms, rank/width 0.094, 4,584 read floats), scored in three
+2397: runs; a wider design (latent 512, 8 atoms, rank/width 0.031, 9,184 read floats), scored in three further 
+2398: runs against 80,000-step baselines, is its replication under the same asymmetric input, so it inherits that row's scope and is not
+2399: promoted to a symmetric-input result. A match-bit design, an interface given identically to
+2400: every arm, failed validation: the n-CLU rose from 0.7247 to 0.9258 ($+0.20$) and the best matched
+2401: baseline from 0.3891 to 0.7902 ($+0.40$), and the learned BLIND-SEQUENTIAL arm read 0.8782 against a bar
+2402: of 0.8758. The pre-amendment first design was superseded by the control defect of the harness paragraph
+2403: above. Deletion rows for the match-bit design (validation only, not a winner) and any seed beyond three are
+2404: not run.
+2408: \paragraph{Declared negatives, each with its failing link.} CMAZE-T: unseen 2-way
+2409: (\emph{interface}); value hold-out (\emph{content}); rollout validity (\emph{read}); the match-bit
+2410: design (\emph{interface}).
+2411: 
+2412: \section{The encoder: adaptation and the unfreezing decomposition}
+2413: \label{app:encoder-main}
+2414: 
+2415: \subsection*{Light encoder adaptation (secondary)}
+2416: 
+2417: The frozen encoder is the primary object: a harness on top of a large encoder that is never
+2418: unfrozen. Light adaptation is optional, and this is what it yields. At $\Kstar$, three seeds,
+2419: equal steps and images across arms (400 steps, 25,600 images; encoder parameters in the
+2420: optimiser 0 / 131,072 / 428,576), the margin of the single design over the best learned
+2421: baseline grows from the frozen encoder under the \emph{anchor} arm (full unfreeze with a
+2422: penalty on distance from the frozen weights) on all three seeds: $+0.5688\to+1.3303$,
+2423: $-0.0275\to-0.0092$, $+1.1009\to+1.3028$. The low-rank \emph{adapter} grows it on two of
+2424: three ($+1.6239$, $+0.3670$, and $+0.3028$, a loss of $0.7982$ on seed 2).
+2426: The comparator here is a 180k-parameter MLP, a different opponent from Tab.~\ref{tab:t7}, so
+2427: the two tables are never merged; a factor probe measured as a margin over random
+2428: initialisation changes nothing ($+0.0001$ to $-0.0160$ aggregate, per seed, never pooled).
+2430: 
+2431: \subsection*{Unfreezing with the n-CLU on the gradient path: the decomposition}
+2432: 
+2433: An earlier CPU leg (shortened decoder, 400 joint steps, 8,192 training images, 3 seeds; a
+2434: different instrument, reported in its own table, App.~\ref{app:encloop}) asked whether
+2435: training the encoder through the n-CLU improves composition. The net is a wash because two
+2436: real effects cancel: unfreezing the encoder with the n-CLU on the gradient path hurts ($A'$
+2437: negative on 5 of 6 seed-rows) and a swap loss repairs that damage ($A''$ positive on 4 of 6;
+2438: the four two-sided sign-test $p$-values are 0.0001751, 0.000198, 0.000346 and 0.0001564, three
+2439: of them at or below 0.0003). This is a finding about the encoder, and the claim
+2440: that the n-CLU shapes the representation is not made. 
+2441: A longer leg at ten times the steps (4,000 joint steps, 256,000 images per arm) corroborates
+2442: the direction of the swap-loss ingredient on its probe margin, $A''$ positive on all three
+2443: seeds ($+0.0100$ / $+0.0129$ / $+0.0075$), while its equal-seconds control is short by 41.2 /
+2444: 27.8 / 18.6 s and is biased toward the treatment. 
+2445: \paragraph{The decomposition re-stated on the longer leg.} On the
+2446: longer, full-decoder leg (Tab.~\ref{tab:bard-gpu}, a block of its own, never merged with the
+2447: shortened-decoder leg of Tab.~\ref{tab:encloop}) the ordering is \textbf{not reproduced} by its
+2448: pre-declared rule, which asks for $A'<0$ and $A''>0$ each in at least four of six cells: $A'$ is
+2449: negative in only 2 of 6 cells, while $A''$ is positive in 6 of 6 (its interval excludes 0 in 5 of 
+2450: 6). The swap-loss half survives and strengthens (positive in 4 of 6 cells on the shortened leg, 6 
+2451: of 6 on the longer one); the ``unfreezing hurts'' half does not survive. Unfreezing \emph{helps} by
+2452: about +32 tuples per held-out combination on row 4 at seeds 0 and 2 and hurts only at seed 1, the one seed whose 
+2453: \texttt{alone} control trained well (probe margin over random initialisation $-0.0505$ / 
+2454: $+0.0242$ / $-0.0862$; row-4 score 38.5 / 64.4 / 39.3). ``Unfreezing hurts'' is therefore not a 
+2455: general finding: at these pins it is a property of one seed's well-trained control. What both legs
+2456: support is that the swap loss helps.
+2457: 
+2458: \section{The two laws on this study's n-CLU, stated in full}
+2459: \label{app:laws}
+2460: 
+2461: \paragraph{Retention on the n-CLU (\textsc{confirmed [this study]}).} Switched on, the field-mode
+2462: n-CLU's relaxation obeys a curvature--retention relationship (CRR) whose prediction is a
+2463: \emph{time}, not a score. On the damped velocity-Verlet map the n-CLU deploys, the slow
+2464: multiplier gives $n_{1/2}=\ln2/(-\ln\lvert\lambda_{\text{slow}}\rvert)$ with nothing fitted. On 49
+2465: held-out combinations and three seeds the median $\lvert\log_{10}(n_{\text{meas}}/n_{\text{pred}})\rvert$ is
+2466: 0.0433 / 0.0435 / 0.0431 against a declared bar of 0.10, a factor of 1.105 at the median
+2467: combination, seed spread 0.0004; and it beats a one-parameter functional form \emph{fitted with sight
+2468: of the held-out measurements} on 49 of 49 combinations on every seed (mean paired $\Delta$ $-0.5968$ /
+2469: $-0.5796$ / $-0.5982$; that fitted form's own median error is 0.640132 / 0.623155 / 0.641281).
+2471: On an exact quadratic, where the law holds by construction, the same measurement chain recovers it
+2472: only to a median of 0.0349 (p90 0.0749, max 0.1601 over 17 cells), so the 0.10 bar is about three
+2473: times the instrument's floor. 
+2474: The law predicts where its own simplest form stops: the median error is 0.0008 at $h/h^\star<0.1$
+2475: and 0.1482 in the one bucket straddling the exceptional point, where the $2\times2$ map is
+2476: defective. 
+2477: One of the six declared criteria missed on all three seeds: the V-curve argmin sits at 0.3362 /
+2478: 0.3301 / 0.3520 of $\gamma_{\text{crit}}$ against a factor-2 bar, a miss declared with its
+2479: cause before the run; and the stricter reading of a second bar, its maximum over $\gamma$, is
+2480: printed and not moved: 59.1158 / 0.1612 / 1883.2934 against 0.10.
+2482: \emph{This is a dynamics result about our own n-CLU. It occupies no row of the evaluation, it
+2483: beats no model, and we make no capability claim from it}; no arm of ours fails the law, so the law
+2484: distinguishes nothing, which is why it is theory and not a result row.
+2485: 
+2486: \paragraph{Deletion commutes with decay (\textsc{confirmed [this study]}) and its companion
+2487: (\textsc{refuted}).} On a learned memory with scheduled per-item decay,
+2488: $\text{evict}\circ\text{decay}^n=\text{decay}^n\circ\text{evict}$ with 0 bytes differing in a
+2489: 2,054,866-byte image, 12 of 12 cells per seed, three seeds, zero tolerance.
+2491: Its companion, that the post-delete memory is byte-identical to the memory built from the
+2492: never-inserted history, fails as declared in advance: 1,339,083 / 1,338,974 / 1,343,641 bytes differ
+2493: (65.17\% / 65.16\% / 65.39\% of the image), and the break-out shows that placement is only 16.5\%
+2494: of the obstruction and 83.5\% is that the address book and coupling table are fitted on the pool.
+2496: That falsifies the precondition (canonical Blelloch--Golovin placement) on this memory, not the
+2497: law. Two consequences derived before measurement were then exact: the refusal horizon is $19.9316$
+2498: half-lives for every curvature, measured at 539 steps $=19.9432$ half-lives on all three seeds.
+2500: 
+2501: 
+2503: \section{Further limitations}
+2504: \label{app:morelimits}
+2505: \begin{enumerate}
+2506: \item \textbf{The unseen-valid row belongs to a generic learner.} A parameter-matched
+2507:   continuous-input MLP beats an earlier arm of the n-CLU class by $-0.0192\pm0.0028$ (573,440
+2508:   parameters, 100.1\% of the arm) and, built independently, by $-0.0170\pm0.0024$, on 3 of 3
+2509:   seeds. 
+2510: \item \textbf{Placement is exhausted as a dial.} Row 4 against the label-derived partition reads
+2511:   $+1.388$ / $-12.755$ / $+2.163$ (mean $-3.068$, seed spread 14.918); the bar was not met.
+2513: \item \textbf{Comparators not run.} Approximate unlearners against the data-matched baselines are not
+2514:   run; an extra abstain output for the non-sequence baselines is not built; the refusal head-to-head on
+2515:   the same post-deletion requests is not run; \texttt{pca\_tensor} is not run at $\Kstar$
+2516:   (App.~\ref{app:notrun}).
+2517: \end{enumerate}
+2518: 
+2520: \section{Placeholder index}
+2521: \label{app:placeholders}
+2522: 
+2523: Two rows remain, each marked in the text by a red \textsc{placeholder} whose argument names
+2524: the row: the per-arm generated states of the arms of Tab.~\ref{tab:cmazet} in
+2525: Figs.~\ref{fig:cmazet-families} and~\ref{fig:cmazet-door-tint}. They are
+2526: permanently blocked, not pending: the run behind Tab.~\ref{tab:cmazet} persisted no arm object and
+2527: no per-transition prediction (its run records hold aggregates only), so these panels cannot be drawn
+2528: from that run, and we keep them as named placeholders rather than draw them from any other run. Rows
+2529: that were pending earlier are now written in from their records: the data-matched baseline set
+2530: (Tabs.~\ref{tab:t7} and~\ref{tab:ladder}); the n-CLU-content ladder baseline set, fitted on each rung's
+2531: 32,768 content rows (Tab.~\ref{tab:ladder}); the four deletion measurements on every scope 
+2532: (Tab.~\ref{tab:del}); the CMAZE-T symmetric-input conditions at six seeds
+2533: (Tab.~\ref{tab:cmazet-sym}); LACE and PoE with the generation-table run (Sec.~\ref{sec:adapt},
+2534: Tabs.~\ref{tab:lace-poe} and~\ref{tab:gentable-kstar}); the decomposition paragraph
+2535: (App.~\ref{app:encoder-main}, Tab.~\ref{tab:bard-gpu}); and the coverage control
+2536: (Sec.~\ref{sec:ladder}). No figure is a placeholder figure and none carries an in-image banner.
+2537: Figs.~\ref{fig:cmazet-families}, \ref{fig:cmazet-per-arm}
+2538: and~\ref{fig:cmazet-door-tint} draw every arm of the words-plus-observation condition from its
+2539: persisted objects; their two placeholders name the per-arm outputs of the arms of
+2540: Tab.~\ref{tab:cmazet}.
+2541: 
+2543: \section{Declared not-runs}
+2544: \label{app:notrun}
+2545: 
+2546: \begin{itemize}
+2547: \item Any Shapes3D row at more than three seeds: seeds 3 and 4 pass the generation-2 cache rule
+2548:   (480,000 rows, 59 block hashes each) but have no frozen decoder and no external classifier.
+2550: \item The strong (refit) random atoms control at $\Kstar$ (about an hour of
+2551:   single-thread CPU per leg). 
+2552: \item \texttt{pca\_tensor} at $\Kstar$; therefore whether ``the statistic provides deletion,
+2553: not composition'' holds at $\Kstar$ is not measured.
+2554: \item LACE and PoE refit on 32,768 or 131,072 rows on the ladder rungs (rows 3--4 only were run, at 
+2555:   131,072 rows); the n-CLU-content set's continuous MLP past 204,800 steps; the data-matched set's ten-times fits on the ladder 
+2556:   beyond the MLP, the continuous MLP and the spot checks; the baselines' retrain-without at ten or
+2557:   thirty times their steps.
+2558: \item Approximate unlearning of the data-matched baselines; the refusal head-to-head on the same
+2559:   post-deletion requests; the extra abstain output for the non-sequence baselines.
+2562: \item The per-arm generated states of the CMAZE-T asymmetric-input arms (Tab.~\ref{tab:cmazet}),
+2563:   which were never persisted; n-CLU-REL on the observation-only and word-only
+2564:   conditions at seeds 3 to 5.
+2566: \item The maze encoder loop (contingent on a positive encoder-loop result that did not occur); the
+2567:   earlier generation cell at the longer compute pin.
+2568: \item The one experiment that would upgrade the retention law from theory to a claim (a comparator
+2569:   predicted in advance to be mispredicted).
+2570: \item A figure for the retention law and for the $K=5\to\Kstar$
+2571:   comparison (figure slots only).
+2572: \end{itemize}
+2573: 
+2577: 
+2578: \end{document}

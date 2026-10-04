@@ -1,0 +1,13 @@
+# LOG w20/referee3-fixes
+- 2026-09-23T17:46:31Z START. tmux: authtest, hubhost, w20-referee3-fixes only -> no conflicting session. Read AMENDMENT-1, task, REFEREE-v2.
+- 2026-09-23T17:54:13Z applied tools/apply.py (common + per-file edits a,b,d,e,f); style diff-check run
+- 2026-09-23T17:54:32Z E32: tab:cmazet-sym caption 'bars' -> 'criteria' (both files)
+- 2026-09-23T17:55:08Z A-fix: removed my own overclaim 'store's only relation to physics is the zero-dynamics identity' (theory section carries measured laws)
+- 2026-09-23T17:55:29Z final compile in /Users/batmac/clu/outputs/w20-referee3-fixes/build-final-20260923T175525Z
+- 2026-09-23T17:57:56Z K* sentence tightened (removed repeated 'K*=32 is what the rule selects'; one '32' token removed from BOTH files)
+- 2026-09-23T17:57:56Z style diff-check: ALL DIFFS EMPTY (STYLE-DIFF-CHECK-w20.md); placeholders 11=11 ordered identical; the 10 w19 placeholders byte-identical to before
+- 2026-09-23T17:57:56Z final compile build-final-20260923T175525Z: both 46 pp, bibtex exit 0, 63 bibitems, 0 undefined citations, 0 undefined refs, 0 TeX errors
+- 2026-09-23T17:57:56Z M5 audit (M5-ENV-AUDIT.md): 0 floats with rows from two maze envs; no M5 edit needed
+- 2026-09-23T17:57:56Z (g) verified untouched by grep of both diffs; TODO sequence identical before/after
+- NOT DONE: visual PDF check (no pdftoppm/pdftotext/pypdf on box); no bib entries added (CDM/PINN/HNN left to citation-prune); w20 shapes-data-matched numbers not filled (not landed)
+- 2026-09-23T17:58:09Z END. commit 02072eb + END_UTC commit; bundle w20-referee3-fixes.bundle

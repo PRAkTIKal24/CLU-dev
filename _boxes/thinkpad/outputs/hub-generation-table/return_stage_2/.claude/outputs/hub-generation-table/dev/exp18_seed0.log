@@ -1,0 +1,60 @@
+[00:29:09] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[00:29:09]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[00:29:09]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[00:29:15]   [c0 additive] agg=0.7824(50/72) ridge=100 cols=58 bytes=475136
+[00:29:25]   [c0 pairwise_all] agg=0.9884(72/72) ridge=100 cols=1380 bytes=11304960
+[00:29:30]   [c1 additive] agg=0.9421(55/72) ridge=300 cols=58 bytes=475136
+[00:29:39]   [c1 pairwise_all] agg=1.0000(72/72) ridge=100 cols=1380 bytes=11304960
+[00:29:44]   [c2 additive] agg=0.9306(58/72) ridge=300 cols=58 bytes=475136
+[00:29:54]   [c2 pairwise_all] agg=0.9676(64/72) ridge=300 cols=1380 bytes=11304960
+[00:29:58]   [c3 additive] agg=0.8333(48/72) ridge=10 cols=58 bytes=475136
+[00:30:08]   [c3 pairwise_all] agg=0.9375(60/72) ridge=1 cols=1380 bytes=11304960
+[00:30:13]   [c4 additive] agg=0.8912(51/72) ridge=1 cols=58 bytes=475136
+[00:30:22]   [c4 pairwise_all] agg=0.9468(68/72) ridge=10 cols=1380 bytes=11304960
+[00:30:27]   [c5 additive] agg=0.6898(57/72) ridge=1 cols=58 bytes=475136
+[00:30:37]   [c5 pairwise_all] agg=1.0000(72/72) ridge=100 cols=1380 bytes=11304960
+[00:30:37] [SUMMARY] additive=0.8449+-0.0885(53.2)  pairwise=0.9734+-0.0247(68.0)  delta=+0.1285  paired 6/6
+[00:30:37] done in 94s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table\dev\exp18_seed0.json
+exit=0

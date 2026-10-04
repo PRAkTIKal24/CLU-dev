@@ -1,0 +1,135 @@
+{
+  "D": 2048,
+  "dataset": "shapes3d",
+  "decoder_param_count": 250467,
+  "decoder_param_hash": "7456e6ba5263fd1a5e5a3486f44366c5c31c454ae1e88541fe6c7cb004c993c9",
+  "encoder_dir": "/Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_cls/seed_1",
+  "encoder_param_hash": "19de6bd4dcfb630b04641e6432c5a1c7ca5fd771c03d32cd93ba955111ccb584",
+  "feature_cache": {
+    "D": 2048,
+    "dataset": "shapes3d",
+    "dtype": "float16",
+    "encoder_param_hash": "19de6bd4dcfb630b04641e6432c5a1c7ca5fd771c03d32cd93ba955111ccb584",
+    "feat_shape": [
+      128,
+      4,
+      4
+    ],
+    "features_bytes": 38043776,
+    "features_file": "features.npy",
+    "features_sha256": "87eb79d6a1ca9310bcbdcacc38c641a94a90edaa935e4ca20f37e90864c0f150",
+    "n_rows": 9288,
+    "rows_file": "feature_rows.npy",
+    "rows_sha256": "d7177d099dc76fdeb6b7e12d5c7d4264f403df924201459a09b792fc56b10179",
+    "schema": "chlu-gen-feature-cache/1",
+    "scope": "used"
+  },
+  "no_leak": {
+    "n_checked": 8192,
+    "n_holdout_excluded": 72,
+    "n_holdout_leaked": 0,
+    "n_holdout_total": 72,
+    "n_train_rows_used": 8192
+  },
+  "pretext": "cls",
+  "probe_param_count": 633049,
+  "probe_param_hash": "fb16109ded84c908d9e3b53b92a4c428215d3db7a19d00103f2d47aa6f5bd260",
+  "result": {
+    "gate": {
+      "ceiling_A": 0.9265950520833334,
+      "ceiling_B": 0.875,
+      "floor": 0.8,
+      "note": "ceiling_B >= 0.8 x ceiling_A: the decoder can render held-out combinations, so kill rule (i) can be read on the store.",
+      "ratio": 0.9443175829966626,
+      "verdict": "PROCEED"
+    },
+    "per_split": {
+      "A": {
+        "ceiling": {
+          "aggregate": 0.9265950520833334,
+          "decoded_mean": 0.5603792071342468,
+          "exact_match": 0.603515625,
+          "n": 1024,
+          "per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 1.0,
+            "orientation": 0.9189453125,
+            "scale": 0.7451171875,
+            "shape": 0.8955078125,
+            "wall_hue": 1.0
+          }
+        },
+        "decode_mse": 0.00516332546249032,
+        "n": 1024,
+        "probe_on_real": {
+          "aggregate": 1.0,
+          "exact_match": 1.0,
+          "n": 1024,
+          "per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 1.0,
+            "orientation": 1.0,
+            "scale": 1.0,
+            "shape": 1.0,
+            "wall_hue": 1.0
+          }
+        }
+      },
+      "B": {
+        "ceiling": {
+          "aggregate": 0.875,
+          "decoded_mean": 0.5991783738136292,
+          "exact_match": 0.3472222222222222,
+          "n": 72,
+          "per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 1.0,
+            "orientation": 0.9861111111111112,
+            "scale": 0.6111111111111112,
+            "shape": 0.6527777777777778,
+            "wall_hue": 1.0
+          }
+        },
+        "decode_mse": 0.0034965870436280966,
+        "n": 72,
+        "probe_on_real": {
+          "aggregate": 1.0,
+          "exact_match": 1.0,
+          "n": 72,
+          "per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 1.0,
+            "orientation": 1.0,
+            "scale": 1.0,
+            "shape": 1.0,
+            "wall_hue": 1.0
+          }
+        }
+      }
+    }
+  },
+  "rows": {
+    "eval_a": 1024,
+    "eval_b": 72,
+    "train": 8192
+  },
+  "schema": "chlu-gen-bridge/1",
+  "seed": 1,
+  "training": {
+    "dec_loss_final": 0.004758204333484173,
+    "dec_loss_first": 0.16781465709209442,
+    "dec_steps": 1200,
+    "probe_loss_final": 0.00016630362370051444,
+    "probe_loss_first": 2.243314743041992,
+    "probe_steps": 1500
+  },
+  "whitening": {
+    "D": 2048,
+    "N_train_features": 8192,
+    "full_whitening_feasible": true,
+    "lace_option": "1 \u2014 feature width chosen so LACE whitens natively (full D x D shrinkage covariance over the cached train features)",
+    "limit": 20000,
+    "note": "D=2048 <= 20000: a full D x D eigendecomposition is feasible, so the LACE arm runs in fully whitened coordinates and is NOT pushed onto channel-only whitening.",
+    "shrinkage_mandatory": false
+  }
+}

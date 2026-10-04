@@ -1,0 +1,147 @@
+WAIT: for sidecar 00:10:11Z
+START: dash seeds 1,2 then learners seed 0 00:12:42Z
+  judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  dash(seed 1) mlp: refuses 0.0000 of the 720 deleted-conjunction requests and answers all of them; the judge reads the asked hue back at 1.0000
+  dash(seed 1) mlp_180k: refuses 0.0000 of the 720 deleted-conjunction requests and answers all of them; the judge reads the asked hue back at 1.0000
+  dash(seed 1) cont_mlp: refuses 0.0000 of the 720 deleted-conjunction requests and answers all of them; the judge reads the asked hue back at 0.9542
+  dash(seed 1) transformer: refuses 0.0000 of the 720 deleted-conjunction requests and answers all of them; the judge reads the asked hue back at 0.9944
+  dash(seed 1) lstm: refuses 0.0000 of the 720 deleted-conjunction requests and answers all of them; the judge reads the asked hue back at 1.0000
+DASH seed 1 exit 0 00:15:05Z
+  judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  dash(seed 2) mlp: refuses 0.0000 of the 720 deleted-conjunction requests and answers all of them; the judge reads the asked hue back at 1.0000
+  dash(seed 2) mlp_180k: refuses 0.0000 of the 720 deleted-conjunction requests and answers all of them; the judge reads the asked hue back at 1.0000
+  dash(seed 2) cont_mlp: refuses 0.0000 of the 720 deleted-conjunction requests and answers all of them; the judge reads the asked hue back at 0.9583
+  dash(seed 2) transformer: refuses 0.0000 of the 720 deleted-conjunction requests and answers all of them; the judge reads the asked hue back at 1.0000
+  dash(seed 2) lstm: refuses 0.0000 of the 720 deleted-conjunction requests and answers all of them; the judge reads the asked hue back at 1.0000
+DASH seed 2 exit 0 00:17:09Z
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+    matched width=61: 130514 params vs target 131072 (-0.43%)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  learners(seed 0) mlp: full pool 73.9s / WITHOUT RED 88.2s on 120,028 rows; after the retrain it still ANSWERS 720 red requests (refusal 0.0000) and the judge reads the asked hue back at 0.0750
+LEARNERS seed 0 exit 0 00:21:12Z
+CHAIN_DONE 00:21:12Z

@@ -1,0 +1,67 @@
+[18:23:27] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[18:23:27]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[18:23:27]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[18:23:28] table=part nvariants=4 corners[3:6] set=select
+[18:23:28]   PT_equal_uniform   K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=454336
+[18:23:28]   PT_equal_waterfill K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=waterfill bytes_pred=454336
+[18:23:28]   PT_ward_uniform    K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=454336
+[18:23:28]   PT_ward_waterfill  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=waterfill bytes_pred=454336
+[18:23:30] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[18:24:06] [c6 0188999d1c] PT_equal_uniform   agg=0.8727 tup=40 B=454336 r=52 [34.3s]
+[18:24:41] [c6 0188999d1c] PT_equal_waterfill agg=0.8542 tup=44 B=454336 r=52 [35.8s]
+[18:25:25] [c6 0188999d1c] PT_ward_uniform    agg=0.8449 tup=42 B=454336 r=52 [40.1s]
+[18:25:59] [c6 0188999d1c] PT_ward_waterfill  agg=0.8495 tup=41 B=466900 r=52 [33.4s]
+[18:25:59] [c6] corner done in 149.2s
+[18:26:34] [c8 18792b5479] PT_equal_uniform   agg=0.9838 tup=65 B=454336 r=52 [33.8s]
+[18:27:08] [c8 18792b5479] PT_equal_waterfill agg=0.9769 tup=62 B=454336 r=52 [33.3s]
+[18:27:44] [c8 18792b5479] PT_ward_uniform    agg=0.9745 tup=61 B=454336 r=52 [32.9s]
+[18:28:18] [c8 18792b5479] PT_ward_waterfill  agg=0.9884 tup=67 B=465832 r=52 [33.8s]
+[18:28:18] [c8] corner done in 138.9s
+[18:28:53] [c12 ff22c5a995] PT_equal_uniform   agg=0.9653 tup=64 B=454336 r=52 [33.2s]
+[18:29:25] [c12 ff22c5a995] PT_equal_waterfill agg=0.9514 tup=59 B=454336 r=52 [32.2s]
+[18:30:03] [c12 ff22c5a995] PT_ward_uniform    agg=0.9028 tup=62 B=454336 r=52 [34.8s]
+[18:30:36] [c12 ff22c5a995] PT_ward_waterfill  agg=0.9236 tup=56 B=469220 r=52 [33.3s]
+[18:30:36] [c12] corner done in 138.6s
+[18:30:36] r1 part done in 428.8s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table/relaunch\runs\r1_ledger_p1.jsonl

@@ -1,0 +1,107 @@
+=== gen-atom-mean-control: shapes3d/recon stage=atoms quick=False ===
+⛔ DIAL: none — this is a CONTROL. No CLU number, no verdict.
+  ⭐ PRECONDITION 1/2: classifier_gate.json gate=PASS (floor 0.95, 3 seeds)
+  ⭐ PRECONDITION 2/2: refusal_scores.json status=complete (not_run=[])
+[     0.0s] seed 1 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (hash + recipe asserted)
+[     0.0s]   ⭐ external classifier aa69b436989b2de5… (978873 params) — THE instrument, identical across every arm in this seed
+[     0.5s] rows: store_train=32768 B=72 MS=199 A=512 fit=32256 val=512 (⛔ fit/val are GenBaselinesConfig's 32,256/512, ⛔ never my own)
+[     0.5s]   ⭐ row split: mode=stratified — val realises floor_hue 10/10 · wall_hue 10/10 · object_hue 10/10 · scale 8/8 · shape 4/4 · orientation 15/15 · max per-value count ratio 1.061
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     1.5s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     1.5s] cache 9288 rows (scope=used), D=2048; re-encode check bit-identical on 64 rows
+[     1.5s]     extending cache coverage: 32199 row(s) encoded through the frozen encoder
+[    74.0s]     extending cache coverage: 196 row(s) encoded through the frozen encoder
+[    76.2s]     extending cache coverage: 31698 row(s) encoded through the frozen encoder
+[   147.5s]     extending cache coverage: 501 row(s) encoded through the frozen encoder
+[   198.9s]   ⚠ this seed's encoder differs from the plan's (fc05e2c5f396… vs 98d326028316…), so the grouping is re-derived on its own channels — ⛔ the plan's label vector would be a size-matched RANDOM partition here
+[   198.9s] wells K=5 sizes=[397, 300, 307, 300, 744] (Σ=2048=D) · the store's own ledger is n_modes(64)·D·4 = 524,288 B
+[   205.6s] ⭐ DECODER ceiling on IMAGES: external in-corner 0.9472 · probe 0.9365
+[   211.1s]   ⭐ [knn_proto REGRESSION] probe in-corner 0.8844221105527639 vs published 0.8844221105527639 -> Δ = +0, bit_identical=True
+[   211.1s]   ⭐ [A] budget 524,288 B -> N = 64 atoms/well (D=2048, an atom costs 8,192 B)
+[   213.3s]     [atoms] global well 0: d_k=2048 -> 64 kmedoid atoms (inertia 5.95e+06, 25 Lloyd iters)
+[   213.3s]     ⭐ [A/global] byte ledger 524,288 B == budget 524,288 B (matched_exactly=True), sha256 e1357e0e6b66073c…
+[   214.0s]     [atoms] per_well well 0: d_k=397 -> 64 kmedoid atoms (inertia 9.986e+05, 25 Lloyd iters)
+[   214.6s]     [atoms] per_well well 1: d_k=300 -> 64 kmedoid atoms (inertia 5.719e+05, 25 Lloyd iters)
+[   215.2s]     [atoms] per_well well 2: d_k=307 -> 64 kmedoid atoms (inertia 5.335e+05, 25 Lloyd iters)
+[   215.7s]     [atoms] per_well well 3: d_k=300 -> 64 kmedoid atoms (inertia 4.381e+05, 25 Lloyd iters)
+[   216.7s]     [atoms] per_well well 4: d_k=744 -> 64 kmedoid atoms (inertia 1.298e+06, 25 Lloyd iters)
+[   216.7s]     ⭐ [A/per_well] byte ledger 524,288 B == budget 524,288 B (matched_exactly=True), sha256 9fabb694388a43d4…
+[   216.7s]     ⭐ atoms persisted: /Users/user/Desktop/CHLU/.claude/outputs/gen-atom-mean-resweep/runs/nval0512_tune0256/seed_1/atoms_s1_A.npz sha256 9fabb694388a43d4…
+[   216.7s]   [A] tuning budget: 24 trials of 36 available; selection = val_aggregate on 256 VALIDATION rows (⛔ B never enters)
+[   218.2s]     [A] trial 1/24 {'k': 1, 'metric': 'euclidean', 'normaliser': 'none', 'scope': 'per_well'}: val agg=0.5573
+[   225.6s]     [A] trial 6/24 {'k': 5, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'per_well'}: val agg=0.5755
+[   234.7s]     [A] trial 12/24 {'k': 5, 'metric': 'cosine', 'normaliser': 'zscore', 'scope': 'per_well'}: val agg=0.5664
+[   243.7s]     [A] trial 18/24 {'k': 5, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'global'}: val agg=0.4082
+[   252.7s]     [A] trial 24/24 {'k': 5, 'metric': 'cosine', 'normaliser': 'zscore', 'scope': 'global'}: val agg=0.4154
+[   252.7s]   ⭐ [A] SELECTED (validation aggregate, ⛔ C/B never enter): {'k': 3, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'per_well', 'val_aggregate': 0.5813802083333334, 'val_compositional': 0.38671875, 'val_aggregate_half1': 0.5950520833333334, 'val_aggregate_half2': 0.5677083333333334, 'val_aggregate_ihalf1': 0.59375, 'val_aggregate_ihalf2': 0.5690104166666666, 'bits_per_read': 90.0}
+[   252.7s]     [A] selection stability (INTERLEAVED halves): agree=False (half1 {'k': 1, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'per_well'}, half2 {'k': 3, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'per_well'})
+[   252.7s]     [A] selection stability: halves agree=False (half1 {'k': 3, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'per_well'}, half2 {'k': 1, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'per_well'}); best-to-second gap 0.0046, trial spread 0.0942
+[   259.4s]   ⭐ [A] IMAGE in-corner shape balacc=0.6683 (probe 0.6880) · distinct on B: 30 atom-configs / 30 vectors / 16 factor-tuples of 72
+[   259.5s]   ⭐ [A] relative read error on A (⛔ unfitted rows): oracle k=1 0.4014 · oracle k=3 0.3225 · request k=3 0.3790 · ⚠ CENTROID control 0.2800 (medoid penalty ×1.434)
+[   262.2s]   ⚠ [A] weak companion (subsample): in-corner 0.5889 vs shipped 0.6683; oracle rel-mse 0.4816 vs shipped 0.4014
+[   262.2s]   ⭐ [B] budget 4,194,304 B -> N = 512 atoms/well (D=2048, an atom costs 8,192 B)
+[   270.4s]     [atoms] global well 0: d_k=2048 -> 512 kmedoid atoms (inertia 3.452e+06, 25 Lloyd iters)
+[   270.4s]     ⭐ [B/global] byte ledger 4,194,304 B == budget 4,194,304 B (matched_exactly=True), sha256 818186da90910825…
+[   273.7s]     [atoms] per_well well 0: d_k=397 -> 512 kmedoid atoms (inertia 5.661e+05, 25 Lloyd iters)
+[   276.4s]     [atoms] per_well well 1: d_k=300 -> 512 kmedoid atoms (inertia 3.26e+05, 25 Lloyd iters)
+[   279.5s]     [atoms] per_well well 2: d_k=307 -> 512 kmedoid atoms (inertia 2.838e+05, 25 Lloyd iters)
+[   282.2s]     [atoms] per_well well 3: d_k=300 -> 512 kmedoid atoms (inertia 2.407e+05, 25 Lloyd iters)
+[   286.4s]     [atoms] per_well well 4: d_k=744 -> 512 kmedoid atoms (inertia 7.347e+05, 25 Lloyd iters)
+[   286.4s]     ⭐ [B/per_well] byte ledger 4,194,304 B == budget 4,194,304 B (matched_exactly=True), sha256 7c0cf9198720cb31…
+[   286.6s]     ⭐ atoms persisted: /Users/user/Desktop/CHLU/.claude/outputs/gen-atom-mean-resweep/runs/nval0512_tune0256/seed_1/atoms_s1_B.npz sha256 7c0cf9198720cb31…
+[   286.6s]   [B] tuning budget: 24 trials of 36 available; selection = val_aggregate on 256 VALIDATION rows (⛔ B never enters)
+[   288.2s]     [B] trial 1/24 {'k': 1, 'metric': 'euclidean', 'normaliser': 'none', 'scope': 'per_well'}: val agg=0.6628
+[   296.0s]     [B] trial 6/24 {'k': 5, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'per_well'}: val agg=0.6335
+[   305.3s]     [B] trial 12/24 {'k': 5, 'metric': 'cosine', 'normaliser': 'zscore', 'scope': 'per_well'}: val agg=0.6243
+[   314.3s]     [B] trial 18/24 {'k': 5, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'global'}: val agg=0.5260
+[   323.3s]     [B] trial 24/24 {'k': 5, 'metric': 'cosine', 'normaliser': 'zscore', 'scope': 'global'}: val agg=0.5078
+[   323.3s]   ⭐ [B] SELECTED (validation aggregate, ⛔ C/B never enter): {'k': 1, 'metric': 'euclidean', 'normaliser': 'none', 'scope': 'per_well', 'val_aggregate': 0.6627604166666666, 'val_compositional': 0.48828125, 'val_aggregate_half1': 0.6731770833333334, 'val_aggregate_half2': 0.65234375, 'val_aggregate_ihalf1': 0.6705729166666666, 'val_aggregate_ihalf2': 0.6549479166666666, 'bits_per_read': 45.0}
+[   323.3s]     [B] selection stability (INTERLEAVED halves): agree=False (half1 {'k': 1, 'metric': 'euclidean', 'normaliser': 'none', 'scope': 'per_well'}, half2 {'k': 1, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'per_well'})
+[   323.3s]     [B] selection stability: halves agree=False (half1 {'k': 1, 'metric': 'euclidean', 'normaliser': 'none', 'scope': 'per_well'}, half2 {'k': 1, 'metric': 'cosine', 'normaliser': 'none', 'scope': 'per_well'}); best-to-second gap 0.0007, trial spread 0.0721
+[   330.3s]   ⭐ [B] IMAGE in-corner shape balacc=0.7528 (probe 0.7477) · distinct on B: 22 atom-configs / 22 vectors / 20 factor-tuples of 72
+[   330.4s]   ⭐ [B] relative read error on A (⛔ unfitted rows): oracle k=1 0.2260 · oracle k=1 0.2260 · request k=1 0.3259 · ⚠ CENTROID control 0.1665 (medoid penalty ×1.357)
+[   333.7s]   ⚠ [B] weak companion (subsample): in-corner 0.6938 vs shipped 0.7528; oracle rel-mse 0.2601 vs shipped 0.2260
+[   333.8s] seed 1 done in 334s
+=== done in 334s ===

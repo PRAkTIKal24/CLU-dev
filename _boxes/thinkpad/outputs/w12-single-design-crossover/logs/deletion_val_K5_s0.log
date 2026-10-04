@@ -1,0 +1,76 @@
+condition=val seed=0 K=5 corners=24 cache={'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+  red AND <shape> rows in the fit pool: {'cube': 0, 'cylinder': 0, 'sphere': 5507, 'oblong': 5517}
+  scope value       : 11,024 of 131,072 fit rows (8.41 %)
+  scope conjunction : 0 of 131,072 fit rows (0.00 %)
+  scope conjunction_live: 5,507 of 131,072 fit rows (4.20 %)
+  scope item        : 1,311 of 131,072 fit rows (1.00 %)
+  reusing the fitted arm from C:\chlu\outputs\w12-single-design-crossover\val_sweep\val_K5_seed0\arm.pkl (K=5, A=64)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    BEFORE deletion                        24 corners in 41s
+
+===== SCOPE VALUE -- 11,024 rows =====
+  OUR ADAPTATION  1.4525s  4,068,192 B rewritten  0 data rows read
+  EXACTNESS (store-scoped)  max|mode dev| 1.455e-11  max subspace dist 1.430e-11  ranks agree True  (refit-without took 13.2s, read 120,048 rows)
+    AFTER value                            24 corners in 39s
+
+===== SCOPE CONJUNCTION -- 0 rows =====
+  OUR ADAPTATION  0.3225s  4,068,192 B rewritten  0 data rows read
+  EXACTNESS (store-scoped)  max|mode dev| 0.000e+00  max subspace dist 0.000e+00  ranks agree True  (refit-without took 14.7s, read 131,072 rows)
+    AFTER conjunction                      24 corners in 39s
+
+===== SCOPE CONJUNCTION_LIVE -- 5,507 rows =====
+  OUR ADAPTATION  0.7211s  4,068,192 B rewritten  0 data rows read
+  EXACTNESS (store-scoped)  max|mode dev| 2.842e-14  max subspace dist 3.177e-14  ranks agree True  (refit-without took 12.5s, read 125,565 rows)
+    AFTER conjunction_live                 24 corners in 40s
+
+===== SCOPE ITEM -- 1,311 rows =====
+  OUR ADAPTATION  0.2781s  4,068,192 B rewritten  0 data rows read
+  EXACTNESS (store-scoped)  max|mode dev| 1.455e-11  max subspace dist 1.334e-11  ranks agree True  (refit-without took 13.7s, read 129,761 rows)
+    AFTER item                             24 corners in 41s
+
+wrote C:\chlu\outputs\w12-single-design-crossover\deletion\val_seed0_K5\deletion.json
+  value        survivors  24  novel/corner  64.208 ->  64.333   paired +0.1250   exactness 1.455e-11
+  conjunction  survivors  24  novel/corner  64.208 ->  64.208   paired +0.0000   exactness 0.000e+00
+  conjunction_live survivors  24  novel/corner  64.208 ->  64.125   paired -0.0833   exactness 2.842e-14
+  item         survivors  24  novel/corner  64.208 ->  64.208   paired +0.0000   exactness 1.455e-11

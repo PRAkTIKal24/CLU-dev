@@ -1,0 +1,71 @@
+[01:19:01] heads fitted
+[01:19:06] --- r1_seen: 512 requests, metric=accuracy
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:19:10]   basis_head               judge_accuracy 0.67578125  valid 346/512  distinct 511  (3.6s)
+[01:19:13]   basis_head_pca           judge_accuracy 0.873046875  valid 447/512  distinct 511  (3.1s)
+[01:19:16]   knn_proto                judge_accuracy 0.205078125  valid 105/512  distinct 508  (3.4s)
+[01:19:20]   clu_span                 judge_accuracy 0.564453125  valid 289/512  distinct 509  (3.7s)
+[01:19:26]   clu_discrete             judge_accuracy 0.02734375  valid 14/512  distinct 474  (6.5s)
+[01:19:31]   store_removed_span       judge_accuracy 0.0  valid 0/512  distinct 13  (4.5s)
+[01:19:36]   store_removed_discrete   judge_accuracy 0.0  valid 0/512  distinct 1  (4.8s)
+[01:19:40]   store_scrambled_span     judge_accuracy 0.0  valid 0/512  distinct 397  (4.4s)
+[01:19:40] --- r3_comp_2way: 1536 requests, metric=novelty
+[01:19:53]   basis_head               distinct_valid_novel_tuples 706  valid 706/1536  distinct 1518  (13.1s)
+[01:20:07]   basis_head_pca           distinct_valid_novel_tuples 1005  valid 1005/1536  distinct 1526  (13.8s)
+[01:20:21]   knn_proto                distinct_valid_novel_tuples 231  valid 231/1536  distinct 1499  (13.8s)
+[01:20:35]   clu_span                 distinct_valid_novel_tuples 637  valid 637/1536  distinct 1511  (14.0s)
+[01:20:55]   clu_discrete             distinct_valid_novel_tuples 2  valid 2/1536  distinct 1121  (20.0s)
+[01:21:12]   store_removed_span       distinct_valid_novel_tuples 0  valid 0/1536  distinct 17  (17.3s)
+[01:21:31]   store_removed_discrete   distinct_valid_novel_tuples 0  valid 0/1536  distinct 1  (19.0s)
+[01:21:49]   store_scrambled_span     distinct_valid_novel_tuples 1  valid 1/1536  distinct 676  (18.3s)
+[01:21:49] --- r4_comp_nway: 3528 requests, metric=novelty
+[01:22:31]   basis_head               distinct_valid_novel_tuples 1652  valid 1652/3528  distinct 2410  (41.2s)
+[01:22:59]   basis_head_pca           distinct_valid_novel_tuples 2968  valid 2968/3528  distinct 3157  (28.4s)
+[01:23:29]   knn_proto                distinct_valid_novel_tuples 725  valid 725/3528  distinct 2362  (30.1s)
+[01:24:01]   clu_span                 distinct_valid_novel_tuples 1283  valid 1283/3528  distinct 2019  (31.9s)
+[01:24:45]   clu_discrete             distinct_valid_novel_tuples 8  valid 8/3528  distinct 441  (44.1s)
+[01:25:29]   store_removed_span       distinct_valid_novel_tuples 0  valid 0/3528  distinct 7  (43.8s)
+[01:26:09]   store_removed_discrete   distinct_valid_novel_tuples 0  valid 0/3528  distinct 1  (39.8s)
+[01:26:35]   store_scrambled_span     distinct_valid_novel_tuples 0  valid 0/3528  distinct 319  (25.9s)
+[01:26:35] wrote C:\chlu\outputs\hub-unseen-valid\runs\rows/scoreboard_rows.json

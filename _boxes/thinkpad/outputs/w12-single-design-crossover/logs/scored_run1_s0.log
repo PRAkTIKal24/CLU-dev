@@ -1,0 +1,108 @@
+GATE OPEN: C:\chlu\outputs\w12-deletion-baselines\BASELINES-READY.json
+  {
+  "NOT_A_SCORED_RUN": true,
+  "SEED_COVERAGE": "seeds present: [0, 1, 2]. Any seed NOT listed here is a DECLARED NOT-RUN for this spoke, never a zero: re-run scripts/w12_deletion_baselines.py with --seed S and this file merges it in.",
+  "branch": "w12/deletion-baselines",
+  "comparators": {
+    "as_trained": {
+      "arms": [
+        "mlp",
+        "cont_mlp",
+        "transformer",
+        "lstm"
+      ],
+      "entry_point": "chlu.eval.rivals.w12_deletion_baselines.fit_as_trained",
+      "exactness": "n/a -- it has not deleted anything",
+      "reads_deleted_rows": true,
+      "role": "the learned arm BEFORE any deletion -- the reference the others move from"
+    },
+    "refuse_token": {
+      "arms": [
+        "transformer"
+      ],
+      "entry_point": "chlu.eval.rivals.w12_deletion_baselines.fit_refuse_token_transformer",
+      "exactness": "n/a -- it is a refusal comparator, scored by separation",
+      "reads_deleted_rows": true,
+      "role": "COMPARATOR 3 -- the refuse-token transformer, the ONLY permitted comparator for refusal DISPLAY rows"
+    },
+    "retrain_without": {
+      "arms": [
+        "mlp",
+        "cont_mlp",
+        "transformer",
+        "lstm"
+      ],
+      "entry_point": "chlu.eval.rivals.w12_deletion_baselines.retrain_without",
+      "exactness": "exact by construction: the deleted rows were never in the pool",
+      "reads_deleted_rows": false,
+      "role": "COMPARATOR 1 -- the EXACT reference: refit from scratch on the pool minus the delete
+CACHE GATE (5 seeds): C:\chlu\outputs\w12-cache-gen2-seeds-3-4\CACHE-READY.json exists = True
+K* = 32 (from CROSSOVER-val.json, rule frozen 11:10:24Z)
+cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+TEST corners: row 3 = 60 pair sub-corners, row 4 = 49 n-way
+store K=32 A=63 built 15.6s  RANK/WIDTH 0.9688..0.9688
+address book 1242.3s  1,060,864 B
+FOUR-PART LEDGER (summed, never netted): atoms 516,096 | cov+count 560,608 | address 1,060,864 | coupling 6,610 = 2,144,178 B  [4.0897x the 524,288 B REFERENCE column]
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cov_tensor (THE ARM)                   109 corners in 187s
+    landscape_removed                      109 corners in 149s
+    landscape_shuffled                     109 corners in 236s
+    landscape_shuffled_across_wells        109 corners in 187s
+    random_atoms                           109 corners in 188s
+    mlp__as_trained                        109 corners in 241s
+    lstm__as_trained                       109 corners in 436s
+    transformer__as_trained                109 corners in 368s
+    cont_mlp__as_trained                   109 corners in 233s
+    table                                  109 corners in 280s
+wrote C:\chlu\outputs\w12-single-design-crossover\scored\run1_seed0_K32\scored.json
+  cov_tensor                             row3   31.600  row4   66.959
+  landscape_removed                      row3    0.000  row4    0.000
+  landscape_shuffled                     row3    0.000  row4    0.000
+  landscape_shuffled_across_wells        row3    0.000  row4    0.000
+  random_atoms                           row3    0.000  row4    0.000
+  mlp__as_trained                        row3    2.933  row4    7.959
+  lstm__as_trained                       row3    2.500  row4    7.531
+  transformer__as_trained                row3    0.667  row4    1.918
+  cont_mlp__as_trained                   row3    0.000  row4    0.061
+  table                                  row3    5.833  row4   11.163

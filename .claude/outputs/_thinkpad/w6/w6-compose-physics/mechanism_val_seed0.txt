@@ -1,0 +1,33 @@
+leg: C:\chlu\outputs\w6-compose-physics\dev\val_seed0   condition = val
+24 val corners  (SELECTION set; nothing here is scored)
+
+leg                        displ   valid distinct   novel    SEEN  seen%
+------------------------------------------------------------------------
+pca_tensor                   nan  0.8941   64.375  64.375   0.000   0.0%
+pca_settle_zerostep       0.0000  0.8941   64.375  64.375   0.000   0.0%
+pca_settle_f01_conv       0.0018  0.8941   64.375  64.375   0.000   0.0%
+pca_settle_f05_conv       0.0092  0.8906   64.125  64.125   0.000   0.0%
+pca_settle_f10_conv       0.0190  0.8877   63.917  63.917   0.000   0.0%
+pca_settle_f25_s3         0.0269  0.8837   63.625  63.625   0.000   0.0%
+pca_settle_onestep        0.0451  0.8663   62.375  62.375   0.000   0.0%
+pca_settle_f25_conv       0.0514  0.8559   61.625  61.625   0.000   0.0%
+pca_settle_f100_s3        0.1186  0.7622   54.875  54.875   0.000   0.0%
+pca_settle_f50_conv       0.1205  0.7442   53.583  53.583   0.000   0.0%
+pca_settle_f100_s10       0.2696  0.4821   34.708  34.708   0.000   0.0%
+pca_settle                0.4195  0.3119   22.458  22.458   0.000   0.0%
+pca_settle_r4             0.3763  0.3084   22.208  22.208   0.000   0.0%
+pca_settle_r64            0.4191  0.3160   22.750  22.750   0.000   0.0%
+pca_settle_kernel            nan  0.0000    0.000   0.000   0.000   0.0%
+pca_settle_lookup         0.4195  0.0000    0.000   0.000   0.000   0.0%
+
+columns: displ = median relative displacement launch->settled; valid = judge validity rate;
+distinct = distinct VALID tuples per corner; novel = of those, never fitted on;
+SEEN = of those, already in the fit pool.  novel is the metric rows 3 and 4 are decided in.
+
+MEASURED, on BOTH conditions: SEEN is identically 0 for every leg, including the incumbent.
+Under val the corners' rows are removed from the fit pool; under test the row-4 corners are
+Montero-shaped combinations the condition never emitted.  Either way the scored corners hold
+NO seen combinations, so distinct == novel by construction and the whole metric is carried by
+VALIDITY.  Consequence: the settled read is NOT regressing to seen combinations (charter E.4's
+banked mechanism) -- it cannot, there are none to regress to.  It is walking the state OFF the
+request, and the external classifier charges it one tuple for one.

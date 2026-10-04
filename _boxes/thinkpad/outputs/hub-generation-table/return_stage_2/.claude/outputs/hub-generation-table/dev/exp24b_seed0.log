@@ -1,0 +1,113 @@
+[01:44:05] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[01:44:05]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[01:44:05]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[01:44:05] 64 candidate corners after de-duplication
+[01:44:05] corner 0 already done
+[01:44:05] corner 1 already done
+[01:44:05] corner 2 already done
+[01:44:05] corner 3 already done
+[01:44:05] corner 4 already done
+[01:44:05] corner 5 already done
+[01:44:05] corner 6 already done
+[01:44:05] corner 7 already done
+[01:44:05] corner 8 SKIPPED — ⛔ DEV corner {'hue_lo': 0.6, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:44:05] corner 9 SKIPPED — ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:44:05] corner 10 already done
+[01:44:05] corner 11 already done
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:44:50] [c12] modes=0.8218(50) atoms=0.7130 pca=0.8032 random=0.7245 mean=0.1806 | clu_argmax=0.5417(15) knn=0.7685(56) | total=469504 [44.5s]
+[01:45:34] [c13] modes=0.6944(41) atoms=0.6528 pca=0.7685 random=0.8125 mean=0.2153 | clu_argmax=0.5440(15) knn=0.7060(56) | total=469504 [44.2s]
+[01:46:17] [c14] modes=0.6620(47) atoms=0.6968 pca=0.7894 random=0.6620 mean=0.3009 | clu_argmax=0.6181(23) knn=0.7940(47) | total=469504 [43.0s]
+[01:47:00] [c15] modes=0.7894(58) atoms=0.7477 pca=0.8380 random=0.7037 mean=0.1250 | clu_argmax=0.5255(25) knn=0.8519(59) | total=469504 [43.3s]
+[01:47:43] [c16] modes=0.8171(35) atoms=0.8171 pca=0.7153 random=0.6782 mean=0.3981 | clu_argmax=0.6481(15) knn=0.8194(54) | total=469504 [42.8s]
+[01:48:27] [c17] modes=0.7454(43) atoms=0.8657 pca=0.6829 random=0.5671 mean=0.4630 | clu_argmax=0.6968(19) knn=0.8056(51) | total=469504 [43.6s]
+[01:49:10] [c18] modes=0.8102(44) atoms=0.8356 pca=0.7500 random=0.6319 mean=0.3472 | clu_argmax=0.7199(12) knn=0.8819(47) | total=469504 [43.4s]
+[01:49:54] [c19] modes=0.9051(57) atoms=0.8819 pca=0.7199 random=0.5949 mean=0.3750 | clu_argmax=0.6551(20) knn=0.9491(60) | total=469504 [43.4s]
+[01:50:37] [c20] modes=0.9097(43) atoms=0.8819 pca=0.8102 random=0.7593 mean=0.4745 | clu_argmax=0.7060(17) knn=0.8588(54) | total=469504 [43.1s]
+[01:51:20] [c21] modes=0.8264(40) atoms=0.7894 pca=0.9468 random=0.8542 mean=0.2569 | clu_argmax=0.6944(18) knn=0.8495(60) | total=469504 [43.0s]
+[01:52:03] [c22] modes=0.8032(40) atoms=0.8194 pca=0.9931 random=0.7014 mean=0.1991 | clu_argmax=0.6435(15) knn=0.8333(48) | total=469504 [43.2s]
+[01:52:03] corner 23 SKIPPED — ⛔ DEV corner {'hue_lo': 0.0, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:52:48] [c24] modes=0.8102(51) atoms=0.8773 pca=0.7986 random=0.7014 mean=0.4074 | clu_argmax=0.6829(24) knn=0.8125(58) | total=469504 [44.5s]
+[01:53:32] [c25] modes=0.7917(39) atoms=0.7477 pca=0.7292 random=0.6088 mean=0.2569 | clu_argmax=0.6736(27) knn=0.8495(58) | total=469504 [44.0s]
+[01:53:32] corner 26 SKIPPED — ⛔ DEV corner {'hue_lo': 0.0, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:53:32] corner 27 SKIPPED — ⛔ DEV corner {'hue_lo': 0.0, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:53:32] corner 28 SKIPPED — ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:53:32] corner 29 SKIPPED — ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:54:15] [c30] modes=0.7477(52) atoms=0.7870 pca=0.6505 random=0.6620 mean=0.2014 | clu_argmax=0.6690(16) knn=0.8356(59) | total=469504 [43.2s]
+[01:54:58] [c31] modes=0.8264(46) atoms=0.8657 pca=0.8819 random=0.7153 mean=0.1898 | clu_argmax=0.6389(17) knn=0.8519(48) | total=469504 [43.2s]
+[01:54:58] corner 32 SKIPPED — ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 1.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:55:41] [c33] modes=0.9398(54) atoms=0.9769 pca=0.9769 random=0.6944 mean=0.2778 | clu_argmax=0.7569(24) knn=0.9491(51) | total=469504 [43.0s]
+[01:55:41] corner 34 SKIPPED — ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': True, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:55:41] corner 35 SKIPPED — ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:55:41] corner 36 SKIPPED — ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:56:25] [c37] modes=0.8356(53) atoms=0.7824 pca=0.7338 random=0.6991 mean=0.2222 | clu_argmax=0.7315(27) knn=0.9144(55) | total=469504 [43.9s]
+[01:57:10] [c38] modes=0.8403(40) atoms=0.7338 pca=0.7245 random=0.6505 mean=0.2037 | clu_argmax=0.6690(22) knn=0.8495(56) | total=469504 [44.5s]
+[01:57:10] corner 39 SKIPPED — ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:57:53] [c40] modes=0.8426(67) atoms=0.7523 pca=0.6829 random=0.6620 mean=0.2801 | clu_argmax=0.5718(32) knn=0.6875(56) | total=469504 [44.0s]
+[01:57:54] corner 41 SKIPPED — ⛔ DEV corner {'hue_lo': 0.4, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:57:54] corner 42 SKIPPED — ⛔ DEV corner {'hue_lo': 0.4, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:58:37] [c43] modes=0.7176(49) atoms=0.7546 pca=0.7130 random=0.7037 mean=0.1806 | clu_argmax=0.5347(10) knn=0.7847(54) | total=469504 [43.5s]
+[01:59:20] [c44] modes=0.8218(57) atoms=0.8773 pca=0.5301 random=0.5949 mean=0.3241 | clu_argmax=0.6412(18) knn=0.8495(50) | total=469504 [43.2s]
+[02:00:05] [c45] modes=0.7569(34) atoms=0.7963 pca=0.5671 random=0.6065 mean=0.3681 | clu_argmax=0.6458(18) knn=0.7940(44) | total=469504 [44.5s]
+[02:00:48] [c46] modes=0.8287(45) atoms=0.7755 pca=0.5810 random=0.5324 mean=0.3125 | clu_argmax=0.6296(24) knn=0.8148(42) | total=469504 [43.7s]
+[02:01:32] [c47] modes=0.8727(43) atoms=0.8125 pca=0.6759 random=0.7130 mean=0.3009 | clu_argmax=0.6875(17) knn=0.8449(46) | total=469504 [43.3s]
+[02:01:32] corner 48 SKIPPED — ⛔ DEV corner {'hue_lo': 0.4, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[02:02:16] [c49] modes=0.8194(50) atoms=0.8519 pca=0.5394 random=0.6597 mean=0.4352 | clu_argmax=0.6296(29) knn=0.9097(48) | total=469504 [44.7s]
+[02:03:00] [c50] modes=0.8032(37) atoms=0.8056 pca=0.6019 random=0.6296 mean=0.3843 | clu_argmax=0.7083(16) knn=0.8310(46) | total=469504 [43.6s]
+[02:03:46] [c51] modes=0.7292(43) atoms=0.6759 pca=0.5764 random=0.6389 mean=0.4514 | clu_argmax=0.4954(20) knn=0.7894(56) | total=469504 [46.4s]
+[02:04:30] [c52] modes=0.8333(63) atoms=0.8218 pca=0.7083 random=0.6875 mean=0.1713 | clu_argmax=0.5139(15) knn=0.6597(53) | total=469504 [44.1s]
+[02:05:14] [c53] modes=0.6898(48) atoms=0.7222 pca=0.7269 random=0.5741 mean=0.1157 | clu_argmax=0.5671(17) knn=0.8264(47) | total=469504 [43.7s]
+[02:05:58] [c54] modes=0.7731(57) atoms=0.7616 pca=0.7361 random=0.7500 mean=0.2731 | clu_argmax=0.4769(9) knn=0.8889(48) | total=469504 [43.9s]
+[02:06:44] [c55] modes=0.8472(59) atoms=0.6991 pca=0.5440 random=0.6829 mean=0.2870 | clu_argmax=0.7106(19) knn=0.8032(51) | total=469504 [45.9s]
+[02:07:27] [c56] modes=0.7269(54) atoms=0.6991 pca=0.5903 random=0.6296 mean=0.2431 | clu_argmax=0.6597(11) knn=0.7685(58) | total=469504 [43.2s]
+[02:08:14] [c57] modes=0.8171(58) atoms=0.7824 pca=0.5833 random=0.6505 mean=0.1667 | clu_argmax=0.6806(13) knn=0.8380(48) | total=469504 [46.6s]
+[02:08:57] [c58] modes=0.9028(51) atoms=0.9190 pca=0.6736 random=0.5440 mean=0.1898 | clu_argmax=0.7245(19) knn=0.8727(48) | total=469504 [43.6s]
+[02:09:42] [c59] modes=0.8403(61) atoms=0.8542 pca=0.7361 random=0.7106 mean=0.2245 | clu_argmax=0.5486(14) knn=0.8287(56) | total=469504 [44.7s]
+[02:10:28] [c60] modes=0.8472(60) atoms=0.7894 pca=0.7153 random=0.7315 mean=0.1852 | clu_argmax=0.5648(14) knn=0.9236(48) | total=469504 [46.1s]
+[02:11:13] [c61] modes=0.8079(54) atoms=0.9514 pca=0.5579 random=0.6319 mean=0.4792 | clu_argmax=0.6620(16) knn=0.8310(65) | total=469504 [44.7s]
+[02:11:57] [c62] modes=0.8102(39) atoms=0.8218 pca=0.6134 random=0.6389 mean=0.3565 | clu_argmax=0.6204(25) knn=0.7894(45) | total=469504 [44.1s]
+[02:12:41] [c63] modes=0.7292(63) atoms=0.6597 pca=0.5648 random=0.5718 mean=0.3472 | clu_argmax=0.6458(13) knn=0.7917(61) | total=469504 [44.3s]
+[02:12:41] [FINAL n=49] modes=0.8135±0.0640(49.9) | knn=0.8307±0.0615(51.8) Dknn=-0.0172 (16/49) | atoms=0.7954 Datoms=+0.0180 (28/49) | pca=0.7055 random=0.6623 mean=0.2860 | clu_argmax=0.6314(18.9) | best_const=0.5278 | total_bytes=469504
+[02:12:41] done in 1718.2s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table\dev\exp24_seed0.json
+exit=0

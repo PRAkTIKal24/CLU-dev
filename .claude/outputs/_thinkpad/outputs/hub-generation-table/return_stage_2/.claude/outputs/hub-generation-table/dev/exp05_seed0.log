@@ -1,0 +1,64 @@
+[22:31:07] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[22:31:07]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[22:31:07]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[22:31:09]   channel geometry loaded from chan_geom_s0_pool32766.npz
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[22:31:11]   [knn_proto] agg=0.7801 (53/72) bytes=475136 [2.2s]
+[22:31:17]   [atom_argmax] agg=0.5833 (22/72) bytes=524288
+[22:31:17]   [atom_mean_lookup] agg=0.6204 (28/72) bytes=524288
+[22:32:25]     [kmeans_pq] 68.6s
+[22:32:29]   [K=32 full naive-Bayes head] agg=0.6921 (25/72) head=475136 B
+[22:32:29]   head singular values (top 12): 387.096, 241.004, 183.442, 176.379, 153.331, 143.366, 139.013, 125.365, 121.001, 117.048, 115.119, 107.088
+[22:32:29]   spectral mass in top 8 of 57: 0.7085
+[22:32:30]   [rank   2] agg=0.2222 (1/72) head=25032 B  fits_74240=True  total=549320
+[22:32:32]   [rank   4] agg=0.3056 (12/72) head=41872 B  fits_74240=True  total=566160
+[22:32:33]   [rank   7] agg=0.2060 (15/72) head=67132 B  fits_74240=True  total=591420
+[22:32:34]   [rank   8] agg=0.1644 (19/72) head=75552 B  fits_74240=False  total=599840
+[22:32:35]   [rank  12] agg=0.4954 (19/72) head=109232 B  fits_74240=False  total=633520
+[22:32:37]   [rank  16] agg=0.3704 (26/72) head=142912 B  fits_74240=False  total=667200
+[22:32:38]   [rank  24] agg=0.6481 (21/72) head=210272 B  fits_74240=False  total=734560
+[22:32:39]   [rank  32] agg=0.5949 (18/72) head=277632 B  fits_74240=False  total=801920
+[22:32:40]   [rank  48] agg=0.6921 (27/72) head=412352 B  fits_74240=False  total=936640
+[22:32:40] done in 101.1s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table\dev\exp05_seed0_K32.json
+exit=0

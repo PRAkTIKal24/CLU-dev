@@ -1,0 +1,59 @@
+[13:04:03] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[13:04:03]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[13:04:03]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[13:04:04] D=2048 cards=[10, 10, 10, 8, 4, 15] names=['floor_hue', 'wall_hue', 'object_hue', 'scale', 'shape', 'orientation']
+[13:04:04] reference pairs ['floor_huexscale', 'object_huexscale'] -> [(0, 3), (2, 3)]
+[13:04:04] byte ledger: store 212992 + head 256512 = 469504 vs knn_proto 475136
+[13:04:04] [c0] pool 32766 rows, 32766 distinct pool tuples
+[13:04:49] [c0] kmeans_pq 41.5s
+[13:04:51] [c0] head equivalence: max|d a| = 4.768e-07 (rel 8.381e-08); pinned 0.6s, stats 0.7s, fast 0.04s
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:04:55] [c0] PINNED  tuples_valid_novel= 38  agg=0.9097  distinct= 61  exact=0.5278
+[13:04:55] [c0] FAST    tuples_valid_novel= 38  agg=0.9097  distinct= 61  exact=0.5278
+[13:04:55] [c2] pool 32764 rows, 32764 distinct pool tuples
+[13:05:40] [c2] kmeans_pq 39.9s
+[13:05:41] [c2] head equivalence: max|d a| = 2.384e-07 (rel 1.079e-07); pinned 0.5s, stats 0.6s, fast 0.04s
+[13:05:43] [c2] PINNED  tuples_valid_novel= 35  agg=0.8912  distinct= 61  exact=0.4861
+[13:05:43] [c2] FAST    tuples_valid_novel= 35  agg=0.8912  distinct= 61  exact=0.4861
+[13:05:43] done in 102.0s -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-composition\iter2r\dev\c01_seed0.json

@@ -1,0 +1,61 @@
+  ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+  ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+  ⭐ cache coverage: shortfall 0 — nothing will be encoded
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+  ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+DECODER CEILING                    observed= 491/512  bootstrap 95% CI [482.0, 499.0]  sd=4.45
+store round-trip (the BOUND)       observed=  10/512  bootstrap 95% CI [4.0, 16.0]  sd=3.12
+clu (codebook read)                observed=   8/512  bootstrap 95% CI [3.0, 14.0]  sd=2.80
+
+--- x0 over the ARM's OWN seed (atoms + coupling); ⛔ bridge seed is 0 throughout ---
+  x0[A] arm_seed=0: VALID^NOVEL=   4/512 (valid=5, distinct=463)
+  x0[A] arm_seed=1: VALID^NOVEL=   5/512 (valid=6, distinct=467)
+  x0[A] arm_seed=2: VALID^NOVEL=   2/512 (valid=3, distinct=470)
+  ⭐ x0[A] over 3 ARM seeds: 3.67 ± 1.25
+  x0[B] arm_seed=0: VALID^NOVEL=  21/512 (valid=28, distinct=502)
+  x0[B] arm_seed=1: VALID^NOVEL=  21/512 (valid=32, distinct=505)
+  x0[B] arm_seed=2: VALID^NOVEL=  17/512 (valid=22, distinct=506)
+  ⭐ x0[B] over 3 ARM seeds: 19.67 ± 1.89
+done

@@ -1,0 +1,91 @@
+[18:19:34] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[18:19:34]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[18:19:34]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[18:19:35] n_add=52 n_pair=220 D=2048  DENSE_ADD=425984 B  DENSE_PAIR=471744 B  budget=475136 B
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[18:19:38] [c38 be7ee79d89] DENSE_ADD    agg=0.8565 tup=49 B=425984 [1.9s]
+[18:19:40] [c38 be7ee79d89] DENSE_PAIR   agg=0.8634 tup=52 B=471744 [1.9s]
+[18:19:42] [c39 8a2a890367] DENSE_ADD    agg=0.8750 tup=51 B=425984 [1.5s]
+[18:19:44] [c39 8a2a890367] DENSE_PAIR   agg=0.8426 tup=56 B=471744 [1.9s]
+[18:19:46] [c40 81a33ffc12] DENSE_ADD    agg=0.8866 tup=51 B=425984 [1.5s]
+[18:19:47] [c40 81a33ffc12] DENSE_PAIR   agg=0.8912 tup=49 B=471744 [1.9s]
+[18:19:49] [c41 fe7b15e2ae] DENSE_ADD    agg=0.8403 tup=55 B=425984 [1.6s]
+[18:19:51] [c41 fe7b15e2ae] DENSE_PAIR   agg=0.8889 tup=51 B=471744 [1.8s]
+[18:19:53] [c43 161682f38f] DENSE_ADD    agg=0.9282 tup=48 B=425984 [1.5s]
+[18:19:55] [c43 161682f38f] DENSE_PAIR   agg=0.9120 tup=48 B=471744 [1.9s]
+[18:19:57] [c44 ea01b256d5] DENSE_ADD    agg=0.8981 tup=46 B=425984 [1.5s]
+[18:19:59] [c44 ea01b256d5] DENSE_PAIR   agg=0.9051 tup=61 B=471744 [2.0s]
+[18:20:01] [c45 62a703ad14] DENSE_ADD    agg=0.8426 tup=61 B=425984 [1.9s]
+[18:20:04] [c45 62a703ad14] DENSE_PAIR   agg=0.8194 tup=64 B=471744 [2.9s]
+[18:20:07] [c46 6de6eb5ddb] DENSE_ADD    agg=0.7963 tup=46 B=425984 [2.0s]
+[18:20:10] [c46 6de6eb5ddb] DENSE_PAIR   agg=0.7917 tup=49 B=471744 [3.2s]
+[18:20:13] [c47 42867c1118] DENSE_ADD    agg=0.7986 tup=60 B=425984 [2.2s]
+[18:20:16] [c47 42867c1118] DENSE_PAIR   agg=0.7546 tup=65 B=471744 [3.3s]
+[18:20:19] [c48 57989b6db5] DENSE_ADD    agg=0.7731 tup=58 B=425984 [2.2s]
+[18:20:22] [c48 57989b6db5] DENSE_PAIR   agg=0.8194 tup=54 B=471744 [3.0s]
+[18:20:25] [c49 f530873075] DENSE_ADD    agg=0.7153 tup=56 B=425984 [2.1s]
+[18:20:28] [c49 f530873075] DENSE_PAIR   agg=0.7847 tup=69 B=471744 [2.9s]
+[18:20:30] [c50 4f5db85c2e] DENSE_ADD    agg=0.7778 tup=46 B=425984 [2.0s]
+[18:20:33] [c50 4f5db85c2e] DENSE_PAIR   agg=0.7338 tup=50 B=471744 [2.7s]
+[18:20:36] [c51 b2974f1be3] DENSE_ADD    agg=0.8333 tup=59 B=425984 [2.1s]
+[18:20:38] [c51 b2974f1be3] DENSE_PAIR   agg=0.8310 tup=58 B=471744 [2.8s]
+[18:20:41] [c52 c99913863c] DENSE_ADD    agg=0.8241 tup=55 B=425984 [2.0s]
+[18:20:44] [c52 c99913863c] DENSE_PAIR   agg=0.8241 tup=61 B=471744 [2.8s]
+[18:20:47] [c53 510d301269] DENSE_ADD    agg=0.8009 tup=51 B=425984 [2.3s]
+[18:20:49] [c53 510d301269] DENSE_PAIR   agg=0.8102 tup=60 B=471744 [2.7s]
+[18:20:52] [c54 4faafc298f] DENSE_ADD    agg=0.8750 tup=46 B=425984 [2.0s]
+[18:20:55] [c54 4faafc298f] DENSE_PAIR   agg=0.8912 tup=53 B=471744 [2.8s]
+[18:20:57] [c55 35cb98b3cb] DENSE_ADD    agg=0.9398 tup=58 B=425984 [2.0s]
+[18:21:00] [c55 35cb98b3cb] DENSE_PAIR   agg=0.9236 tup=61 B=471744 [2.6s]
+[18:21:03] [c56 b3dc39bc3e] DENSE_ADD    agg=0.8727 tup=49 B=425984 [2.0s]
+[18:21:04] [c56 b3dc39bc3e] DENSE_PAIR   agg=0.9074 tup=49 B=471744 [1.9s]
+[18:21:06] [c57 6408d3575a] DENSE_ADD    agg=0.8542 tup=55 B=425984 [1.5s]
+[18:21:09] [c57 6408d3575a] DENSE_PAIR   agg=0.9051 tup=52 B=471744 [2.0s]
+[18:21:11] [c58 12b60adea1] DENSE_ADD    agg=0.8333 tup=48 B=425984 [1.8s]
+[18:21:14] [c58 12b60adea1] DENSE_PAIR   agg=0.8495 tup=50 B=471744 [3.2s]
+[18:21:17] [c60 3d79e55777] DENSE_ADD    agg=0.8125 tup=65 B=425984 [2.4s]
+[18:21:20] [c60 3d79e55777] DENSE_PAIR   agg=0.8241 tup=62 B=471744 [3.2s]
+[18:21:23] [c61 99c1ba3192] DENSE_ADD    agg=0.8611 tup=55 B=425984 [2.3s]
+[18:21:26] [c61 99c1ba3192] DENSE_PAIR   agg=0.8171 tup=45 B=471744 [2.5s]
+[18:21:26] r2_bound done in 111.8s

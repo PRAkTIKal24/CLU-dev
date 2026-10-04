@@ -1,0 +1,205 @@
+=== PART A: value row, CLU-REL-A10, BOTH TEST (run JSON ROWS.value) ===
+| seed | n | CLU (JSON) | brief | abs diff | best: matched rivals | best: + 10x-read-floats diagnostic | best: + 10x-floats + '+rel' diagnostics | best: every trained arm |
+|---|---|---|---|---|---|---|---|---|
+| 0 | 4000 | 0.4888 | 0.4888 | 5.0e-05 | 0.6817 (rival: transformer) | 0.7242 (diagnostic@10x-read-floats: transformer) | 0.8460 (diagnostic+rel@80k: transformer +rel) | 0.8460 (diagnostic+rel@80k: transformer +rel) |
+| 1 | 4000 | 0.5008 | 0.5008 | 5.0e-05 | 0.8612 (rival@10x-steps: transformer) | 0.8942 (diagnostic@10x-read-floats: transformer) | 0.9107 (diagnostic+rel@8k: transformer +rel) | 0.9107 (diagnostic+rel@8k: transformer +rel) |
+| 2 | 4000 | 0.5118 | 0.5118 | 5.0e-05 | 0.8385 (rival@10x-steps: transformer) | 0.8960 (diagnostic@10x-read-floats: transformer) | 0.8960 (diagnostic@10x-read-floats: transformer) | 0.8960 (diagnostic@10x-read-floats: transformer) |
+| 3 | 4000 | 0.5252 | 0.5252 | 5.0e-05 | 0.8223 (rival: transformer) | 0.8738 (diagnostic@10x-read-floats: transformer) | 0.9018 (diagnostic+rel@8k: transformer +rel) | 0.9018 (diagnostic+rel@8k: transformer +rel) |
+| 4 | 4000 | 0.6917 | 0.6917 | 5.0e-05 | 0.7480 (rival@10x-steps: transformer) | 0.7480 (rival@10x-steps: transformer) | 0.7480 (rival@10x-steps: transformer) | 0.7480 (rival@10x-steps: transformer) |
+| 5 | 4000 | 0.6038 | 0.6038 | 5.0e-05 | 0.8305 (rival@10x-steps: transformer) | 0.8305 (rival@10x-steps: transformer) | 0.9032 (diagnostic+rel@8k: transformer +rel) | 0.9032 (diagnostic+rel@8k: transformer +rel) |
+| mean 6 |  | 0.5537 | 0.5537 |  | 0.7970 | 0.8278 | 0.8676 | 0.8676 |
+| mean s0-2 |  | 0.5004 |  |  | 0.7938 | 0.8382 | 0.8842 | 0.8842 |
+
+section-9 '0.500 vs 0.792': CLU mean over seeds 0-2 = 0.5004 (0.4888 / 0.5008 / 0.5118) ; arms whose seeds-0-2 MEAN rounds to 0.792: ['rival@10x-steps: transformer = 0.7922 (0.6767 / 0.8612 / 0.8385)']
+per-seed cells (any arm, any seed) that round to 0.792: []
+
+=== PART B: mechanics, CLU-REL-A10, value row (colour 4 = the never-trained colour) ===
+
+--- seed 0 (hashes OK; value exact 0.4888 reproduced from the object; design width 396; 90 columns name colour 4; 6 eq + 72 eq-crosses) ---
+  colour-4 columns on the all FIT rows: max|Phi| = 0.0  -> head rows W_k[C4] max|.| = ['3.6e-10', '4.5e-10'] (other rows rms ['0.524', '0.551'])
+  eq x door=4 crosses: 6 cols, fit rows non-zero 0, value rows non-zero 253, head rows max|.| ['2.7e-39', '3.0e-39']
+  read(value) vs read(value with every colour-4 column zeroed): max|dz| = 0.00e+00 ; emissions identical on 1.0000 of rows
+  | eq column | fit rows active | value rows active | ...of which both words = 4 | head row norm (w0, w1) |
+  |---|---|---|---|---|
+  | eq(w_agent,w_key) | 0 | 0 | 0 | 0.000, 0.000 |
+  | eq(w_agent,w_door) | 72 | 80 | 61 | 4.482, 4.152 |
+  | eq(w_agent,w_tint) | 1368 | 295 | 260 | 2.263, 1.350 |
+  | eq(w_key,w_door) | 14 | 1 | 0 | 0.392, 0.325 |
+  | eq(w_key,w_tint) | 321 | 49 | 27 | 0.098, 0.088 |
+  | eq(w_door,w_tint) | 768 | 314 | 210 | 0.139, 0.081 |
+  | value rows by truth | n | CLU exact | wrong legal/disp/event/pocket | CLU emits colour 4 anywhere |
+  |---|---|---|---|---|
+  | truth names colour 4 | 2020 | 17 (0.008) | 26/23/83/1907 | 94 |
+  | truth does not name colour 4 | 1980 | 1938 (0.979) | 25/7/17/13 | 8 |
+  store: codes naming 4 in value truth 10, in fit pool 0; codec round-trip ok 10/10; span rel-resid mean 0.220 (codes naming 4) vs 0.093 (others); L2-best in-span decode ok 9/10 (naming 4) vs 33/34 (others)
+  | colour-4 role | truth | n | CLU exact | rows with any eq active | wrong legal/disp/event/pocket |
+  |---|---|---|---|---|---|
+  | w_agent | truth names 4 | 1685 | 0 | 0.069 | 0/0/0/1685 |
+  | w_agent+w_door | truth names 4 | 23 | 17 | 1.000 | 0/0/6/0 |
+  | w_agent+w_door+w_tint | truth names 4 | 38 | 0 | 1.000 | 26/20/25/0 |
+  | w_agent+w_tint | truth names 4 | 222 | 0 | 1.000 | 0/3/0/222 |
+  | w_door | truth colour-free | 93 | 87 | 0.215 | 6/1/0/0 |
+  | w_door+w_tint | truth colour-free | 172 | 153 | 1.000 | 19/0/0/0 |
+  | w_key | truth colour-free | 607 | 605 | 0.035 | 0/2/2/2 |
+  | w_key | truth names 4 | 52 | 0 | 0.000 | 0/0/52/0 |
+  | w_key+w_tint | truth colour-free | 27 | 27 | 1.000 | 0/0/0/0 |
+  | w_tint | truth colour-free | 1081 | 1066 | 0.016 | 0/4/15/11 |
+
+--- seed 1 (hashes OK; value exact 0.5008 reproduced from the object; design width 396; 90 columns name colour 4; 6 eq + 72 eq-crosses) ---
+  colour-4 columns on the all FIT rows: max|Phi| = 0.0  -> head rows W_k[C4] max|.| = ['6.4e-10', '6.4e-10'] (other rows rms ['0.471', '0.456'])
+  eq x door=4 crosses: 6 cols, fit rows non-zero 0, value rows non-zero 234, head rows max|.| ['1.2e-38', '2.8e-39']
+  read(value) vs read(value with every colour-4 column zeroed): max|dz| = 0.00e+00 ; emissions identical on 1.0000 of rows
+  | eq column | fit rows active | value rows active | ...of which both words = 4 | head row norm (w0, w1) |
+  |---|---|---|---|---|
+  | eq(w_agent,w_key) | 0 | 0 | 0 | 0.000, 0.000 |
+  | eq(w_agent,w_door) | 0 | 73 | 59 | 0.000, 0.000 |
+  | eq(w_agent,w_tint) | 522 | 281 | 255 | 2.037, 1.723 |
+  | eq(w_key,w_door) | 3 | 4 | 3 | 0.057, 0.074 |
+  | eq(w_key,w_tint) | 301 | 67 | 36 | 0.067, 0.079 |
+  | eq(w_door,w_tint) | 852 | 298 | 192 | 0.127, 0.123 |
+  | value rows by truth | n | CLU exact | wrong legal/disp/event/pocket | CLU emits colour 4 anywhere |
+  |---|---|---|---|---|
+  | truth names colour 4 | 1986 | 3 (0.002) | 59/61/103/1892 | 59 |
+  | truth does not name colour 4 | 2014 | 2000 (0.993) | 14/14/14/14 | 0 |
+  store: codes naming 4 in value truth 10, in fit pool 0; codec round-trip ok 10/10; span rel-resid mean 0.213 (codes naming 4) vs 0.126 (others); L2-best in-span decode ok 10/10 (naming 4) vs 27/31 (others)
+  | colour-4 role | truth | n | CLU exact | rows with any eq active | wrong legal/disp/event/pocket |
+  |---|---|---|---|---|---|
+  | w_agent | truth names 4 | 1666 | 0 | 0.077 | 0/0/0/1666 |
+  | w_agent+w_door | truth names 4 | 21 | 0 | 1.000 | 21/21/21/0 |
+  | w_agent+w_door+w_tint | truth names 4 | 38 | 0 | 1.000 | 38/38/38/12 |
+  | w_agent+w_tint | truth names 4 | 217 | 3 | 1.000 | 0/2/0/214 |
+  | w_door | truth colour-free | 91 | 91 | 0.198 | 0/0/0/0 |
+  | w_door+w_tint | truth colour-free | 154 | 154 | 1.000 | 0/0/0/0 |
+  | w_key | truth colour-free | 634 | 634 | 0.021 | 0/0/0/0 |
+  | w_key | truth names 4 | 44 | 0 | 0.000 | 0/0/44/0 |
+  | w_key+w_door | truth colour-free | 3 | 3 | 1.000 | 0/0/0/0 |
+  | w_key+w_tint | truth colour-free | 36 | 36 | 1.000 | 0/0/0/0 |
+  | w_tint | truth colour-free | 1096 | 1082 | 0.013 | 14/14/14/14 |
+
+--- seed 2 (hashes OK; value exact 0.5118 reproduced from the object; design width 396; 90 columns name colour 4; 6 eq + 72 eq-crosses) ---
+  colour-4 columns on the all FIT rows: max|Phi| = 0.0  -> head rows W_k[C4] max|.| = ['7.4e-11', '3.4e-10'] (other rows rms ['0.473', '0.505'])
+  eq x door=4 crosses: 6 cols, fit rows non-zero 0, value rows non-zero 257, head rows max|.| ['1.0e-38', '6.0e-39']
+  read(value) vs read(value with every colour-4 column zeroed): max|dz| = 0.00e+00 ; emissions identical on 1.0000 of rows
+  | eq column | fit rows active | value rows active | ...of which both words = 4 | head row norm (w0, w1) |
+  |---|---|---|---|---|
+  | eq(w_agent,w_key) | 0 | 0 | 0 | 0.000, 0.000 |
+  | eq(w_agent,w_door) | 153 | 89 | 60 | 5.686, 3.962 |
+  | eq(w_agent,w_tint) | 316 | 249 | 219 | 1.385, 1.184 |
+  | eq(w_key,w_door) | 15 | 10 | 9 | 0.281, 0.199 |
+  | eq(w_key,w_tint) | 199 | 76 | 51 | 0.106, 0.138 |
+  | eq(w_door,w_tint) | 912 | 302 | 216 | 0.119, 0.118 |
+  | value rows by truth | n | CLU exact | wrong legal/disp/event/pocket | CLU emits colour 4 anywhere |
+  |---|---|---|---|---|
+  | truth names colour 4 | 1943 | 0 (0.000) | 0/44/124/1819 | 64 |
+  | truth does not name colour 4 | 2057 | 2047 (0.995) | 2/1/8/7 | 0 |
+  store: codes naming 4 in value truth 10, in fit pool 0; codec round-trip ok 10/10; span rel-resid mean 0.290 (codes naming 4) vs 0.083 (others); L2-best in-span decode ok 6/10 (naming 4) vs 33/33 (others)
+  | colour-4 role | truth | n | CLU exact | rows with any eq active | wrong legal/disp/event/pocket |
+  |---|---|---|---|---|---|
+  | w_agent | truth names 4 | 1635 | 0 | 0.065 | 0/0/0/1635 |
+  | w_agent+w_door | truth names 4 | 25 | 0 | 1.000 | 0/0/25/0 |
+  | w_agent+w_door+w_tint | truth names 4 | 35 | 0 | 1.000 | 0/0/35/0 |
+  | w_agent+w_tint | truth names 4 | 184 | 0 | 1.000 | 0/44/0/184 |
+  | w_door | truth colour-free | 84 | 82 | 0.190 | 2/0/0/0 |
+  | w_door+w_tint | truth colour-free | 172 | 172 | 1.000 | 0/0/0/0 |
+  | w_key | truth colour-free | 624 | 622 | 0.029 | 0/1/2/2 |
+  | w_key | truth names 4 | 64 | 0 | 0.000 | 0/0/64/0 |
+  | w_key+w_door+w_tint | truth colour-free | 9 | 9 | 1.000 | 0/0/0/0 |
+  | w_key+w_tint | truth colour-free | 42 | 42 | 1.000 | 0/0/0/0 |
+  | w_tint | truth colour-free | 1126 | 1120 | 0.024 | 0/0/6/5 |
+
+--- seed 3 (hashes OK; value exact 0.5252 reproduced from the object; design width 396; 90 columns name colour 4; 6 eq + 72 eq-crosses) ---
+  colour-4 columns on the all FIT rows: max|Phi| = 0.0  -> head rows W_k[C4] max|.| = ['5.2e-10', '5.8e-10'] (other rows rms ['0.535', '0.524'])
+  eq x door=4 crosses: 6 cols, fit rows non-zero 0, value rows non-zero 198, head rows max|.| ['1.8e-39', '8.7e-40']
+  read(value) vs read(value with every colour-4 column zeroed): max|dz| = 0.00e+00 ; emissions identical on 1.0000 of rows
+  | eq column | fit rows active | value rows active | ...of which both words = 4 | head row norm (w0, w1) |
+  |---|---|---|---|---|
+  | eq(w_agent,w_key) | 0 | 0 | 0 | 0.000, 0.000 |
+  | eq(w_agent,w_door) | 224 | 78 | 37 | 3.978, 4.187 |
+  | eq(w_agent,w_tint) | 1032 | 248 | 228 | 1.749, 1.049 |
+  | eq(w_key,w_door) | 10 | 5 | 1 | 0.351, 0.302 |
+  | eq(w_key,w_tint) | 279 | 65 | 34 | 0.074, 0.096 |
+  | eq(w_door,w_tint) | 921 | 266 | 177 | 0.109, 0.089 |
+  | value rows by truth | n | CLU exact | wrong legal/disp/event/pocket | CLU emits colour 4 anywhere |
+  |---|---|---|---|---|
+  | truth names colour 4 | 1946 | 115 (0.059) | 0/19/84/1747 | 168 |
+  | truth does not name colour 4 | 2054 | 1986 (0.967) | 51/5/17/0 | 0 |
+  store: codes naming 4 in value truth 10, in fit pool 0; codec round-trip ok 10/10; span rel-resid mean 0.264 (codes naming 4) vs 0.110 (others); L2-best in-span decode ok 9/10 (naming 4) vs 35/35 (others)
+  | colour-4 role | truth | n | CLU exact | rows with any eq active | wrong legal/disp/event/pocket |
+  |---|---|---|---|---|---|
+  | w_agent | truth names 4 | 1656 | 106 | 0.070 | 0/0/0/1550 |
+  | w_agent+w_door | truth names 4 | 9 | 1 | 1.000 | 0/0/8/0 |
+  | w_agent+w_door+w_tint | truth names 4 | 28 | 5 | 1.000 | 0/8/23/0 |
+  | w_agent+w_tint | truth names 4 | 200 | 3 | 1.000 | 0/11/0/197 |
+  | w_door | truth colour-free | 87 | 72 | 0.126 | 15/5/0/0 |
+  | w_door+w_tint | truth colour-free | 149 | 113 | 1.000 | 36/0/0/0 |
+  | w_key | truth colour-free | 595 | 595 | 0.020 | 0/0/0/0 |
+  | w_key | truth names 4 | 53 | 0 | 0.000 | 0/0/53/0 |
+  | w_key+w_door | truth colour-free | 1 | 1 | 1.000 | 0/0/0/0 |
+  | w_key+w_tint | truth colour-free | 34 | 34 | 1.000 | 0/0/0/0 |
+  | w_tint | truth colour-free | 1188 | 1171 | 0.037 | 0/0/17/0 |
+
+--- seed 4 (hashes OK; value exact 0.6917 reproduced from the object; design width 396; 90 columns name colour 4; 6 eq + 72 eq-crosses) ---
+  colour-4 columns on the all FIT rows: max|Phi| = 0.0  -> head rows W_k[C4] max|.| = ['2.2e-10', '3.4e-10'] (other rows rms ['0.471', '0.494'])
+  eq x door=4 crosses: 6 cols, fit rows non-zero 0, value rows non-zero 237, head rows max|.| ['2.7e-39', '5.0e-39']
+  read(value) vs read(value with every colour-4 column zeroed): max|dz| = 0.00e+00 ; emissions identical on 1.0000 of rows
+  | eq column | fit rows active | value rows active | ...of which both words = 4 | head row norm (w0, w1) |
+  |---|---|---|---|---|
+  | eq(w_agent,w_key) | 0 | 0 | 0 | 0.000, 0.000 |
+  | eq(w_agent,w_door) | 54 | 93 | 69 | 3.075, 2.576 |
+  | eq(w_agent,w_tint) | 1121 | 299 | 262 | 2.207, 1.339 |
+  | eq(w_key,w_door) | 4 | 7 | 3 | 0.173, 0.140 |
+  | eq(w_key,w_tint) | 209 | 89 | 59 | 0.086, 0.065 |
+  | eq(w_door,w_tint) | 724 | 292 | 180 | 0.133, 0.073 |
+  | value rows by truth | n | CLU exact | wrong legal/disp/event/pocket | CLU emits colour 4 anywhere |
+  |---|---|---|---|---|
+  | truth names colour 4 | 2071 | 863 (0.417) | 37/34/123/1139 | 863 |
+  | truth does not name colour 4 | 1929 | 1904 (0.987) | 17/26/15/15 | 0 |
+  store: codes naming 4 in value truth 10, in fit pool 0; codec round-trip ok 10/10; span rel-resid mean 0.330 (codes naming 4) vs 0.106 (others); L2-best in-span decode ok 8/10 (naming 4) vs 31/33 (others)
+  | colour-4 role | truth | n | CLU exact | rows with any eq active | wrong legal/disp/event/pocket |
+  |---|---|---|---|---|---|
+  | w_agent | truth names 4 | 1728 | 673 | 0.080 | 0/0/0/1055 |
+  | w_agent+w_door | truth names 4 | 27 | 0 | 1.000 | 0/0/27/0 |
+  | w_agent+w_door+w_tint | truth names 4 | 42 | 0 | 1.000 | 37/25/42/0 |
+  | w_agent+w_tint | truth names 4 | 220 | 190 | 1.000 | 0/9/0/30 |
+  | w_door | truth colour-free | 105 | 102 | 0.267 | 3/11/0/0 |
+  | w_door+w_tint | truth colour-free | 137 | 137 | 1.000 | 0/0/0/0 |
+  | w_key | truth colour-free | 545 | 543 | 0.022 | 2/2/2/2 |
+  | w_key | truth names 4 | 54 | 0 | 0.000 | 0/0/54/54 |
+  | w_key+w_door | truth colour-free | 2 | 2 | 1.000 | 0/0/0/0 |
+  | w_key+w_door+w_tint | truth colour-free | 1 | 1 | 1.000 | 0/1/0/0 |
+  | w_key+w_tint | truth colour-free | 58 | 58 | 1.000 | 0/0/0/0 |
+  | w_tint | truth colour-free | 1081 | 1061 | 0.022 | 12/12/13/13 |
+
+--- seed 5 (hashes OK; value exact 0.6038 reproduced from the object; design width 396; 90 columns name colour 4; 6 eq + 72 eq-crosses) ---
+  colour-4 columns on the all FIT rows: max|Phi| = 0.0  -> head rows W_k[C4] max|.| = ['6.0e-10', '4.3e-10'] (other rows rms ['0.476', '0.457'])
+  eq x door=4 crosses: 6 cols, fit rows non-zero 0, value rows non-zero 248, head rows max|.| ['1.0e-39', '6.4e-40']
+  read(value) vs read(value with every colour-4 column zeroed): max|dz| = 0.00e+00 ; emissions identical on 1.0000 of rows
+  | eq column | fit rows active | value rows active | ...of which both words = 4 | head row norm (w0, w1) |
+  |---|---|---|---|---|
+  | eq(w_agent,w_key) | 0 | 0 | 0 | 0.000, 0.000 |
+  | eq(w_agent,w_door) | 0 | 81 | 57 | 0.000, 0.000 |
+  | eq(w_agent,w_tint) | 1314 | 286 | 262 | 1.660, 2.442 |
+  | eq(w_key,w_door) | 4 | 6 | 5 | 0.246, 0.171 |
+  | eq(w_key,w_tint) | 286 | 55 | 32 | 0.112, 0.107 |
+  | eq(w_door,w_tint) | 770 | 276 | 204 | 0.129, 0.162 |
+  | value rows by truth | n | CLU exact | wrong legal/disp/event/pocket | CLU emits colour 4 anywhere |
+  |---|---|---|---|---|
+  | truth names colour 4 | 2066 | 505 (0.244) | 57/57/110/1502 | 572 |
+  | truth does not name colour 4 | 1934 | 1910 (0.988) | 24/25/24/24 | 0 |
+  store: codes naming 4 in value truth 10, in fit pool 0; codec round-trip ok 10/10; span rel-resid mean 0.392 (codes naming 4) vs 0.173 (others); L2-best in-span decode ok 6/10 (naming 4) vs 26/33 (others)
+  | colour-4 role | truth | n | CLU exact | rows with any eq active | wrong legal/disp/event/pocket |
+  |---|---|---|---|---|---|
+  | w_agent | truth names 4 | 1727 | 492 | 0.055 | 0/0/0/1235 |
+  | w_agent+w_door | truth names 4 | 24 | 0 | 1.000 | 24/24/24/24 |
+  | w_agent+w_door+w_tint | truth names 4 | 33 | 0 | 1.000 | 33/33/33/27 |
+  | w_agent+w_tint | truth names 4 | 229 | 13 | 1.000 | 0/0/0/216 |
+  | w_door | truth colour-free | 110 | 110 | 0.164 | 0/1/0/0 |
+  | w_door+w_tint | truth colour-free | 168 | 168 | 1.000 | 0/0/0/0 |
+  | w_key | truth colour-free | 559 | 559 | 0.011 | 0/0/0/0 |
+  | w_key | truth names 4 | 53 | 0 | 0.000 | 0/0/53/0 |
+  | w_key+w_door | truth colour-free | 2 | 2 | 1.000 | 0/0/0/0 |
+  | w_key+w_door+w_tint | truth colour-free | 3 | 3 | 1.000 | 0/0/0/0 |
+  | w_key+w_tint | truth colour-free | 29 | 29 | 1.000 | 0/0/0/0 |
+  | w_tint | truth colour-free | 1063 | 1039 | 0.024 | 24/24/24/24 |
+
+pooled 6 seeds: truth names colour 4: 1503/12032 = 0.1249; truth does not name colour 4: 11785/11968 = 0.9847

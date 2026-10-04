@@ -1,0 +1,111 @@
+{
+ "arm": "basis_head@WIDEN",
+ "base": "basis_head",
+ "content": "WIDEN",
+ "set": "row1",
+ "set_label": "row1 (row1_seen.json)",
+ "spec": {
+  "name": "WIDEN",
+  "blocks": [
+   "p",
+   "b3"
+  ],
+  "half_channels": [],
+  "shuffle": [],
+  "shuffle_seed": 0,
+  "D": 4096,
+  "n_atoms": 32,
+  "store_bytes": 524288,
+  "budget_bytes": 524288,
+  "byte_matched": true,
+  "dims_per_block": {
+   "p": 2048,
+   "b3": 2048
+  },
+  "bytes_formula": "n_atoms * D * 4",
+  "note": "THE ARM. All of the penultimate map PLUS conv block 3 (the map one block earlier, 8x8, block-mean pooled to 4x4). Paid for in atoms: 64 -> 32. D=4096 <= the 20,000 LACE whitening limit, so LACE stays fair."
+ },
+ "n_requests": 512,
+ "seed": 0,
+ "rows": {
+  "full": {
+   "n": 512,
+   "aggregate": 0.7054036458333334,
+   "exact_match": 0.05078125,
+   "per_factor": {
+    "floor_hue": 1.0,
+    "wall_hue": 1.0,
+    "object_hue": 1.0,
+    "scale": 0.169921875,
+    "shape": 0.80859375,
+    "orientation": 0.25390625
+   },
+   "launch_mode": "basis_head@WIDEN",
+   "per_corner": {
+    "row1": {
+     "n": 512,
+     "aggregate": 0.7054036458333334,
+     "exact_match": 0.05078125,
+     "per_factor": {
+      "floor_hue": 1.0,
+      "wall_hue": 1.0,
+      "object_hue": 1.0,
+      "scale": 0.169921875,
+      "shape": 0.80859375,
+      "orientation": 0.25390625
+     },
+     "distinct_valid_tuples": 26,
+     "distinct_valid_novel_tuples": 25,
+     "replayed_seen_tuples": 1,
+     "n_valid": 26
+    }
+   }
+  }
+ },
+ "grouping": {
+  "well_sizes": [
+   495,
+   495,
+   495,
+   796,
+   1815
+  ],
+  "K": 5,
+  "method_used": "ward",
+  "n_dead_channels": 71
+ },
+ "byte_ledger": {
+  "n_atoms_per_well": 32,
+  "dim": 4096,
+  "well_sizes": [
+   495,
+   495,
+   495,
+   796,
+   1815
+  ],
+  "store_bytes": 524288,
+  "dtype": "float32",
+  "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+  "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72).",
+  "deployed_bytes": 524288,
+  "budget_bytes": 524288,
+  "what": "basis_head: 32 basis vectors x 4096 float32"
+ },
+ "head_bytes": 36480,
+ "coefficients": {
+  "frac_negative": 0.4201416015625,
+  "mean_l1_per_well": 2.6519498348236086,
+  "frac_probability_vectors": 0.0
+ },
+ "provenance": {
+  "ridge_proj": 0.01,
+  "ridge_head": 0.1,
+  "atom_selection": "kmeanspp",
+  "M": 32,
+  "D": 4096,
+  "seed": 0,
+  "read": "signed linear combination over the basis"
+ },
+ "wall_seconds": 87.42277884483337
+}

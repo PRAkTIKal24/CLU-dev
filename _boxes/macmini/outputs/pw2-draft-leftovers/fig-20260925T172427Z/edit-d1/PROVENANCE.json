@@ -1,0 +1,6807 @@
+{
+ "backend": "Agg",
+ "evidence_root": "/Users/batmac/clu/evidence/outputs",
+ "figures": {
+  "fig_cmazet_door_then_tint": {
+   "awaiting": null,
+   "banner": false,
+   "built_by": "make_figures_w21.py",
+   "door_search_draw_seed": 16,
+   "door_search_rule": "PW-1 item 16.2: n-CLU successes on door transitions, found BY RULE in the persisted per-item scores.\n\nReads data/cmazet_items.json (base n-CLU, seeds 0-2: the only base seeds with persisted objects)\nand data/cmazet_items_rel.json (n-CLU-REL, seeds 0-5). Loads no model; no scoring.\n\nClasses, per model, per seed, over the held-out TEST n-way rows:\n  door_open          truth key event > k (a key consumed at a door: the door opens) AND n-CLU correct\n  door_then_tint     family == \"interaction\" (door colour = pocket colour = target tint) AND n-CLU correct\n  most_baselines_wrong  n-CLU correct AND >= 4 of the 6 matched baselines wrong\n                     (rival: {mlp,lstm,transformer} at 8,000 and 80,000 steps, the run's own objects)\nThe draw: numpy default_rng(DRAW_SEED), one generator, calls in the fixed order of ALLOCATION.\nWithin a draw, the qualifying items are grouped into strata (family, colour = pocket colour); the\nstrata are visited in a random permutation and one item is drawn uniformly inside each stratum, so\nconsecutive draws differ in family or colour wherever the set allows it. A draw never repeats an item.\nAn empty class is recorded as empty; nothing is substituted.",
+   "drawn_rows_items_sha256": {
+    "n-CLU-REL": "0af6c6f653319b1e553026524769b39294ce27563bd35555ec2217130fab766c"
+   },
+   "facts_shown": [
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      1,
+      7,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      7,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 0
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "CLU",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival: mlp",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "rival: lstm",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival: transformer",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "control: random_atoms",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 1
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      1,
+      1,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      0,
+      0
+     ],
+     "key": "CLU",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      3,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      0
+     ],
+     "key": "rival: mlp",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "rival: lstm",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "key": "rival: transformer",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      3,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      0
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": true,
+     "row": 1
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      1,
+      1,
+      5,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      5,
+      0
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      0,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "key": "control: random_atoms",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 2
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      1,
+      1,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      0,
+      0
+     ],
+     "key": "CLU",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "rival: mlp",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      2,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      0
+     ],
+     "key": "rival: lstm",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      1,
+      6,
+      4
+     ],
+     "facts_shown": [
+      1,
+      1,
+      6,
+      4
+     ],
+     "key": "rival: transformer",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      1,
+      1,
+      5,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      5,
+      0
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      0,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "key": "control: random_atoms",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 3
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "key": "CLU",
+     "mark": true,
+     "row": 3
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      0,
+      1,
+      2
+     ],
+     "facts_shown": [
+      1,
+      0,
+      1,
+      2
+     ],
+     "key": "rival: mlp",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival: lstm",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "key": "rival: transformer",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      1,
+      2,
+      6,
+      2
+     ],
+     "facts_shown": [
+      1,
+      2,
+      6,
+      2
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      1,
+      2,
+      4,
+      0
+     ],
+     "facts_shown": [
+      1,
+      2,
+      4,
+      0
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "key": "control: random_atoms",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      0,
+      0,
+      0,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 4
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "key": "CLU",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival: mlp",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      2
+     ],
+     "key": "rival: lstm",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      0,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      0
+     ],
+     "key": "rival: transformer",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      0,
+      4,
+      6,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      1,
+      3,
+      7,
+      3
+     ],
+     "facts_shown": [
+      1,
+      3,
+      7,
+      3
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      1,
+      4,
+      7,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      7,
+      0
+     ],
+     "key": "control: random_atoms",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      0,
+      0,
+      0,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 5
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "key": "CLU",
+     "mark": true,
+     "row": 5
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival: mlp",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      3,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      2
+     ],
+     "key": "rival: lstm",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival: transformer",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      3,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": true,
+     "row": 5
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      1,
+      4,
+      7,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      7,
+      0
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "key": "control: random_atoms",
+     "mark": true,
+     "row": 5
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      0,
+      0,
+      0,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 5
+    }
+   ],
+   "items_sha256": "a570dce2358e820f7109ed0238ee7d75cc175a2cb7a1f8475f0ff30789ee7443",
+   "notes": "Door-then-tint (interaction family): the first seed-0 TEST n-way row per move direction present. Same columns as fig_cmazet_families. PW-1: + n-CLU door-then-tint successes, one per move direction present, drawn by rule (cmazet_door_search.py); the base n-CLU has none at seeds 0-2, so they come from the n-CLU-REL run, every column of those rows from that run. per-item re-read of the persisted w19 BOTH TEST objects (hash-verified; every arm's n-way score equals the scored artefact, asserted in cmazet_extract.py); items file sha256 recorded under items_sha256",
+   "part": "C",
+   "placeholder": false,
+   "select_rule": "interaction_per_direction",
+   "selection": [
+    {
+     "direction": "N",
+     "i": 117,
+     "seed": 0
+    },
+    {
+     "direction": "S",
+     "i": 29,
+     "seed": 0
+    },
+    {
+     "direction": "W",
+     "i": 55,
+     "seed": 0
+    },
+    {
+     "cls": "door_then_tint",
+     "door_search_slot": "fig_cmazet_door_then_tint: success rows",
+     "drawn": [
+      {
+       "action": "E",
+       "colour": 2,
+       "family": "interaction",
+       "i": 214,
+       "model": "n-CLU-REL",
+       "seed": 2,
+       "truth": [
+        1,
+        2,
+        6,
+        0
+       ]
+      },
+      {
+       "action": "S",
+       "colour": 2,
+       "family": "interaction",
+       "i": 332,
+       "model": "n-CLU-REL",
+       "seed": 2,
+       "truth": [
+        1,
+        3,
+        6,
+        0
+       ]
+      },
+      {
+       "action": "W",
+       "colour": 2,
+       "family": "interaction",
+       "i": 348,
+       "model": "n-CLU-REL",
+       "seed": 2,
+       "truth": [
+        1,
+        4,
+        6,
+        0
+       ]
+      }
+     ],
+     "empty_for": [
+      "n-CLU"
+     ],
+     "model": "n-CLU-REL",
+     "n_qualifying": 44
+    }
+   ],
+   "source_sha256": {
+    "w19-maze-t-symmetric/test/BOTH_test_seed0.json": "de45327c110e24cdbd97d79782aeb0a0a31856d985eaebf041c5e5c7cabd22f6",
+    "w19-maze-t-symmetric/test/BOTH_test_seed1.json": "790f62614bb9376b98a4dc940657a6724fc6efdde9b71cf24890ac8a59cbbed7",
+    "w19-maze-t-symmetric/test/BOTH_test_seed2.json": "3103607a28c84ee4ef9bb4a0ad57e365a84037c6eb3ea995fee539afbc76eac8",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed2.json": "c05b7d5feee9572f91d23b8fcbb223d0af7a939ad48e625d6cbd156800319c8a"
+   },
+   "sources": [
+    "w19-maze-t-symmetric/test/BOTH_test_seed0.json",
+    "w19-maze-t-symmetric/test/BOTH_test_seed1.json",
+    "w19-maze-t-symmetric/test/BOTH_test_seed2.json",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed2.json"
+   ]
+  },
+  "fig_cmazet_families": {
+   "awaiting": null,
+   "banner": false,
+   "built_by": "make_figures_w21.py",
+   "door_search_draw_seed": 16,
+   "door_search_rule": "PW-1 item 16.2: n-CLU successes on door transitions, found BY RULE in the persisted per-item scores.\n\nReads data/cmazet_items.json (base n-CLU, seeds 0-2: the only base seeds with persisted objects)\nand data/cmazet_items_rel.json (n-CLU-REL, seeds 0-5). Loads no model; no scoring.\n\nClasses, per model, per seed, over the held-out TEST n-way rows:\n  door_open          truth key event > k (a key consumed at a door: the door opens) AND n-CLU correct\n  door_then_tint     family == \"interaction\" (door colour = pocket colour = target tint) AND n-CLU correct\n  most_baselines_wrong  n-CLU correct AND >= 4 of the 6 matched baselines wrong\n                     (rival: {mlp,lstm,transformer} at 8,000 and 80,000 steps, the run's own objects)\nThe draw: numpy default_rng(DRAW_SEED), one generator, calls in the fixed order of ALLOCATION.\nWithin a draw, the qualifying items are grouped into strata (family, colour = pocket colour); the\nstrata are visited in a random permutation and one item is drawn uniformly inside each stratum, so\nconsecutive draws differ in family or colour wherever the set allows it. A draw never repeats an item.\nAn empty class is recorded as empty; nothing is substituted.",
+   "drawn_rows_items_sha256": {
+    "n-CLU": "a570dce2358e820f7109ed0238ee7d75cc175a2cb7a1f8475f0ff30789ee7443",
+    "n-CLU-REL": "0af6c6f653319b1e553026524769b39294ce27563bd35555ec2217130fab766c"
+   },
+   "facts_shown": [
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 0
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      1,
+      1,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      0,
+      0
+     ],
+     "key": "CLU",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      3,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      0
+     ],
+     "key": "rival: mlp",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "rival: lstm",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "key": "rival: transformer",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      3,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      0
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": true,
+     "row": 0
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      1,
+      1,
+      5,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      5,
+      0
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      0,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      6,
+      0
+     ],
+     "key": "control: random_atoms",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 0
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 1
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      0,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "CLU",
+     "mark": true,
+     "row": 1
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "rival: mlp",
+     "mark": true,
+     "row": 1
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "rival: lstm",
+     "mark": true,
+     "row": 1
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "rival: transformer",
+     "mark": true,
+     "row": 1
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": true,
+     "row": 1
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": true,
+     "row": 1
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": true,
+     "row": 1
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": true,
+     "row": 1
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      0,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": true,
+     "row": 1
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "control: random_atoms",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 2
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "CLU",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival: mlp",
+     "mark": true,
+     "row": 2
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival: lstm",
+     "mark": true,
+     "row": 2
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      0,
+      3,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      3,
+      3
+     ],
+     "key": "rival: transformer",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": true,
+     "row": 2
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": true,
+     "row": 2
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      0,
+      3,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      3,
+      3
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      0,
+      3,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      1,
+      0,
+      3,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      3,
+      3
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      1,
+      3,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      3
+     ],
+     "key": "control: random_atoms",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      1,
+      0,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      0
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 2
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": true,
+     "row": 2
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 3
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "CLU",
+     "mark": true,
+     "row": 3
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival: mlp",
+     "mark": true,
+     "row": 3
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival: lstm",
+     "mark": true,
+     "row": 3
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival: transformer",
+     "mark": true,
+     "row": 3
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": true,
+     "row": 3
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": true,
+     "row": 3
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": true,
+     "row": 3
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": true,
+     "row": 3
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "control: random_atoms",
+     "mark": true,
+     "row": 3
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      1,
+      3,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      3
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 4
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "CLU",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "rival: mlp",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "rival: lstm",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "rival: transformer",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      1,
+      3,
+      8,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      8,
+      1
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "control: random_atoms",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      0,
+      3,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 4
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 5
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      0,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "CLU",
+     "mark": true,
+     "row": 5
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "rival: mlp",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "rival: lstm",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival: transformer",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      0,
+      4,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      0,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": true,
+     "row": 5
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      0,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "control: random_atoms",
+     "mark": true,
+     "row": 5
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      1,
+      4,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      3
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 6
+    },
+    {
+     "col": "n-CLU",
+     "emitted": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "key": "CLU",
+     "mark": true,
+     "row": 6
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival: mlp",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "key": "rival: lstm",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      1,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      2
+     ],
+     "key": "rival: transformer",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "MLP",
+     "emitted": [
+      0,
+      0,
+      0,
+      4
+     ],
+     "facts_shown": [
+      0,
+      4
+     ],
+     "key": "rival@10x-steps: mlp",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "LSTM",
+     "emitted": [
+      1,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: lstm",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "Transformer",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "rival@10x-steps: transformer",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "landscape removed",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "control: landscape_removed",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "landscape shuffled",
+     "emitted": [
+      0,
+      4,
+      6,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "control: landscape_shuffled",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "shuffled across wells",
+     "emitted": [
+      1,
+      3,
+      7,
+      3
+     ],
+     "facts_shown": [
+      1,
+      3,
+      7,
+      3
+     ],
+     "key": "control: landscape_shuffled_across_wells",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "random atoms",
+     "emitted": [
+      1,
+      4,
+      7,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      7,
+      0
+     ],
+     "key": "control: random_atoms",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "blind colour",
+     "emitted": [
+      0,
+      0,
+      0,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "mark": false,
+     "row": 6
+    },
+    {
+     "col": "blind sequential",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "mark": false,
+     "row": 6
+    }
+   ],
+   "items_sha256": "a570dce2358e820f7109ed0238ee7d75cc175a2cb7a1f8475f0ff30789ee7443",
+   "notes": "One held-out TEST n-way transition per rule family: the first in the scorer's capped order at seed 0, else at the first seed that has one. Columns: s_t with the action, the engine's s_{t+1}, then each arm's generated s_{t+1} (apply_outcome of its own emission) with the engine's judge's mark. PW-1: + two rows drawn by rule (cmazet_door_search.py): one where the n-CLU is right and >= 4 of the 6 matched baselines are wrong (base n-CLU, seeds 0-2), and one n-CLU door success (key consumed, door then tint) - the base n-CLU has none at seeds 0-2, so it is drawn from the n-CLU-REL run, every column of that row from that run. per-item re-read of the persisted w19 BOTH TEST objects (hash-verified; every arm's n-way score equals the scored artefact, asserted in cmazet_extract.py); items file sha256 recorded under items_sha256",
+   "part": "C",
+   "placeholder": false,
+   "select_rule": "first_per_family",
+   "selection": [
+    {
+     "family": "interaction",
+     "i": 29,
+     "seed": 0
+    },
+    {
+     "family": "rule_b",
+     "i": 0,
+     "seed": 0
+    },
+    {
+     "family": "rule_a",
+     "i": 482,
+     "seed": 2
+    },
+    {
+     "family": "open_door_tint",
+     "i": 34,
+     "seed": 0
+    },
+    {
+     "family": "free",
+     "i": 1,
+     "seed": 0
+    },
+    {
+     "cls": "most_baselines_wrong",
+     "door_search_slot": "fig_cmazet_families: most-baselines-wrong row",
+     "drawn": [
+      {
+       "action": "W",
+       "colour": 1,
+       "family": "rule_b",
+       "i": 308,
+       "model": "n-CLU",
+       "seed": 0,
+       "truth": [
+        0,
+        0,
+        0,
+        1
+       ]
+      }
+     ],
+     "empty_for": [],
+     "model": "n-CLU",
+     "n_qualifying": 199
+    },
+    {
+     "cls": "door_then_tint",
+     "door_search_slot": "fig_cmazet_families: door row",
+     "drawn": [
+      {
+       "action": "S",
+       "colour": 2,
+       "family": "interaction",
+       "i": 467,
+       "model": "n-CLU-REL",
+       "seed": 2,
+       "truth": [
+        1,
+        3,
+        6,
+        0
+       ]
+      }
+     ],
+     "empty_for": [
+      "n-CLU"
+     ],
+     "model": "n-CLU-REL",
+     "n_qualifying": 44
+    }
+   ],
+   "source_sha256": {
+    "w19-maze-t-symmetric/test/BOTH_test_seed0.json": "de45327c110e24cdbd97d79782aeb0a0a31856d985eaebf041c5e5c7cabd22f6",
+    "w19-maze-t-symmetric/test/BOTH_test_seed1.json": "790f62614bb9376b98a4dc940657a6724fc6efdde9b71cf24890ac8a59cbbed7",
+    "w19-maze-t-symmetric/test/BOTH_test_seed2.json": "3103607a28c84ee4ef9bb4a0ad57e365a84037c6eb3ea995fee539afbc76eac8",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed2.json": "c05b7d5feee9572f91d23b8fcbb223d0af7a939ad48e625d6cbd156800319c8a"
+   },
+   "sources": [
+    "w19-maze-t-symmetric/test/BOTH_test_seed0.json",
+    "w19-maze-t-symmetric/test/BOTH_test_seed1.json",
+    "w19-maze-t-symmetric/test/BOTH_test_seed2.json",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed2.json"
+   ]
+  },
+  "fig_cmazet_per_arm": {
+   "awaiting": null,
+   "banner": false,
+   "built_by": "make_figures_w21.py",
+   "door_search_draw_seed": 16,
+   "door_search_rule": "PW-1 item 16.2: n-CLU successes on door transitions, found BY RULE in the persisted per-item scores.\n\nReads data/cmazet_items.json (base n-CLU, seeds 0-2: the only base seeds with persisted objects)\nand data/cmazet_items_rel.json (n-CLU-REL, seeds 0-5). Loads no model; no scoring.\n\nClasses, per model, per seed, over the held-out TEST n-way rows:\n  door_open          truth key event > k (a key consumed at a door: the door opens) AND n-CLU correct\n  door_then_tint     family == \"interaction\" (door colour = pocket colour = target tint) AND n-CLU correct\n  most_baselines_wrong  n-CLU correct AND >= 4 of the 6 matched baselines wrong\n                     (rival: {mlp,lstm,transformer} at 8,000 and 80,000 steps, the run's own objects)\nThe draw: numpy default_rng(DRAW_SEED), one generator, calls in the fixed order of ALLOCATION.\nWithin a draw, the qualifying items are grouped into strata (family, colour = pocket colour); the\nstrata are visited in a random permutation and one item is drawn uniformly inside each stratum, so\nconsecutive draws differ in family or colour wherever the set allows it. A draw never repeats an item.\nAn empty class is recorded as empty; nothing is substituted.",
+   "drawn_rows_items_sha256": {},
+   "facts_shown": [
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 0
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 0
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 1
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      1,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      0,
+      0
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 2
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 2
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 3
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 4
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 5
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      1,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      1,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 6
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 6
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 7
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 7
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 8
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 8
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 9
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 9
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 10
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 10
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 11
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      0,
+      3,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      3,
+      3
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 11
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 12
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 12
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 13
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      2
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 13
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 14
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 14
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 15
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 15
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 16
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 16
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 17
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 17
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 18
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      1,
+      6,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 18
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 19
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 19
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 20
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 20
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 21
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      3
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 21
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 22
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 22
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 23
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 23
+    }
+   ],
+   "items_sha256": "a570dce2358e820f7109ed0238ee7d75cc175a2cb7a1f8475f0ff30789ee7443",
+   "notes": "For every arm, one seed-0 TEST n-way transition on which it is right and one on which it is wrong, each a uniform draw (numpy default_rng(21), arms in manifest order) among the qualifying rows; an arm with no qualifying row gets no row (recorded in selection). per-item re-read of the persisted w19 BOTH TEST objects (hash-verified; every arm's n-way score equals the scored artefact, asserted in cmazet_extract.py); items file sha256 recorded under items_sha256",
+   "part": "C",
+   "placeholder": false,
+   "select_rule": "success_failure_per_arm",
+   "selection": [
+    {
+     "arm": "CLU",
+     "i": 225,
+     "n_candidates": 609,
+     "want": "succeeds"
+    },
+    {
+     "arm": "CLU",
+     "i": 573,
+     "n_candidates": 152,
+     "want": "fails"
+    },
+    {
+     "arm": "rival: mlp",
+     "i": 286,
+     "n_candidates": 375,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival: mlp",
+     "i": 464,
+     "n_candidates": 386,
+     "want": "fails"
+    },
+    {
+     "arm": "rival: lstm",
+     "i": 345,
+     "n_candidates": 275,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival: lstm",
+     "i": 531,
+     "n_candidates": 486,
+     "want": "fails"
+    },
+    {
+     "arm": "rival: transformer",
+     "i": 250,
+     "n_candidates": 359,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival: transformer",
+     "i": 66,
+     "n_candidates": 402,
+     "want": "fails"
+    },
+    {
+     "arm": "rival@10x-steps: mlp",
+     "i": 216,
+     "n_candidates": 466,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival@10x-steps: mlp",
+     "i": 487,
+     "n_candidates": 295,
+     "want": "fails"
+    },
+    {
+     "arm": "rival@10x-steps: lstm",
+     "i": 475,
+     "n_candidates": 477,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival@10x-steps: lstm",
+     "i": 747,
+     "n_candidates": 284,
+     "want": "fails"
+    },
+    {
+     "arm": "rival@10x-steps: transformer",
+     "i": 182,
+     "n_candidates": 428,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival@10x-steps: transformer",
+     "i": 325,
+     "n_candidates": 333,
+     "want": "fails"
+    },
+    {
+     "arm": "control: landscape_removed",
+     "none_exists": true,
+     "want": "succeeds"
+    },
+    {
+     "arm": "control: landscape_removed",
+     "i": 720,
+     "n_candidates": 761,
+     "want": "fails"
+    },
+    {
+     "arm": "control: landscape_shuffled",
+     "i": 96,
+     "n_candidates": 176,
+     "want": "succeeds"
+    },
+    {
+     "arm": "control: landscape_shuffled",
+     "i": 526,
+     "n_candidates": 585,
+     "want": "fails"
+    },
+    {
+     "arm": "control: landscape_shuffled_across_wells",
+     "i": 720,
+     "n_candidates": 316,
+     "want": "succeeds"
+    },
+    {
+     "arm": "control: landscape_shuffled_across_wells",
+     "i": 703,
+     "n_candidates": 445,
+     "want": "fails"
+    },
+    {
+     "arm": "control: random_atoms",
+     "i": 531,
+     "n_candidates": 206,
+     "want": "succeeds"
+    },
+    {
+     "arm": "control: random_atoms",
+     "i": 680,
+     "n_candidates": 555,
+     "want": "fails"
+    },
+    {
+     "arm": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "none_exists": true,
+     "want": "succeeds"
+    },
+    {
+     "arm": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "i": 150,
+     "n_candidates": 761,
+     "want": "fails"
+    },
+    {
+     "arm": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "i": 539,
+     "n_candidates": 182,
+     "want": "succeeds"
+    },
+    {
+     "arm": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "i": 521,
+     "n_candidates": 579,
+     "want": "fails"
+    }
+   ],
+   "source_sha256": {
+    "w19-maze-t-symmetric/test/BOTH_test_seed0.json": "de45327c110e24cdbd97d79782aeb0a0a31856d985eaebf041c5e5c7cabd22f6",
+    "w19-maze-t-symmetric/test/BOTH_test_seed1.json": "790f62614bb9376b98a4dc940657a6724fc6efdde9b71cf24890ac8a59cbbed7",
+    "w19-maze-t-symmetric/test/BOTH_test_seed2.json": "3103607a28c84ee4ef9bb4a0ad57e365a84037c6eb3ea995fee539afbc76eac8"
+   },
+   "sources": [
+    "w19-maze-t-symmetric/test/BOTH_test_seed0.json",
+    "w19-maze-t-symmetric/test/BOTH_test_seed1.json",
+    "w19-maze-t-symmetric/test/BOTH_test_seed2.json"
+   ]
+  },
+  "fig_cmazet_rel_per_arm": {
+   "awaiting": null,
+   "banner": false,
+   "built_by": "make_figures_w21.py",
+   "door_search_draw_seed": 16,
+   "door_search_rule": "PW-1 item 16.2: n-CLU successes on door transitions, found BY RULE in the persisted per-item scores.\n\nReads data/cmazet_items.json (base n-CLU, seeds 0-2: the only base seeds with persisted objects)\nand data/cmazet_items_rel.json (n-CLU-REL, seeds 0-5). Loads no model; no scoring.\n\nClasses, per model, per seed, over the held-out TEST n-way rows:\n  door_open          truth key event > k (a key consumed at a door: the door opens) AND n-CLU correct\n  door_then_tint     family == \"interaction\" (door colour = pocket colour = target tint) AND n-CLU correct\n  most_baselines_wrong  n-CLU correct AND >= 4 of the 6 matched baselines wrong\n                     (rival: {mlp,lstm,transformer} at 8,000 and 80,000 steps, the run's own objects)\nThe draw: numpy default_rng(DRAW_SEED), one generator, calls in the fixed order of ALLOCATION.\nWithin a draw, the qualifying items are grouped into strata (family, colour = pocket colour); the\nstrata are visited in a random permutation and one item is drawn uniformly inside each stratum, so\nconsecutive draws differ in family or colour wherever the set allows it. A draw never repeats an item.\nAn empty class is recorded as empty; nothing is substituted.",
+   "drawn_rows_items_sha256": {},
+   "facts_shown": [
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 0
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 0
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      1,
+      7,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      7,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 1
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      3,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 1
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 2
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 2
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 3
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 3
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 4
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 4
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 5
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      0,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      0,
+      0
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 5
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 6
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 6
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 7
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 7
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 8
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 8
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      1,
+      7,
+      0
+     ],
+     "facts_shown": [
+      1,
+      1,
+      7,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 9
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 9
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 10
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 10
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 11
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 11
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 12
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 12
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 13
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 13
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 14
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      3
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 14
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 15
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 15
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 16
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 16
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 17
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      2
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 17
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 18
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 18
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 19
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 19
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 20
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      0,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 20
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 21
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      3
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      3
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 21
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 22
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      4,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 22
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 23
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 23
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 24
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 24
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      3,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 25
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      6,
+      4
+     ],
+     "facts_shown": [
+      1,
+      4,
+      6,
+      4
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 25
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 26
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 26
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 27
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      2
+     ],
+     "facts_shown": [
+      0,
+      2
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 27
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 28
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "facts_shown": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 28
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 29
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      2,
+      6,
+      0
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 29
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 30
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 30
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 31
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 31
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 32
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "facts_shown": [
+      0,
+      1
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 32
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      5,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 33
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      0
+     ],
+     "facts_shown": [
+      0,
+      0
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 33
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 34
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      0,
+      0,
+      0,
+      3
+     ],
+     "facts_shown": [
+      0,
+      3
+     ],
+     "key": "subject",
+     "mark": true,
+     "row": 34
+    },
+    {
+     "col": "engine $s_{t+1}$",
+     "emitted": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      4,
+      6,
+      0
+     ],
+     "key": "engine",
+     "mark": null,
+     "row": 35
+    },
+    {
+     "col": "the arm's $s_{t+1}$",
+     "emitted": [
+      1,
+      0,
+      6,
+      0
+     ],
+     "facts_shown": [
+      1,
+      0,
+      6,
+      0
+     ],
+     "key": "subject",
+     "mark": false,
+     "row": 35
+    }
+   ],
+   "items_sha256": "0af6c6f653319b1e553026524769b39294ce27563bd35555ec2217130fab766c",
+   "notes": "CLU-REL-A10 (the improved CLU config). For every arm, including the six '+rel' diagnostic rivals (rivals given the CLU's relational request columns; not matched baselines), one seed-0 TEST n-way transition on which it is right and one on which it is wrong, each a uniform draw (numpy default_rng(21), arms in manifest order) among the qualifying rows; an arm with no qualifying row gets no row (recorded in selection). Same rows and rule as fig_cmazet_per_arm. PW-1: the n-CLU-REL 'succeeds' row is a door-then-tint success drawn by rule (cmazet_door_search.py; the seed-0 uniform draw is still consumed so every other row is unchanged). per-item re-read of the persisted CLU-REL-A10 BOTH TEST objects (hash-verified; every arm's n-way score equals the scored run JSON, float ==, asserted in cmazet_extract_rel.py, seeds 0-5); items file sha256 recorded under items_sha256",
+   "part": "C",
+   "placeholder": false,
+   "select_rule": "success_failure_per_arm",
+   "selection": [
+    {
+     "arm": "CLU",
+     "door_search_slot": "fig_cmazet_rel_per_arm: n-CLU-REL success row",
+     "drawn": [
+      {
+       "action": "E",
+       "colour": 2,
+       "family": "interaction",
+       "i": 581,
+       "model": "n-CLU-REL",
+       "seed": 2,
+       "truth": [
+        1,
+        2,
+        6,
+        0
+       ]
+      }
+     ],
+     "empty_for": [],
+     "n_qualifying": 44,
+     "replaces_uniform_draw_i": 226,
+     "want": "succeeds"
+    },
+    {
+     "arm": "CLU",
+     "i": 558,
+     "n_candidates": 70,
+     "want": "fails"
+    },
+    {
+     "arm": "rival: mlp",
+     "i": 288,
+     "n_candidates": 534,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival: mlp",
+     "i": 464,
+     "n_candidates": 227,
+     "want": "fails"
+    },
+    {
+     "arm": "rival: lstm",
+     "i": 572,
+     "n_candidates": 20,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival: lstm",
+     "i": 533,
+     "n_candidates": 741,
+     "want": "fails"
+    },
+    {
+     "arm": "rival: transformer",
+     "i": 252,
+     "n_candidates": 602,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival: transformer",
+     "i": 71,
+     "n_candidates": 159,
+     "want": "fails"
+    },
+    {
+     "arm": "rival@10x-steps: mlp",
+     "i": 217,
+     "n_candidates": 611,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival@10x-steps: mlp",
+     "i": 504,
+     "n_candidates": 150,
+     "want": "fails"
+    },
+    {
+     "arm": "rival@10x-steps: lstm",
+     "i": 492,
+     "n_candidates": 190,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival@10x-steps: lstm",
+     "i": 750,
+     "n_candidates": 571,
+     "want": "fails"
+    },
+    {
+     "arm": "rival@10x-steps: transformer",
+     "i": 182,
+     "n_candidates": 611,
+     "want": "succeeds"
+    },
+    {
+     "arm": "rival@10x-steps: transformer",
+     "i": 361,
+     "n_candidates": 150,
+     "want": "fails"
+    },
+    {
+     "arm": "control: landscape_removed",
+     "none_exists": true,
+     "want": "succeeds"
+    },
+    {
+     "arm": "control: landscape_removed",
+     "i": 720,
+     "n_candidates": 761,
+     "want": "fails"
+    },
+    {
+     "arm": "control: landscape_shuffled",
+     "i": 89,
+     "n_candidates": 347,
+     "want": "succeeds"
+    },
+    {
+     "arm": "control: landscape_shuffled",
+     "i": 527,
+     "n_candidates": 414,
+     "want": "fails"
+    },
+    {
+     "arm": "control: landscape_shuffled_across_wells",
+     "i": 725,
+     "n_candidates": 592,
+     "want": "succeeds"
+    },
+    {
+     "arm": "control: landscape_shuffled_across_wells",
+     "i": 712,
+     "n_candidates": 169,
+     "want": "fails"
+    },
+    {
+     "arm": "control: random_atoms",
+     "i": 515,
+     "n_candidates": 293,
+     "want": "succeeds"
+    },
+    {
+     "arm": "control: random_atoms",
+     "i": 681,
+     "n_candidates": 468,
+     "want": "fails"
+    },
+    {
+     "arm": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "none_exists": true,
+     "want": "succeeds"
+    },
+    {
+     "arm": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+     "i": 150,
+     "n_candidates": 761,
+     "want": "fails"
+    },
+    {
+     "arm": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "i": 539,
+     "n_candidates": 182,
+     "want": "succeeds"
+    },
+    {
+     "arm": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+     "i": 521,
+     "n_candidates": 579,
+     "want": "fails"
+    },
+    {
+     "arm": "diagnostic+rel@8k: mlp +rel",
+     "i": 377,
+     "n_candidates": 669,
+     "want": "succeeds"
+    },
+    {
+     "arm": "diagnostic+rel@8k: mlp +rel",
+     "i": 759,
+     "n_candidates": 92,
+     "want": "fails"
+    },
+    {
+     "arm": "diagnostic+rel@8k: lstm +rel",
+     "i": 649,
+     "n_candidates": 165,
+     "want": "succeeds"
+    },
+    {
+     "arm": "diagnostic+rel@8k: lstm +rel",
+     "i": 154,
+     "n_candidates": 596,
+     "want": "fails"
+    },
+    {
+     "arm": "diagnostic+rel@8k: transformer +rel",
+     "i": 742,
+     "n_candidates": 691,
+     "want": "succeeds"
+    },
+    {
+     "arm": "diagnostic+rel@8k: transformer +rel",
+     "i": 602,
+     "n_candidates": 70,
+     "want": "fails"
+    },
+    {
+     "arm": "diagnostic+rel@80k: mlp +rel",
+     "i": 275,
+     "n_candidates": 696,
+     "want": "succeeds"
+    },
+    {
+     "arm": "diagnostic+rel@80k: mlp +rel",
+     "i": 546,
+     "n_candidates": 65,
+     "want": "fails"
+    },
+    {
+     "arm": "diagnostic+rel@80k: lstm +rel",
+     "i": 600,
+     "n_candidates": 506,
+     "want": "succeeds"
+    },
+    {
+     "arm": "diagnostic+rel@80k: lstm +rel",
+     "i": 172,
+     "n_candidates": 255,
+     "want": "fails"
+    },
+    {
+     "arm": "diagnostic+rel@80k: transformer +rel",
+     "i": 197,
+     "n_candidates": 691,
+     "want": "succeeds"
+    },
+    {
+     "arm": "diagnostic+rel@80k: transformer +rel",
+     "i": 133,
+     "n_candidates": 70,
+     "want": "fails"
+    }
+   ],
+   "source_sha256": {
+    "w21-maze-t-clu-improve/test/BOTH_test_seed0.json": "486e0ab3caf106e754a35902cf8200740012fa757fde6f4915f58154c92460d4",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed1.json": "9384b728c08a2f647cb85341aa0c6c18f253bd573289070c39bbdeb2c713aaa9",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed2.json": "c05b7d5feee9572f91d23b8fcbb223d0af7a939ad48e625d6cbd156800319c8a",
+    "w21-rel-newseeds/test/BOTH_test_seed3.json": "36a28a42e32e820357980bb60ccc148f6c1522bfd68137de7b94d11f6e2fbd5a",
+    "w21-rel-newseeds/test/BOTH_test_seed4.json": "301525ea3193af4ef05055d8a7d90601e11674260ecf034e0014a8c20e5e55a2",
+    "w21-rel-newseeds/test/BOTH_test_seed5.json": "9b2840bab76f22bfc1591c2b9bc35a2cbc1b16447caf50af81d3e81322774d5c"
+   },
+   "sources": [
+    "w21-maze-t-clu-improve/test/BOTH_test_seed0.json",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed1.json",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed2.json",
+    "w21-rel-newseeds/test/BOTH_test_seed3.json",
+    "w21-rel-newseeds/test/BOTH_test_seed4.json",
+    "w21-rel-newseeds/test/BOTH_test_seed5.json"
+   ]
+  },
+  "fig_crossover": {
+   "awaiting": null,
+   "banner": false,
+   "built_by": "make_figures_w21.py",
+   "notes": "n = 3 seeds (0, 1, 2) at EVERY K = 5..32; no single-seed line. (a) line = the artefact's val_composition.mean, band = +-1 val_composition.sd (sample sd, asserted equal to the per-seed values), open dots = per_seed.*.val_composition; grey x = the highest of the four charter-C controls' mean_over_seeds_and_corners (0 at every K except K = 20, landscape_shuffled_across_wells 0.000193). (b) stacked parts_across_seeds.*.mean, error bar = honest_total_bytes.sd; 524,288 B is a reference line only. The artefact is SMOKE_NOT_A_CLAIM (validation).",
+   "placeholder": false,
+   "source_sha256": {
+    "w15-crossover-seeds/CROSSOVER-3SEED.json": "c5d68ee3abf1e203436f00360aa0ddaae27c028776d519db515ffc1d631a9290"
+   },
+   "sources": [
+    "w15-crossover-seeds/CROSSOVER-3SEED.json"
+   ]
+  },
+  "fig_deletion": {
+   "awaiting": null,
+   "banner": false,
+   "built_by": "make_figures_w22.py",
+   "deletion_facts": {
+    "conjunction_live": {
+     "0": {
+      "after_mean": 41.36697247706422,
+      "before_mean": 47.4954128440367,
+      "book_rendered_features_rel_dev": 3.2864523547004865e-08,
+      "book_statistic_count_dev": 0,
+      "book_statistic_first_moment_dev": 0.0,
+      "max_abs_mode_dev": 5.383044481277466e-07,
+      "n_survivor_combinations": 109,
+      "refusal": {
+       "false_refusal_rate_on_survivor_requests": 0.0,
+       "n_deleted_corner_requests": 0,
+       "n_survivor_requests": 5688,
+       "refusal_rate_on_deleted_corner_requests": null
+      }
+     },
+     "1": {
+      "after_mean": 40.972477064220186,
+      "before_mean": 47.403669724770644,
+      "book_rendered_features_rel_dev": 7.812795388417726e-08,
+      "book_statistic_count_dev": 0,
+      "book_statistic_first_moment_dev": 0.0,
+      "max_abs_mode_dev": 1.0743169909233075e-08,
+      "n_survivor_combinations": 109,
+      "refusal": {
+       "false_refusal_rate_on_survivor_requests": 0.0,
+       "n_deleted_corner_requests": 0,
+       "n_survivor_requests": 5688,
+       "refusal_rate_on_deleted_corner_requests": null
+      }
+     },
+     "2": {
+      "after_mean": 42.81651376146789,
+      "before_mean": 49.11926605504587,
+      "book_rendered_features_rel_dev": 2.0331563099773575e-09,
+      "book_statistic_count_dev": 0,
+      "book_statistic_first_moment_dev": 0.0,
+      "max_abs_mode_dev": 6.252833628650478e-08,
+      "n_survivor_combinations": 109,
+      "refusal": {
+       "false_refusal_rate_on_survivor_requests": 0.0,
+       "n_deleted_corner_requests": 0,
+       "n_survivor_requests": 5688,
+       "refusal_rate_on_deleted_corner_requests": null
+      }
+     }
+    },
+    "item": {
+     "0": {
+      "after_mean": 47.477064220183486,
+      "before_mean": 47.4954128440367,
+      "book_rendered_features_rel_dev": 5.829167148974079e-10,
+      "book_statistic_count_dev": 0,
+      "book_statistic_first_moment_dev": 0.0,
+      "max_abs_mode_dev": 2.337619662284851e-07,
+      "n_survivor_combinations": 109,
+      "refusal": {
+       "DECLARED_NA": "an item deletion clears no value bit and punches no conjunction hole: 0 certifiably-impossible requests (w12-deletion-baselines FINDINGS \u00a73)"
+      }
+     },
+     "1": {
+      "after_mean": 47.293577981651374,
+      "before_mean": 47.403669724770644,
+      "book_rendered_features_rel_dev": 9.74098579575866e-10,
+      "book_statistic_count_dev": 0,
+      "book_statistic_first_moment_dev": 0.0,
+      "max_abs_mode_dev": 1.4860233932267874e-08,
+      "n_survivor_combinations": 109,
+      "refusal": {
+       "DECLARED_NA": "an item deletion clears no value bit and punches no conjunction hole: 0 certifiably-impossible requests (w12-deletion-baselines FINDINGS \u00a73)"
+      }
+     },
+     "2": {
+      "after_mean": 49.11009174311926,
+      "before_mean": 49.11926605504587,
+      "book_rendered_features_rel_dev": 6.873774882620864e-10,
+      "book_statistic_count_dev": 0,
+      "book_statistic_first_moment_dev": 0.0,
+      "max_abs_mode_dev": 3.1622182206092475e-08,
+      "n_survivor_combinations": 109,
+      "refusal": {
+       "DECLARED_NA": "an item deletion clears no value bit and punches no conjunction hole: 0 certifiably-impossible requests (w12-deletion-baselines FINDINGS \u00a73)"
+      }
+     }
+    },
+    "value": {
+     "0": {
+      "after_mean": 50.86516853932584,
+      "before_mean": 50.92134831460674,
+      "book_rendered_features_rel_dev": 1.8504165977262232e-09,
+      "book_statistic_count_dev": 0,
+      "book_statistic_first_moment_dev": 0.0,
+      "max_abs_mode_dev": 5.960464477539063e-08,
+      "n_survivor_combinations": 89,
+      "refusal": {
+       "false_refusal_rate_on_survivor_requests": 0.0,
+       "n_deleted_corner_requests": 720,
+       "n_survivor_requests": 4968,
+       "refusal_rate_on_deleted_corner_requests": 1.0
+      }
+     },
+     "1": {
+      "after_mean": 50.853932584269664,
+      "before_mean": 50.52808988764045,
+      "book_rendered_features_rel_dev": 1.4153540561778755e-09,
+      "book_statistic_count_dev": 0,
+      "book_statistic_first_moment_dev": 0.0,
+      "max_abs_mode_dev": 4.8212314140982926e-08,
+      "n_survivor_combinations": 89,
+      "refusal": {
+       "false_refusal_rate_on_survivor_requests": 0.0,
+       "n_deleted_corner_requests": 720,
+       "n_survivor_requests": 4968,
+       "refusal_rate_on_deleted_corner_requests": 1.0
+      }
+     },
+     "2": {
+      "after_mean": 52.0,
+      "before_mean": 52.60674157303371,
+      "book_rendered_features_rel_dev": 1.215328060411025e-09,
+      "book_statistic_count_dev": 0,
+      "book_statistic_first_moment_dev": 0.0,
+      "max_abs_mode_dev": 2.010899713411618e-08,
+      "n_survivor_combinations": 89,
+      "refusal": {
+       "false_refusal_rate_on_survivor_requests": 0.0,
+       "n_deleted_corner_requests": 720,
+       "n_survivor_requests": 4968,
+       "refusal_rate_on_deleted_corner_requests": 1.0
+      }
+     }
+    }
+   },
+   "notes": "PW-1 item 12: two panels, former (e) and (f) relettered (a) and (b); former (a)-(d) removed and their values moved to the deletion table (deletion_facts below, asserted and recorded, not drawn). Rows 3-4 TEST, K* = 32, fit pool 131,072 rows, seeds 0, 1, 2; all from SHAPES-MATCHED.json deletion_matched.per_scope.<scope> (definition: forget c = downdate the store, downdate the address book's statistic and refit the book from it, punch the hole). (a) store.<seed>.d.paired_after_minus_before.mean_paired_delta with its bootstrap_ci95 (downdate minus refit-without = 0.000, all corners tied, asserted); (b) rivals.<fam>.<seed>.ours_minus_rival_retrain_without with ci95, rivals retrained on the same surviving rows of the same pool at their declared schedule.",
+   "placeholder": false,
+   "rendered_text": [
+    "(a) Composition on the surviving\ncombinations, after \u2212 before\n(3 seeds)",
+    "(b) n-CLU after deletion \u2212 baseline\nretrained without the rows",
+    "0",
+    "1 % items\n(control)",
+    "1 % items (control)",
+    "10",
+    "2",
+    "20",
+    "30",
+    "40",
+    "Continuous MLP",
+    "LSTM",
+    "MLP",
+    "Transformer",
+    "after \u2212 before, novel tuples per held-out\ncombination (95 % bootstrap CI)",
+    "n-CLU after \u2212 baseline retrained\nwithout, same rows (95 % CI)",
+    "red sphere",
+    "value",
+    "\u221210",
+    "\u22122",
+    "\u22124",
+    "\u22126",
+    "\u22128"
+   ],
+   "rival_rows_read": {
+    "conjunction_live": {
+     "cont_mlp": [
+      125561
+     ],
+     "lstm": [
+      125561
+     ],
+     "mlp": [
+      125561
+     ],
+     "transformer": [
+      125561
+     ]
+    },
+    "item": {
+     "cont_mlp": [
+      129761
+     ],
+     "lstm": [
+      129761
+     ],
+     "mlp": [
+      129761
+     ],
+     "transformer": [
+      129761
+     ]
+    },
+    "value": {
+     "cont_mlp": [
+      120028
+     ],
+     "lstm": [
+      120028
+     ],
+     "mlp": [
+      120028
+     ],
+     "transformer": [
+      120028
+     ]
+    }
+   },
+   "source_sha256": {
+    "w20-shapes-data-matched/SHAPES-MATCHED.json": "70176bc73ae9e34cc028ae1937d425adc80a14fade105404768bf6b934d7fd2f"
+   },
+   "sources": [
+    "w20-shapes-data-matched/SHAPES-MATCHED.json"
+   ]
+  },
+  "fig_encoder_adapt": {
+   "awaiting": null,
+   "banner": false,
+   "notes": "3 seeds x 3 configurations = 9 arm-runs (3 SEEDS). Margin = single design - best learned baseline (mlp_180k, chosen per arm); a DIFFERENT opponent from the ladder's learned 1x, so this figure is never merged with fig_ladder. Equal compute: 400 steps / 25,600 images per arm-run (printed in CROSS-ARM.md).",
+   "placeholder": false,
+   "sources": [
+    "w13-encoder-adapt/CROSS-ARM.json"
+   ]
+  },
+  "fig_ladder": {
+   "awaiting": null,
+   "banner": false,
+   "built_by": "make_figures_w22.py",
+   "notes": "PW-1 item 10: one panel, no title, legend at the right. 3 seeds (0, 1, 2) on every rung; line = mean of the three per-seed values, dots = seeds. The one landed rival column set (data/ladder_rival_sets.json; the 32,256-row and the 32,768-row data-matched MLP sets are retired by item 10.1), beside the store (KSTAR-LADDER.json by_rung.*.kstar_K32.store; asserted equal, seed by seed, to SHAPES-MATCHED.json ladder.*.arms.store_K32_n131072) and table floor. Pool size and optimiser steps are asserted from the artefact and printed in the caption. Set drawn: data_matched_131072: Data-matched rivals, 131,072-row pool, 131,072 rows, 20,480/204,800 steps (each rung's own 131,072-row pool, the store's exact rows; P1-carried fit per family and seed); source w20-shapes-data-matched/SHAPES-MATCHED.json. w20 set: the P1-carried fit per family and seed (P3_margin.store_K32_n131072.per_family.*.*.carried_rival); a filled dot is a seed carried at its 204,800-step (10x) fit, an open dot the 20,480-step fit. For n >= 3 the rungs probe the identical 120 corners.",
+   "placeholder": false,
+   "rendered_text": [
+    "0",
+    "10",
+    "2",
+    "20",
+    "3",
+    "30",
+    "4",
+    "40",
+    "5",
+    "50",
+    "6",
+    "60",
+    "70",
+    "80",
+    "Continuous MLP",
+    "LSTM",
+    "Lookup table (floor)",
+    "MLP",
+    "Transformer",
+    "distinct valid novel tuples\nper held-out combination",
+    "each seed; line = mean",
+    "n, factors jointly held out",
+    "n-CLU",
+    "seed at $10{\\times}$ training steps"
+   ],
+   "rival_at_or_above_store": [],
+   "rival_sets_drawn": [
+    "data_matched_131072"
+   ],
+   "rival_sets_not_landed": [
+    "ladder_rivals_32k (32,768 rows): w21 ladder-rivals-32k (32,768-row ladder rival set; still running on forgis-14 at build time). Drop-in: set status 'landed', source, reader, arms, steps, steps_check."
+   ],
+   "rival_sets_retired": [
+    "combination_split_32256",
+    "data_matched_mlp_32768"
+   ],
+   "source_sha256": {
+    "w12-composition-ladder/LADDER.csv": "dd1464db8c10488e61111c1d3994196588a59effedf66ab437d404042ce1b8ad",
+    "w12b-nr6-and-kstar/KSTAR-LADDER.json": "e119891732645f57a06f63b677ca1f29f4ee4419b1179565d2c3d91c1149dd53",
+    "w20-shapes-data-matched/SHAPES-MATCHED.json": "70176bc73ae9e34cc028ae1937d425adc80a14fade105404768bf6b934d7fd2f"
+   },
+   "sources": [
+    "w12-composition-ladder/LADDER.csv",
+    "w12b-nr6-and-kstar/KSTAR-LADDER.json",
+    "w20-shapes-data-matched/SHAPES-MATCHED.json"
+   ],
+   "step_sources": {
+    "data_matched_131072": []
+   },
+   "tenx_points": [
+    {
+     "arm": "mlp",
+     "n": 2,
+     "seed": 0
+    },
+    {
+     "arm": "mlp",
+     "n": 3,
+     "seed": 0
+    },
+    {
+     "arm": "mlp",
+     "n": 3,
+     "seed": 2
+    },
+    {
+     "arm": "mlp",
+     "n": 4,
+     "seed": 0
+    },
+    {
+     "arm": "mlp",
+     "n": 4,
+     "seed": 1
+    },
+    {
+     "arm": "mlp",
+     "n": 4,
+     "seed": 2
+    },
+    {
+     "arm": "mlp",
+     "n": 5,
+     "seed": 0
+    },
+    {
+     "arm": "mlp",
+     "n": 5,
+     "seed": 2
+    },
+    {
+     "arm": "mlp",
+     "n": 6,
+     "seed": 0
+    },
+    {
+     "arm": "mlp",
+     "n": 6,
+     "seed": 2
+    },
+    {
+     "arm": "lstm",
+     "n": 2,
+     "seed": 0
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 2,
+     "seed": 0
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 2,
+     "seed": 1
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 2,
+     "seed": 2
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 3,
+     "seed": 0
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 3,
+     "seed": 1
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 3,
+     "seed": 2
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 4,
+     "seed": 0
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 4,
+     "seed": 1
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 4,
+     "seed": 2
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 5,
+     "seed": 0
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 5,
+     "seed": 1
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 5,
+     "seed": 2
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 6,
+     "seed": 0
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 6,
+     "seed": 1
+    },
+    {
+     "arm": "cont_mlp",
+     "n": 6,
+     "seed": 2
+    }
+   ]
+  },
+  "fig_maze_conditions": {
+   "awaiting": null,
+   "banner": false,
+   "built_by": "make_figures_w22.py",
+   "notes": "PW-1 item 1. (a) four input conditions, primary row unseen n-way (the engine's judge); every seed a row has is drawn (3 for the words-full and observation rows, from their BARS artefacts; 6 for the two words-plus-observation rows, from each seed's run JSON via maze_six.py, asserted float-equal to REL-NEWSEEDS.json). Comparator = the matched baseline with the highest mean over the row's seeds (every kind, both step limits); for the n-CLU-REL row, Transformer-REL at the step limit with the higher six-seed mean. (b), (c) per seed: n-CLU / n-CLU-REL, the (a) comparator of that row, and the highest control (max over the four controls on that seed). No claim label, no ceiling, no hard/easy class, no text over the data.",
+   "placeholder": false,
+   "rows": {
+    "observation": {
+     "comparator_arm": "rival@10x-steps: transformer",
+     "comparator_mean": 0.45663721986855893,
+     "comparator_per_seed": [
+      0.4640957446808511,
+      0.45037037037037037,
+      0.45544554455445546
+     ],
+     "label": "Observation",
+     "leg": "VAL",
+     "n_CLU_mean": 0.3513038895074918,
+     "n_CLU_per_seed": [
+      0.24069148936170212,
+      0.37333333333333335,
+      0.43988684582743987
+     ],
+     "seeds": [
+      0,
+      1,
+      2
+     ],
+     "source": "w19-maze-t-symmetric/val/BARS-OBS-val.json"
+    },
+    "words_full": {
+     "comparator_arm": "rival: transformer",
+     "comparator_mean": 0.7421448824348764,
+     "comparator_per_seed": [
+      0.8252299605781866,
+      0.5673854447439353,
+      0.8338192419825073
+     ],
+     "label": "Words, full design",
+     "leg": "TEST",
+     "n_CLU_mean": 0.724626907621842,
+     "n_CLU_per_seed": [
+      0.8002628120893561,
+      0.5660377358490566,
+      0.8075801749271136
+     ],
+     "seeds": [
+      0,
+      1,
+      2
+     ],
+     "source": "w21-words-full-test/test/BARS-WORDS-FULL-test.json"
+    },
+    "words_plus_observation": {
+     "comparator_arm": "rival@10x-steps: transformer",
+     "comparator_mean": 0.5490243919986637,
+     "comparator_per_seed": [
+      0.5624178712220762,
+      0.5566037735849056,
+      0.6618075801749271,
+      0.4074074074074074,
+      0.43015214384508993,
+      0.6757575757575758
+     ],
+     "label": "Words + observation (n-CLU)",
+     "leg": "TEST",
+     "n_CLU_mean": 0.6770460727620738,
+     "n_CLU_per_seed": [
+      0.8002628120893561,
+      0.5660377358490566,
+      0.8075801749271136,
+      0.674074074074074,
+      0.5325034578146611,
+      0.6818181818181818
+     ],
+     "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+     ],
+     "source": "maze_six.py (six-seed read)"
+    },
+    "words_plus_observation_rel": {
+     "comparator_arm": "diagnostic+rel@80k: transformer +rel",
+     "comparator_mean": 0.8885533281892039,
+     "comparator_per_seed": [
+      0.9080157687253614,
+      0.8692722371967655,
+      0.8090379008746356,
+      0.9051851851851852,
+      0.9004149377593361,
+      0.9393939393939394
+     ],
+     "label": "Words + observation (n-CLU-REL)",
+     "leg": "TEST",
+     "n_CLU_mean": 0.925454677527981,
+     "n_CLU_per_seed": [
+      0.9080157687253614,
+      0.8935309973045822,
+      0.9839650145772595,
+      0.9274074074074075,
+      0.9004149377593361,
+      0.9393939393939394
+     ],
+     "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+     ],
+     "source": "maze_six.py (six-seed read)"
+    }
+   },
+   "six_seed": {
+    "A1": {
+     "0": {
+      "baseline": 0.5624178712220762,
+      "baseline_arm": "rival@10x-steps: transformer",
+      "highest_control": 0.4152431011826544,
+      "highest_control_arms": [
+       "control: landscape_shuffled_across_wells"
+      ],
+      "n_CLU": 0.8002628120893561,
+      "source": "w19-maze-t-symmetric/test/BOTH_test_seed0.json"
+     },
+     "1": {
+      "baseline": 0.5566037735849056,
+      "baseline_arm": "rival@10x-steps: transformer",
+      "highest_control": 0.20889487870619947,
+      "highest_control_arms": [
+       "control: landscape_shuffled_across_wells"
+      ],
+      "n_CLU": 0.5660377358490566,
+      "source": "w19-maze-t-symmetric/test/BOTH_test_seed1.json"
+     },
+     "2": {
+      "baseline": 0.6618075801749271,
+      "baseline_arm": "rival@10x-steps: transformer",
+      "highest_control": 0.31924198250728864,
+      "highest_control_arms": [
+       "control: landscape_shuffled"
+      ],
+      "n_CLU": 0.8075801749271136,
+      "source": "w19-maze-t-symmetric/test/BOTH_test_seed2.json"
+     },
+     "3": {
+      "baseline": 0.4074074074074074,
+      "baseline_arm": "rival@10x-steps: transformer",
+      "highest_control": 0.1348148148148148,
+      "highest_control_arms": [
+       "control: landscape_shuffled_across_wells"
+      ],
+      "n_CLU": 0.674074074074074,
+      "source": "w21-maze-t-seed4/test/BOTH_test_seed3.json"
+     },
+     "4": {
+      "baseline": 0.43015214384508993,
+      "baseline_arm": "rival@10x-steps: transformer",
+      "highest_control": 0.26556016597510373,
+      "highest_control_arms": [
+       "control: landscape_removed"
+      ],
+      "n_CLU": 0.5325034578146611,
+      "source": "w21-maze-t-seed4/test/BOTH_test_seed4.json"
+     },
+     "5": {
+      "baseline": 0.6757575757575758,
+      "baseline_arm": "rival@10x-steps: transformer",
+      "highest_control": 0.4954545454545455,
+      "highest_control_arms": [
+       "control: landscape_shuffled_across_wells"
+      ],
+      "n_CLU": 0.6818181818181818,
+      "source": "w21-maze-t-seed4/test/BOTH_test_seed5.json"
+     }
+    },
+    "REL": {
+     "0": {
+      "baseline": 0.9080157687253614,
+      "baseline_arm": "diagnostic+rel@80k: transformer +rel",
+      "highest_control": 0.7779237844940867,
+      "highest_control_arms": [
+       "control: landscape_shuffled_across_wells"
+      ],
+      "n_CLU": 0.9080157687253614,
+      "source": "w21-maze-t-clu-improve/test/BOTH_test_seed0.json"
+     },
+     "1": {
+      "baseline": 0.8692722371967655,
+      "baseline_arm": "diagnostic+rel@80k: transformer +rel",
+      "highest_control": 0.5633423180592992,
+      "highest_control_arms": [
+       "control: landscape_shuffled_across_wells"
+      ],
+      "n_CLU": 0.8935309973045822,
+      "source": "w21-maze-t-clu-improve/test/BOTH_test_seed1.json"
+     },
+     "2": {
+      "baseline": 0.8090379008746356,
+      "baseline_arm": "diagnostic+rel@80k: transformer +rel",
+      "highest_control": 0.47667638483965014,
+      "highest_control_arms": [
+       "control: landscape_shuffled"
+      ],
+      "n_CLU": 0.9839650145772595,
+      "source": "w21-maze-t-clu-improve/test/BOTH_test_seed2.json"
+     },
+     "3": {
+      "baseline": 0.9051851851851852,
+      "baseline_arm": "diagnostic+rel@80k: transformer +rel",
+      "highest_control": 0.6977777777777778,
+      "highest_control_arms": [
+       "control: random_atoms"
+      ],
+      "n_CLU": 0.9274074074074075,
+      "source": "w21-rel-newseeds/test/BOTH_test_seed3.json"
+     },
+     "4": {
+      "baseline": 0.9004149377593361,
+      "baseline_arm": "diagnostic+rel@80k: transformer +rel",
+      "highest_control": 0.9004149377593361,
+      "highest_control_arms": [
+       "control: random_atoms"
+      ],
+      "n_CLU": 0.9004149377593361,
+      "source": "w21-rel-newseeds/test/BOTH_test_seed4.json"
+     },
+     "5": {
+      "baseline": 0.9393939393939394,
+      "baseline_arm": "diagnostic+rel@80k: transformer +rel",
+      "highest_control": 0.8272727272727273,
+      "highest_control_arms": [
+       "control: landscape_shuffled_across_wells"
+      ],
+      "n_CLU": 0.9393939393939394,
+      "source": "w21-rel-newseeds/test/BOTH_test_seed5.json"
+     }
+    }
+   },
+   "source_sha256": {
+    "w19-maze-t-symmetric/test/BARS-BOTH-test.json": "70d109fa085d7999692f175bc76d0638fc3898af3b4a0d54ec84891c47a3b1ef",
+    "w19-maze-t-symmetric/test/BOTH_test_seed0.json": "de45327c110e24cdbd97d79782aeb0a0a31856d985eaebf041c5e5c7cabd22f6",
+    "w19-maze-t-symmetric/test/BOTH_test_seed1.json": "790f62614bb9376b98a4dc940657a6724fc6efdde9b71cf24890ac8a59cbbed7",
+    "w19-maze-t-symmetric/test/BOTH_test_seed2.json": "3103607a28c84ee4ef9bb4a0ad57e365a84037c6eb3ea995fee539afbc76eac8",
+    "w19-maze-t-symmetric/val/BARS-OBS-val.json": "71c897b656074038573d751980e65f538b31652ef1afb3eb98962b35fbfbee39",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed0.json": "486e0ab3caf106e754a35902cf8200740012fa757fde6f4915f58154c92460d4",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed1.json": "9384b728c08a2f647cb85341aa0c6c18f253bd573289070c39bbdeb2c713aaa9",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed2.json": "c05b7d5feee9572f91d23b8fcbb223d0af7a939ad48e625d6cbd156800319c8a",
+    "w21-maze-t-seed4/MAZE-T-SEED4.json": "a17058a0eaaae7436d10ff3f3c1f736dc3d2c221ad7df0c2af9ba4d7fb958d39",
+    "w21-maze-t-seed4/test/BOTH_test_seed3.json": "22a0a80009e7a14f5e84aa66c95876e695647b7843ba59e85fe9f752476266ff",
+    "w21-maze-t-seed4/test/BOTH_test_seed4.json": "3e20d7d9adea014cb003904ce13d46d370992aa1f73a8d84c2e81e93a5464c0c",
+    "w21-maze-t-seed4/test/BOTH_test_seed5.json": "f452d9bf726fce7a4c880e125623f09654c77109b39e942a7d4703ef6947cc2f",
+    "w21-rel-newseeds/REL-NEWSEEDS.json": "24cac1f07fc367b261ba1250a75be25dff72a043637a250aaf6c3663657ab205",
+    "w21-rel-newseeds/test/BOTH_test_seed3.json": "36a28a42e32e820357980bb60ccc148f6c1522bfd68137de7b94d11f6e2fbd5a",
+    "w21-rel-newseeds/test/BOTH_test_seed4.json": "301525ea3193af4ef05055d8a7d90601e11674260ecf034e0014a8c20e5e55a2",
+    "w21-rel-newseeds/test/BOTH_test_seed5.json": "9b2840bab76f22bfc1591c2b9bc35a2cbc1b16447caf50af81d3e81322774d5c",
+    "w21-words-full-test/test/BARS-WORDS-FULL-test.json": "4b71cf95774157a328fbb93000265f639e5c58cfdd4930b4abb4d55f5020099a"
+   },
+   "sources": [
+    "w19-maze-t-symmetric/test/BARS-BOTH-test.json",
+    "w19-maze-t-symmetric/test/BOTH_test_seed0.json",
+    "w19-maze-t-symmetric/test/BOTH_test_seed1.json",
+    "w19-maze-t-symmetric/test/BOTH_test_seed2.json",
+    "w19-maze-t-symmetric/val/BARS-OBS-val.json",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed0.json",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed1.json",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed2.json",
+    "w21-maze-t-seed4/MAZE-T-SEED4.json",
+    "w21-maze-t-seed4/test/BOTH_test_seed3.json",
+    "w21-maze-t-seed4/test/BOTH_test_seed4.json",
+    "w21-maze-t-seed4/test/BOTH_test_seed5.json",
+    "w21-rel-newseeds/REL-NEWSEEDS.json",
+    "w21-rel-newseeds/test/BOTH_test_seed3.json",
+    "w21-rel-newseeds/test/BOTH_test_seed4.json",
+    "w21-rel-newseeds/test/BOTH_test_seed5.json",
+    "w21-words-full-test/test/BARS-WORDS-FULL-test.json"
+   ]
+  },
+  "fig_task_cmazet": {
+   "a": {
+    "budget_not_drawn": 88,
+    "generator_seed": 2000006,
+    "grid_shape": [
+     15,
+     15
+    ],
+    "keystate": [
+     0,
+     0,
+     1,
+     2
+    ],
+    "n_colours": 4,
+    "opt_len": 80,
+    "optimal_route": "EPEEEEEEEEENNNNNNWWWWNPSEEEESSSSSSWWSSWWNNEEEESPNWWSSWWNNWWSSWWNNWWNNEENNWWNNNNE",
+    "pocket": 3,
+    "rule": "RULE (written after seeing only the bank's FIRST maze, never the chosen one): walk the seed-0 TRAIN bank's generator sequence exactly\n    as ``build_bank`` does (base 2_000_000, rng seed base + 5551, ``tinted_door_instance``); take\n    the FIRST maze whose optimal route picks up >= 2 keys; show the state right after its\n    second pickup (one door already opened, one key in the pocket).",
+    "shown_after_step": 23,
+    "tint_receipt": {
+     "door_cells": 4,
+     "infeasible": false,
+     "opt_len_after": 80,
+     "opt_len_before": 80,
+     "reverted": 0,
+     "self_tinted": 2,
+     "tinted": 4
+    }
+   },
+   "awaiting": null,
+   "b_c_d": [
+    {
+     "action": "E",
+     "answer": [
+      1,
+      2,
+      0,
+      1
+     ],
+     "door": 0,
+     "engine_step_and_step_ref_agree": true,
+     "panel": "legal",
+     "pocket": 1,
+     "tint": 2,
+     "words": [
+      1,
+      0,
+      0,
+      2,
+      1
+     ]
+    },
+    {
+     "action": "E",
+     "answer": [
+      0,
+      0,
+      0,
+      1
+     ],
+     "door": 0,
+     "engine_step_and_step_ref_agree": true,
+     "panel": "illegal (rule B)",
+     "pocket": 1,
+     "tint": 1,
+     "words": [
+      1,
+      0,
+      0,
+      1,
+      1
+     ]
+    },
+    {
+     "action": "E",
+     "answer": [
+      1,
+      2,
+      5,
+      0
+     ],
+     "door": 1,
+     "engine_step_and_step_ref_agree": true,
+     "panel": "legal: key spent at door",
+     "pocket": 1,
+     "tint": 1,
+     "words": [
+      1,
+      0,
+      1,
+      1,
+      1
+     ]
+    }
+   ],
+   "banner": false,
+   "built_by": "w19_task_figures/make_task_figures.py --only cmazet (w22 figures3, AMENDMENT-1)",
+   "glyph_identity": {
+    "blocks": [
+     {
+      "disc_pixels_equal": true,
+      "n_disc_pixels": 52,
+      "panel_item": {
+       "arm": "CLU",
+       "i": 482,
+       "plain_floor": true,
+       "pocket": 3,
+       "seed": 2
+      },
+      "pocket": 3,
+      "task_panel": "(a) grid",
+      "whole_cell_equal": true
+     },
+     {
+      "disc_pixels_equal": true,
+      "n_disc_pixels": 52,
+      "panel_item": {
+       "arm": "CLU",
+       "i": 5,
+       "plain_floor": false,
+       "pocket": 1,
+       "seed": 2
+      },
+      "pocket": 1,
+      "task_panel": "(2,0) before",
+      "whole_cell_equal": null
+     },
+     {
+      "disc_pixels_equal": true,
+      "n_disc_pixels": 52,
+      "panel_item": {
+       "arm": "CLU",
+       "i": 5,
+       "plain_floor": false,
+       "pocket": 1,
+       "seed": 2
+      },
+      "pocket": 1,
+      "task_panel": "(2,0) after",
+      "whole_cell_equal": null
+     },
+     {
+      "disc_pixels_equal": true,
+      "n_disc_pixels": 52,
+      "panel_item": {
+       "arm": "CLU",
+       "i": 5,
+       "plain_floor": false,
+       "pocket": 1,
+       "seed": 2
+      },
+      "pocket": 1,
+      "task_panel": "(1,0) before",
+      "whole_cell_equal": null
+     },
+     {
+      "disc_pixels_equal": true,
+      "n_disc_pixels": 52,
+      "panel_item": {
+       "arm": "CLU",
+       "i": 5,
+       "plain_floor": false,
+       "pocket": 1,
+       "seed": 2
+      },
+      "pocket": 1,
+      "task_panel": "(1,0) after",
+      "whole_cell_equal": null
+     },
+     {
+      "disc_pixels_equal": true,
+      "n_disc_pixels": 52,
+      "panel_item": {
+       "arm": "CLU",
+       "i": 5,
+       "plain_floor": false,
+       "pocket": 1,
+       "seed": 2
+      },
+      "pocket": 1,
+      "task_panel": "(1,1) before",
+      "whole_cell_equal": null
+     },
+     {
+      "disc_pixels_equal": true,
+      "n_disc_pixels": 52,
+      "panel_item": {
+       "arm": "rival: mlp",
+       "i": 0,
+       "plain_floor": false,
+       "pocket": 0,
+       "seed": 2
+      },
+      "pocket": 0,
+      "task_panel": "(1,1) after",
+      "whole_cell_equal": null
+     }
+    ],
+    "identical": true,
+    "pdf_palette": {
+     "1": {
+      "hex": "cc302b",
+      "in_panels_pdf": true,
+      "in_task_pdf": true
+     },
+     "3": {
+      "hex": "e0a800",
+      "in_panels_pdf": true,
+      "in_task_pdf": true
+     },
+     "empty": {
+      "hex": "ffffff",
+      "in_panels_pdf": true,
+      "in_task_pdf": true
+     },
+     "ring": {
+      "hex": "0c0c0c",
+      "in_panels_pdf": true,
+      "in_task_pdf": true
+     }
+    }
+   },
+   "glyph_source": "every maze cell drawn by w21_figures/cmazet_panels.draw_state (via draw_grid), the result panels' own renderer; digits overlaid as text",
+   "leader_crossings": 0,
+   "maze_colours": {
+    "1": "#cc302b",
+    "2": "#3366cc",
+    "3": "#e0a800",
+    "4": "#9c40a1"
+   },
+   "notes": "Task definition, no result. Every maze cell is drawn by the result panels' renderer cmazet_panels.draw_state (agent = black disc, centre = pocket colour, white = empty); the time/budget line is removed; c1..c4 are the panels' MAZE_RGB. fig_task_shapes is NOT rebuilt (w19 build, needs 3dshapes.h5).",
+   "placeholder": false,
+   "source_sha256": {
+    "chlu/exp_w15_cmaze_t.py": "af7d7c7c8ca174427f7d6f5c37c2d29373a2891444fcd9a920d71106b050312a",
+    "w19_task_figures/make_task_figures.py": "1b80b8145d6538369d073a4c374608bf3bcc1679063d0ae88e65ec13bde22740",
+    "w21_figures/cmazet_panels.py": "125b40dd567acc44623b11959bbfc07cfb6a1e10c50aa3f02450644eddf08f53",
+    "w8_envscout/maze_colour.py": "955fc1c390583194cf538a8bb09f8d1cf6a92b6c8edfb649ec5f0b2c1d35598f",
+    "w9_harness/dynamics.py": "0bcb24b205b4e2cf91c0ef3e8b2c123f1de6ae987d15b1a813d77dc9f4e9f31e"
+   },
+   "sources": [
+    "w19_task_figures/make_task_figures.py",
+    "w21_figures/cmazet_panels.py",
+    "w8_envscout/maze_colour.py",
+    "w9_harness/dynamics.py",
+    "chlu/exp_w15_cmaze_t.py"
+   ]
+  }
+ },
+ "figures_redraw": {
+  "built_by": "make_figures.py then make_figures_w22.py (build.sh)",
+  "cmazet_fact_strip": "pass 3: every CMAZE-T s_{t+1} panel carries the emitted facts the judge scores; same-picture opposite-mark pairs 0 (cmazet_ambiguity.py)",
+  "cmazet_rel_panels": "drawn (pass 3): gate 2 passed, 132/132 arms float== the scored run JSONs (data/cmazet_items_rel.REPRO.json)",
+  "stems_redrawn_or_added": [
+   "fig_cmazet_door_then_tint",
+   "fig_cmazet_families",
+   "fig_cmazet_per_arm",
+   "fig_cmazet_rel_per_arm",
+   "fig_crossover",
+   "fig_deletion",
+   "fig_ladder",
+   "fig_maze_conditions",
+   "fig_task_cmazet"
+  ]
+ },
+ "matplotlib": "3.10.8"
+}

@@ -1,0 +1,47 @@
+{'manifest': '/Users/batmac/clu/stage/w20-shapes-data-matched/SHA256-w20-test-objects.txt', 'n_files': 116, 'all_match': True}
+/Users/batmac/clu/workspace/.venv/lib/python3.12/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+seed 1: 109 corners, 5688 requests, 2616 comparisons, 0 mismatches
+  judge: decoder 2d7eea75add7 (v1_capacity_schedule) + classifier ad16c4e53273
+seed 2: 109 corners, 5688 requests, 2616 comparisons, 0 mismatches

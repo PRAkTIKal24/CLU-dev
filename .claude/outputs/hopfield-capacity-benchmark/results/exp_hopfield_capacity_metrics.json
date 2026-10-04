@@ -1,0 +1,990 @@
+{
+  "seed": 0,
+  "designed_not_learned": true,
+  "protocol": {
+    "uhop_commit": "cdac75431df968b7142b4fb605a0fcd56feb59cb",
+    "ramsauer_commit": "f56f929c95b77a070ae675ea4f56b6d54d36e730",
+    "mask": "torch.dropout(x, p=0.5) \u2014 zero 50%, scale survivors by 1/(1-p)",
+    "primary_metric": "mean sqdiff (repo); identity-acc + cosine reported",
+    "pixels": "[0,1] (torchvision ToTensor convention)"
+  },
+  "config": {
+    "datasets": [
+      "mnist",
+      "cifar10"
+    ],
+    "load_grid": [
+      16,
+      32,
+      64,
+      128,
+      256,
+      512
+    ],
+    "noise_levels": [
+      0.0,
+      0.2,
+      0.4,
+      0.6,
+      0.8,
+      1.0
+    ],
+    "noise_fixed_load": 128,
+    "n_data_pool": 2000,
+    "mask_p": 0.5,
+    "hopfield_beta": 1.0,
+    "hopfield_steps": 1,
+    "hopfield_steps_tuned": 2,
+    "activations": [
+      "softmax",
+      "sparsemax"
+    ],
+    "clu_s_frac": 0.3,
+    "clu_b": 1.0,
+    "clu_alpha": 0.001,
+    "clu_gamma": 0.1,
+    "clu_steps": 200,
+    "clu_tail_frac": 0.1,
+    "clu_kinetic_mode": "newtonian_identity",
+    "retry_boost": 1.5,
+    "retry_conf_frac": 0.5,
+    "success_cosine": 0.9
+  },
+  "capacity": [
+    {
+      "dataset": "mnist",
+      "rows": [
+        {
+          "M": 16,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.875,
+            "mean_sqdiff": 9.940191268920898,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.875
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.875,
+            "mean_sqdiff": 10.076848983764648,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.875
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.875,
+            "mean_sqdiff": 10.076848983764648,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.875
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.8125,
+            "mean_sqdiff": 21.077651977539062,
+            "median_cosine": 0.9998698234558105,
+            "success_at_cosine": 0.8125,
+            "dt": 1.1143673658370972
+          },
+          "clu_s": 2.2287347316741943
+        },
+        {
+          "M": 32,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.9375,
+            "mean_sqdiff": 3.4381022453308105,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.9375,
+            "mean_sqdiff": 3.6544601917266846,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.90625,
+            "mean_sqdiff": 6.966342926025391,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.90625
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.75,
+            "mean_sqdiff": 26.264413833618164,
+            "median_cosine": 0.9998124837875366,
+            "success_at_cosine": 0.75,
+            "dt": 1.058366847038269
+          },
+          "clu_s": 2.116733694076538
+        },
+        {
+          "M": 64,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.90625,
+            "mean_sqdiff": 3.9484400749206543,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.90625,
+            "mean_sqdiff": 5.709729194641113,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.875,
+            "mean_sqdiff": 8.654815673828125,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.90625
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.703125,
+            "mean_sqdiff": 23.686906814575195,
+            "median_cosine": 0.9997788667678833,
+            "success_at_cosine": 0.75,
+            "dt": 1.054290533065796
+          },
+          "clu_s": 2.108581066131592
+        },
+        {
+          "M": 128,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.8828125,
+            "mean_sqdiff": 6.310371398925781,
+            "median_cosine": 0.9999999403953552,
+            "success_at_cosine": 0.8828125
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.875,
+            "mean_sqdiff": 7.152238845825195,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.8828125
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.8359375,
+            "mean_sqdiff": 9.607357025146484,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.84375
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.5625,
+            "mean_sqdiff": 34.751197814941406,
+            "median_cosine": 0.9989046454429626,
+            "success_at_cosine": 0.6171875,
+            "dt": 0.9767937183380127
+          },
+          "clu_s": 1.9535874366760253
+        },
+        {
+          "M": 256,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.765625,
+            "mean_sqdiff": 10.528846740722656,
+            "median_cosine": 0.9999977350234985,
+            "success_at_cosine": 0.78125
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.765625,
+            "mean_sqdiff": 12.341330528259277,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.78125
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.68359375,
+            "mean_sqdiff": 19.364381790161133,
+            "median_cosine": 0.9999999403953552,
+            "success_at_cosine": 0.69921875
+          },
+          "nearest_neighbor": {
+            "identity_acc": 0.99609375,
+            "mean_sqdiff": 0.058784183114767075,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.99609375
+          },
+          "clu_register": {
+            "identity_acc": 0.34375,
+            "mean_sqdiff": 46.496158599853516,
+            "median_cosine": 0.6992063522338867,
+            "success_at_cosine": 0.37109375,
+            "dt": 0.9395390510559082
+          },
+          "clu_s": 1.8790781021118164
+        },
+        {
+          "M": 512,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.63671875,
+            "mean_sqdiff": 17.596622467041016,
+            "median_cosine": 0.997923731803894,
+            "success_at_cosine": 0.6484375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.638671875,
+            "mean_sqdiff": 20.89859390258789,
+            "median_cosine": 0.9999999403953552,
+            "success_at_cosine": 0.65234375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.5625,
+            "mean_sqdiff": 28.788957595825195,
+            "median_cosine": 0.9999998807907104,
+            "success_at_cosine": 0.5703125
+          },
+          "nearest_neighbor": {
+            "identity_acc": 0.998046875,
+            "mean_sqdiff": 0.01411139965057373,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.23046875,
+            "mean_sqdiff": 57.57079315185547,
+            "median_cosine": 0.5040938854217529,
+            "success_at_cosine": 0.251953125,
+            "dt": 0.8778971672058106
+          },
+          "clu_s": 1.7557943344116211
+        }
+      ],
+      "clu_s_last": 1.7557943344116211,
+      "hopfield_beta_tuned": 2.344220878118179
+    },
+    {
+      "dataset": "cifar10",
+      "rows": [
+        {
+          "M": 16,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.0625,
+            "mean_sqdiff": 577.8822021484375,
+            "median_cosine": 0.8693826198577881,
+            "success_at_cosine": 0.25
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.0625,
+            "mean_sqdiff": 577.8822021484375,
+            "median_cosine": 0.8693826198577881,
+            "success_at_cosine": 0.25
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.0625,
+            "mean_sqdiff": 577.8822021484375,
+            "median_cosine": 0.8693826198577881,
+            "success_at_cosine": 0.25
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.0625,
+            "mean_sqdiff": 786.9659423828125,
+            "median_cosine": 0.7938868999481201,
+            "success_at_cosine": 0.0625,
+            "dt": 2.0676946163177488
+          },
+          "clu_s": 4.1353892326354975
+        },
+        {
+          "M": 32,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.03125,
+            "mean_sqdiff": 626.7774658203125,
+            "median_cosine": 0.8681223392486572,
+            "success_at_cosine": 0.21875
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.03125,
+            "mean_sqdiff": 626.777587890625,
+            "median_cosine": 0.8681223392486572,
+            "success_at_cosine": 0.21875
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.03125,
+            "mean_sqdiff": 626.777587890625,
+            "median_cosine": 0.8681223392486572,
+            "success_at_cosine": 0.21875
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.03125,
+            "mean_sqdiff": 766.534423828125,
+            "median_cosine": 0.8031214475631714,
+            "success_at_cosine": 0.03125,
+            "dt": 1.9226861000061035
+          },
+          "clu_s": 3.845372200012207
+        },
+        {
+          "M": 64,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 688.02490234375,
+            "median_cosine": 0.8678688406944275,
+            "success_at_cosine": 0.28125
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 688.02490234375,
+            "median_cosine": 0.8678688406944275,
+            "success_at_cosine": 0.28125
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 688.02490234375,
+            "median_cosine": 0.8678688406944275,
+            "success_at_cosine": 0.28125
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.03125,
+            "mean_sqdiff": 810.138671875,
+            "median_cosine": 0.8282599449157715,
+            "success_at_cosine": 0.046875,
+            "dt": 1.829904556274414
+          },
+          "clu_s": 3.659809112548828
+        },
+        {
+          "M": 128,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 661.1746826171875,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 661.3335571289062,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 370.6571044921875,
+            "median_cosine": 0.8421146273612976,
+            "success_at_cosine": 0.0546875,
+            "dt": 1.7252566337585449
+          },
+          "clu_s": 3.4505132675170898
+        },
+        {
+          "M": 256,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.01171875,
+            "mean_sqdiff": 737.1729736328125,
+            "median_cosine": 0.879318118095398,
+            "success_at_cosine": 0.375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.01171875,
+            "mean_sqdiff": 739.4984130859375,
+            "median_cosine": 0.8786259889602661,
+            "success_at_cosine": 0.375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.01171875,
+            "mean_sqdiff": 743.5271606445312,
+            "median_cosine": 0.8782862424850464,
+            "success_at_cosine": 0.37109375
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 200.13815307617188,
+            "median_cosine": 0.9008080363273621,
+            "success_at_cosine": 0.5078125,
+            "dt": 1.7121914863586425
+          },
+          "clu_s": 3.424382972717285
+        },
+        {
+          "M": 512,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.01171875,
+            "mean_sqdiff": 733.6724853515625,
+            "median_cosine": 0.8827406764030457,
+            "success_at_cosine": 0.390625
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.01171875,
+            "mean_sqdiff": 736.3750610351562,
+            "median_cosine": 0.882621169090271,
+            "success_at_cosine": 0.384765625
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.01171875,
+            "mean_sqdiff": 740.8408203125,
+            "median_cosine": 0.8815293312072754,
+            "success_at_cosine": 0.37890625
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.00390625,
+            "mean_sqdiff": 191.43429565429688,
+            "median_cosine": 0.9065123796463013,
+            "success_at_cosine": 0.5546875,
+            "dt": 1.6480213165283202
+          },
+          "clu_s": 3.2960426330566404
+        }
+      ],
+      "clu_s_last": 3.2960426330566404,
+      "hopfield_beta_tuned": 1.0
+    }
+  ],
+  "noise": [
+    {
+      "dataset": "mnist",
+      "fixed_load": 128,
+      "rows": [
+        {
+          "sigma": 0.0,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.890625,
+            "mean_sqdiff": 4.679478168487549,
+            "median_cosine": 0.9999999403953552,
+            "success_at_cosine": 0.921875
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.8984375,
+            "mean_sqdiff": 6.082801818847656,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.921875
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.859375,
+            "mean_sqdiff": 8.225984573364258,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.875
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.921875,
+            "mean_sqdiff": 0.8210309743881226,
+            "median_cosine": 0.9999876022338867,
+            "success_at_cosine": 0.9765625
+          }
+        },
+        {
+          "sigma": 0.2,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.421875,
+            "mean_sqdiff": 53.9054069519043,
+            "median_cosine": 0.7568198442459106,
+            "success_at_cosine": 0.4296875
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.421875,
+            "mean_sqdiff": 64.07569122314453,
+            "median_cosine": 0.7076026201248169,
+            "success_at_cosine": 0.4375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.40625,
+            "mean_sqdiff": 68.6156005859375,
+            "median_cosine": 0.6557272672653198,
+            "success_at_cosine": 0.4140625
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.921875,
+            "mean_sqdiff": 0.8210254311561584,
+            "median_cosine": 0.9999876022338867,
+            "success_at_cosine": 0.9765625
+          }
+        },
+        {
+          "sigma": 0.4,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.1640625,
+            "mean_sqdiff": 105.13995361328125,
+            "median_cosine": 0.5312163829803467,
+            "success_at_cosine": 0.1640625
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.15625,
+            "mean_sqdiff": 111.6957778930664,
+            "median_cosine": 0.5169613361358643,
+            "success_at_cosine": 0.1640625
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.15625,
+            "mean_sqdiff": 114.99415588378906,
+            "median_cosine": 0.5070874691009521,
+            "success_at_cosine": 0.1640625
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.03125,
+            "mean_sqdiff": 74.70732116699219,
+            "median_cosine": 0.40548598766326904,
+            "success_at_cosine": 0.0703125
+          }
+        },
+        {
+          "sigma": 0.6,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.046875,
+            "mean_sqdiff": 129.95663452148438,
+            "median_cosine": 0.4797137379646301,
+            "success_at_cosine": 0.046875
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.046875,
+            "mean_sqdiff": 136.0531768798828,
+            "median_cosine": 0.4700894355773926,
+            "success_at_cosine": 0.046875
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.0390625,
+            "mean_sqdiff": 138.8048095703125,
+            "median_cosine": 0.4687628746032715,
+            "success_at_cosine": 0.046875
+          },
+          "nearest_neighbor": {
+            "identity_acc": 0.890625,
+            "mean_sqdiff": 9.183616638183594,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.8984375
+          },
+          "clu_register": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 77.01085662841797,
+            "median_cosine": 0.3964955806732178,
+            "success_at_cosine": 0.0546875
+          }
+        },
+        {
+          "sigma": 0.8,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 143.27517700195312,
+            "median_cosine": 0.45914357900619507,
+            "success_at_cosine": 0.0234375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 146.32797241210938,
+            "median_cosine": 0.454172283411026,
+            "success_at_cosine": 0.0234375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 147.80697631835938,
+            "median_cosine": 0.4534347951412201,
+            "success_at_cosine": 0.0234375
+          },
+          "nearest_neighbor": {
+            "identity_acc": 0.203125,
+            "mean_sqdiff": 96.95976257324219,
+            "median_cosine": 0.5344504714012146,
+            "success_at_cosine": 0.203125
+          },
+          "clu_register": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 77.87439727783203,
+            "median_cosine": 0.38181209564208984,
+            "success_at_cosine": 0.03125
+          }
+        },
+        {
+          "sigma": 1.0,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 148.57835388183594,
+            "median_cosine": 0.4453197419643402,
+            "success_at_cosine": 0.015625
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 149.98660278320312,
+            "median_cosine": 0.4449490010738373,
+            "success_at_cosine": 0.015625
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 150.43882751464844,
+            "median_cosine": 0.4449490010738373,
+            "success_at_cosine": 0.015625
+          },
+          "nearest_neighbor": {
+            "identity_acc": 0.0625,
+            "mean_sqdiff": 127.7289047241211,
+            "median_cosine": 0.48670119047164917,
+            "success_at_cosine": 0.0625
+          },
+          "clu_register": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 78.13862609863281,
+            "median_cosine": 0.37420928478240967,
+            "success_at_cosine": 0.0390625
+          }
+        }
+      ]
+    },
+    {
+      "dataset": "cifar10",
+      "fixed_load": 128,
+      "rows": [
+        {
+          "sigma": 0.0,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 659.3187255859375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 658.9647827148438,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.859375,
+            "mean_sqdiff": 11.143295288085938,
+            "median_cosine": 0.9999767541885376,
+            "success_at_cosine": 1.0
+          }
+        },
+        {
+          "sigma": 0.2,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "nearest_neighbor": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "clu_register": {
+            "identity_acc": 0.7109375,
+            "mean_sqdiff": 35.020408630371094,
+            "median_cosine": 0.9999628663063049,
+            "success_at_cosine": 0.9921875
+          }
+        },
+        {
+          "sigma": 0.4,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "nearest_neighbor": {
+            "identity_acc": 0.9296875,
+            "mean_sqdiff": 12.2557373046875,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9453125
+          },
+          "clu_register": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 309.5480651855469,
+            "median_cosine": 0.8729798197746277,
+            "success_at_cosine": 0.3203125
+          }
+        },
+        {
+          "sigma": 0.6,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "nearest_neighbor": {
+            "identity_acc": 0.1328125,
+            "mean_sqdiff": 190.36865234375,
+            "median_cosine": 0.9000166058540344,
+            "success_at_cosine": 0.5
+          },
+          "clu_register": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 317.77618408203125,
+            "median_cosine": 0.8617547154426575,
+            "success_at_cosine": 0.25
+          }
+        },
+        {
+          "sigma": 0.8,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "nearest_neighbor": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 289.98846435546875,
+            "median_cosine": 0.89557945728302,
+            "success_at_cosine": 0.484375
+          },
+          "clu_register": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 298.001708984375,
+            "median_cosine": 0.8804848194122314,
+            "success_at_cosine": 0.3515625
+          }
+        },
+        {
+          "sigma": 1.0,
+          "hopfield_softmax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_sparsemax_repo": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "hopfield_softmax_tuned": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 669.44287109375,
+            "median_cosine": 0.8791636824607849,
+            "success_at_cosine": 0.359375
+          },
+          "nearest_neighbor": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 298.06829833984375,
+            "median_cosine": 0.89557945728302,
+            "success_at_cosine": 0.484375
+          },
+          "clu_register": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 284.63226318359375,
+            "median_cosine": 0.8895853161811829,
+            "success_at_cosine": 0.390625
+          }
+        }
+      ]
+    }
+  ],
+  "crossover": [
+    {
+      "dataset": "mnist",
+      "threshold": 0.9,
+      "first_M_below": {
+        "hopfield_softmax_repo": 16,
+        "hopfield_sparsemax_repo": 16,
+        "hopfield_softmax_tuned": 16,
+        "nearest_neighbor": null,
+        "clu_register": 16
+      }
+    },
+    {
+      "dataset": "cifar10",
+      "threshold": 0.9,
+      "first_M_below": {
+        "hopfield_softmax_repo": 16,
+        "hopfield_sparsemax_repo": 16,
+        "hopfield_softmax_tuned": 16,
+        "nearest_neighbor": null,
+        "clu_register": 16
+      }
+    }
+  ],
+  "differentiators": {
+    "retry": {
+      "dataset": "mnist",
+      "load": 128,
+      "n_retried": 64,
+      "compute_multiplier": 1.5,
+      "first_pass": {
+        "identity_acc": 0.4921875,
+        "mean_sqdiff": 38.8566780090332,
+        "median_cosine": 0.9654366374015808,
+        "success_at_cosine": 0.546875
+      },
+      "after_retry_lowconf": {
+        "identity_acc": 0.9609375,
+        "mean_sqdiff": 30.05674934387207,
+        "median_cosine": 0.8231953382492065,
+        "success_at_cosine": 0.5
+      },
+      "blank_retry_highconf": {
+        "identity_acc": 0.109375,
+        "mean_sqdiff": 58.61056137084961,
+        "median_cosine": 0.2732517719268799,
+        "success_at_cosine": 0.046875
+      },
+      "acc_lift_pp": 46.875,
+      "blank_lift_pp": -38.28125
+    },
+    "retention": {
+      "dataset": "mnist",
+      "n_items": 16,
+      "n_permanent": 8,
+      "schedule": [
+        {
+          "t": 0.0,
+          "acc_permanent": 0.875,
+          "acc_decaying": 0.875
+        },
+        {
+          "t": 0.5,
+          "acc_permanent": 0.875,
+          "acc_decaying": 0.875
+        },
+        {
+          "t": 1.0,
+          "acc_permanent": 0.875,
+          "acc_decaying": 0.625
+        },
+        {
+          "t": 2.0,
+          "acc_permanent": 0.875,
+          "acc_decaying": 0.0
+        },
+        {
+          "t": 4.0,
+          "acc_permanent": 0.875,
+          "acc_decaying": 0.0
+        }
+      ],
+      "note": "Hopfield has no time axis for a per-item retention schedule; this is a capability demonstration, not a benchmark curve."
+    }
+  },
+  "figures": [
+    ".claude/outputs/hopfield-capacity-benchmark/plots/hopfield_capacity_mnist.png",
+    ".claude/outputs/hopfield-capacity-benchmark/plots/hopfield_capacity_cifar10.png",
+    ".claude/outputs/hopfield-capacity-benchmark/plots/hopfield_noise_mnist.png",
+    ".claude/outputs/hopfield-capacity-benchmark/plots/hopfield_noise_cifar10.png"
+  ]
+}

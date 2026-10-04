@@ -1,0 +1,115 @@
+@@@ 850 850
+
+This section turns from what the naive unit does to what it does not: its measured limitations,
+the one measured clue toward a dynamical successor, the theory we carry, and a leaving note.
+
+@@@ 854 892
+\begin{enumerate}[leftmargin=*,itemsep=1pt]
+\item \emph{No store row on the maze.} On CMAZE-2 a matched-parameter transformer beats the
+  store on every composition row ($-0.0560$ / $-0.0209$ / $-0.0434$), and the charter controls do
+  not collapse (\texttt{landscape\_shuffled} 0.9509 and \texttt{random\_atoms} 0.9601 against
+  1.0000 on the seen row); no row is therefore claimed for the store (Appendix~\ref{app:cmaze2}).
+  On CMAZE-2b the controls again fail to collapse (\S\ref{sec:verb}). % SRC: w13-seeds-and-tables/TABLES.md
+\item \emph{The value identity is not in the store at $\Kstar$.} Exact deletion of every red
+  row leaves the red-requesting corners at 32.2500 and judge accuracy at 0.8958
+  (\S\ref{sec:shapes-del}); there, only the store-scoped claim is demonstrated.
+  % SRC: w13-seeds-and-tables/TABLES.md
+\item \emph{Exactness is expensive in bytes.} At $\Kstar$ the deletable object is 4.0768 to 4.0897
+  times the reference (Table~\ref{tab:ledger-kstar}). Across nine swept partitions the honest
+  four-part total is U-shaped in $K$, with its minimum of 3.9942 times the reference at $K=24$, so
+  $\Kstar$ is not the cheapest point; and on the one configuration at $K\ge36$ whose composition
+  was measured ($K=40$, 7 atoms per well, 0.991 times the pin), composition collapses to 0.0648.
+  On no swept partition does an object with a float64 sufficient statistic compose and forget inside 524,288 bytes at rank
+  64 (the validation sweep labels itself a smoke, not a claim).
+  % SRC: w13-referee-2/REFEREE-v1.md; w13-seeds-and-tables/TABLES.md; w13-draft-revise/DRAFT-v1.md
+\item \emph{The store does not shape the representation.} When the encoder was trained through
+  the store, the pre-declared falsifier fired on row 3 (\S\ref{sec:bard}). % SRC: w13-seeds-and-tables/TABLES.md
+\item \emph{Post-deletion composition on the maze fails, as pre-registered} (0.1024 to 0.0000
+  on CMAZE-2); the repaired mechanism rests on one validation measurement only.
+  % SRC: w13-seeds-and-tables/TABLES.md
+\item \emph{Refusal on the maze was novelty detection, and the maze refusal displays are
+  retired.} The store refused the reachable-but-unwritten pair (0.9781) as often as the walled
+  one (0.9801), at a false-refusal rate of 0.8182 on grounded-possible requests against a
+  pre-registered 0.20. % SRC: w13-seeds-and-tables/TABLES.md
+  A ridge probe on the same observation at $t=0$ scores AUC 0.48--0.55 across all six seed and
+  tier runs: deciding solvability within budget is close to solving the maze, which is a property
+  of the task rather than a defect of the model. % SRC: w14-advisor-report.md; w14-refusal-displays-closeout/FINDINGS.md
+  The Shapes3D coupling hole is a different object in a different environment and is unaffected.
+\item \emph{At most three seeds.} Seeds 3 and 4 cannot be judged (they have neither a decoder
+  nor an external classifier), so no row can exceed three seeds.
+\item \emph{Further limitations} (an unseen-valid row that belongs to a generic learner, an
+  exhausted placement dial, and comparators not run) are listed in Appendix~\ref{app:morelimits}.
+\item \emph{Residual novelty risk.} Abstract-level screening cannot catch a match buried in a
+  method section, and the coverage of very recent preprints and non-indexed workshop papers is
+  incomplete; we judge the risk to be low, not zero. % SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
+\end{enumerate}
+@@@ 897 912
+The store we evaluate is the zero-dynamics limit of the CLU: the same content, wells and read,
+with the step count of the settling loop set to zero. Inside a well this is an algebraic
+identity. The store's energy is the distance to the atom span, and the request's basin sits at
+an address inside that span; both minima therefore coincide, and an in-well settle has nowhere
+to go (derivation in Appendix~\ref{app:clue}). We asserted this in code: the zero-step arm was required to be bit-identical to
+the static read by \texttt{np.array\_equal} over 256 requests, and it was, on all three scored
+seeds, returning the static read's held-out scores to every printed digit (row 4: 63.612 /
+64.327 / 67.653; row 3: 29.717 / 31.617 / 31.450). % SRC: w12-clue-theorist/CLUE.md
+Dynamics can act only across wells. With a bilinear low-rank coupling $\lambda W$, the settled
+state is $z^\star=(\beta I-\lambda W)^{-1}\beta z_{\text{req}}$, which returns
+$z_{\text{req}}$ exactly at $\lambda=0$. Switching the dynamics on costs composition at every
+strength at which they move the state: $-0.531$ / $-0.510$ / $-0.388$ six-factor tuples per
+corner at the gentlest setting that moves it (median displacement 0.009), and $-39.959$ /
+$-46.918$ / $-39.061$ at full strength (median displacement 0.39). The dynamics also pay 81,312
+to 84,216 bytes of read-side coupling that the static read does not. % SRC: w12-clue-theorist/CLUE.md
+The identity holds under four named conditions (Appendix~\ref{app:clue}).
+@@@ 917 921
+We call the class of objects of which this store is the static corner a \textbf{Latent Dynamics
+Model}: a store whose content is read by relaxing a latent state under a designed energy. The
+Naive CLU is the member of this class with the relaxation switched off. (The phrase is used in
+reduced-order modelling and in model-based reinforcement learning for a learned surrogate of an
+environment's dynamics; here the dynamics are the read, not a model of the data.) The laws of the
+class are this paper's own theory, each with a status label and a rider (further laws in
+Appendix~\ref{app:shorts}).
+@@@ 923 938
+\paragraph{Two laws measured on this study's own store (\textsc{confirmed [this study]}).}
+When switched on, the field store's relaxation obeys a curvature--retention relationship whose
+prediction is a \emph{time}, not a score. With nothing fitted, it predicts the settle half-life to
+a median factor of 1.105 on 49 held-out corners and three seeds (bar 0.10 on the log error; 0.0433
+/ 0.0435 / 0.0431), and it beats a one-parameter form fitted with sight of the held-out
+measurements on 49 of 49 corners on every seed. One of six pre-registered bars (the V-curve
+argmin) misses on all three seeds, and the law predicts where its simplest form stops.
+% SRC: w10-physics-section-evidence/EVIDENCE.md
+Deletion commutes with scheduled decay on a learned store, with 0 bytes differing in a
+2,054,866-byte image. The stronger claim, that the post-delete store equals the never-inserted
+one, is \textsc{refuted} (65.17\% to 65.39\% of the image differs, 83.5\% of it because the
+address book and coupling table are fitted on the pool). % SRC: w10-physics-section-evidence/EVIDENCE.md
+\emph{These are dynamics results about our own store. They occupy no row of the evaluation, they
+beat no model, and we make no capability claim from them}; since no arm of ours fails the
+retention law, it distinguishes nothing. Appendix~\ref{app:physics} gives the full statements,
+bars and misses.
+@@@ 943 950
+The naive unit buys exact deletion by subtraction and, at a stated partition, composition that
+beats read-path-matched learners on Shapes3D. However, it does not buy composition on an
+exact-judge route task, where the operator is task-shaped and belongs to the interface; it does
+not stop the object answering a deleted value; and it pays for exactness in bytes. When switched
+on, the dynamics cost composition at every strength that moves the state, while a law that no arm
+of ours fails predicts their relaxation: so far, a \emph{law about the store}, not a \emph{lever on
+the task}. The experiment that would turn the law into a claim about a class, a comparator
+predicted in advance to be mispredicted in the $h/h^\star\in[0.5,2]$ bucket, is named but not run. % SRC: w10-physics-section-evidence/EVIDENCE.md
+@@@ 957 959
+The naive unit is the zero-dynamics limit of a settling unit (\S\ref{sec:clue}), and the
+leaving note states what it does not buy. The follow-up is therefore a full
+evaluation of the settling (physics) CLU on the three properties of \S\ref{sec:why}, with the
+same judges, ledger and matching, and with this paper's store as its zero-dynamics ablation. The
+negatives of this study fix what it must contain (Appendix~\ref{app:bench}).
+@@@ 969 973
+This study uses a public synthetic image dataset (Shapes3D) and procedurally generated mazes; it
+involves no human subjects and no personal data. Exact deletion is relevant to data-protection
+requests. We claim store-scoped exactness only, and no certified unlearning, and
+\S\ref{sec:shapes-del} states a case in which the exact deletion of a value does not change what
+the model answers.
+@@@ 976 981
+Every number in this paper is read from a recorded artefact of a pre-registered or declared run,
+and the provenance of each is kept beside it in the source. \S\ref{sec:object} defines the
+object, judge, estimand and ledger; every table states its seeds, condition and pins; and
+Appendices~\ref{app:notrun}--\ref{app:corrections} give the declared not-runs, corrections and
+per-cell provenance conventions. An anonymised code archive will accompany the submission as
+supplementary material. \TODO{anonymised code archive not yet built.}

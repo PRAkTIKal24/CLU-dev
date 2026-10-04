@@ -1,0 +1,791 @@
+{
+  "bar": {
+    "corners_per_k": 49,
+    "declared_in": "PREREG.md (2026-09-21), before any count existed",
+    "source": "w3-hub-common section 3 \u2014 the multi-corner paired estimand",
+    "unit": "corner"
+  },
+  "built_by": "w12/kway-ladder-harness",
+  "condition": "kway_ladder",
+  "config": {
+    "n_cells": null,
+    "value_cfg": {
+      "a7_n_requests": 512,
+      "a7_seed": 0,
+      "c_invalid_n_per_kind": 256,
+      "c_invalid_seed": 0,
+      "dataset": "shapes3d",
+      "detector_tolerance": 0.05,
+      "held_out_hue_factor": "object_hue",
+      "held_out_hue_value": 0.5,
+      "held_out_shape_factor": "shape",
+      "held_out_shape_value": 0.0,
+      "meta": {},
+      "n_nway_cells": 49,
+      "n_pair_cells": 3,
+      "nway_seed": 0,
+      "pair_seed": 0,
+      "row1_n_per_kind": 256,
+      "row1_seed": 0,
+      "row1_seen_hue_value": 0.4,
+      "row1_seen_shape_value": 3.0,
+      "row2_n_requests": 512,
+      "row2_seed": 0,
+      "row5_n_per_kind": 256,
+      "row5_seed": 0
+    },
+    "variant": "primary",
+    "widths": {
+      "hue_band": 2,
+      "orientation_corner": 3,
+      "scale_corner": 3
+    }
+  },
+  "confound_declared": "a lower-k box pins fewer factors, so it removes more rows from the fit pool; the ladder confounds composition depth with held-out fraction. The per-rung held_out_fraction_total is reported for every rung and the min_cells_* fields give the smallest budget that still clears the bar.",
+  "dataset": "shapes3d",
+  "end_reproduction": {
+    "E1_k6_vs_row4": {
+      "assertion": "E1_k6_equals_row4_nway_cells",
+      "cell_values_identical": true,
+      "n_cells_compared": 120,
+      "order_identical": true,
+      "reference": "chlu.data.gen_value_holdout.build_nway_cells"
+    },
+    "E2_k2_vs_row3": {
+      "assertion": "E2_k2_equals_row3_pair_subcorners",
+      "corner_ids_identical": true,
+      "corner_row_sets_identical": true,
+      "n_corners_compared": 60,
+      "reference": "chlu.experiments.exp_gen_factor_wells.pair_subcorners"
+    },
+    "E2_reference_widths_vs_PINS": {
+      "assertion": "row3_tile_widths_equal_PINS",
+      "reference": "chlu.experiments.exp_gen_factor_wells.PINS['pair_tile_*']",
+      "status": "PASS",
+      "widths": {
+        "hue_band": 2,
+        "orientation_corner": 3,
+        "scale_corner": 3
+      }
+    }
+  },
+  "estimand": {
+    "accuracy_margin": 0.02,
+    "accuracy_margin_name": "DECORATION_MARGIN_ACCURACY",
+    "bootstrap": {
+      "n_resamples": 10000,
+      "rng_seed": 20260919
+    },
+    "function": "chlu.experiments.exp_gen_factor_wells.paired_estimand",
+    "margin": 1.0,
+    "margin_name": "DECORATION_MARGIN_NOVELTY",
+    "metric_rows_3_4_and_ladder": "distinct_valid_novel_tuples",
+    "note": "\u26d4 the ladder introduces no new metric and no new margin",
+    "statistic": "mean paired per-corner difference (arm - control)",
+    "unit": "corner"
+  },
+  "families": {
+    "k2": {
+      "all_corner_rows_held_out": true,
+      "bar": 49,
+      "clears_bar": true,
+      "corner_ids_head": [
+        "pair-000/f0-hh",
+        "pair-000/f0-hl",
+        "pair-000/f0-lh",
+        "pair-000/f0-ll"
+      ],
+      "corner_ids_tail": [
+        "pair-002/f8-lh",
+        "pair-002/f8-ll"
+      ],
+      "disjointness_check": {
+        "n_corner_rows": 2160,
+        "pairwise_disjoint": true,
+        "rows_per_corner": [
+          36
+        ],
+        "test": "np.unique(concat(corner_rows)).size == concat(corner_rows).size"
+      },
+      "display_name": "row 3 (existing end)",
+      "family": "pair-*",
+      "fit_pool_feasibility": {
+        "headroom_rows": 156928,
+        "n_pool_pin": 131072,
+        "n_store_train_pin": 32768,
+        "pool_drawn": 131072,
+        "serves_pinned_pool": true,
+        "train_rows": 288000
+      },
+      "fit_pool_rows": 288000,
+      "free_factors": [
+        "floor_hue",
+        "orientation",
+        "scale",
+        "wall_hue"
+      ],
+      "held_out_fraction_total": 0.4,
+      "held_out_rows_total": 192000,
+      "k": 2,
+      "n_cells": 3,
+      "n_corner_rows_in_holdout": 2160,
+      "n_corners": 60,
+      "pinned_factors": [
+        "object_hue",
+        "shape"
+      ],
+      "role": "existing end \u2014 reproduced, not rebuilt (E2)",
+      "status": "PASS",
+      "tiling_units": [
+        "floorwall",
+        "scale",
+        "orientation"
+      ],
+      "widths": {
+        "hue_band": 2,
+        "orientation_corner": 3,
+        "scale_corner": 3
+      }
+    },
+    "k3": {
+      "all_corner_rows_held_out": true,
+      "bar": 49,
+      "clears_bar": true,
+      "corner_ids_head": [
+        "kway3-000/f0-h",
+        "kway3-000/f0-l",
+        "kway3-000/f2-h",
+        "kway3-000/f2-l"
+      ],
+      "corner_ids_tail": [
+        "kway3-011/f8-h",
+        "kway3-011/f8-l"
+      ],
+      "disjointness_check": {
+        "n_corner_rows": 8640,
+        "pairwise_disjoint": true,
+        "rows_per_corner": [
+          72
+        ],
+        "test": "np.unique(concat(corner_rows)).size == concat(corner_rows).size"
+      },
+      "display_name": "k=3 (NEW)",
+      "family": "kway3-*",
+      "fit_pool_feasibility": {
+        "headroom_rows": 48928,
+        "n_pool_pin": 131072,
+        "n_store_train_pin": 32768,
+        "pool_drawn": 131072,
+        "serves_pinned_pool": true,
+        "train_rows": 180000
+      },
+      "fit_pool_rows": 180000,
+      "free_factors": [
+        "floor_hue",
+        "orientation",
+        "wall_hue"
+      ],
+      "held_out_fraction_total": 0.625,
+      "held_out_rows_total": 300000,
+      "k": 3,
+      "n_cells": 12,
+      "n_corner_rows_in_holdout": 8640,
+      "n_corners": 120,
+      "pinned_factors": [
+        "object_hue",
+        "scale",
+        "shape"
+      ],
+      "role": "NEW \u2014 built by w12/kway-ladder-harness",
+      "status": "PASS",
+      "tiling_units": [
+        "floorwall",
+        "orientation"
+      ],
+      "widths": {
+        "hue_band": 2,
+        "orientation_corner": 3,
+        "scale_corner": 3
+      }
+    },
+    "k4": {
+      "all_corner_rows_held_out": true,
+      "bar": 49,
+      "clears_bar": true,
+      "corner_ids_head": [
+        "kway4-000/f0",
+        "kway4-000/f2",
+        "kway4-000/f4",
+        "kway4-000/f6"
+      ],
+      "corner_ids_tail": [
+        "kway4-023/f6",
+        "kway4-023/f8"
+      ],
+      "disjointness_check": {
+        "n_corner_rows": 8640,
+        "pairwise_disjoint": true,
+        "rows_per_corner": [
+          72
+        ],
+        "test": "np.unique(concat(corner_rows)).size == concat(corner_rows).size"
+      },
+      "display_name": "k=4 (NEW)",
+      "family": "kway4-*",
+      "fit_pool_feasibility": {
+        "headroom_rows": 113728,
+        "n_pool_pin": 131072,
+        "n_store_train_pin": 32768,
+        "pool_drawn": 131072,
+        "serves_pinned_pool": true,
+        "train_rows": 244800
+      },
+      "fit_pool_rows": 244800,
+      "free_factors": [
+        "floor_hue",
+        "wall_hue"
+      ],
+      "held_out_fraction_total": 0.49,
+      "held_out_rows_total": 235200,
+      "k": 4,
+      "n_cells": 24,
+      "n_corner_rows_in_holdout": 8640,
+      "n_corners": 120,
+      "pinned_factors": [
+        "object_hue",
+        "orientation",
+        "scale",
+        "shape"
+      ],
+      "role": "NEW \u2014 built by w12/kway-ladder-harness",
+      "status": "PASS",
+      "tiling_units": [
+        "floorwall"
+      ],
+      "widths": {
+        "hue_band": 2,
+        "orientation_corner": 3,
+        "scale_corner": 3
+      }
+    },
+    "k5": {
+      "all_corner_rows_held_out": true,
+      "bar": 49,
+      "clears_bar": true,
+      "corner_ids_head": [
+        "kway5-000/h",
+        "kway5-000/l",
+        "kway5-001/h",
+        "kway5-001/l"
+      ],
+      "corner_ids_tail": [
+        "kway5-059/h",
+        "kway5-059/l"
+      ],
+      "disjointness_check": {
+        "n_corner_rows": 8640,
+        "pairwise_disjoint": true,
+        "rows_per_corner": [
+          72
+        ],
+        "test": "np.unique(concat(corner_rows)).size == concat(corner_rows).size"
+      },
+      "display_name": "k=5 (NEW)",
+      "family": "kway5-*",
+      "fit_pool_feasibility": {
+        "headroom_rows": 135328,
+        "n_pool_pin": 131072,
+        "n_store_train_pin": 32768,
+        "pool_drawn": 131072,
+        "serves_pinned_pool": true,
+        "train_rows": 266400
+      },
+      "fit_pool_rows": 266400,
+      "free_factors": [
+        "orientation"
+      ],
+      "held_out_fraction_total": 0.445,
+      "held_out_rows_total": 213600,
+      "k": 5,
+      "n_cells": 60,
+      "n_corner_rows_in_holdout": 8640,
+      "n_corners": 120,
+      "pinned_factors": [
+        "floor_hue",
+        "object_hue",
+        "scale",
+        "shape",
+        "wall_hue"
+      ],
+      "role": "NEW \u2014 built by w12/kway-ladder-harness",
+      "status": "PASS",
+      "tiling_units": [
+        "orientation"
+      ],
+      "widths": {
+        "hue_band": 2,
+        "orientation_corner": 3,
+        "scale_corner": 3
+      }
+    },
+    "k6": {
+      "all_corner_rows_held_out": true,
+      "bar": 49,
+      "clears_bar": true,
+      "corner_ids_head": [
+        "kway6-000",
+        "kway6-001",
+        "kway6-002",
+        "kway6-003"
+      ],
+      "corner_ids_tail": [
+        "kway6-118",
+        "kway6-119"
+      ],
+      "disjointness_check": {
+        "n_corner_rows": 8640,
+        "pairwise_disjoint": true,
+        "rows_per_corner": [
+          72
+        ],
+        "test": "np.unique(concat(corner_rows)).size == concat(corner_rows).size"
+      },
+      "display_name": "row 4 (existing end)",
+      "family": "nway-*",
+      "fit_pool_feasibility": {
+        "headroom_rows": 148288,
+        "n_pool_pin": 131072,
+        "n_store_train_pin": 32768,
+        "pool_drawn": 131072,
+        "serves_pinned_pool": true,
+        "train_rows": 279360
+      },
+      "fit_pool_rows": 279360,
+      "free_factors": [],
+      "held_out_fraction_total": 0.418,
+      "held_out_rows_total": 200640,
+      "k": 6,
+      "n_cells": 120,
+      "n_corner_rows_in_holdout": 8640,
+      "n_corners": 120,
+      "pinned_factors": [
+        "floor_hue",
+        "object_hue",
+        "orientation",
+        "scale",
+        "shape",
+        "wall_hue"
+      ],
+      "role": "existing end \u2014 reproduced, not rebuilt (E1)",
+      "status": "PASS",
+      "tiling_units": [],
+      "widths": {
+        "hue_band": 2,
+        "orientation_corner": 3,
+        "scale_corner": 3
+      }
+    }
+  },
+  "geometry": {
+    "note": "every corner is a Montero box: a floor band == wall band of 2, an object_hue band, a scale corner of 3, one shape, an orientation corner of 3 \u2014 the geometry of rows 3 and 4",
+    "object_hue_band_width_row3": 1,
+    "object_hue_band_width_row4_and_ladder": 2,
+    "object_hue_width_note": "\u26a0 the two EXISTING ends already disagree here: row 3 pins ONE object hue (36-row corners), row 4 a band of 2 (72-row corners). The ladder follows row 4, the end it is anchored to. \u26d4 Not introduced by w12.",
+    "wall_tied_to_floor": true,
+    "widths": {
+      "hue_band": 2,
+      "orientation_corner": 3,
+      "scale_corner": 3
+    }
+  },
+  "grid": {
+    "cardinalities": [
+      10,
+      10,
+      10,
+      8,
+      4,
+      15
+    ],
+    "grid_dataset_id": "shapes3d",
+    "n_rows": 480000,
+    "names": [
+      "floor_hue",
+      "wall_hue",
+      "object_hue",
+      "scale",
+      "shape",
+      "orientation"
+    ]
+  },
+  "ineligibility": {
+    "kway_box_eligible": [
+      "scale",
+      "orientation"
+    ],
+    "note": "scale and orientation are physical defaults (gen_value_holdout section 2) and stay INELIGIBLE as VALUE hold-outs; they are eligible INSIDE a k-way box exactly as in row 4 \u2014 \u26d4 not widened",
+    "value_holdout_ineligible": [
+      "scale",
+      "orientation"
+    ]
+  },
+  "kill_check": {
+    "bar": 49,
+    "coordinate_option_counts": {
+      "floor_only": 5,
+      "floorwall": 5,
+      "object_hue": 2,
+      "orientation": 2,
+      "scale": 2,
+      "shape": 3,
+      "wall_only": 5
+    },
+    "grid_cardinalities": {
+      "floor_hue": 10,
+      "object_hue": 10,
+      "orientation": 15,
+      "scale": 8,
+      "shape": 4,
+      "wall_hue": 10
+    },
+    "grid_rows": 480000,
+    "rungs": {
+      "2": {
+        "bar": 49,
+        "cell_option_counts": {
+          "pair_cells (build_pair_cells)": 3
+        },
+        "clears_bar": true,
+        "corners_per_cell": 20,
+        "free_factors": [
+          "floor_hue",
+          "orientation",
+          "scale",
+          "wall_hue"
+        ],
+        "held_out_fraction_full_sweep": 0.075,
+        "held_out_rows_full_sweep": 36000,
+        "k": 2,
+        "max_corners": 60,
+        "min_cells_corners": 60,
+        "min_cells_for_bar": 3,
+        "min_cells_held_out_fraction": 0.075,
+        "min_cells_held_out_rows": 36000,
+        "n_cells_capacity": 3,
+        "pinned_factors": [
+          "object_hue",
+          "shape"
+        ],
+        "pinned_units": [
+          "object_hue",
+          "shape"
+        ],
+        "rows_per_cell": 12000,
+        "status": "PASS",
+        "tiling_units": [
+          "floorwall",
+          "scale",
+          "orientation"
+        ]
+      },
+      "3": {
+        "bar": 49,
+        "cell_option_counts": {
+          "object_hue": 2,
+          "scale": 2,
+          "shape": 3
+        },
+        "clears_bar": true,
+        "corners_per_cell": 10,
+        "free_factors": [
+          "floor_hue",
+          "orientation",
+          "wall_hue"
+        ],
+        "held_out_fraction_full_sweep": 0.225,
+        "held_out_rows_full_sweep": 108000,
+        "k": 3,
+        "max_corners": 120,
+        "min_cells_corners": 50,
+        "min_cells_for_bar": 5,
+        "min_cells_held_out_fraction": 0.09375,
+        "min_cells_held_out_rows": 45000,
+        "n_cells_capacity": 12,
+        "pinned_factors": [
+          "object_hue",
+          "scale",
+          "shape"
+        ],
+        "pinned_units": [
+          "object_hue",
+          "shape",
+          "scale"
+        ],
+        "rows_per_cell": 9000,
+        "status": "PASS",
+        "tiling_units": [
+          "floorwall",
+          "orientation"
+        ]
+      },
+      "4": {
+        "bar": 49,
+        "cell_option_counts": {
+          "object_hue": 2,
+          "orientation": 2,
+          "scale": 2,
+          "shape": 3
+        },
+        "clears_bar": true,
+        "corners_per_cell": 5,
+        "free_factors": [
+          "floor_hue",
+          "wall_hue"
+        ],
+        "held_out_fraction_full_sweep": 0.09,
+        "held_out_rows_full_sweep": 43200,
+        "k": 4,
+        "max_corners": 120,
+        "min_cells_corners": 50,
+        "min_cells_for_bar": 10,
+        "min_cells_held_out_fraction": 0.0375,
+        "min_cells_held_out_rows": 18000,
+        "n_cells_capacity": 24,
+        "pinned_factors": [
+          "object_hue",
+          "orientation",
+          "scale",
+          "shape"
+        ],
+        "pinned_units": [
+          "object_hue",
+          "shape",
+          "scale",
+          "orientation"
+        ],
+        "rows_per_cell": 1800,
+        "status": "PASS",
+        "tiling_units": [
+          "floorwall"
+        ]
+      },
+      "5": {
+        "bar": 49,
+        "cell_option_counts": {
+          "floorwall": 5,
+          "object_hue": 2,
+          "scale": 2,
+          "shape": 3
+        },
+        "clears_bar": true,
+        "corners_per_cell": 2,
+        "free_factors": [
+          "orientation"
+        ],
+        "held_out_fraction_full_sweep": 0.045,
+        "held_out_rows_full_sweep": 21600,
+        "k": 5,
+        "max_corners": 120,
+        "min_cells_corners": 50,
+        "min_cells_for_bar": 25,
+        "min_cells_held_out_fraction": 0.01875,
+        "min_cells_held_out_rows": 9000,
+        "n_cells_capacity": 60,
+        "pinned_factors": [
+          "floor_hue",
+          "object_hue",
+          "scale",
+          "shape",
+          "wall_hue"
+        ],
+        "pinned_units": [
+          "object_hue",
+          "shape",
+          "scale",
+          "floorwall"
+        ],
+        "rows_per_cell": 360,
+        "status": "PASS",
+        "tiling_units": [
+          "orientation"
+        ]
+      },
+      "6": {
+        "bar": 49,
+        "cell_option_counts": {
+          "floorwall": 5,
+          "object_hue": 2,
+          "orientation": 2,
+          "scale": 2,
+          "shape": 3
+        },
+        "clears_bar": true,
+        "corners_per_cell": 1,
+        "free_factors": [],
+        "held_out_fraction_full_sweep": 0.018,
+        "held_out_rows_full_sweep": 8640,
+        "k": 6,
+        "max_corners": 120,
+        "min_cells_corners": 49,
+        "min_cells_for_bar": 49,
+        "min_cells_held_out_fraction": 0.00735,
+        "min_cells_held_out_rows": 3528,
+        "n_cells_capacity": 120,
+        "pinned_factors": [
+          "floor_hue",
+          "object_hue",
+          "orientation",
+          "scale",
+          "shape",
+          "wall_hue"
+        ],
+        "pinned_units": [
+          "object_hue",
+          "shape",
+          "scale",
+          "orientation",
+          "floorwall"
+        ],
+        "rows_per_cell": 72,
+        "status": "PASS",
+        "tiling_units": []
+      }
+    },
+    "variant": "primary",
+    "widths": {
+      "hue_band": 2,
+      "orientation_corner": 3,
+      "scale_corner": 3
+    }
+  },
+  "nested_alternative": {
+    "capacity": {
+      "bar": 49,
+      "coordinate_option_counts": {
+        "floor_only": 5,
+        "floorwall": 5,
+        "object_hue": 2,
+        "orientation": 2,
+        "scale": 2,
+        "shape": 3,
+        "wall_only": 5
+      },
+      "grid_cardinalities": {
+        "floor_hue": 10,
+        "object_hue": 10,
+        "orientation": 15,
+        "scale": 8,
+        "shape": 4,
+        "wall_hue": 10
+      },
+      "grid_rows": 480000,
+      "rungs": {
+        "5": {
+          "bar": 49,
+          "cell_option_counts": {
+            "floor_only": 5,
+            "object_hue": 2,
+            "orientation": 2,
+            "scale": 2,
+            "shape": 3
+          },
+          "clears_bar": true,
+          "corners_per_cell": 5,
+          "free_factors": [
+            "wall_hue"
+          ],
+          "held_out_fraction_full_sweep": 0.09,
+          "held_out_rows_full_sweep": 43200,
+          "k": 5,
+          "max_corners": 600,
+          "min_cells_corners": 50,
+          "min_cells_for_bar": 10,
+          "min_cells_held_out_fraction": 0.0075,
+          "min_cells_held_out_rows": 3600,
+          "n_cells_capacity": 120,
+          "pinned_factors": [
+            "floor_hue",
+            "object_hue",
+            "orientation",
+            "scale",
+            "shape"
+          ],
+          "pinned_units": [
+            "object_hue",
+            "shape",
+            "scale",
+            "orientation",
+            "floor_only"
+          ],
+          "rows_per_cell": 360,
+          "status": "PASS",
+          "tiling_units": [
+            "wall_only"
+          ]
+        }
+      },
+      "variant": "nested_alt",
+      "widths": {
+        "hue_band": 2,
+        "orientation_corner": 3,
+        "scale_corner": 3
+      }
+    },
+    "k5": {
+      "all_corner_rows_held_out": true,
+      "clears_bar": true,
+      "disjointness_check": {
+        "n_corner_rows": 43200,
+        "pairwise_disjoint": true,
+        "rows_per_corner": [
+          72
+        ]
+      },
+      "family": "kway5-*",
+      "free_factors": [
+        "wall_hue"
+      ],
+      "geometry_matches_rows_3_4": false,
+      "geometry_note": "floor band != wall band in 4 of every 5 tiles; rows 3 and 4 always tie them \u2014 \u26d4 use only if the hub declares the deviation",
+      "held_out_fraction_total": 0.49,
+      "held_out_rows_total": 235200,
+      "k": 5,
+      "n_cells": 120,
+      "n_corner_rows_in_holdout": 43200,
+      "n_corners": 600,
+      "pinned_factors": [
+        "floor_hue",
+        "object_hue",
+        "orientation",
+        "scale",
+        "shape"
+      ],
+      "status": "PASS",
+      "variant": "nested_alt"
+    }
+  },
+  "nesting_caveat": "floor_hue and wall_hue are TIED in rows 3 and 4, so the pinned-unit sets cannot be strictly nested through every k: A2 < A3 < A4 and A3 < A5 < A6, but A4 is not a subset of A5. LADDER_AXES_NESTED_ALT unties wall_hue at k=5 and IS nested, at the cost of corners whose floor band != wall band.",
+  "row_matching_feasibility": {
+    "available_ceiling": 8640,
+    "feasible": false,
+    "max_rows_at_full_capacity_per_rung": {
+      "2": 36000,
+      "3": 108000,
+      "4": 43200,
+      "5": 21600,
+      "6": 8640
+    },
+    "min_rows_to_clear_bar_per_rung": {
+      "2": 36000,
+      "3": 45000,
+      "4": 18000,
+      "5": 9000,
+      "6": 3528
+    },
+    "question": "is there a common held-out ROW budget at which every rung still has >= 49 pairwise-disjoint corners?",
+    "required_floor": 45000,
+    "verdict": "NO \u2014 the rung that needs the most rows to reach 49 corners needs 45,000, and the tightest rung can hold out at most 8,640. \u26d4 The ladder CANNOT be row-matched across k while every rung clears the bar; the confound must be handled by a control, not by a budget."
+  },
+  "scope": "SCOPE OF THE VALUE HOLD-OUT (\u26d4 quote no row without this). The hold-out is from the STORE'S FIT POOL, not from the encoder, the decoder or the judge. Those three are frozen, hash-pinned and read-only (charter \u00a7A.4) and were fitted on a train split containing EVERY hue and EVERY shape; re-fitting them on a value hold-out would void every wave-2 number and is out of scope. Therefore 'never trained on' means here: THE STORE NEVER HELD A ROW CARRYING THAT VALUE. The decoder can still render the value and the judge can still recognise it \u2014 which is what makes rows 2/5/6/7 scorable at all. \u26d4 Read end-to-end, 'never seen' is false and the claim dies with it.",
+  "scored_runs_spent": 0
+}

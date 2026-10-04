@@ -1,0 +1,71 @@
+[23:03:55] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[23:03:55]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[23:03:55]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[23:03:57]   channel geometry loaded from chan_geom_s0_pool32766.npz
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[23:03:59]   [isotropic noise, mse=0.0545] agg=0.9213 (61/72)
+[23:04:00]   [isotropic noise, mse=0.0517] agg=0.9005 (64/72)
+[23:04:01]   [isotropic noise, mse=0.0446] agg=0.9491 (64/72)
+[23:04:03]   [isotropic noise, mse=0.0381] agg=0.9375 (69/72)
+[23:04:04]   [isotropic noise, mse=0.0289] agg=0.9329 (65/72)
+[23:04:09]   [K=32 clu_wide] agg=0.6574 (22/72)
+[23:04:11]   [K=32 argmax] agg=0.6921 (25/72)
+[23:04:12]   [K=32 hybrid lam=0] agg=0.6921 (25/72)
+[23:04:14]   [K=32 hybrid lam=0.1] agg=0.6921 (25/72)
+[23:04:15]   [K=32 hybrid lam=0.3] agg=0.6991 (25/72)
+[23:04:16]   [K=32 hybrid lam=1] agg=0.6968 (21/72)
+[23:04:18]   [K=32 hybrid lam=3] agg=0.6875 (28/72)
+[23:04:19]   [K=32 hybrid lam=10] agg=0.6620 (33/72)
+[23:04:20]   [K=32 hybrid lam=1e+06] agg=0.6273 (33/72)
+[23:04:30]   [K=128 clu_wide] agg=0.6412 (31/72)
+[23:04:31]   [K=128 argmax] agg=0.6551 (47/72)
+[23:04:33]   [K=128 hybrid lam=0] agg=0.6551 (47/72)
+[23:04:34]   [K=128 hybrid lam=0.1] agg=0.6574 (45/72)
+[23:04:36]   [K=128 hybrid lam=0.3] agg=0.6574 (39/72)
+[23:04:37]   [K=128 hybrid lam=1] agg=0.6759 (34/72)
+[23:04:39]   [K=128 hybrid lam=3] agg=0.6991 (36/72)
+[23:04:40]   [K=128 hybrid lam=10] agg=0.6597 (32/72)
+[23:04:42]   [K=128 hybrid lam=1e+06] agg=0.6551 (36/72)
+[23:04:42] done in 48.8s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table\dev\exp07_seed0.json
+exit=0

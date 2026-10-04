@@ -1,0 +1,63 @@
+[19:19:52] stage=screen out=C:\chlu\outputs\hub-placement\dev-val-gen2 condition=val
+[19:19:54]   fit pool 131072 rows, 0 shared with the hold-out
+[19:20:48]   relevance (2048, 6) in 51.0s; dead 67
+[19:21:10]   candidates: 14 written -> C:\chlu\outputs\hub-placement\dev-val-gen2\candidates.npz
+[19:21:10]   probe: 512 pinned pairs, all 6 factors differ in each
+[19:21:10]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:21:16]   ceiling (no swap): exact=0.9805
+[19:21:44]   mi_argmax              exact=0.0875 control=0.5312 leak=0.0620 own=[0, 1, 2, 3, 5]
+[19:22:20]   mi_balanced            exact=0.1516 control=0.5145 leak=0.0385 own=[0, 1, 2, 3, 5]
+[19:23:00]   ward                   exact=0.0719 control=0.3520 leak=0.0417 own=[1, 3, 5, 2, 0]
+[19:23:48]   ward_balanced          exact=0.0836 control=0.3500 leak=0.0410 own=[1, 5, 3, 2, 0]
+[19:24:40]   norm_rank              exact=0.2457 control=0.5266 leak=0.0265 own=[0, 1, 2, 4, 5]
+[19:25:35]   norm_zscore            exact=0.2270 control=0.5086 leak=0.0272 own=[0, 1, 2, 4, 5]
+[19:26:27]   norm_share             exact=0.1836 control=0.5043 leak=0.0363 own=[0, 1, 2, 3, 5]
+[19:27:19]   norm_sqrt              exact=0.2094 control=0.5344 leak=0.0262 own=[0, 1, 2, 4, 5]
+[19:27:57]   indep_lam0.5           exact=0.2348 control=0.5176 leak=0.0266 own=[0, 1, 2, 4, 5]
+[19:28:26]   indep_lam1             exact=0.2371 control=0.5332 leak=0.0247 own=[0, 1, 2, 4, 5]
+[19:28:56]   indep_lam2             exact=0.2176 control=0.5309 leak=0.0262 own=[0, 1, 2, 4, 5]
+[19:29:28]   random_mi_balanced     exact=0.0137 control=0.0395 leak=0.0195 own=[0, 2, 4, 5, 3]
+[19:30:08]   random_ward            exact=0.0117 control=0.0434 leak=0.0218 own=[1, 2, 3, 4, 5]
+[19:30:47]   random_ward_balanced   exact=0.0141 control=0.0340 leak=0.0194 own=[0, 3, 4, 2, 5]

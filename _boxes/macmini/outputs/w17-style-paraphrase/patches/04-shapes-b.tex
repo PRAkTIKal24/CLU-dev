@@ -1,0 +1,113 @@
+@@@ 472 480
+We run three deletions on the $\Kstar$ object on TEST. \emph{Value}: every fit row carrying
+red. \emph{Conjunction}: every fit row carrying red \emph{and} sphere, which we call the red
+sphere everywhere; the conjunction the task first named, red $\wedge$ cube, deletes zero rows,
+because cube is the shape held out of the split entirely, and it is printed as vacuous, never as
+a deletion result. \emph{Item}: a random 1\% of fit rows.
+Table~\ref{tab:del} gives each deletion with its cost. Post-deletion adaptation of the store is
+\emph{light and data-free}: the covariance and count are downdated by subtraction, the atoms are
+re-eigendecomposed from the downdated statistic and the address book is carried across the basis
+change, with no row of data read. The reference, in contrast, can delete only by refitting from
+scratch without the deleted rows.
+@@@ 505 508
+\noindent Each row rewrites 2,081,024 bytes of the store and address book, reads 0 data rows
+and refits nothing, whereas the reference reads 120,028 to 131,072 rows. % SRC: w13-seeds-and-tables/TABLES.md
+On every scope the ranks of the downdated and refit stores agree, and the basis did move
+($\cos_{\min}$ well below 1). % SRC: w13-seeds-and-tables/TABLES.md
+@@@ 515 531
+\paragraph{The probe that bounds the claim.} The store-scoping of exactness is measurable, not
+only definitional. Deleting all 11,044 red rows leaves the 20 red-requesting corners at 32.2500
+novel valid tuples per corner before and after, and judge accuracy at 0.8958 before and after.
+% SRC: w13-seeds-and-tables/TABLES.md
+The store itself has changed. Without the address-book carry, the read moves by 0.610083
+relative RMS on the 720 red-requesting requests, but also by 0.614277 on the 4,968 requests
+that do not ask for red; the basis change is therefore generic, not targeted. With the carry,
+the read moves by \sci{6.194}{-08} and \sci{6.163}{-08}, respectively. The carry rewrites
+1,015,808 of the address book's 1,060,864 bytes and touches 0 data rows. % SRC: w13-seeds-and-tables/TABLES.md
+\emph{``The store has forgotten red'' and ``the object no longer answers red'' are different
+statements, and at $\Kstar$ only the first is demonstrated.} At $\Kstar$ the value identity
+resides in the address book, which the deletion carries rather than refits. The trade-off moved
+rather than vanished: at $K=5$ (rank/width 0.156), the same red deletion was concentrated, with
+$\cos_{\min}$ 0.1999 against 0.9976 for a size-matched random deletion of the same number of
+rows. % SRC: w13-seeds-and-tables/TABLES.md; w13-draft-revise/DRAFT-v1.md
+The targeting of a deletion is thus a function of rank/width, and it disappears where the ledger
+is cheapest. This is why refusal needs its own mechanism (\S\ref{sec:hole}).
+@@@ 536 555
+The only exact deletion route for a learned rival is to retrain from scratch without the rows.
+We built that route for every rival family at matched compute, together with two approximate
+unlearners, measured on the fit pool (16,384 rows; no held-out corner and no scored run).
+Retraining without the red rows costs each rival 8.86 to 34.62 s and reads 15,032 data rows
+(Table~\ref{tab:rivals-del}). The approximate unlearners are appendix rows
+(Appendix~\ref{app:delbase}), both because a ruling drops them from paper rows and because
+they miss the exact answer. % SRC: w12-deletion-baselines/FINDINGS.md
+
+\noindent Against that exact reference, NegGrad+ over-forgets by 9.4 to 20.8 times and
+fine-tuning on the retained rows under-forgets on three of four arms, although both received
+every gradient row-visit that the exact retrain received (296,960, asserted equal across all
+eight arm and method combinations on all three seeds). % SRC: w12-deletion-baselines/FINDINGS.md
+On the rivals themselves, the conjunction row confirms that composition survives a conjunction
+deletion: retraining a learned rival without the red sphere rows leaves red-sphere
+reconstruction essentially unchanged (3-seed means $-0.00289$, $+0.01907$, $-0.00179$,
+$-0.00026$), since red and sphere each survive separately and the rival composes them.
+% SRC: w12-deletion-baselines/FINDINGS.md
+This is composition working, not deletion failing, and it is a property of compositional
+generation rather than of our store. It is also the reason why the conjunction row cannot carry a
+refusal claim; the hole carries it.
+@@@ 560 570
+Refusal is a second exact mechanism on the same object: a coupling table with \textbf{holes}.
+Punching a hole for a deleted value or conjunction marks the request slot as refused. On the
+$\Kstar$ object, two holes cost 2 bytes, read 0 data rows, take 0.0000 s and refit nothing, in
+a 1,322-byte coupling table whose layout is asserted equal to the field store's over 1,322 pair
+slots. % SRC: w13-seeds-and-tables/TABLES.md
+One hole (red $\wedge$ cube) is refusable although no red cube was ever written: refusal does
+not require a deleted row to have existed. % SRC: w13-seeds-and-tables/TABLES.md
+Because the downdate does not stop the object answering red (the probe above), the hole is the
+only mechanism on this object that can. An item deletion, in contrast, makes nothing impossible:
+0 of 164 requests built from the deleted rows are certifiably impossible, on all three seeds, so
+the item row has no refusal row at all. % SRC: w12-deletion-baselines/FINDINGS.md
+@@@ 599 609
+\noindent The comparator serves to price the alternative to a hole, not to lose. For a value
+deletion the task is a one-token lookup, which a free 8-byte value-presence bitmap already scores
+at 1.0000 with 0 rows read. For a conjunction the free bitmap cannot express the question at
+all, and the transformer learns the conjunction hole at AUROC 1.0000 for 130,479 parameters,
+4,096 data rows read, 521,916 bytes rewritten and 10.48 s, whereas the coupling hole costs one
+byte and no row. % SRC: w12-deletion-baselines/FINDINGS.md
+\noindent The hole, not deletion in general, is the operation that is both exact on bytes and
+free on behaviour. On the earlier item store, evicting red refuses at 1.0000 on all three
+seeds but costs $-2.0899$ / $-0.9101$ / $-6.7416$ composition against a declared $\pm1.0$ bar,
+while punching a hole refuses at 1.0000 at a cost of exactly $+0.0000$. % SRC: w13-seeds-and-tables/TABLES.md
+The claim is exactness, never cost-free erasure.
+@@@ 614 630
+\paragraph{Composition-only store (composes, cannot forget).} Dropping the statistic and keeping the atoms and address book gives the earlier \texttt{pca\_tensor} store. It keeps no
+sufficient statistic, which is the price it does not pay and the reason it has no exact
+deletion. At the $K=5$ endpoint of the ladder it is bit-identical to the single design at every rung and seed, at 712,072 to 719,352 bytes, 1.358 to 1.372 times the reference.
+% SRC: w13-seeds-and-tables/TABLES.md; w12-composition-ladder/FINDINGS.md
+The statistic is not consulted at generation time, hence the equal reads. Whether the
+equality survives at $\Kstar$ is not measured: \texttt{pca\_tensor} was not run at
+$\Kstar$ (a declared not-run, Appendix~\ref{app:notrun}). \TODO{no artefact for the
+``$\sim$1/7$\times$'' byte ratio of the composition-only store named in the task spine; the
+artefacts give the two totals printed here and in Table~\ref{tab:ledger-kstar}, and this spoke
+does not divide them.}
+On its own scored TEST legs (three seeds), the composition-only store beats a parameter-matched
+learner on both rows beyond a margin declared in advance, at total deployed bytes matched to within $\pm0.5$\% (713,632 / 719,352 / 719,352 against the rival's 715,808) and parameters within $-0.304$\% to $+0.495$\%, the arm carrying more parameters on two of three seeds.
+% SRC: w13-seeds-and-tables/TABLES.md
+@@@ 632 636
+\paragraph{Item store (forgets, loses composition).} An item store of 64 whole written rows at
+the same byte pin, read by an oracle handed the true feature, deletes by construction but
+composes poorly: on row 4 it sits $-21.0816$ / $-16.5306$ / $-18.0816$ below the learned
+reference. This 3-seed mean of 18.56 tuples per corner is a lower bound on what an item store
+costs, because this store is a ceiling and not an arm. % SRC: w13-seeds-and-tables/TABLES.md
+@@@ 638 641
+Table~\ref{tab:ablations} (Appendix~\ref{app:w5}) prints both ablations per seed. Together they
+show the join that the single design exists for: one ablation composes but cannot forget, the
+other forgets but cannot compose, and the single design does both on one object, at the cost
+printed in Table~\ref{tab:ledger-kstar}.
+@@@ 645 652
+The frozen encoder is the primary object. Light adaptation at $\Kstar$, with equal steps and
+images, grows the store's margin over a 180k-parameter learner on all three seeds under an
+anchored full unfreeze ($+0.5688\to+1.3303$, $-0.0275\to-0.0092$, $+1.1009\to+1.3028$) and on two
+of three under a low-rank adapter. % SRC: w13-encoder-adapt/CROSS-ARM.md
+Training the encoder through the store, in contrast, is a wash of two real effects: unfreezing
+hurts and a swap loss repairs. The store's margin over a matched learner does not grow, so the
+store does not shape the representation. Appendix~\ref{app:encoder-main} reports both results,
+with the pending scored BAR D row of the longer leg.

@@ -1,0 +1,370 @@
+{
+  "schema": "admission-u0c/1",
+  "seed": 0,
+  "budget": "A",
+  "feat_shape": [
+    128,
+    4,
+    4
+  ],
+  "K_wells": 5,
+  "n_atoms": 64,
+  "dim": 2048,
+  "well_sizes": [
+    303,
+    305,
+    573,
+    501,
+    366
+  ],
+  "sigma": [
+    4.634332180023193,
+    5.071405410766602,
+    9.182735443115234,
+    6.305441856384277,
+    5.100610733032227
+  ],
+  "cache_meta": {
+    "n_rows": 480000,
+    "scope": "full",
+    "D": 2048,
+    "dtype": "float16"
+  },
+  "grouping": {
+    "grouping_source": "per_seed (re-derived at the plan's K)",
+    "n_corr_rows": 16384,
+    "n_dead_channels": 71,
+    "grouping_info": {
+      "method_requested": "auto",
+      "method_used": "ward",
+      "method_order": [
+        "average",
+        "ward"
+      ],
+      "min_well_frac": 0.1,
+      "min_well_size_floor": 39,
+      "attempts": [
+        {
+          "method": "average",
+          "sizes": [
+            1973,
+            1,
+            1,
+            1,
+            1
+          ],
+          "min_well_size": 1,
+          "floor": 39,
+          "accepted": false
+        },
+        {
+          "method": "ward",
+          "sizes": [
+            232,
+            305,
+            573,
+            501,
+            366
+          ],
+          "min_well_size": 232,
+          "floor": 39,
+          "accepted": true
+        }
+      ],
+      "n_dead_channels": 71,
+      "n_live_channels": 1977,
+      "well_sizes": [
+        303,
+        305,
+        573,
+        501,
+        366
+      ]
+    },
+    "well_sizes": [
+      303,
+      305,
+      573,
+      501,
+      366
+    ],
+    "plan_encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+    "this_encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+    "reproduces_the_plan_bit_identically": true
+  },
+  "names": [
+    "floor_hue",
+    "wall_hue",
+    "object_hue",
+    "scale",
+    "shape",
+    "orientation"
+  ],
+  "cards": [
+    10,
+    10,
+    10,
+    8,
+    4,
+    15
+  ],
+  "reencode_check": {
+    "n_checked": 64,
+    "n_elements": 131072,
+    "max_abs_delta": 0.001953125,
+    "max_ulp_delta": 51.0,
+    "n_differing": 1280,
+    "frac_differing": 0.009765625,
+    "n_nonfinite": 0,
+    "cache_dtype": "float16",
+    "ulp_bound": 1.0,
+    "frac_bound": 0.01,
+    "enforced": false,
+    "enforced_reason": "hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.",
+    "would_have_failed": true,
+    "would_have_failed_why": [
+      "ulp"
+    ]
+  },
+  "identity": {
+    "wells": [
+      {
+        "well": 0,
+        "n_atoms": 64,
+        "sigma": 4.634332180023193,
+        "max_E_at_atoms": -33.3983039855957,
+        "min_E_at_atoms": -54.653568267822266,
+        "certified_radius": 13.365663210066256
+      },
+      {
+        "well": 1,
+        "n_atoms": 64,
+        "sigma": 5.071405410766602,
+        "max_E_at_atoms": -40.861785888671875,
+        "min_E_at_atoms": -60.47782897949219,
+        "certified_radius": 14.62620591035727
+      },
+      {
+        "well": 2,
+        "n_atoms": 64,
+        "sigma": 9.182735443115234,
+        "max_E_at_atoms": -225.5814666748047,
+        "min_E_at_atoms": -262.185791015625,
+        "certified_radius": 26.48350280303008
+      },
+      {
+        "well": 3,
+        "n_atoms": 64,
+        "sigma": 6.305441856384277,
+        "max_E_at_atoms": -89.68307495117188,
+        "min_E_at_atoms": -118.92387390136719,
+        "certified_radius": 18.18523337760942
+      },
+      {
+        "well": 4,
+        "n_atoms": 64,
+        "sigma": 5.100610733032227,
+        "max_E_at_atoms": -30.393728256225586,
+        "min_E_at_atoms": -65.74612426757812,
+        "certified_radius": 14.710435630235018
+      }
+    ],
+    "max_over_all_wells": -30.393728256225586,
+    "identity_E_le_0_holds": true
+  },
+  "term_experts_offgrid": {
+    "n_offgrid_terms": 0
+  },
+  "reproduces_shipped_experts": {
+    "max_abs_delta_vs_request_experts": 0.0,
+    "bit_identical": true,
+    "shape_ref": [
+      6,
+      256,
+      5,
+      64
+    ],
+    "shape_got": [
+      6,
+      256,
+      5,
+      64
+    ]
+  },
+  "r8_bytes": {
+    "n_prototypes": 57,
+    "dim": 2048,
+    "dtype": "float32",
+    "bytes_formula": "(sum_k C_k + 1) * D * 4",
+    "bytes": 475136,
+    "role": "request embedding == the kNN arm's ADDRESSING HEAD; the store's own byte count excludes the CLU addressing head by the same convention"
+  },
+  "store_energy_agreement": {
+    "max_abs_delta": 6.4849853515625e-05,
+    "max_rel_delta": 1.220155568973758e-07,
+    "agrees": true,
+    "note": "sum_k E_k (this module) vs gen_landscape.store_energy (shipped)"
+  },
+  "launch_points_valid": {
+    "clamp_atom": {
+      "n": 256,
+      "accept_rate": 1.0,
+      "refuse_rate": 0.0,
+      "certified_fraction_of_refusals": null,
+      "mean_wells_refusing": 0.0,
+      "E_max_over_wells_mean": -39.5136007219553,
+      "E_max_over_wells_median": -38.89552879333496,
+      "d_over_sigma_min_mean": 7.049920865719173e-06,
+      "d_over_sigma_mean": 0.00045484107515282146,
+      "per_well_refuse_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_well_E_mean": [
+        -45.34288904070854,
+        -52.381835997104645,
+        -245.06377178430557,
+        -112.44026425480843,
+        -43.98478928208351
+      ],
+      "per_well_d_over_sigma_mean": [
+        0.000634185338870979,
+        0.00045899467058238124,
+        0.00025609045895135175,
+        0.00035591540811918173,
+        0.0005690194992402132
+      ]
+    },
+    "posterior_mean": {
+      "n": 256,
+      "accept_rate": 1.0,
+      "refuse_rate": 0.0,
+      "certified_fraction_of_refusals": null,
+      "mean_wells_refusing": 0.0,
+      "E_max_over_wells_mean": -52.70142675936222,
+      "E_max_over_wells_median": -53.435638427734375,
+      "d_over_sigma_min_mean": 0.7900556522474789,
+      "d_over_sigma_mean": 0.9121993204794547,
+      "per_well_refuse_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_well_E_mean": [
+        -57.36144740879536,
+        -67.682722479105,
+        -292.44432759284973,
+        -133.6237689256668,
+        -56.40573589503765
+      ],
+      "per_well_d_over_sigma_mean": [
+        0.9287177021671894,
+        0.9465831440832444,
+        0.889757877292628,
+        0.8997493253236475,
+        0.896188553530563
+      ]
+    },
+    "prior_atom": {
+      "n": 256,
+      "accept_rate": 1.0,
+      "refuse_rate": 0.0,
+      "certified_fraction_of_refusals": null,
+      "mean_wells_refusing": 0.0,
+      "E_max_over_wells_mean": -40.8865966796875,
+      "E_max_over_wells_median": -40.8865966796875,
+      "d_over_sigma_min_mean": 0.0,
+      "d_over_sigma_mean": 0.0,
+      "per_well_refuse_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_well_E_mean": [
+        -52.97405242919922,
+        -50.001441955566406,
+        -262.185791015625,
+        -116.66825103759766,
+        -40.8865966796875
+      ],
+      "per_well_d_over_sigma_mean": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "r8_affine": {
+      "n": 256,
+      "accept_rate": 1.0,
+      "refuse_rate": 0.0,
+      "certified_fraction_of_refusals": null,
+      "mean_wells_refusing": 0.0,
+      "E_max_over_wells_mean": -42.058427304029465,
+      "E_max_over_wells_median": -41.26856231689453,
+      "d_over_sigma_min_mean": 0.7690157193642406,
+      "d_over_sigma_mean": 0.9020730745829418,
+      "per_well_refuse_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_well_E_mean": [
+        -48.50607620179653,
+        -56.290852054953575,
+        -256.08180671930313,
+        -116.58395808935165,
+        -45.332249850034714
+      ],
+      "per_well_d_over_sigma_mean": [
+        0.9079257293331916,
+        0.9168085558742234,
+        0.8792801664516906,
+        0.8520576842963684,
+        0.9542932369592356
+      ]
+    },
+    "true_feature": {
+      "n": 256,
+      "accept_rate": 1.0,
+      "refuse_rate": 0.0,
+      "certified_fraction_of_refusals": null,
+      "mean_wells_refusing": 0.0,
+      "E_max_over_wells_mean": -34.49730544909835,
+      "E_max_over_wells_median": -34.011112213134766,
+      "d_over_sigma_min_mean": 0.7996226001550275,
+      "d_over_sigma_mean": 1.0012560505669412,
+      "per_well_refuse_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "per_well_E_mean": [
+        -42.62762829661369,
+        -49.48174364119768,
+        -237.57022607326508,
+        -106.76664346456528,
+        -38.565787967294455
+      ],
+      "per_well_d_over_sigma_mean": [
+        0.999223201217931,
+        1.000832210492073,
+        0.9593480806856913,
+        0.9706945374930421,
+        1.0761822229459692
+      ]
+    }
+  }
+}

@@ -1,0 +1,49 @@
+[01:10:31] oracle cache has 4096 rows for 512 requests; the instrument-anchored metric is SKIPPED
+[01:10:31] 512 row-2 requests; 64 corners realised
+[01:11:01] heads fitted (two-sided ridge, phi=1e-2, atom=1e-6); basis variants: kmeans++ and PCA, both 64 x d_k = 524288 B
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:11:07] basis_head: HUEMAE 0.4167D  ROW2ACC 0.5742  SNAPFRAC 0.8652  tuples 512  (5.7s)
+[01:11:12] knn_proto: HUEMAE 0.4331D  ROW2ACC 0.2051  SNAPFRAC 0.8906  tuples 512  (5.2s)
+[01:11:19] clu_discrete: HUEMAE 0.5094D  ROW2ACC 0.0215  SNAPFRAC 0.9531  tuples 491  (7.0s)
+[01:11:19] wrote C:\chlu\outputs\hub-unseen-valid\runs\smoke/run_manifest.json

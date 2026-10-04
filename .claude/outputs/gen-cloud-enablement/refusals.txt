@@ -1,0 +1,48 @@
+### 1. un-quota'd card is refused BY NAME, with the measured limit
+== preflight: a100-80 x1 spot in us-central1
+[quota] us-central1: REFUSING TO LAUNCH.
+  - card 'a100-80' (nvidia-a100-80gb) has NO QUOTA in this project/region: PREEMPTIBLE_NVIDIA_A100_80GB_GPUS limit = 0. Spot quota is separate from on-demand -- check the other one too. QUOTA IS ZERO IN THIS PROJECT AND NOT YET REQUESTED. Present so the preflight can refuse it by name. 80 GB A100s ARE free at point of use on CSF3 -- design for CSF3, not for this.
+FATAL: quota preflight refused this launch (see above). Nothing was created.
+
+### 2. H100/H200 are refused as not offered to this project
+== preflight: h200 x1 on-demand in us-central1
+[quota] us-central1: unknown card 'h200'. Known: a100-40, a100-80, l4, t4. Not available to this project at all: h100 (not offered to this project in us-central1 or europe-west4), h200 (not offered to this project in us-central1 or europe-west4)
+FATAL: quota preflight refused this launch (see above). Nothing was created.
+
+### 3. tag-pinned image is refused
+== preflight: l4 x1 on-demand in us-central1
+[quota] us-central1 l4 x1 (on-demand) OK
+metric                                   need    limit     used     free  ok
+NVIDIA_L4_GPUS                              1        8        2        6  yes
+CPUS                                        8      200        0      200  yes
+FATAL: image 'us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda:latest' is pinned by TAG. Refusing: a tag is a mutable pointer, so a
+       re-run would silently get a different environment and we would never know.
+       Pass a digest ref, e.g. us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:<...>
+
+### 4. more A100s than A2_CPUS allows is refused
+== preflight: a100-40 x2 spot in us-central1
+[quota] us-central1: REFUSING TO LAUNCH.
+  - card 'a100-40': 2x a2-highgpu-1g needs 24 vCPU, but A2_CPUS limit = 12 with 0 in use => 12 free. This caps concurrency at 1 such VM(s) regardless of GPU quota.
+FATAL: quota preflight refused this launch (see above). Nothing was created.
+
+### 5. a valid plan (dry run, nothing created)
+== preflight: a100-40 x1 spot in us-central1
+[quota] us-central1 a100-40 x1 (spot) OK
+metric                                   need    limit     used     free  ok
+PREEMPTIBLE_NVIDIA_A100_GPUS                1       16        0       16  yes
+A2_CPUS                                    12       12        0       12  yes
+== plan
+   job           demo          vm chlu-demo
+   card          a100-40 (nvidia-tesla-a100) x1 on a2-highgpu-1g [12 vCPU]
+   provisioning  SPOT -- expect pre-emption; the job resumes
+   zone          us-central1-a
+   boot image    common-cu129-ubuntu-2204-nvidia-580-v20260909 (deeplearning-platform-release)
+   run image     us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:94002e3018510f1d60eb6252b0d9e2696d165f64d447a4e382258856888f1dc6
+   payload       --steps 400 --size 4096 --seed 0 --ckpt-every-s 20 --step-sleep-s 0
+   checkpoints   gs://chlu-cloud-forgisprova/jobs/demo/ckpt   every 20s
+   sync-back     gs://chlu-cloud-forgisprova/jobs/demo/out    every 15s (DURING the run, not only at exit)
+   determinism   XLA deterministic ops, autotune off
+   watchdog      2 h, then the VM deletes itself
+   est. cost     $1.47/h x 2 h ceiling = $2.94
+                 (2026-09-15 (public list price, us-central1; estimate, not an invoice))
+== --dry-run: nothing created.

@@ -1,0 +1,5031 @@
+{
+  "config": {
+    "n_wells": 16,
+    "f_subset": 4,
+    "n_items": 32,
+    "n_unseen": 64,
+    "atoms_per_well": 6,
+    "addr_dim": 4,
+    "payload_dim": 8,
+    "ball_radius": 2.0,
+    "payload_radius": 0.6,
+    "atom_width": 0.3,
+    "atom_depth_init": 0.0001,
+    "atom_init_scale": 1.0,
+    "atom_local_radius": 0.25,
+    "atom_payload_init_radius": 0.6,
+    "confine": 0.05,
+    "target_ds": 2.7,
+    "s_measured": 0.318,
+    "depth_ratio": 3.0,
+    "write_steps": 300,
+    "write_lr": 0.003,
+    "write_weight_decay": 0.0001,
+    "write_sigma_addr": 0.25,
+    "write_sigma_pay": 0.6,
+    "write_margin": 0.15,
+    "write_barrier": 0.2,
+    "write_n_perturb": 32,
+    "lambda_traj": 0.0,
+    "n_particles": 4,
+    "launch_radius": 0.6,
+    "dt": 0.05,
+    "gamma_address": 0.05,
+    "gamma_read": 0.02,
+    "address_steps": 400,
+    "read_steps": 800,
+    "kinetic_mode": "newtonian_learned",
+    "query_sigma": 0.15,
+    "organize_steps": 200,
+    "organize_lr": 0.003,
+    "organize_retain": 40,
+    "organize_batch": 32,
+    "tol_frac": 0.25,
+    "seed": 0,
+    "quick": false,
+    "soft_cert_B": 0.542,
+    "write_mode": "placing",
+    "place_depth": 0.3,
+    "place_jitter_frac_s": 0.5,
+    "place_stationarity_shift": true,
+    "place_shift_iters": 40,
+    "atom_width_frac_spacing": 0.37,
+    "atom_width_selected_frac": 0.37,
+    "width_guard": true,
+    "launch_mode": "feature_factored",
+    "n_channels": null,
+    "reach_radius_frac_s": 2.0,
+    "coverage_trigger_threshold": 0.2
+  },
+  "flags_vs_default": {
+    "n_wells": 16,
+    "n_items": 32,
+    "n_unseen": 64,
+    "atoms_per_well": 6,
+    "payload_radius": 0.6,
+    "atom_payload_init_radius": 0.6,
+    "write_mode": "placing",
+    "atom_width_frac_spacing": 0.37,
+    "atom_width_selected_frac": 0.37,
+    "launch_mode": "feature_factored"
+  },
+  "grid": {
+    "lrs": [
+      0.01
+    ],
+    "tune_seeds": [
+      0
+    ],
+    "score_seeds": [
+      0,
+      1
+    ],
+    "n_val": 8,
+    "steps": 20,
+    "n1_atoms_per_well": [
+      6
+    ],
+    "n1_taus": [
+      1.0
+    ],
+    "n1_inits": [
+      "written"
+    ],
+    "n2_variants": [
+      "kmeans"
+    ],
+    "n2_codes": [
+      16
+    ],
+    "n2_commitments": [
+      0.0
+    ],
+    "n2_restarts": 2,
+    "n3_levels": [
+      "b"
+    ],
+    "n3_payloads": [
+      "fitted"
+    ],
+    "n4_ks": [
+      1
+    ],
+    "n4_weights": [
+      "idw"
+    ],
+    "n4_keys": [
+      "set_code",
+      "launch_mean",
+      "launch_flat"
+    ],
+    "n5_hidden": [
+      8
+    ],
+    "n5_momentum": [
+      0.0
+    ],
+    "n5_decay": [
+      0.0
+    ],
+    "n5_gate": [
+      "surprise"
+    ],
+    "n5_chunk": [
+      1
+    ],
+    "n5_passes": 1,
+    "n5_pretrain_steps": 10
+  },
+  "quick": true,
+  "seeds": [
+    0,
+    1
+  ],
+  "frozen_loaded": false,
+  "frozen_path": null,
+  "frozen_note": "\u26d4 quick mode: the frozen cross-check is DISABLED because the quick family is deliberately not the claim cell. No number from a quick run is quotable.",
+  "arms": [
+    "N1",
+    "N2",
+    "N3",
+    "N4",
+    "N5"
+  ],
+  "gridmax": {
+    "stage": "gridmax",
+    "seeds": [
+      0,
+      1
+    ],
+    "arms": {
+      "N1": {
+        "n_configs": 2,
+        "grid_max_mean": 0.0,
+        "argmax": {
+          "lr": 0.01,
+          "atoms_per_well": 6,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "best_single_seed": 0.0,
+        "rows": [
+          {
+            "config": {
+              "lr": 0.01,
+              "atoms_per_well": 6,
+              "tau": 1.0,
+              "init": "written",
+              "read": "soft"
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "config": {
+              "lr": 0.01,
+              "atoms_per_well": 6,
+              "tau": 1.0,
+              "init": "written",
+              "read": "hard"
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          }
+        ],
+        "wall_s": 0.1
+      },
+      "N2": {
+        "n_configs": 4,
+        "grid_max_mean": 0.0,
+        "argmax": {
+          "variant": "kmeans",
+          "n_codes": 16,
+          "payload_source": "fitted",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "best_single_seed": 0.0,
+        "rows": [
+          {
+            "config": {
+              "variant": "kmeans",
+              "n_codes": 16,
+              "payload_source": "fitted",
+              "commitment": 0.0,
+              "lr": 0.0
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "config": {
+              "variant": "kmeans",
+              "n_codes": 16,
+              "payload_source": "written",
+              "commitment": 0.0,
+              "lr": 0.0
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "config": {
+              "variant": "product_vq",
+              "n_codes": 16,
+              "payload_source": "fitted",
+              "commitment": 0.0,
+              "lr": 0.0
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "config": {
+              "variant": "vq_ste",
+              "n_codes": 16,
+              "payload_source": "fitted",
+              "commitment": 0.0,
+              "lr": 0.01
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          }
+        ],
+        "wall_s": 0.2
+      },
+      "N3": {
+        "n_configs": 2,
+        "grid_max_mean": 0.0,
+        "argmax": {
+          "lr": 0.01,
+          "level": "b",
+          "payload_source": "fitted",
+          "tau": 0.05
+        },
+        "best_single_seed": 0.0,
+        "rows": [
+          {
+            "config": {
+              "lr": 0.01,
+              "level": "b",
+              "payload_source": "fitted",
+              "tau": 0.05
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "config": {
+              "lr": 0.01,
+              "level": "b",
+              "payload_source": "fitted",
+              "tau": 0.2
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          }
+        ],
+        "wall_s": 0.0
+      },
+      "N4": {
+        "n_configs": 3,
+        "grid_max_mean": 0.0,
+        "argmax": {
+          "key": "set_code",
+          "k": 1,
+          "weight": "idw"
+        },
+        "best_single_seed": 0.0,
+        "rows": [
+          {
+            "config": {
+              "key": "set_code",
+              "k": 1,
+              "weight": "idw"
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "config": {
+              "key": "launch_mean",
+              "k": 1,
+              "weight": "idw"
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "config": {
+              "key": "launch_flat",
+              "k": 1,
+              "weight": "idw"
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          }
+        ],
+        "wall_s": 0.0
+      },
+      "N5": {
+        "n_configs": 1,
+        "grid_max_mean": 0.0,
+        "argmax": {
+          "lr": 0.01,
+          "hidden": 8,
+          "momentum": 0.0,
+          "decay": 0.0,
+          "gate": "surprise",
+          "chunk": 1
+        },
+        "best_single_seed": 0.0,
+        "rows": [
+          {
+            "config": {
+              "lr": 0.01,
+              "hidden": 8,
+              "momentum": 0.0,
+              "decay": 0.0,
+              "gate": "surprise",
+              "chunk": 1
+            },
+            "mean": 0.0,
+            "max_seed": 0.0,
+            "per_seed": [
+              0.0,
+              0.0
+            ]
+          }
+        ],
+        "wall_s": 0.0
+      }
+    },
+    "n_configs_total": 12,
+    "null_star": 0.0,
+    "null_star_arm": "N1",
+    "n_score_seeds": 2,
+    "label": "\u26d4 ORACLE-SELECTED UPPER BOUND over the entire registered grid x score seeds. Never any arm's own score."
+  },
+  "v2": {
+    "stage": "v2",
+    "cells": [
+      {
+        "seed": 0,
+        "arm": "N1",
+        "config": {
+          "lr": 0.01,
+          "atoms_per_well": 6,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "V2a_auroc": 0.6727869986168742,
+        "V2a_negative_label_permutation": 0.5255456871895228,
+        "V2a_negative_permuted_payloads": 0.6973132780082988,
+        "V2b_ece": {
+          "ece": 0.581190664556962,
+          "acc": 0.0,
+          "mean_conf": 0.581190664556962,
+          "n_bins": 10,
+          "bins": [
+            {
+              "lo": 0.0,
+              "hi": 0.1,
+              "n": 42,
+              "acc": 0.0,
+              "conf": 0.07663690476190477
+            },
+            {
+              "lo": 0.1,
+              "hi": 0.2,
+              "n": 23,
+              "acc": 0.0,
+              "conf": 0.14402173913043478
+            },
+            {
+              "lo": 0.2,
+              "hi": 0.30000000000000004,
+              "n": 22,
+              "acc": 0.0,
+              "conf": 0.2585227272727273
+            },
+            {
+              "lo": 0.30000000000000004,
+              "hi": 0.4,
+              "n": 17,
+              "acc": 0.0,
+              "conf": 0.35661764705882354
+            },
+            {
+              "lo": 0.4,
+              "hi": 0.5,
+              "n": 21,
+              "acc": 0.0,
+              "conf": 0.4806547619047619
+            },
+            {
+              "lo": 0.5,
+              "hi": 0.6000000000000001,
+              "n": 35,
+              "acc": 0.0,
+              "conf": 0.5589285714285714
+            },
+            {
+              "lo": 0.6000000000000001,
+              "hi": 0.7000000000000001,
+              "n": 12,
+              "acc": 0.0,
+              "conf": 0.6588541666666666
+            },
+            {
+              "lo": 0.7000000000000001,
+              "hi": 0.8,
+              "n": 44,
+              "acc": 0.0,
+              "conf": 0.7485795454545454
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.9,
+              "n": 14,
+              "acc": 0.0,
+              "conf": 0.8705357142857143
+            },
+            {
+              "lo": 0.9,
+              "hi": 1.0,
+              "n": 86,
+              "acc": 0.0,
+              "conf": 0.9614825581395349
+            }
+          ],
+          "degenerate": true,
+          "degenerate_note": "accuracy <= 0.01: ECE is mean confidence and the most under-confident arm wins by construction. Reported WITH the accuracy."
+        },
+        "mean_conf_by_novel_count": {
+          "0": -6.365413564443588,
+          "1": -6.066706365905702,
+          "2": -6.069774724543095
+        },
+        "n_novel_wells": 4,
+        "n_particles_novel": 300,
+        "n_particles": 1264,
+        "tol": 0.2590047727113351,
+        "wall_s": 0.4
+      },
+      {
+        "seed": 0,
+        "arm": "N2",
+        "config": {
+          "variant": "kmeans",
+          "n_codes": 16,
+          "payload_source": "written",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "V2a_auroc": 0.7910165975103735,
+        "V2a_negative_label_permutation": 0.5214243899175406,
+        "V2a_negative_permuted_payloads": 0.7910165975103735,
+        "V2b_ece": {
+          "ece": 0.2077729430379747,
+          "acc": 0.006329113924050633,
+          "mean_conf": 0.2141020569620253,
+          "n_bins": 10,
+          "bins": [
+            {
+              "lo": 0.0,
+              "hi": 0.1,
+              "n": 147,
+              "acc": 0.006802721088435374,
+              "conf": 0.030399659863945577
+            },
+            {
+              "lo": 0.1,
+              "hi": 0.2,
+              "n": 28,
+              "acc": 0.0,
+              "conf": 0.17745535714285715
+            },
+            {
+              "lo": 0.2,
+              "hi": 0.30000000000000004,
+              "n": 61,
+              "acc": 0.0,
+              "conf": 0.22489754098360656
+            },
+            {
+              "lo": 0.30000000000000004,
+              "hi": 0.4,
+              "n": 19,
+              "acc": 0.0,
+              "conf": 0.3569078947368421
+            },
+            {
+              "lo": 0.4,
+              "hi": 0.5,
+              "n": 22,
+              "acc": 0.045454545454545456,
+              "conf": 0.4318181818181818
+            },
+            {
+              "lo": 0.5,
+              "hi": 0.6000000000000001,
+              "n": 12,
+              "acc": 0.0,
+              "conf": 0.5911458333333334
+            },
+            {
+              "lo": 0.6000000000000001,
+              "hi": 0.7000000000000001,
+              "n": 3,
+              "acc": 0.0,
+              "conf": 0.6875
+            },
+            {
+              "lo": 0.7000000000000001,
+              "hi": 0.8,
+              "n": 16,
+              "acc": 0.0,
+              "conf": 0.765625
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.9,
+              "n": 6,
+              "acc": 0.0,
+              "conf": 0.8333333333333334
+            },
+            {
+              "lo": 0.9,
+              "hi": 1.0,
+              "n": 2,
+              "acc": 0.0,
+              "conf": 0.90625
+            }
+          ],
+          "degenerate": true,
+          "degenerate_note": "accuracy <= 0.01: ECE is mean confidence and the most under-confident arm wins by construction. Reported WITH the accuracy."
+        },
+        "mean_conf_by_novel_count": {
+          "0": -0.298071010625713,
+          "1": -0.3422968192012461,
+          "2": -0.38930224427392496
+        },
+        "n_novel_wells": 4,
+        "n_particles_novel": 300,
+        "n_particles": 1264,
+        "tol": 0.2590047727113351,
+        "wall_s": 0.0
+      },
+      {
+        "seed": 0,
+        "arm": "N3",
+        "config": {
+          "lr": 0.01,
+          "level": "b",
+          "payload_source": "fitted",
+          "tau": 0.05
+        },
+        "V2a_auroc": 0.7716839557399723,
+        "V2a_negative_label_permutation": 0.7250104537775771,
+        "V2a_negative_permuted_payloads": 0.7716770401106501,
+        "V2b_ece": {
+          "ece": 0.39398734177215194,
+          "acc": 0.0,
+          "mean_conf": 0.3939873417721519,
+          "n_bins": 10,
+          "bins": [
+            {
+              "lo": 0.0,
+              "hi": 0.1,
+              "n": 108,
+              "acc": 0.0,
+              "conf": 0.044849537037037035
+            },
+            {
+              "lo": 0.1,
+              "hi": 0.2,
+              "n": 5,
+              "acc": 0.0,
+              "conf": 0.13125
+            },
+            {
+              "lo": 0.2,
+              "hi": 0.30000000000000004,
+              "n": 18,
+              "acc": 0.0,
+              "conf": 0.234375
+            },
+            {
+              "lo": 0.30000000000000004,
+              "hi": 0.4,
+              "n": 30,
+              "acc": 0.0,
+              "conf": 0.35104166666666664
+            },
+            {
+              "lo": 0.4,
+              "hi": 0.5,
+              "n": 38,
+              "acc": 0.0,
+              "conf": 0.4777960526315789
+            },
+            {
+              "lo": 0.5,
+              "hi": 0.6000000000000001,
+              "n": 25,
+              "acc": 0.0,
+              "conf": 0.5375
+            },
+            {
+              "lo": 0.6000000000000001,
+              "hi": 0.7000000000000001,
+              "n": 22,
+              "acc": 0.0,
+              "conf": 0.6463068181818182
+            },
+            {
+              "lo": 0.7000000000000001,
+              "hi": 0.8,
+              "n": 26,
+              "acc": 0.0,
+              "conf": 0.7536057692307693
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.9,
+              "n": 24,
+              "acc": 0.0,
+              "conf": 0.8307291666666666
+            },
+            {
+              "lo": 0.9,
+              "hi": 1.0,
+              "n": 20,
+              "acc": 0.0,
+              "conf": 0.9453125
+            }
+          ],
+          "degenerate": true,
+          "degenerate_note": "accuracy <= 0.01: ECE is mean confidence and the most under-confident arm wins by construction. Reported WITH the accuracy."
+        },
+        "mean_conf_by_novel_count": {
+          "0": 8.531616572539011,
+          "1": 7.316086810315028,
+          "2": 6.824043002328835
+        },
+        "n_novel_wells": 4,
+        "n_particles_novel": 300,
+        "n_particles": 1264,
+        "tol": 0.2590047727113351,
+        "wall_s": 0.0
+      },
+      {
+        "seed": 0,
+        "arm": "N4",
+        "config": {
+          "key": "set_code",
+          "k": 1,
+          "weight": "idw"
+        },
+        "V2a_auroc": 0.5614730290456431,
+        "V2a_negative_label_permutation": 0.5162560422834396,
+        "V2a_negative_permuted_payloads": 0.5614730290456431,
+        "V2b_ece": {
+          "ece": 0.36402294303797467,
+          "acc": 0.0,
+          "mean_conf": 0.36402294303797467,
+          "n_bins": 10,
+          "bins": [
+            {
+              "lo": 0.0,
+              "hi": 0.1,
+              "n": 45,
+              "acc": 0.0,
+              "conf": 0.03819444444444445
+            },
+            {
+              "lo": 0.1,
+              "hi": 0.2,
+              "n": 42,
+              "acc": 0.0,
+              "conf": 0.15401785714285715
+            },
+            {
+              "lo": 0.2,
+              "hi": 0.30000000000000004,
+              "n": 61,
+              "acc": 0.0,
+              "conf": 0.2510245901639344
+            },
+            {
+              "lo": 0.30000000000000004,
+              "hi": 0.4,
+              "n": 61,
+              "acc": 0.0,
+              "conf": 0.33709016393442626
+            },
+            {
+              "lo": 0.4,
+              "hi": 0.5,
+              "n": 31,
+              "acc": 0.0,
+              "conf": 0.4637096774193548
+            },
+            {
+              "lo": 0.5,
+              "hi": 0.6000000000000001,
+              "n": 16,
+              "acc": 0.0,
+              "conf": 0.5546875
+            },
+            {
+              "lo": 0.6000000000000001,
+              "hi": 0.7000000000000001,
+              "n": 23,
+              "acc": 0.0,
+              "conf": 0.6684782608695652
+            },
+            {
+              "lo": 0.7000000000000001,
+              "hi": 0.8,
+              "n": 8,
+              "acc": 0.0,
+              "conf": 0.77734375
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.9,
+              "n": 11,
+              "acc": 0.0,
+              "conf": 0.8579545454545454
+            },
+            {
+              "lo": 0.9,
+              "hi": 1.0,
+              "n": 18,
+              "acc": 0.0,
+              "conf": 0.9270833333333334
+            }
+          ],
+          "degenerate": true,
+          "degenerate_note": "accuracy <= 0.01: ECE is mean confidence and the most under-confident arm wins by construction. Reported WITH the accuracy."
+        },
+        "mean_conf_by_novel_count": {
+          "0": -0.8848323869208495,
+          "1": -0.9411301489453763,
+          "2": -0.9812651901156642
+        },
+        "n_novel_wells": 4,
+        "n_particles_novel": 300,
+        "n_particles": 1264,
+        "tol": 0.2590047727113351,
+        "wall_s": 0.1
+      },
+      {
+        "seed": 0,
+        "arm": "N5",
+        "config": {
+          "lr": 0.01,
+          "hidden": 8,
+          "momentum": 0.0,
+          "decay": 0.0,
+          "gate": "surprise",
+          "chunk": 1
+        },
+        "V2a_auroc": 0.28321230982019363,
+        "V2a_negative_label_permutation": 0.28578118989077894,
+        "V2a_negative_permuted_payloads": 0.49881742738589213,
+        "V2b_ece": {
+          "ece": 0.6469541139240507,
+          "acc": 0.0,
+          "mean_conf": 0.6469541139240507,
+          "n_bins": 10,
+          "bins": [
+            {
+              "lo": 0.0,
+              "hi": 0.1,
+              "n": 4,
+              "acc": 0.0,
+              "conf": 0.03125
+            },
+            {
+              "lo": 0.1,
+              "hi": 0.2,
+              "n": 4,
+              "acc": 0.0,
+              "conf": 0.15625
+            },
+            {
+              "lo": 0.2,
+              "hi": 0.30000000000000004,
+              "n": 35,
+              "acc": 0.0,
+              "conf": 0.2571428571428571
+            },
+            {
+              "lo": 0.30000000000000004,
+              "hi": 0.4,
+              "n": 30,
+              "acc": 0.0,
+              "conf": 0.3333333333333333
+            },
+            {
+              "lo": 0.4,
+              "hi": 0.5,
+              "n": 42,
+              "acc": 0.0,
+              "conf": 0.4255952380952381
+            },
+            {
+              "lo": 0.5,
+              "hi": 0.6000000000000001,
+              "n": 32,
+              "acc": 0.0,
+              "conf": 0.5810546875
+            },
+            {
+              "lo": 0.6000000000000001,
+              "hi": 0.7000000000000001,
+              "n": 14,
+              "acc": 0.0,
+              "conf": 0.65625
+            },
+            {
+              "lo": 0.7000000000000001,
+              "hi": 0.8,
+              "n": 23,
+              "acc": 0.0,
+              "conf": 0.7703804347826086
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.9,
+              "n": 41,
+              "acc": 0.0,
+              "conf": 0.8300304878048781
+            },
+            {
+              "lo": 0.9,
+              "hi": 1.0,
+              "n": 91,
+              "acc": 0.0,
+              "conf": 0.9591346153846154
+            }
+          ],
+          "degenerate": true,
+          "degenerate_note": "accuracy <= 0.01: ECE is mean confidence and the most under-confident arm wins by construction. Reported WITH the accuracy."
+        },
+        "mean_conf_by_novel_count": {
+          "0": -0.09700342260766774,
+          "1": -0.09654511418557377,
+          "2": -0.08611502590611053
+        },
+        "n_novel_wells": 4,
+        "n_particles_novel": 300,
+        "n_particles": 1264,
+        "tol": 0.2590047727113351,
+        "wall_s": 0.1
+      },
+      {
+        "seed": 1,
+        "arm": "N1",
+        "config": {
+          "lr": 0.01,
+          "atoms_per_well": 6,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "V2a_auroc": 0.6117007042253522,
+        "V2a_negative_label_permutation": 0.48307799371629156,
+        "V2a_negative_permuted_payloads": 0.5063767605633803,
+        "V2b_ece": {
+          "ece": 0.5198598130841121,
+          "acc": 0.0,
+          "mean_conf": 0.5198598130841121,
+          "n_bins": 10,
+          "bins": [
+            {
+              "lo": 0.0,
+              "hi": 0.1,
+              "n": 49,
+              "acc": 0.0,
+              "conf": 0.04528061224489796
+            },
+            {
+              "lo": 0.1,
+              "hi": 0.2,
+              "n": 32,
+              "acc": 0.0,
+              "conf": 0.12890625
+            },
+            {
+              "lo": 0.2,
+              "hi": 0.30000000000000004,
+              "n": 8,
+              "acc": 0.0,
+              "conf": 0.22265625
+            },
+            {
+              "lo": 0.30000000000000004,
+              "hi": 0.4,
+              "n": 16,
+              "acc": 0.0,
+              "conf": 0.353515625
+            },
+            {
+              "lo": 0.4,
+              "hi": 0.5,
+              "n": 56,
+              "acc": 0.0,
+              "conf": 0.4799107142857143
+            },
+            {
+              "lo": 0.5,
+              "hi": 0.6000000000000001,
+              "n": 20,
+              "acc": 0.0,
+              "conf": 0.5578125
+            },
+            {
+              "lo": 0.6000000000000001,
+              "hi": 0.7000000000000001,
+              "n": 19,
+              "acc": 0.0,
+              "conf": 0.6348684210526315
+            },
+            {
+              "lo": 0.7000000000000001,
+              "hi": 0.8,
+              "n": 47,
+              "acc": 0.0,
+              "conf": 0.773936170212766
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.9,
+              "n": 36,
+              "acc": 0.0,
+              "conf": 0.8472222222222222
+            },
+            {
+              "lo": 0.9,
+              "hi": 1.0,
+              "n": 38,
+              "acc": 0.0,
+              "conf": 0.9506578947368421
+            }
+          ],
+          "degenerate": true,
+          "degenerate_note": "accuracy <= 0.01: ECE is mean confidence and the most under-confident arm wins by construction. Reported WITH the accuracy."
+        },
+        "mean_conf_by_novel_count": {
+          "0": -6.256310420769911,
+          "1": -6.273773729801178,
+          "2": -6.286763849668205
+        },
+        "n_novel_wells": 4,
+        "n_particles_novel": 284,
+        "n_particles": 1284,
+        "tol": 0.2555770057071891,
+        "wall_s": 0.3
+      },
+      {
+        "seed": 1,
+        "arm": "N2",
+        "config": {
+          "variant": "kmeans",
+          "n_codes": 16,
+          "payload_source": "written",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "V2a_auroc": 0.4679225352112676,
+        "V2a_negative_label_permutation": 0.5719709762262953,
+        "V2a_negative_permuted_payloads": 0.4679225352112676,
+        "V2b_ece": {
+          "ece": 0.16462227414330213,
+          "acc": 0.012461059190031152,
+          "mean_conf": 0.16442757009345793,
+          "n_bins": 10,
+          "bins": [
+            {
+              "lo": 0.0,
+              "hi": 0.1,
+              "n": 191,
+              "acc": 0.020942408376963352,
+              "conf": 0.01030759162303665
+            },
+            {
+              "lo": 0.1,
+              "hi": 0.2,
+              "n": 31,
+              "acc": 0.0,
+              "conf": 0.1592741935483871
+            },
+            {
+              "lo": 0.2,
+              "hi": 0.30000000000000004,
+              "n": 15,
+              "acc": 0.0,
+              "conf": 0.23125
+            },
+            {
+              "lo": 0.30000000000000004,
+              "hi": 0.4,
+              "n": 35,
+              "acc": 0.0,
+              "conf": 0.33482142857142855
+            },
+            {
+              "lo": 0.4,
+              "hi": 0.5,
+              "n": 18,
+              "acc": 0.0,
+              "conf": 0.4670138888888889
+            },
+            {
+              "lo": 0.5,
+              "hi": 0.6000000000000001,
+              "n": 6,
+              "acc": 0.0,
+              "conf": 0.59375
+            },
+            {
+              "lo": 0.6000000000000001,
+              "hi": 0.7000000000000001,
+              "n": 6,
+              "acc": 0.0,
+              "conf": 0.6510416666666666
+            },
+            {
+              "lo": 0.7000000000000001,
+              "hi": 0.8,
+              "n": 14,
+              "acc": 0.0,
+              "conf": 0.7410714285714286
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.9,
+              "n": 2,
+              "acc": 0.0,
+              "conf": 0.8125
+            },
+            {
+              "lo": 0.9,
+              "hi": 1.0,
+              "n": 3,
+              "acc": 0.0,
+              "conf": 0.9375
+            }
+          ],
+          "degenerate": false,
+          "degenerate_note": "accuracy <= 0.01: ECE is mean confidence and the most under-confident arm wins by construction. Reported WITH the accuracy."
+        },
+        "mean_conf_by_novel_count": {
+          "0": -0.35161585370960585,
+          "1": -0.35721522550107976,
+          "2": -0.36098348155690685
+        },
+        "n_novel_wells": 4,
+        "n_particles_novel": 284,
+        "n_particles": 1284,
+        "tol": 0.2555770057071891,
+        "wall_s": 0.0
+      },
+      {
+        "seed": 1,
+        "arm": "N3",
+        "config": {
+          "lr": 0.01,
+          "level": "b",
+          "payload_source": "fitted",
+          "tau": 0.05
+        },
+        "V2a_auroc": 0.5504049295774648,
+        "V2a_negative_label_permutation": 0.45415997189046836,
+        "V2a_negative_permuted_payloads": 0.5502359154929577,
+        "V2b_ece": {
+          "ece": 0.44957165109034264,
+          "acc": 0.0,
+          "mean_conf": 0.4495716510903427,
+          "n_bins": 10,
+          "bins": [
+            {
+              "lo": 0.0,
+              "hi": 0.1,
+              "n": 67,
+              "acc": 0.0,
+              "conf": 0.03451492537313433
+            },
+            {
+              "lo": 0.1,
+              "hi": 0.2,
+              "n": 68,
+              "acc": 0.0,
+              "conf": 0.17003676470588236
+            },
+            {
+              "lo": 0.2,
+              "hi": 0.30000000000000004,
+              "n": 11,
+              "acc": 0.0,
+              "conf": 0.26704545454545453
+            },
+            {
+              "lo": 0.30000000000000004,
+              "hi": 0.4,
+              "n": 8,
+              "acc": 0.0,
+              "conf": 0.3359375
+            },
+            {
+              "lo": 0.4,
+              "hi": 0.5,
+              "n": 17,
+              "acc": 0.0,
+              "conf": 0.4577205882352941
+            },
+            {
+              "lo": 0.5,
+              "hi": 0.6000000000000001,
+              "n": 28,
+              "acc": 0.0,
+              "conf": 0.5803571428571429
+            },
+            {
+              "lo": 0.6000000000000001,
+              "hi": 0.7000000000000001,
+              "n": 30,
+              "acc": 0.0,
+              "conf": 0.6625
+            },
+            {
+              "lo": 0.7000000000000001,
+              "hi": 0.8,
+              "n": 26,
+              "acc": 0.0,
+              "conf": 0.7620192307692307
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.9,
+              "n": 23,
+              "acc": 0.0,
+              "conf": 0.8600543478260869
+            },
+            {
+              "lo": 0.9,
+              "hi": 1.0,
+              "n": 43,
+              "acc": 0.0,
+              "conf": 0.9607558139534884
+            }
+          ],
+          "degenerate": true,
+          "degenerate_note": "accuracy <= 0.01: ECE is mean confidence and the most under-confident arm wins by construction. Reported WITH the accuracy."
+        },
+        "mean_conf_by_novel_count": {
+          "0": 6.940810903448325,
+          "1": 7.386666516889818,
+          "2": 7.493243477540091
+        },
+        "n_novel_wells": 4,
+        "n_particles_novel": 284,
+        "n_particles": 1284,
+        "tol": 0.2555770057071891,
+        "wall_s": 0.0
+      },
+      {
+        "seed": 1,
+        "arm": "N4",
+        "config": {
+          "key": "set_code",
+          "k": 1,
+          "weight": "idw"
+        },
+        "V2a_auroc": 0.6837992957746479,
+        "V2a_negative_label_permutation": 0.40878729885822085,
+        "V2a_negative_permuted_payloads": 0.6837992957746479,
+        "V2b_ece": {
+          "ece": 0.3484228971962616,
+          "acc": 0.0,
+          "mean_conf": 0.3484228971962617,
+          "n_bins": 10,
+          "bins": [
+            {
+              "lo": 0.0,
+              "hi": 0.1,
+              "n": 76,
+              "acc": 0.0,
+              "conf": 0.02261513157894737
+            },
+            {
+              "lo": 0.1,
+              "hi": 0.2,
+              "n": 25,
+              "acc": 0.0,
+              "conf": 0.16
+            },
+            {
+              "lo": 0.2,
+              "hi": 0.30000000000000004,
+              "n": 60,
+              "acc": 0.0,
+              "conf": 0.25104166666666666
+            },
+            {
+              "lo": 0.30000000000000004,
+              "hi": 0.4,
+              "n": 31,
+              "acc": 0.0,
+              "conf": 0.32560483870967744
+            },
+            {
+              "lo": 0.4,
+              "hi": 0.5,
+              "n": 48,
+              "acc": 0.0,
+              "conf": 0.4700520833333333
+            },
+            {
+              "lo": 0.5,
+              "hi": 0.6000000000000001,
+              "n": 15,
+              "acc": 0.0,
+              "conf": 0.5645833333333333
+            },
+            {
+              "lo": 0.6000000000000001,
+              "hi": 0.7000000000000001,
+              "n": 28,
+              "acc": 0.0,
+              "conf": 0.6662946428571429
+            },
+            {
+              "lo": 0.7000000000000001,
+              "hi": 0.8,
+              "n": 12,
+              "acc": 0.0,
+              "conf": 0.71875
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.9,
+              "n": 16,
+              "acc": 0.0,
+              "conf": 0.822265625
+            },
+            {
+              "lo": 0.9,
+              "hi": 1.0,
+              "n": 10,
+              "acc": 0.0,
+              "conf": 0.95
+            }
+          ],
+          "degenerate": true,
+          "degenerate_note": "accuracy <= 0.01: ECE is mean confidence and the most under-confident arm wins by construction. Reported WITH the accuracy."
+        },
+        "mean_conf_by_novel_count": {
+          "0": -1.151149912350453,
+          "1": -1.1190711217350326,
+          "2": -1.1159524434187915
+        },
+        "n_novel_wells": 4,
+        "n_particles_novel": 284,
+        "n_particles": 1284,
+        "tol": 0.2555770057071891,
+        "wall_s": 0.1
+      },
+      {
+        "seed": 1,
+        "arm": "N5",
+        "config": {
+          "lr": 0.01,
+          "hidden": 8,
+          "momentum": 0.0,
+          "decay": 0.0,
+          "gate": "surprise",
+          "chunk": 1
+        },
+        "V2a_auroc": 0.3053274647887324,
+        "V2a_negative_label_permutation": 0.6354937418767206,
+        "V2a_negative_permuted_payloads": 0.35972887323943664,
+        "V2b_ece": {
+          "ece": 0.5390381619937694,
+          "acc": 0.0,
+          "mean_conf": 0.5390381619937694,
+          "n_bins": 10,
+          "bins": [
+            {
+              "lo": 0.0,
+              "hi": 0.1,
+              "n": 30,
+              "acc": 0.0,
+              "conf": 0.04791666666666667
+            },
+            {
+              "lo": 0.1,
+              "hi": 0.2,
+              "n": 24,
+              "acc": 0.0,
+              "conf": 0.13020833333333334
+            },
+            {
+              "lo": 0.2,
+              "hi": 0.30000000000000004,
+              "n": 26,
+              "acc": 0.0,
+              "conf": 0.25721153846153844
+            },
+            {
+              "lo": 0.30000000000000004,
+              "hi": 0.4,
+              "n": 42,
+              "acc": 0.0,
+              "conf": 0.33705357142857145
+            },
+            {
+              "lo": 0.4,
+              "hi": 0.5,
+              "n": 29,
+              "acc": 0.0,
+              "conf": 0.4536637931034483
+            },
+            {
+              "lo": 0.5,
+              "hi": 0.6000000000000001,
+              "n": 16,
+              "acc": 0.0,
+              "conf": 0.564453125
+            },
+            {
+              "lo": 0.6000000000000001,
+              "hi": 0.7000000000000001,
+              "n": 51,
+              "acc": 0.0,
+              "conf": 0.6446078431372549
+            },
+            {
+              "lo": 0.7000000000000001,
+              "hi": 0.8,
+              "n": 19,
+              "acc": 0.0,
+              "conf": 0.725328947368421
+            },
+            {
+              "lo": 0.8,
+              "hi": 0.9,
+              "n": 23,
+              "acc": 0.0,
+              "conf": 0.8260869565217391
+            },
+            {
+              "lo": 0.9,
+              "hi": 1.0,
+              "n": 61,
+              "acc": 0.0,
+              "conf": 0.9800204918032787
+            }
+          ],
+          "degenerate": true,
+          "degenerate_note": "accuracy <= 0.01: ECE is mean confidence and the most under-confident arm wins by construction. Reported WITH the accuracy."
+        },
+        "mean_conf_by_novel_count": {
+          "0": -0.07074028168303462,
+          "1": -0.07454041597884498,
+          "2": -0.075563580612652
+        },
+        "n_novel_wells": 4,
+        "n_particles_novel": 284,
+        "n_particles": 1284,
+        "tol": 0.2555770057071891,
+        "wall_s": 0.1
+      }
+    ],
+    "per_arm": {
+      "N1": {
+        "V2a": {
+          "mean": 0.6422438514211132,
+          "sd": 0.04319453300180299,
+          "n": 2,
+          "two_se": 0.06108629439152202,
+          "values": [
+            0.6727869986168742,
+            0.6117007042253522
+          ]
+        },
+        "V2a_negative_label_permutation": {
+          "mean": 0.5043118404529072,
+          "sd": 0.030029194036273472,
+          "n": 2,
+          "two_se": 0.042467693473231205,
+          "values": [
+            0.5255456871895228,
+            0.48307799371629156
+          ]
+        },
+        "V2a_negative_permuted_payloads": {
+          "mean": 0.6018450192858396,
+          "sd": 0.13501250626144537,
+          "n": 2,
+          "two_se": 0.19093651744491844,
+          "values": [
+            0.6973132780082988,
+            0.5063767605633803
+          ]
+        },
+        "V2b_ece": {
+          "mean": 0.550525238820537,
+          "sd": 0.04336746097239711,
+          "n": 2,
+          "two_se": 0.06133085147284988,
+          "values": [
+            0.581190664556962,
+            0.5198598130841121
+          ]
+        },
+        "V2b_acc": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "V2b_degenerate": true
+      },
+      "N2": {
+        "V2a": {
+          "mean": 0.6294695663608205,
+          "sd": 0.22846200241280662,
+          "n": 2,
+          "two_se": 0.32309406229910587,
+          "values": [
+            0.7910165975103735,
+            0.4679225352112676
+          ]
+        },
+        "V2a_negative_label_permutation": {
+          "mean": 0.5466976830719179,
+          "sd": 0.03574183394475158,
+          "n": 2,
+          "two_se": 0.05054658630875475,
+          "values": [
+            0.5214243899175406,
+            0.5719709762262953
+          ]
+        },
+        "V2a_negative_permuted_payloads": {
+          "mean": 0.6294695663608205,
+          "sd": 0.22846200241280662,
+          "n": 2,
+          "two_se": 0.32309406229910587,
+          "values": [
+            0.7910165975103735,
+            0.4679225352112676
+          ]
+        },
+        "V2b_ece": {
+          "mean": 0.1861976085906384,
+          "sd": 0.030512130588158395,
+          "n": 2,
+          "two_se": 0.04315066889467256,
+          "values": [
+            0.2077729430379747,
+            0.16462227414330213
+          ]
+        },
+        "V2b_acc": {
+          "mean": 0.009395086557040893,
+          "sd": 0.004335940079439574,
+          "n": 2,
+          "two_se": 0.00613194526598052,
+          "values": [
+            0.006329113924050633,
+            0.012461059190031152
+          ]
+        },
+        "V2b_degenerate": false
+      },
+      "N3": {
+        "V2a": {
+          "mean": 0.6610444426587185,
+          "sd": 0.1564678999338645,
+          "n": 2,
+          "two_se": 0.22127902616250747,
+          "values": [
+            0.7716839557399723,
+            0.5504049295774648
+          ]
+        },
+        "V2a_negative_label_permutation": {
+          "mean": 0.5895852128340228,
+          "sd": 0.19152021243001877,
+          "n": 2,
+          "two_se": 0.27085048188710875,
+          "values": [
+            0.7250104537775771,
+            0.45415997189046836
+          ]
+        },
+        "V2a_negative_permuted_payloads": {
+          "mean": 0.6609564778018039,
+          "sd": 0.15658252085074562,
+          "n": 2,
+          "two_se": 0.2214411246176924,
+          "values": [
+            0.7716770401106501,
+            0.5502359154929577
+          ]
+        },
+        "V2b_ece": {
+          "mean": 0.4217794964312473,
+          "sd": 0.03930404204646324,
+          "n": 2,
+          "two_se": 0.05558430931819069,
+          "values": [
+            0.39398734177215194,
+            0.44957165109034264
+          ]
+        },
+        "V2b_acc": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "V2b_degenerate": true
+      },
+      "N4": {
+        "V2a": {
+          "mean": 0.6226361624101455,
+          "sd": 0.08649773272131366,
+          "n": 2,
+          "two_se": 0.1223262667290048,
+          "values": [
+            0.5614730290456431,
+            0.6837992957746479
+          ]
+        },
+        "V2a_negative_label_permutation": {
+          "mean": 0.4625216705708302,
+          "sd": 0.07599187724156936,
+          "n": 2,
+          "two_se": 0.10746874342521873,
+          "values": [
+            0.5162560422834396,
+            0.40878729885822085
+          ]
+        },
+        "V2a_negative_permuted_payloads": {
+          "mean": 0.6226361624101455,
+          "sd": 0.08649773272131366,
+          "n": 2,
+          "two_se": 0.1223262667290048,
+          "values": [
+            0.5614730290456431,
+            0.6837992957746479
+          ]
+        },
+        "V2b_ece": {
+          "mean": 0.35622292011711815,
+          "sd": 0.011030898201496293,
+          "n": 2,
+          "two_se": 0.015600045841713038,
+          "values": [
+            0.36402294303797467,
+            0.3484228971962616
+          ]
+        },
+        "V2b_acc": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "V2b_degenerate": true
+      },
+      "N5": {
+        "V2a": {
+          "mean": 0.294269887304463,
+          "sd": 0.015637776045245137,
+          "n": 2,
+          "two_se": 0.02211515496853877,
+          "values": [
+            0.28321230982019363,
+            0.3053274647887324
+          ]
+        },
+        "V2a_negative_label_permutation": {
+          "mean": 0.46063746588374976,
+          "sd": 0.24728411697531236,
+          "n": 2,
+          "two_se": 0.3497125519859416,
+          "values": [
+            0.28578118989077894,
+            0.6354937418767206
+          ]
+        },
+        "V2a_negative_permuted_payloads": {
+          "mean": 0.4292731503126644,
+          "sd": 0.09835045982239096,
+          "n": 2,
+          "two_se": 0.13908855414645546,
+          "values": [
+            0.49881742738589213,
+            0.35972887323943664
+          ]
+        },
+        "V2b_ece": {
+          "mean": 0.59299613795891,
+          "sd": 0.07630810140810337,
+          "n": 2,
+          "two_se": 0.10791595193028125,
+          "values": [
+            0.6469541139240507,
+            0.5390381619937694
+          ]
+        },
+        "V2b_acc": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "V2b_degenerate": true
+      }
+    },
+    "null_star_V2a": 0.6610444426587185,
+    "null_star_V2a_arm": "N3",
+    "best_V2b_ece": 0.1861976085906384,
+    "rider_R2": "the novel/known split is NOT frozen: n_novel=4 wells by default_rng(20260811+seed), never written. Spoke B must use the same rule.",
+    "designed_negative_note": "\u26d4 permuted payloads does NOT bind an address-geometry confidence channel and is reported as structurally invariant, never as a pass. The binding negative is the label permutation."
+  },
+  "ceiling": {
+    "stage": "ceiling",
+    "cells": [
+      {
+        "n_combos": 1820,
+        "noiseless_combo_exact": 1.0,
+        "noiseless_accuracy": 1.0,
+        "as_launched_combo_exact": 0.578125,
+        "as_launched_accuracy": 0.578125,
+        "asserted_set_exact": 0.015625,
+        "asserted_set_precision": 0.44140625,
+        "seed": 0,
+        "wall_s": 0.3
+      },
+      {
+        "n_combos": 1820,
+        "noiseless_combo_exact": 1.0,
+        "noiseless_accuracy": 1.0,
+        "as_launched_combo_exact": 0.625,
+        "as_launched_accuracy": 0.625,
+        "asserted_set_exact": 0.0,
+        "asserted_set_precision": 0.40625,
+        "seed": 1,
+        "wall_s": 0.1
+      }
+    ],
+    "noiseless": {
+      "mean": 1.0,
+      "sd": 0.0,
+      "n": 2,
+      "two_se": 0.0,
+      "values": [
+        1.0,
+        1.0
+      ]
+    },
+    "as_launched": {
+      "mean": 0.6015625,
+      "sd": 0.03314563036811941,
+      "n": 2,
+      "two_se": 0.04687499999999999,
+      "values": [
+        0.578125,
+        0.625
+      ]
+    },
+    "asserted_set_exact": {
+      "mean": 0.0078125,
+      "sd": 0.011048543456039806,
+      "n": 2,
+      "two_se": 0.015625,
+      "values": [
+        0.015625,
+        0.0
+      ]
+    },
+    "banked_C2W5": {
+      "noiseless": 1.0,
+      "as_launched": 0.2719
+    },
+    "label": "\u26d4 DECLARED OUT-OF-CLASS \u2014 never an arm, never a score."
+  },
+  "oracle": {
+    "stage": "oracle",
+    "cells": [
+      {
+        "seed": 0,
+        "fitted_on_assignments": {
+          "agreement_unseen": 1.0,
+          "agreement_seen": 1.0,
+          "native_unseen": 0.0
+        },
+        "fitted_on_read_objective": {
+          "agreement_unseen": 0.93359375,
+          "agreement_seen": 0.90625,
+          "native_unseen": 0.0
+        },
+        "physics_store_unseen_zero_param": 0.015625
+      }
+    ],
+    "agreement_fitted_on_assignments": {
+      "mean": 1.0,
+      "sd": 0.0,
+      "n": 1,
+      "two_se": 0.0,
+      "values": [
+        1.0
+      ]
+    },
+    "agreement_fitted_on_read_objective": {
+      "mean": 0.93359375,
+      "sd": 0.0,
+      "n": 1,
+      "two_se": 0.0,
+      "values": [
+        0.93359375
+      ]
+    },
+    "banked_C2W5": {
+      "assignments": 0.8888,
+      "read_objective": 0.2576
+    },
+    "F5_fires_bar": 0.99,
+    "rider_R3": "the target is the WRITTEN, UN-ORGANIZED physics store (the trained organizer is spoke B's)",
+    "carry_this_sentence": "The 0.89-vs-0.26 gap is an optimisation gap in fitting the diagram, NOT evidence of a structurally non-VQ channel."
+  },
+  "guards": {
+    "stage": "guards",
+    "cells": [
+      {
+        "seed": 0,
+        "phi_bytes": 320,
+        "phi_byte_hash": "b7aea9e859f746dae77e6827454034c2",
+        "phi_hash_matches_frozen": false,
+        "launch_bit_identical_to_physics_read": true,
+        "launch_point_hash": "516c3d9cbd668bdea4b8c5aeb415e356",
+        "tol": 0.25644258985889096,
+        "chance": 0.0,
+        "frozen_check": {
+          "frozen_verified": false,
+          "tol_measured": 0.25644258985889096,
+          "seed": 0,
+          "note": "\u26d4 FROZEN-INTERFACES-C2W11.json not found: the cell ran on its own construction and NOTHING here is verified against spoke A."
+        },
+        "val_rule4": {
+          "n_val": 32,
+          "n_rule4_valid": 13,
+          "frac_rule4_valid": 0.40625
+        },
+        "head_bytes": {
+          "head_bytes": 0,
+          "reuses_phi_codes_bytes": 256
+        }
+      },
+      {
+        "seed": 1,
+        "phi_bytes": 320,
+        "phi_byte_hash": "b7aea9e859f746dae77e6827454034c2",
+        "phi_hash_matches_frozen": false,
+        "launch_bit_identical_to_physics_read": true,
+        "launch_point_hash": "bd5682ba30b1513668c5ac73ab74e2dd",
+        "tol": 0.28846652201712913,
+        "chance": 0.015625,
+        "frozen_check": {
+          "frozen_verified": false,
+          "tol_measured": 0.28846652201712913,
+          "seed": 1,
+          "note": "\u26d4 FROZEN-INTERFACES-C2W11.json not found: the cell ran on its own construction and NOTHING here is verified against spoke A."
+        },
+        "val_rule4": {
+          "n_val": 32,
+          "n_rule4_valid": 10,
+          "frac_rule4_valid": 0.3125
+        },
+        "head_bytes": {
+          "head_bytes": 0,
+          "reuses_phi_codes_bytes": 256
+        }
+      }
+    ],
+    "phi_byte_identical_across_seeds": true,
+    "all_launches_bit_identical": true,
+    "all_phi_match_frozen": false,
+    "VALUE_LAUNCH_KEY": 7000,
+    "rider_R1": "the VALUE launch key is NOT frozen by spoke A; this spoke adopts k3_k4_k5's PRNGKey(7000+seed). Spoke B must match or V1/V3 are scored on different launches."
+  },
+  "grid_stage": {
+    "stage": "grid",
+    "seeds": [
+      0
+    ],
+    "records": {
+      "N1": [
+        {
+          "config": {
+            "lr": 0.01,
+            "atoms_per_well": 6,
+            "tau": 1.0,
+            "init": "written",
+            "read": "soft"
+          },
+          "val_acc": 0.0,
+          "val_mse": 1.2979154189726285,
+          "train_acc": 0.041666666666666664,
+          "train_mse": 0.37204860426346714,
+          "n_params": 1344,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 1.2979154189726285,
+                "diverged": false
+              },
+              "train": {
+                "acc": 0.041666666666666664,
+                "mse": 0.37204860426346714,
+                "diverged": false
+              },
+              "n_params": 1344
+            }
+          ]
+        },
+        {
+          "config": {
+            "lr": 0.01,
+            "atoms_per_well": 6,
+            "tau": 1.0,
+            "init": "written",
+            "read": "hard"
+          },
+          "val_acc": 0.0,
+          "val_mse": 1.542660618700015,
+          "train_acc": 0.0,
+          "train_mse": 0.4152183187150742,
+          "n_params": 1344,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 1.542660618700015,
+                "diverged": false
+              },
+              "train": {
+                "acc": 0.0,
+                "mse": 0.4152183187150742,
+                "diverged": false
+              },
+              "n_params": 1344
+            }
+          ]
+        }
+      ],
+      "N2": [
+        {
+          "config": {
+            "variant": "kmeans",
+            "n_codes": 16,
+            "payload_source": "fitted",
+            "commitment": 0.0,
+            "lr": 0.0
+          },
+          "val_acc": 0.0,
+          "val_mse": 8.341758347806381,
+          "train_acc": 0.2916666666666667,
+          "train_mse": 0.2140220362771883,
+          "n_params": 192,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 8.341758347806381,
+                "diverged": false
+              },
+              "train": {
+                "acc": 0.2916666666666667,
+                "mse": 0.2140220362771883,
+                "diverged": false
+              },
+              "n_params": 192
+            }
+          ]
+        },
+        {
+          "config": {
+            "variant": "kmeans",
+            "n_codes": 16,
+            "payload_source": "written",
+            "commitment": 0.0,
+            "lr": 0.0
+          },
+          "val_acc": 0.0,
+          "val_mse": 1.1686238105867082,
+          "train_acc": 0.0,
+          "train_mse": 1.473180661636377,
+          "n_params": 192,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 1.1686238105867082,
+                "diverged": false
+              },
+              "train": {
+                "acc": 0.0,
+                "mse": 1.473180661636377,
+                "diverged": false
+              },
+              "n_params": 192
+            }
+          ]
+        },
+        {
+          "config": {
+            "variant": "product_vq",
+            "n_codes": 16,
+            "payload_source": "fitted",
+            "commitment": 0.0,
+            "lr": 0.0
+          },
+          "val_acc": 0.0,
+          "val_mse": 2.250384321941016,
+          "train_acc": 0.25,
+          "train_mse": 0.18683543519375442,
+          "n_params": 320,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 2.250384321941016,
+                "diverged": false
+              },
+              "train": {
+                "acc": 0.25,
+                "mse": 0.18683543519375442,
+                "diverged": false
+              },
+              "n_params": 320
+            }
+          ]
+        },
+        {
+          "config": {
+            "variant": "vq_ste",
+            "n_codes": 16,
+            "payload_source": "fitted",
+            "commitment": 0.0,
+            "lr": 0.01
+          },
+          "val_acc": 0.0,
+          "val_mse": 8.341758347806381,
+          "train_acc": 0.2916666666666667,
+          "train_mse": 0.2140220362771883,
+          "n_params": 192,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 8.341758347806381,
+                "diverged": false
+              },
+              "train": {
+                "acc": 0.2916666666666667,
+                "mse": 0.2140220362771883,
+                "diverged": false
+              },
+              "n_params": 192
+            }
+          ]
+        }
+      ],
+      "N3": [
+        {
+          "config": {
+            "lr": 0.01,
+            "level": "b",
+            "payload_source": "fitted",
+            "tau": 0.05
+          },
+          "val_acc": 0.0,
+          "val_mse": 1.0591514734387173,
+          "train_acc": 0.0,
+          "train_mse": 0.4943034171767777,
+          "n_params": 144,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 1.0591514734387173,
+                "diverged": false
+              },
+              "train": {
+                "acc": 0.0,
+                "mse": 0.4943034171767777,
+                "diverged": false
+              },
+              "n_params": 144
+            }
+          ]
+        },
+        {
+          "config": {
+            "lr": 0.01,
+            "level": "b",
+            "payload_source": "fitted",
+            "tau": 0.2
+          },
+          "val_acc": 0.0,
+          "val_mse": 1.0593606767614148,
+          "train_acc": 0.0,
+          "train_mse": 0.49431389524269687,
+          "n_params": 144,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 1.0593606767614148,
+                "diverged": false
+              },
+              "train": {
+                "acc": 0.0,
+                "mse": 0.49431389524269687,
+                "diverged": false
+              },
+              "n_params": 144
+            }
+          ]
+        }
+      ],
+      "N4": [
+        {
+          "config": {
+            "key": "set_code",
+            "k": 1,
+            "weight": "idw"
+          },
+          "val_acc": 0.0,
+          "val_mse": 1.4913123616284911,
+          "train_acc": 1.0,
+          "train_mse": 0.0,
+          "n_params": 0,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 1.4913123616284911,
+                "diverged": false
+              },
+              "train": {
+                "acc": 1.0,
+                "mse": 0.0,
+                "diverged": false
+              },
+              "n_params": 0
+            }
+          ]
+        },
+        {
+          "config": {
+            "key": "launch_mean",
+            "k": 1,
+            "weight": "idw"
+          },
+          "val_acc": 0.0,
+          "val_mse": 1.6004974910569025,
+          "train_acc": 1.0,
+          "train_mse": 0.0,
+          "n_params": 0,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 1.6004974910569025,
+                "diverged": false
+              },
+              "train": {
+                "acc": 1.0,
+                "mse": 0.0,
+                "diverged": false
+              },
+              "n_params": 0
+            }
+          ]
+        },
+        {
+          "config": {
+            "key": "launch_flat",
+            "k": 1,
+            "weight": "idw"
+          },
+          "val_acc": 0.0,
+          "val_mse": 1.5913684811037334,
+          "train_acc": 1.0,
+          "train_mse": 0.0,
+          "n_params": 0,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 1.5913684811037334,
+                "diverged": false
+              },
+              "train": {
+                "acc": 1.0,
+                "mse": 0.0,
+                "diverged": false
+              },
+              "n_params": 0
+            }
+          ]
+        }
+      ],
+      "N5": [
+        {
+          "config": {
+            "lr": 0.01,
+            "hidden": 8,
+            "momentum": 0.0,
+            "decay": 0.0,
+            "gate": "surprise",
+            "chunk": 1
+          },
+          "val_acc": 0.0,
+          "val_mse": 2.890662355221613,
+          "train_acc": 0.0,
+          "train_mse": 1.4088556722017163,
+          "n_params": 208,
+          "diverged": false,
+          "per_seed": [
+            {
+              "seed": 0,
+              "val": {
+                "acc": 0.0,
+                "mse": 2.890662355221613,
+                "diverged": false
+              },
+              "train": {
+                "acc": 0.0,
+                "mse": 1.4088556722017163,
+                "diverged": false
+              },
+              "n_params": 208
+            }
+          ]
+        }
+      ]
+    },
+    "selected": {
+      "N1": {
+        "config": {
+          "lr": 0.01,
+          "atoms_per_well": 6,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "val_acc": 0.0,
+        "val_mse": 1.2979154189726285,
+        "train_acc": 0.041666666666666664,
+        "train_mse": 0.37204860426346714,
+        "n_params": 1344,
+        "wall_s": 1.1,
+        "diverged_can_win": false
+      },
+      "N2": {
+        "config": {
+          "variant": "kmeans",
+          "n_codes": 16,
+          "payload_source": "written",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "val_acc": 0.0,
+        "val_mse": 1.1686238105867082,
+        "train_acc": 0.0,
+        "train_mse": 1.473180661636377,
+        "n_params": 192,
+        "wall_s": 0.2,
+        "diverged_can_win": false
+      },
+      "N3": {
+        "config": {
+          "lr": 0.01,
+          "level": "b",
+          "payload_source": "fitted",
+          "tau": 0.05
+        },
+        "val_acc": 0.0,
+        "val_mse": 1.0591514734387173,
+        "train_acc": 0.0,
+        "train_mse": 0.4943034171767777,
+        "n_params": 144,
+        "wall_s": 0.2,
+        "diverged_can_win": false
+      },
+      "N4": {
+        "config": {
+          "key": "set_code",
+          "k": 1,
+          "weight": "idw"
+        },
+        "val_acc": 0.0,
+        "val_mse": 1.4913123616284911,
+        "train_acc": 1.0,
+        "train_mse": 0.0,
+        "n_params": 0,
+        "wall_s": 0.1,
+        "diverged_can_win": false
+      },
+      "N5": {
+        "config": {
+          "lr": 0.01,
+          "hidden": 8,
+          "momentum": 0.0,
+          "decay": 0.0,
+          "gate": "surprise",
+          "chunk": 1
+        },
+        "val_acc": 0.0,
+        "val_mse": 2.890662355221613,
+        "train_acc": 0.0,
+        "train_mse": 1.4088556722017163,
+        "n_params": 208,
+        "wall_s": 0.8,
+        "diverged_can_win": false
+      }
+    },
+    "n_configs": {
+      "N1": 2,
+      "N2": 4,
+      "N3": 2,
+      "N4": 3,
+      "N5": 1
+    },
+    "n_diverged": {
+      "N1": 0,
+      "N2": 0,
+      "N3": 0,
+      "N4": 0,
+      "N5": 0
+    }
+  },
+  "score": {
+    "stage": "score",
+    "cells": [
+      {
+        "seed": 0,
+        "arm": "N1",
+        "config": {
+          "lr": 0.01,
+          "atoms_per_well": 6,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.0,
+        "tol": 0.25644258985889096,
+        "ledger": {
+          "arm": "N1",
+          "n_params": 1344,
+          "param_bytes": 5376,
+          "n_state": 0,
+          "state_bytes": 0,
+          "phi_bytes": 576,
+          "total_bytes": 5952,
+          "n_atoms": 96,
+          "read_flops": 1920,
+          "atoms_per_well": 6,
+          "init": "written"
+        },
+        "train": {
+          "loss_first": 1.322033405303955,
+          "loss_last": 0.4271070957183838
+        },
+        "native_unseen": {
+          "acc": 0.0,
+          "mse": 1.2680691372588808,
+          "diverged": false
+        },
+        "native_seen": {
+          "acc": 0.0,
+          "mse": 0.40826361565931923,
+          "diverged": false
+        },
+        "native_curve": {
+          "x0.25": 0.0,
+          "x0.5": 0.0,
+          "x1": 0.0,
+          "x2": 0.0,
+          "x4": 0.40625
+        },
+        "readers_unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "readers_seen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "best_reader_unseen": 0.0,
+        "best_unseen": 0.0,
+        "launder_shuffle_phi": 0.0,
+        "bytes": {
+          "store": 5376,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 416,
+          "state": 0,
+          "total_bytes": 6112,
+          "arm": "N1",
+          "reader_params_max": 104,
+          "read_mult_adds_per_query": 1920
+        },
+        "wall_s": 1.4
+      },
+      {
+        "seed": 0,
+        "arm": "N2",
+        "config": {
+          "variant": "kmeans",
+          "n_codes": 16,
+          "payload_source": "written",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "chance": 0.0,
+        "tol": 0.25644258985889096,
+        "ledger": {
+          "arm": "N2",
+          "n_params": 192,
+          "param_bytes": 768,
+          "n_state": 0,
+          "state_bytes": 0,
+          "phi_bytes": 576,
+          "total_bytes": 1344,
+          "n_codes": 16,
+          "variant": "kmeans",
+          "commitment": 0.0,
+          "payload_source": "written",
+          "read_flops": 320
+        },
+        "train": {},
+        "native_unseen": {
+          "acc": 0.0,
+          "mse": 1.6054461091014083,
+          "diverged": false
+        },
+        "native_seen": {
+          "acc": 0.0,
+          "mse": 1.5413297547313638,
+          "diverged": false
+        },
+        "native_curve": {
+          "x0.25": 0.0,
+          "x0.5": 0.0,
+          "x1": 0.0,
+          "x2": 0.0,
+          "x4": 0.328125
+        },
+        "readers_unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "readers_seen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.875,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "best_reader_unseen": 0.0,
+        "best_unseen": 0.0,
+        "launder_shuffle_phi": 0.0,
+        "bytes": {
+          "store": 768,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 416,
+          "state": 0,
+          "total_bytes": 1504,
+          "arm": "N2",
+          "reader_params_max": 104,
+          "read_mult_adds_per_query": 320
+        },
+        "wall_s": 0.1
+      },
+      {
+        "seed": 0,
+        "arm": "N3",
+        "config": {
+          "lr": 0.01,
+          "level": "b",
+          "payload_source": "fitted",
+          "tau": 0.05
+        },
+        "chance": 0.0,
+        "tol": 0.25644258985889096,
+        "ledger": {
+          "arm": "N3",
+          "n_params": 144,
+          "param_bytes": 576,
+          "n_state": 0,
+          "state_bytes": 0,
+          "phi_bytes": 576,
+          "total_bytes": 1152,
+          "level": "b",
+          "payload_source": "fitted",
+          "read_flops": 320
+        },
+        "train": {
+          "loss_first": 1.3728960752487183,
+          "loss_last": 0.5515575408935547
+        },
+        "native_unseen": {
+          "acc": 0.0,
+          "mse": 1.1673217449141204,
+          "diverged": false
+        },
+        "native_seen": {
+          "acc": 0.0,
+          "mse": 0.5417153014637777,
+          "diverged": false
+        },
+        "native_curve": {
+          "x0.25": 0.0,
+          "x0.5": 0.0,
+          "x1": 0.0,
+          "x2": 0.0,
+          "x4": 0.421875
+        },
+        "readers_unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "readers_seen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.875,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "best_reader_unseen": 0.0,
+        "best_unseen": 0.0,
+        "launder_shuffle_phi": 0.0,
+        "bytes": {
+          "store": 576,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 416,
+          "state": 0,
+          "total_bytes": 1312,
+          "arm": "N3",
+          "reader_params_max": 104,
+          "read_mult_adds_per_query": 320
+        },
+        "wall_s": 0.3
+      },
+      {
+        "seed": 0,
+        "arm": "N4",
+        "config": {
+          "key": "set_code",
+          "k": 1,
+          "weight": "idw"
+        },
+        "chance": 0.0,
+        "tol": 0.25644258985889096,
+        "ledger": {
+          "arm": "N4",
+          "n_params": 0,
+          "param_bytes": 0,
+          "n_state": 384,
+          "state_bytes": 1536,
+          "phi_bytes": 576,
+          "total_bytes": 2112,
+          "k": 1,
+          "weight": "idw",
+          "key_space": "set_code",
+          "noiseless_key": true,
+          "read_flops": 384
+        },
+        "train": {},
+        "native_unseen": {
+          "acc": 0.0,
+          "mse": 1.5730680163297848,
+          "diverged": false
+        },
+        "native_seen": {
+          "acc": 1.0,
+          "mse": 0.0,
+          "diverged": false
+        },
+        "native_curve": {
+          "x0.25": 0.0,
+          "x0.5": 0.0,
+          "x1": 0.0,
+          "x2": 0.0,
+          "x4": 0.265625
+        },
+        "readers_unseen": {
+          "direct_predictor": 0.0
+        },
+        "reader_params": {
+          "direct_predictor": 0
+        },
+        "best_reader_unseen": 0.0,
+        "readers_note": "\u26d4 N4/N5 are DIRECT PREDICTORS: they have no latent z and therefore no reader-class column. Reported as such, never dressed up as a latent map.",
+        "best_unseen": 0.0,
+        "launder_shuffle_phi": 0.0,
+        "bytes": {
+          "store": 0,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 0,
+          "state": 1536,
+          "total_bytes": 1856,
+          "arm": "N4",
+          "reader_params_max": 0,
+          "read_mult_adds_per_query": 384
+        },
+        "wall_s": 0.1
+      },
+      {
+        "seed": 0,
+        "arm": "N5",
+        "config": {
+          "lr": 0.01,
+          "hidden": 8,
+          "momentum": 0.0,
+          "decay": 0.0,
+          "gate": "surprise",
+          "chunk": 1
+        },
+        "chance": 0.0,
+        "tol": 0.25644258985889096,
+        "ledger": {
+          "arm": "N5",
+          "n_params": 208,
+          "param_bytes": 832,
+          "n_state": 208,
+          "state_bytes": 832,
+          "phi_bytes": 576,
+          "total_bytes": 2240,
+          "hidden": 8,
+          "gate": "surprise",
+          "chunk": 1,
+          "momentum": 0.0,
+          "decay": 0.0,
+          "init_is": "PARAMETERS",
+          "deviation_is": "STATE",
+          "read_flops": 96
+        },
+        "train": {
+          "pre_loss_first": 5.894152641296387,
+          "pre_loss_last": 2.236874580383301,
+          "stream_loss_first": 3.5488855838775635,
+          "stream_loss_last": 0.745238184928894
+        },
+        "native_unseen": {
+          "acc": 0.0,
+          "mse": 2.5647005178140434,
+          "diverged": false
+        },
+        "native_seen": {
+          "acc": 0.0,
+          "mse": 1.4307213149075382,
+          "diverged": false
+        },
+        "native_curve": {
+          "x0.25": 0.0,
+          "x0.5": 0.0,
+          "x1": 0.0,
+          "x2": 0.0,
+          "x4": 0.109375
+        },
+        "readers_unseen": {
+          "direct_predictor": 0.0
+        },
+        "reader_params": {
+          "direct_predictor": 0
+        },
+        "best_reader_unseen": 0.0,
+        "readers_note": "\u26d4 N4/N5 are DIRECT PREDICTORS: they have no latent z and therefore no reader-class column. Reported as such, never dressed up as a latent map.",
+        "best_unseen": 0.0,
+        "launder_shuffle_phi": 0.0,
+        "bytes": {
+          "store": 832,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 0,
+          "state": 832,
+          "total_bytes": 1984,
+          "arm": "N5",
+          "reader_params_max": 0,
+          "read_mult_adds_per_query": 96
+        },
+        "wall_s": 0.5
+      },
+      {
+        "seed": 1,
+        "arm": "N1",
+        "config": {
+          "lr": 0.01,
+          "atoms_per_well": 6,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.015625,
+        "tol": 0.28846652201712913,
+        "ledger": {
+          "arm": "N1",
+          "n_params": 1344,
+          "param_bytes": 5376,
+          "n_state": 0,
+          "state_bytes": 0,
+          "phi_bytes": 576,
+          "total_bytes": 5952,
+          "n_atoms": 96,
+          "read_flops": 1920,
+          "atoms_per_well": 6,
+          "init": "written"
+        },
+        "train": {
+          "loss_first": 1.4744713306427002,
+          "loss_last": 0.5019048452377319
+        },
+        "native_unseen": {
+          "acc": 0.0,
+          "mse": 1.637075392974749,
+          "diverged": false
+        },
+        "native_seen": {
+          "acc": 0.0,
+          "mse": 0.47621561637699067,
+          "diverged": false
+        },
+        "native_curve": {
+          "x0.25": 0.0,
+          "x0.5": 0.0,
+          "x1": 0.0,
+          "x2": 0.03125,
+          "x4": 0.453125
+        },
+        "readers_unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "readers_seen": {
+          "sum_linear": 0.03125,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0625,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "best_reader_unseen": 0.0,
+        "best_unseen": 0.0,
+        "launder_shuffle_phi": 0.0,
+        "bytes": {
+          "store": 5376,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 416,
+          "state": 0,
+          "total_bytes": 6112,
+          "arm": "N1",
+          "reader_params_max": 104,
+          "read_mult_adds_per_query": 1920
+        },
+        "wall_s": 0.1
+      },
+      {
+        "seed": 1,
+        "arm": "N2",
+        "config": {
+          "variant": "kmeans",
+          "n_codes": 16,
+          "payload_source": "written",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "chance": 0.015625,
+        "tol": 0.28846652201712913,
+        "ledger": {
+          "arm": "N2",
+          "n_params": 192,
+          "param_bytes": 768,
+          "n_state": 0,
+          "state_bytes": 0,
+          "phi_bytes": 576,
+          "total_bytes": 1344,
+          "n_codes": 16,
+          "variant": "kmeans",
+          "commitment": 0.0,
+          "payload_source": "written",
+          "read_flops": 320
+        },
+        "train": {},
+        "native_unseen": {
+          "acc": 0.0,
+          "mse": 1.933602574475312,
+          "diverged": false
+        },
+        "native_seen": {
+          "acc": 0.0,
+          "mse": 1.5343647932725946,
+          "diverged": false
+        },
+        "native_curve": {
+          "x0.25": 0.0,
+          "x0.5": 0.0,
+          "x1": 0.0,
+          "x2": 0.015625,
+          "x4": 0.359375
+        },
+        "readers_unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "readers_seen": {
+          "sum_linear": 0.03125,
+          "well_table": 0.0,
+          "knn": 0.9375,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "best_reader_unseen": 0.0,
+        "best_unseen": 0.0,
+        "launder_shuffle_phi": 0.0,
+        "bytes": {
+          "store": 768,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 416,
+          "state": 0,
+          "total_bytes": 1504,
+          "arm": "N2",
+          "reader_params_max": 104,
+          "read_mult_adds_per_query": 320
+        },
+        "wall_s": 0.1
+      },
+      {
+        "seed": 1,
+        "arm": "N3",
+        "config": {
+          "lr": 0.01,
+          "level": "b",
+          "payload_source": "fitted",
+          "tau": 0.05
+        },
+        "chance": 0.015625,
+        "tol": 0.28846652201712913,
+        "ledger": {
+          "arm": "N3",
+          "n_params": 144,
+          "param_bytes": 576,
+          "n_state": 0,
+          "state_bytes": 0,
+          "phi_bytes": 576,
+          "total_bytes": 1152,
+          "level": "b",
+          "payload_source": "fitted",
+          "read_flops": 320
+        },
+        "train": {
+          "loss_first": 1.2835766077041626,
+          "loss_last": 0.5702316164970398
+        },
+        "native_unseen": {
+          "acc": 0.0,
+          "mse": 1.543704114629192,
+          "diverged": false
+        },
+        "native_seen": {
+          "acc": 0.0,
+          "mse": 0.5619409802651496,
+          "diverged": false
+        },
+        "native_curve": {
+          "x0.25": 0.0,
+          "x0.5": 0.0,
+          "x1": 0.0,
+          "x2": 0.03125,
+          "x4": 0.40625
+        },
+        "readers_unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "readers_seen": {
+          "sum_linear": 0.03125,
+          "well_table": 0.0,
+          "knn": 0.9375,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "best_reader_unseen": 0.0,
+        "best_unseen": 0.0,
+        "launder_shuffle_phi": 0.0,
+        "bytes": {
+          "store": 576,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 416,
+          "state": 0,
+          "total_bytes": 1312,
+          "arm": "N3",
+          "reader_params_max": 104,
+          "read_mult_adds_per_query": 320
+        },
+        "wall_s": 0.1
+      },
+      {
+        "seed": 1,
+        "arm": "N4",
+        "config": {
+          "key": "set_code",
+          "k": 1,
+          "weight": "idw"
+        },
+        "chance": 0.015625,
+        "tol": 0.28846652201712913,
+        "ledger": {
+          "arm": "N4",
+          "n_params": 0,
+          "param_bytes": 0,
+          "n_state": 384,
+          "state_bytes": 1536,
+          "phi_bytes": 576,
+          "total_bytes": 2112,
+          "k": 1,
+          "weight": "idw",
+          "key_space": "set_code",
+          "noiseless_key": true,
+          "read_flops": 384
+        },
+        "train": {},
+        "native_unseen": {
+          "acc": 0.0,
+          "mse": 1.742902711797711,
+          "diverged": false
+        },
+        "native_seen": {
+          "acc": 1.0,
+          "mse": 0.0,
+          "diverged": false
+        },
+        "native_curve": {
+          "x0.25": 0.0,
+          "x0.5": 0.0,
+          "x1": 0.0,
+          "x2": 0.0,
+          "x4": 0.390625
+        },
+        "readers_unseen": {
+          "direct_predictor": 0.0
+        },
+        "reader_params": {
+          "direct_predictor": 0
+        },
+        "best_reader_unseen": 0.0,
+        "readers_note": "\u26d4 N4/N5 are DIRECT PREDICTORS: they have no latent z and therefore no reader-class column. Reported as such, never dressed up as a latent map.",
+        "best_unseen": 0.0,
+        "launder_shuffle_phi": 0.0,
+        "bytes": {
+          "store": 0,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 0,
+          "state": 1536,
+          "total_bytes": 1856,
+          "arm": "N4",
+          "reader_params_max": 0,
+          "read_mult_adds_per_query": 384
+        },
+        "wall_s": 0.0
+      },
+      {
+        "seed": 1,
+        "arm": "N5",
+        "config": {
+          "lr": 0.01,
+          "hidden": 8,
+          "momentum": 0.0,
+          "decay": 0.0,
+          "gate": "surprise",
+          "chunk": 1
+        },
+        "chance": 0.015625,
+        "tol": 0.28846652201712913,
+        "ledger": {
+          "arm": "N5",
+          "n_params": 208,
+          "param_bytes": 832,
+          "n_state": 208,
+          "state_bytes": 832,
+          "phi_bytes": 576,
+          "total_bytes": 2240,
+          "hidden": 8,
+          "gate": "surprise",
+          "chunk": 1,
+          "momentum": 0.0,
+          "decay": 0.0,
+          "init_is": "PARAMETERS",
+          "deviation_is": "STATE",
+          "read_flops": 96
+        },
+        "train": {
+          "pre_loss_first": 4.508440971374512,
+          "pre_loss_last": 1.6468300819396973,
+          "stream_loss_first": 0.8457220792770386,
+          "stream_loss_last": 1.7788281440734863
+        },
+        "native_unseen": {
+          "acc": 0.0,
+          "mse": 2.0110109040981965,
+          "diverged": false
+        },
+        "native_seen": {
+          "acc": 0.0,
+          "mse": 1.096968690144203,
+          "diverged": false
+        },
+        "native_curve": {
+          "x0.25": 0.0,
+          "x0.5": 0.0,
+          "x1": 0.0,
+          "x2": 0.0,
+          "x4": 0.234375
+        },
+        "readers_unseen": {
+          "direct_predictor": 0.0
+        },
+        "reader_params": {
+          "direct_predictor": 0
+        },
+        "best_reader_unseen": 0.0,
+        "readers_note": "\u26d4 N4/N5 are DIRECT PREDICTORS: they have no latent z and therefore no reader-class column. Reported as such, never dressed up as a latent map.",
+        "best_unseen": 0.0,
+        "launder_shuffle_phi": 0.0,
+        "bytes": {
+          "store": 832,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 0,
+          "state": 832,
+          "total_bytes": 1984,
+          "arm": "N5",
+          "reader_params_max": 0,
+          "read_mult_adds_per_query": 96
+        },
+        "wall_s": 0.0
+      }
+    ],
+    "per_arm": {
+      "N1": {
+        "unseen": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "seen": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "launder": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "config": {
+          "lr": 0.01,
+          "atoms_per_well": 6,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "bytes": {
+          "store": 5376,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 416,
+          "state": 0,
+          "total_bytes": 6112,
+          "arm": "N1",
+          "reader_params_max": 104,
+          "read_mult_adds_per_query": 1920
+        }
+      },
+      "N2": {
+        "unseen": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "seen": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "launder": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "config": {
+          "variant": "kmeans",
+          "n_codes": 16,
+          "payload_source": "written",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "bytes": {
+          "store": 768,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 416,
+          "state": 0,
+          "total_bytes": 1504,
+          "arm": "N2",
+          "reader_params_max": 104,
+          "read_mult_adds_per_query": 320
+        }
+      },
+      "N3": {
+        "unseen": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "seen": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "launder": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "config": {
+          "lr": 0.01,
+          "level": "b",
+          "payload_source": "fitted",
+          "tau": 0.05
+        },
+        "bytes": {
+          "store": 576,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 416,
+          "state": 0,
+          "total_bytes": 1312,
+          "arm": "N3",
+          "reader_params_max": 104,
+          "read_mult_adds_per_query": 320
+        }
+      },
+      "N4": {
+        "unseen": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "seen": {
+          "mean": 1.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            1.0,
+            1.0
+          ]
+        },
+        "launder": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "config": {
+          "key": "set_code",
+          "k": 1,
+          "weight": "idw"
+        },
+        "bytes": {
+          "store": 0,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 0,
+          "state": 1536,
+          "total_bytes": 1856,
+          "arm": "N4",
+          "reader_params_max": 0,
+          "read_mult_adds_per_query": 384
+        }
+      },
+      "N5": {
+        "unseen": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "seen": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "launder": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 2,
+          "two_se": 0.0,
+          "values": [
+            0.0,
+            0.0
+          ]
+        },
+        "config": {
+          "lr": 0.01,
+          "hidden": 8,
+          "momentum": 0.0,
+          "decay": 0.0,
+          "gate": "surprise",
+          "chunk": 1
+        },
+        "bytes": {
+          "store": 832,
+          "phi": 320,
+          "launch_head": 0,
+          "projection": 0,
+          "reader_params_bytes": 0,
+          "state": 832,
+          "total_bytes": 1984,
+          "arm": "N5",
+          "reader_params_max": 0,
+          "read_mult_adds_per_query": 96
+        }
+      }
+    },
+    "chance": 0.0078125,
+    "bar_context_only": 0.0578125,
+    "max_arm_selected": 0.0,
+    "note": "\u26d4 `max over the SELECTED configs` is NOT null*. null* is the grid-max of stage_gridmax, an oracle-selected upper bound over the ENTIRE registered grid."
+  },
+  "v3": {
+    "stage": "v3",
+    "budgets": [
+      50,
+      100,
+      200,
+      400,
+      800,
+      1200
+    ],
+    "budget_grid_source": "module default",
+    "instantiation_sweep": {
+      "N1": {
+        "n_configs": 30,
+        "rows": [
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          }
+        ],
+        "selected": {
+          "width_frac": 0.2,
+          "place_depth": 0.15,
+          "total_atoms": 384,
+          "val_acc": 0.0
+        },
+        "wall_s": 29.9,
+        "note": "selected on the held-out-from-seen split at the top budget; \u26d4 Q_unseen is not read in this phase"
+      },
+      "N2": {
+        "n_configs": 30,
+        "rows": [
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          }
+        ],
+        "selected": {
+          "width_frac": 0.2,
+          "place_depth": 0.15,
+          "total_atoms": 384,
+          "val_acc": 0.0
+        },
+        "wall_s": 19.4,
+        "note": "selected on the held-out-from-seen split at the top budget; \u26d4 Q_unseen is not read in this phase"
+      },
+      "N3": {
+        "n_configs": 30,
+        "rows": [
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.2,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.25,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.37,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.5,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.15,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.15,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.3,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.3,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.6,
+            "total_atoms": 384,
+            "val_acc": 0.0
+          },
+          {
+            "width_frac": 0.75,
+            "place_depth": 0.6,
+            "total_atoms": 768,
+            "val_acc": 0.0
+          }
+        ],
+        "selected": {
+          "width_frac": 0.2,
+          "place_depth": 0.15,
+          "total_atoms": 384,
+          "val_acc": 0.0
+        },
+        "wall_s": 18.7,
+        "note": "selected on the held-out-from-seen split at the top budget; \u26d4 Q_unseen is not read in this phase"
+      }
+    },
+    "curves": {
+      "N1": {
+        "selected_instantiation": {
+          "width_frac": 0.2,
+          "place_depth": 0.15,
+          "total_atoms": 384,
+          "val_acc": 0.0
+        },
+        "curve": {
+          "50": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 998400,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "100": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 1996800,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "200": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 3993600,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "400": {
+            "best": {
+              "mean": 0.0078125,
+              "sd": 0.011048543456039806,
+              "n": 2,
+              "two_se": 0.015625,
+              "values": [
+                0.0,
+                0.015625
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 7987200,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "800": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 15974400,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "1200": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 23961600,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          }
+        },
+        "gridmax": {
+          "50": {
+            "mean": 0.0,
+            "sd": 0.0,
+            "n": 2,
+            "two_se": 0.0,
+            "values": [
+              0.0,
+              0.0
+            ]
+          },
+          "100": {
+            "mean": 0.0,
+            "sd": 0.0,
+            "n": 2,
+            "two_se": 0.0,
+            "values": [
+              0.0,
+              0.0
+            ]
+          },
+          "200": {
+            "mean": 0.0,
+            "sd": 0.0,
+            "n": 2,
+            "two_se": 0.0,
+            "values": [
+              0.0,
+              0.0
+            ]
+          },
+          "400": {
+            "mean": 0.0078125,
+            "sd": 0.011048543456039806,
+            "n": 2,
+            "two_se": 0.015625,
+            "values": [
+              0.0,
+              0.015625
+            ]
+          },
+          "800": {
+            "mean": 0.0,
+            "sd": 0.0,
+            "n": 2,
+            "two_se": 0.0,
+            "values": [
+              0.0,
+              0.0
+            ]
+          },
+          "1200": {
+            "mean": 0.0,
+            "sd": 0.0,
+            "n": 2,
+            "two_se": 0.0,
+            "values": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "flat": false,
+        "monotone": false,
+        "span": 0.0078125,
+        "wall_s": 49.4
+      },
+      "N2": {
+        "selected_instantiation": {
+          "width_frac": 0.2,
+          "place_depth": 0.15,
+          "total_atoms": 384,
+          "val_acc": 0.0
+        },
+        "curve": {
+          "50": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 998400,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "100": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 1996800,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "200": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 3993600,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "400": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 7987200,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "800": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 15974400,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "1200": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 23961600,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          }
+        },
+        "gridmax": {
+          "50": {
+            "mean": 0.015625,
+            "sd": 0.02209708691207961,
+            "n": 2,
+            "two_se": 0.03125,
+            "values": [
+              0.0,
+              0.03125
+            ]
+          },
+          "100": {
+            "mean": 0.0078125,
+            "sd": 0.011048543456039806,
+            "n": 2,
+            "two_se": 0.015625,
+            "values": [
+              0.0,
+              0.015625
+            ]
+          },
+          "200": {
+            "mean": 0.015625,
+            "sd": 0.02209708691207961,
+            "n": 2,
+            "two_se": 0.03125,
+            "values": [
+              0.0,
+              0.03125
+            ]
+          },
+          "400": {
+            "mean": 0.0078125,
+            "sd": 0.011048543456039806,
+            "n": 2,
+            "two_se": 0.015625,
+            "values": [
+              0.0,
+              0.015625
+            ]
+          },
+          "800": {
+            "mean": 0.015625,
+            "sd": 0.02209708691207961,
+            "n": 2,
+            "two_se": 0.03125,
+            "values": [
+              0.0,
+              0.03125
+            ]
+          },
+          "1200": {
+            "mean": 0.0078125,
+            "sd": 0.011048543456039806,
+            "n": 2,
+            "two_se": 0.015625,
+            "values": [
+              0.0,
+              0.015625
+            ]
+          }
+        },
+        "flat": true,
+        "monotone": true,
+        "span": 0.0,
+        "wall_s": 59.2
+      },
+      "N3": {
+        "selected_instantiation": {
+          "width_frac": 0.2,
+          "place_depth": 0.15,
+          "total_atoms": 384,
+          "val_acc": 0.0
+        },
+        "curve": {
+          "50": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 998400,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "100": {
+            "best": {
+              "mean": 0.0078125,
+              "sd": 0.011048543456039806,
+              "n": 2,
+              "two_se": 0.015625,
+              "values": [
+                0.0,
+                0.015625
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 1996800,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "200": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 3993600,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "400": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 7987200,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "800": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 15974400,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          },
+          "1200": {
+            "best": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "native": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "well_identity": {
+              "mean": 0.0,
+              "sd": 0.0,
+              "n": 2,
+              "two_se": 0.0,
+              "values": [
+                0.0,
+                0.0
+              ]
+            },
+            "store_bytes": 21504,
+            "read_mult_adds_per_query": 23961600,
+            "reader_params": {
+              "sum_linear": 104,
+              "well_table": 72,
+              "knn": 0,
+              "mlp": 92,
+              "well_identity": 0,
+              "sum_identity": 0
+            }
+          }
+        },
+        "gridmax": {
+          "50": {
+            "mean": 0.0,
+            "sd": 0.0,
+            "n": 2,
+            "two_se": 0.0,
+            "values": [
+              0.0,
+              0.0
+            ]
+          },
+          "100": {
+            "mean": 0.0078125,
+            "sd": 0.011048543456039806,
+            "n": 2,
+            "two_se": 0.015625,
+            "values": [
+              0.0,
+              0.015625
+            ]
+          },
+          "200": {
+            "mean": 0.0,
+            "sd": 0.0,
+            "n": 2,
+            "two_se": 0.0,
+            "values": [
+              0.0,
+              0.0
+            ]
+          },
+          "400": {
+            "mean": 0.0,
+            "sd": 0.0,
+            "n": 2,
+            "two_se": 0.0,
+            "values": [
+              0.0,
+              0.0
+            ]
+          },
+          "800": {
+            "mean": 0.0,
+            "sd": 0.0,
+            "n": 2,
+            "two_se": 0.0,
+            "values": [
+              0.0,
+              0.0
+            ]
+          },
+          "1200": {
+            "mean": 0.0,
+            "sd": 0.0,
+            "n": 2,
+            "two_se": 0.0,
+            "values": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "flat": false,
+        "monotone": false,
+        "span": 0.0078125,
+        "wall_s": 59.1
+      }
+    },
+    "NOT_RUN": {
+      "N4": "no landscape exists (kNN over raw rows)",
+      "N5": "no landscape exists (Titans fast weights)"
+    },
+    "flat_reference_lines": {
+      "N4": 0.0,
+      "N5": 0.0
+    },
+    "null_star_V3_by_budget": {
+      "50": 0.015625,
+      "100": 0.0078125,
+      "200": 0.015625,
+      "400": 0.0078125,
+      "800": 0.015625,
+      "1200": 0.0078125
+    },
+    "null_star_V3": 0.015625,
+    "physics_read_mult_adds_per_query": 5990400
+  }
+}

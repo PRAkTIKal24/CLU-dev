@@ -1,0 +1,40 @@
+# w15 hub/single-design-seeds -- MY OWN PIDs. These are the ONLY processes this hub may
+# ever stop. Other agents' training runs are on this box; a box-wide kill is forbidden.
+# Verified by command line: every row below names scripts/w15_deletion_rows.py.
+#
+# 2026-09-22T21:37Z  first launch attempt, MSYS pids 174857 / 174858 -- both DIED at
+#   once with "seed N: feature cache is GENERATION 1, not 2" because env_w3.sh unsets
+#   every CHLU_* and CHLU_GEN_FEATURES_ROOT is not ambient on this box. No number was
+#   produced by them. Fixed in outputs/w15-single-design-seeds/env.sh.
+#
+# 2026-09-22T21:39Z  live launch
+# role          msys_pid   windows_pid   command
+seed1-full      174931     34344         python -u scripts/w15_deletion_rows.py --seed 1 --K 32 --stage full
+seed2-full      174932     35120         python -u scripts/w15_deletion_rows.py --seed 2 --K 32 --stage full
+seed0-rivals    175135     15400         python -u scripts/w15_deletion_rows.py --seed 0 --K 32 --stage rivals --arm-json C:/chlu/outputs/w12-single-design-crossover/deletion/test_seed0_K32/deletion.json
+seed1 176373
+seed2 176374
+
+# 2026-09-22T22:18Z  seeds 1 and 2 RELAUNCHED after a harness defect was found and fixed
+#   (w12's deletion script read the post-deletion store through the RAW post basis while
+#   carrying the address book onto the WIDTH-MATCHED one; identical at seed 0, a shape
+#   error at seed 1). The first pair (msys 174931/174932, win 34344/35120) is dead: seed 1
+#   crashed on the defect, seed 2 was killed by this hub with `kill <its own pid>`.
+#   NO BOX-WIDE KILL WAS RUN AT ANY POINT.
+# role          msys_pid   windows_pid   command
+seed1-full      (relaunch) 28880         python -u scripts/w15_deletion_rows.py --seed 1 --K 32 --stage full
+seed2-full      (relaunch) 12260         python -u scripts/w15_deletion_rows.py --seed 2 --K 32 --stage full
+
+# 2026-09-22T23:40Z  CLOSE-OUT. All three jobs had already written their artefacts
+#   (`DONE: true`, 4 scopes + 4 rival scopes each) and printed "wrote ...".
+#   seed0-rivals (win 15400) exited on its own. seeds 1 and 2 (win 28880, 12260) were
+#   still resident 8-10 minutes after their final write, burning CPU and holding ~10 GB
+#   each in interpreter/XLA teardown on a 4-core box shared with other agents, so this
+#   hub stopped THOSE TWO PIDs -- each one re-verified by its command line naming
+#   `w15_deletion_rows` immediately before the stop. No artefact was lost.
+# ⛔ NO BOX-WIDE KILL WAS RUN AT ANY POINT IN THIS WAVE.
+# Confirmed still running and UNTOUCHED (other agents' w15 spokes):
+#   23408  scripts/w15_cmaze_o_span.py  (w15-cmaze-o-harness)
+#   30308  scripts/w15_cmaze_t_run.py 0 (w15-cmaze-t-harness)
+#   36740  scripts/w15_cmaze_t_run.py 1 (w15-cmaze-t-harness)
+#   17204  scripts/w15_cmaze_t_run.py 2 (w15-cmaze-t-harness)

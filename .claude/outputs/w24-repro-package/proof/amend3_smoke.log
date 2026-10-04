@@ -1,0 +1,478 @@
+# Standalone proof, 2026-09-26T01:27:15Z
+copy: /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg (from nclu-iclr-code/, 195 files)
+PYTHONPATH=<unset>
+Activate with: source /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/venv/bin/activate
+Installed 30 packages in 135ms
+ + equinox==0.13.4
+ + jax==0.9.0
+ + jaxlib==0.9.0
+ + jaxtyping==0.3.6
+ + nclu==0.1.0 (from file:///private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg)
+ + numpy==2.4.1
+nclu.__file__ = /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/nclu/__init__.py
+jax 0.9.0 numpy 2.4.1 equinox 0.13.4
+ASSERT nclu.__file__ inside the copy: OK
+data: data/shapes3d/3dshapes.h5 -> dataset file; sha256 0a0f6ed98baff276a50f3a081a7434d788da63cb135a98189b2a5b5769be1785 (expected 0a0f6ed98baff276a50f3a081a7434d788da63cb135a98189b2a5b5769be1785)
+NCLU_FEATURES_ROOT=<feature caches; seed_0 only on this machine>
+## split  rc=0  3.7s
+$ python -m nclu.data.gen_value_holdout --data-root data/shapes3d --out-dir data/shapes3d/value_holdout
+    |     "r7_deletion": {
+    |       "evidential": true,
+    |       "rank": 1,
+    |       "why": "\u2b50 THE strongest instrument. Deleting a value from the store does not move the factor grid, so the no-model rule's delta_reject is exactly 0.0. A changed refusal after a deletion, with NO retraining, is not producible by any syntactic rule."
+    |     }
+    |   },
+    |   "scope": "SCOPE OF THE VALUE HOLD-OUT (\u26d4 quote no row without this). The hold-out is from the STORE'S FIT POOL, not from the encoder, the decoder or the judge. Those three are frozen, hash-pinned and read-only (protocol \u00a7A.4) and were fitted on a train split containing EVERY hue and EVERY shape; re-fitting them on a value hold-out would void every round-2 number and is out of scope. Therefore 'never trained on' means here: THE STORE NEVER HELD A ROW CARRYING THAT VALUE. The decoder can still render the value and the judge can still recognise it \u2014 which is what makes rows 2/5/6/7 scorable at all. \u26d4 Read end-to-end, 'never seen' is false and the claim dies with it."
+    | }
+
+## partition_test  rc=0  13.9s
+$ python -m nclu.experiments.factor_wells --stage partition --condition test --out runs/partitions/test
+    | [    0.4s]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+    | [    1.3s]   dead channels: 64
+    | [    7.9s]   channel-factor relevance: (2048, 6) in 6.6s; mean top-factor MI 0.5458 bits
+    | [   13.8s]   partitions written -> runs/partitions/test/partitions.json
+
+## partition_val  rc=0  9.6s
+$ python -m nclu.experiments.factor_wells --stage partition --condition val --out runs/partitions/val
+    | [    0.5s]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+    | [    0.8s]   dead channels: 67
+    | [    7.5s]   channel-factor relevance: (2048, 6) in 6.7s; mean top-factor MI 0.5460 bits
+    | [    9.5s]   partitions written -> runs/partitions/val/partitions.json
+
+## build_nclu  rc=0  2.7s
+$ python scripts/shapes_build_nclu.py --where test --seed 0 --K 32 --npool 2048
+    | [03:27:52] cache {'generation': 2, 'dtype': 'float16', 'root': '/Users/batmac/clu/stage/outputs/spoke-a-rivals/cache_generation2', 'n_rows': 480000, 'scope': 'full', 'bytes': 1966080128, 'features_sha256': 'ef6359a4cd54b08287cf3709a2b4f7ed39c0fb504b32f5ddb65d483aefa813c3', 'encoder_param_hash': '98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d', 'file': '/Users/batmac/clu/stage/outputs/spoke-a-rivals/cache_generation2/shapes3d_recon/seed_0/features.npy', 'present': True, 'size_ok': True}
+    | [03:27:52] where=test seed=0 K=32 npool=2048 (of 131072) from /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/partitions/test/partitions.npz
+    | [03:27:53] store built 0.9s  A=63 wells 64..64 RANK/WIDTH 0.7969..0.9688
+    | [03:27:55] address book 1.5s 1055144 B; four-part total 2138458 B
+    | [03:27:55] wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/shapes3d/stores/test/seed0/K32_n2048
+
+## score_nclu  rc=0  95.2s
+$ python scripts/shapes_score_arms.py --corners rows34 --seed 0 --arms store:runs/shapes3d/stores/test/seed0/K32_n2048/arm.pkl:smoke_K32_n2048 --out-tag _smoke
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## fit_baseline  rc=0  9.8s
+$ python scripts/shapes_fit_baseline.py --where test --seed 0 --family mlp --npool 2048 --no-tenx --suffix _smoke
+    | [03:29:40]       epoch 16/40 train 0.08218  (0s)
+    | [03:29:40]       epoch 20/40 train 0.06776  (0s)
+    | [03:29:40]       epoch 24/40 train 0.06089  (0s)
+    | [03:29:40]       epoch 28/40 train 0.05734  (0s)
+    | [03:29:40]       epoch 32/40 train 0.05562  (0s)
+    | [03:29:40]       epoch 36/40 train 0.05492  (0s)
+    | [03:29:40]       epoch 40/40 train 0.05472  (0s)
+    | [03:29:40] declared done: final train mse 0.05472 in 0s
+
+## score_baseline  rc=0  26.5s
+$ python scripts/shapes_score_arms.py --corners rows34 --seed 0 --arms rival:test_smoke:mlp__declared --out-tag _smoke
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## baseline_suite_table  rc=0  12.7s
+$ python -m nclu.experiments.baseline_suite --stage table --seeds 0
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## baseline_suite_learners  rc=0  24.8s
+$ python -m nclu.experiments.baseline_suite --stage learners --seeds 0 --families mlp --variants full
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## score_table_floor  rc=0  26.2s
+$ python scripts/shapes_score_arms.py --corners rows34 --seed 0 --arms table --out-tag _smoke
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## build_nclu_full  rc=0  89.6s
+$ python scripts/shapes_build_nclu.py --where test --seed 0 --K 32 --npool 131072
+    | [03:31:10] cache {'generation': 2, 'dtype': 'float16', 'root': '/Users/batmac/clu/stage/outputs/spoke-a-rivals/cache_generation2', 'n_rows': 480000, 'scope': 'full', 'bytes': 1966080128, 'features_sha256': 'ef6359a4cd54b08287cf3709a2b4f7ed39c0fb504b32f5ddb65d483aefa813c3', 'encoder_param_hash': '98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d', 'file': '/Users/batmac/clu/stage/outputs/spoke-a-rivals/cache_generation2/shapes3d_recon/seed_0/features.npy', 'present': True, 'size_ok': True}
+    | [03:31:10] where=test seed=0 K=32 npool=131072 (of 131072) from /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/partitions/test/partitions.npz
+    | [03:31:13] store built 2.4s  A=63 wells 64..64 RANK/WIDTH 0.9688..0.9688
+    | [03:32:39] address book 86.8s 1060864 B; four-part total 2144178 B
+    | [03:32:39] wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/shapes3d/stores/test/seed0/K32_n131072
+
+## delete_nclu_item  rc=0  232.7s
+$ python scripts/shapes_delete_nclu.py --seed 0 --scope item
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## ladder_earlier_shipped  rc=0  87.7s
+$ python scripts/shapes_ladder_earlier.py --rung shipped --seed 0 --out runs/shapes3d/ladder_earlier --arms single_design_K5,rival_table
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## lace_poe  rc=0  129.9s
+$ python scripts/shapes_fit_lace_poe.py --rung shipped --seed 0 --nrows 2048 --max-corners 2 --out runs/shapes3d/lacepoe_smoke
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## sweep_k  rc=0  55.8s
+$ python scripts/shapes_sweep_k.py --K 5 --seed 0 --no-controls --no-exactness
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## ladder_earlier  rc=0  135.5s
+$ python scripts/shapes_ladder_earlier.py --rung 2 --seed 0 --out runs/shapes3d/ladder_earlier --arms single_design_K5,pca_tensor,rival_table,rival_mlp
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## ladder_nclu  rc=0  104.2s
+$ python scripts/shapes_ladder_nclu.py --rung 2 --seed 0 --arms store
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## refusal_comparator  rc=0  37.7s
+$ python scripts/shapes_refusal_comparator.py --seed 0 --n-fit 1024 --epochs 1 --out runs/shapes3d/refusal_comparator_smoke
+    |   MATCHED COMPUTE CHECKED: every unlearner spent 768 gradient row-visits
+    | 
+    |   -- COMPARATOR 3: the refuse-token transformer --
+    |     applicability (MEASURED): 0 of 10 requests built from the deleted rows are certified impossible
+    |     DECLARED NOT-RUN: a refusal row needs at least one request the post-deletion pool can never answer. 0 of 10 requests built from the deleted rows are certified impossible -- a item deletion clears no (factor, value) bit and punches no conjunction hole, so nothing becomes impossible and there is no DISPLAY row to print.
+    | 
+    | == BASELINES-READY ==
+    | wrote runs/shapes3d/refusal_comparator_smoke/BASELINES-READY.seed_0.json  (50 comparator records, 37.2 s); merged BASELINES-READY.json now carries seeds [0] and 50 records in total
+
+## deletion_battery_candidates  rc=0  1.0s
+$ python scripts/shapes_deletion_battery_candidates.py --K 5 --seed 0 --n-pool 4096
+    | == cost line ==
+    |   downdate          0.083 s   rows refitted 0        passes over data 0
+    |   refit-without     0.118 s   rows refitted 3,780   passes over data 1
+    |   ratio refit/downdate = 1.4x
+    | 
+    | VERDICT: downdate == refit-without to float precision: YES;  negative control fired: YES
+    | 
+    | wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/shapes3d/deletion_battery_candidates
+
+## deletion_full_square_fit  rc=0  2.7s
+$ python -m nclu.experiments.deletion_full_square --stage fit --out runs/shapes3d/deletion_full_square/smoke
+    | [03:45:47]   ⛔ FOOTPRINT, printed separately and never netted:
+    | [03:45:47]      store            524,288 B  (pin 524,288 B, matches=True)
+    | [03:45:47]      covariance    12,258,640 B  float64 d_k^2 per well [594441, 883600, 47089, 3600, 3600]
+    | [03:45:47]      counts            11,488 B
+    | [03:45:47]      coupling           5,288 B + 1,322 B of holes
+    | [03:45:47]      HONEST SUM    12,817,450 B = 24.4473x the pin  ⛔ OVER, and printed not netted
+    | [03:45:47]   DOWNDATE-READY.json -> status='partial' condition='val'
+    | [03:45:47] done
+
+## deletion_full_square  rc=0  13.8s
+$ python -m nclu.experiments.deletion_full_square --stage assertions --out runs/shapes3d/deletion_full_square/smoke
+    | [03:45:52]   [A1/negative control] nudged one atom by 1e-3 -> max abs dev 1.000e-03, check FIRED=True ✓
+    | [03:45:55]   [A1/random_64_rows] max abs dev per well ['1.137e-13', '0.000e+00', '0.000e+00', '0.000e+00', '0.000e+00']
+    | [03:45:55]            worst 1.137e-13 (9.537e-07 float32 ulp @1.0), 4/5 wells bit-identical, ranks agree=True, counts equal=True, term/pair counts equal=True/True
+    | [03:45:57]   [A2/full_pool] corpus 131,072 rows; delete(64) consumed 320 row-reads = 64 rows x 5 wells, with 5 tripwires armed on the corpus
+    | [03:45:58]   [A2/half_pool] corpus 65,536 rows; delete(64) consumed 320 row-reads = 64 rows x 5 wells, with 5 tripwires armed on the corpus
+    | [03:46:00]   [A3] 26 arrays, every shape explained by (A, d_k, K, T, NC); object bytes 12,833,834 at 131,072 rows and 12,833,834 at 65,536 rows -- grew by 0 B
+    | [03:46:00]   DOWNDATE-READY.json -> status='partial' condition='val'
+    | [03:46:00] done
+
+## composition_cell_pins  rc=0  0.1s
+$ python -m nclu.experiments.composition_cell --stage pins --out runs/shapes3d/composition_cell/val_seed0
+    |    "pca_span_rotated",
+    |    "pca_lookup_argmax",
+    |    "pca_lookup_convex"
+    |   ],
+    |   "n_arms": 37,
+    |   "pre_existing_unchanged": true
+    |  }
+    | }
+
+## settle_dynamics_pins  rc=0  0.1s
+$ python -m nclu.experiments.settle_dynamics --stage pins --out runs/shapes3d/settle_dynamics/val_seed0
+    |    "pca_settle_f25_s3",
+    |    "pca_settle_r4",
+    |    "pca_settle_r64"
+    |   ],
+    |   "n_arms": 54,
+    |   "pre_existing_unchanged": true
+    |  }
+    | }
+
+## zero_dynamics_check  rc=0  2.8s
+$ python scripts/zero_dynamics_check.py
+    |   A_pass       True
+    |   B_pass       True
+    |   C_pass       True
+    |   D_pass       True
+    |   E_pass       True
+    |   F_pass       True
+    |   ALL PASS   True
+    |   wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/scripts/check_01_zero_dynamics.json
+
+## retention_criteria_help  rc=0  0.1s
+$ python scripts/retention_law_criteria.py --help
+    | 
+    | Evaluate the retention law's declared criteria B1-B6 from the retention-law
+    | runs.
+    | 
+    | options:
+    |   -h, --help     show this help message and exit
+    |   --out OUT
+    |   --seeds SEEDS
+
+## retention_law_dev  rc=0  21.6s
+$ python -m nclu.experiments.retention_law --stage dev --seed 0 --out runs/physics/retention_dev --max-seconds 600
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## shapes_tables  rc=0  0.1s
+$ python scripts/shapes_tables.py
+    | wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/shapes3d/SHAPES-MATCHED.json
+
+## generation_table_kstar  rc=0  321.5s
+$ python scripts/shapes_generation_table.py --out runs/shapes3d/generation_table --seed 0 --arm kstar --stage all
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## sweep_k_seeds  rc=0  108.1s
+$ python scripts/shapes_sweep_k_seeds.py --K 32 --seed 0 --no-controls --no-exactness
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## sweep_k_report  rc=0  0.1s
+$ python scripts/shapes_sweep_k_report.py
+    | wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/shapes3d/k_sweep_seeds/CROSSOVER-3SEED.json  sha256 982dd641203e431b6dbce7896ef9221ccb20533b33294ae2ff0bfcff89f9ac0f
+    | wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/shapes3d/k_sweep_seeds/CROSSOVER-3SEED.md  sha256 468c5467108d5db7a38397325cae5cd96826108b95b7238e944dc73e03647a15
+    | n_seeds per K: {'32': 1}
+    | K* = None   K_crossover = None
+    | U-shape S3 verdict: REFUTED   per-seed minima {'0': 32}
+
+## sweep_k_figure  rc=0  1.6s
+$ python scripts/shapes_sweep_k_figure.py
+    | wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/shapes3d/k_sweep_seeds/fig_crossover_3seed.pdf  sha256 a395b1e180dc7166c0eefba64cde4e9c94f0eef599398e71167b416e8e6d99aa
+    | wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/shapes3d/k_sweep_seeds/fig_crossover_3seed.png  sha256 28c81703411893513eda13aca0027007a79b0dbd044324401b63a69b30f4e58e
+
+## coverage_control  rc=0  258.8s
+$ python scripts/shapes_coverage_control.py --seed 0 --learned 0
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## coverage_control_report  rc=0  7.1s
+$ python scripts/shapes_coverage_control_report.py
+    |   "B_test_n6": null,
+    |   "rise_test_B_minus_A": null
+    |  }
+    | }
+    | /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/venv/lib/python3.12/site-packages/numpy/_core/_methods.py:219: RuntimeWarning: Degrees of freedom <= 0 for slice
+    |   ret = _var(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+    | /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/venv/lib/python3.12/site-packages/numpy/_core/_methods.py:211: RuntimeWarning: invalid value encountered in scalar divide
+    |   ret = ret.dtype.type(ret / rcount)
+
+## tables_lace_poe  rc=0  0.1s
+$ python scripts/shapes_tables_lace_poe.py
+    | wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/shapes3d/lace_poe_32k/GENTABLE-KSTAR.json
+    | wrote /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofE_20260926T012715/pkg/runs/shapes3d/lace_poe_32k/GENTABLE-KSTAR.md
+
+## encoder_loop_warm_toy  rc=0  83.2s
+$ python -m nclu.experiments.encoder_loop --stage warm --seed 0 --out runs/encoder_loop_smoke --quick
+    |     def __init__(self, ...):
+    |         self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+    | 
+    |     def __call__(self, ...):
+    |         ... = self.vmap_linear(...)
+    | ```
+    | 
+    |   jit_wrapper = _JitWrapper(
+
+## encoder_loop_train_toy  rc=0  107.9s
+$ python -m nclu.experiments.encoder_loop --stage train --arm loop_swap --seed 0 --out runs/encoder_loop_smoke --quick
+    | [04:00:53]     step 8/20  loss=0.12258
+    | [04:01:00]     step 12/20  loss=0.11199
+    | [04:01:06]     step 16/20  loss=0.10706
+    | [04:01:13]     step 20/20  loss=0.10399
+    | [04:01:13]   no-bypass OK: same-codes-different-features delta = 0.0; channel = 30.0 bits (K*log2(M))
+    | [04:01:13]   decoder published for the Judge -> runs/encoder_loop_smoke/seed_0/loop_swap/declift (declared NOT the frozen winner)
+    | [04:01:13]   arm loop_swap seed 0 written -> runs/encoder_loop_smoke/seed_0/loop_swap/arm.json
+    | [04:01:13] done in 107.4s
+
+## encoder_loop_report_help  rc=0  0.0s
+$ python scripts/encoder_loop_report.py --help
+    | options:
+    |   -h, --help            show this help message and exit
+    |   --score-base SCORE_BASE
+    |   --run-base RUN_BASE
+    |   --condition CONDITION
+    |   --seeds [SEEDS ...]
+    |   --margin MARGIN
+    |   --out OUT
+
+## encoder_loop_criteria_help  rc=0  0.1s
+$ python scripts/encoder_loop_criteria.py --help
+    | options:
+    |   -h, --help            show this help message and exit
+    |   --score-base SCORE_BASE
+    |   --run-base RUN_BASE
+    |   --condition CONDITION
+    |   --seeds [SEEDS ...]
+    |   --out-dir OUT_DIR
+    |   --gate                evaluate the VAL gate V1-V3 only
+
+## cmazet_selftest  rc=0  0.2s
+$ python scripts/cmazet_selftest.py 3
+    |       oracle               1.0000
+    |       blind-A              0.9261
+    |       blind-B              0.9179
+    |       blind-colour         0.6971
+    |       blind-sequential     0.9872
+    |       blind-factor         0.9380
+    | 
+    | SELF-TEST PASS   [0.2s]
+
+## cmazet_symmetric  rc=0  70.5s
+$ python scripts/cmazet_symmetric.py 0 runs/cmaze_t/smoke --cond BOTH --leg val --smoke 1
+    |     TRAIN rival@10x-steps: transformer params    4869  loss 0.2320  [1.2s]
+    |     TRAIN diagnostic@10x-read-floats: transformer params   45455  loss 2.1289  [1.2s]
+    |   row seen  n=150   CLU 0.9933 best-rival8k 0.0867 best-rival80k 0.8467 worst-ctl 0.6000 bseq 0.8867 bcol 0.6200
+    |   row pair  n=150   CLU 0.1667 best-rival8k 0.0000 best-rival80k 0.2733 worst-ctl 0.2200 bseq 0.5733 bcol 0.1667
+    |   row nway  n=150   CLU 0.5933 best-rival8k 0.0000 best-rival80k 0.2533 worst-ctl 0.3467 bseq 0.1133 bcol 0.0000
+    |   row value n=150   CLU 0.4533 best-rival8k 0.0400 best-rival80k 0.2400 worst-ctl 0.1733 bseq 0.4600 bcol 0.2600
+    |   rollout CLU validity 0.0000 per-step 0.9315
+    | [BOTH_val seed 0] wrote runs/cmaze_t/smoke/BOTH_val_seed0_SMOKE.json [69.7s]
+
+## cmazet_relational  rc=0  88.0s
+$ python scripts/cmazet_symmetric.py 0 runs/cmaze_t/smoke_rel --cond BOTH --leg val --smoke 1 --rel_diag 1 --clu_cfg scripts/configs/nclu_rel.json
+    |   row pair  diag+rel best 0.6133 (never a bar)
+    |   row pair  n=150   CLU 0.8333 best-rival8k 0.0000 best-rival80k 0.3400 worst-ctl 0.7467 bseq 0.5733 bcol 0.1667
+    |   row nway  diag+rel best 0.9067 (never a bar)
+    |   row nway  n=150   CLU 0.9067 best-rival8k 0.0000 best-rival80k 0.5867 worst-ctl 0.7867 bseq 0.1133 bcol 0.0000
+    |   row value diag+rel best 0.4933 (never a bar)
+    |   row value n=150   CLU 0.4800 best-rival8k 0.0400 best-rival80k 0.5000 worst-ctl 0.4200 bseq 0.4600 bcol 0.2600
+    |   rollout CLU validity 0.0000 per-step 0.9468
+    | [BOTH_val seed 0] wrote runs/cmaze_t/smoke_rel/BOTH_val_seed0_SMOKE.json [87.0s]
+
+## cmazet_asymmetric  rc=0  119.1s
+$ python scripts/cmazet_asymmetric.py full 0 runs/cmaze_t/asym_smoke --leg val --latent 128 --K 2 --atoms 6 --smoke 1
+    |   row nway  n=752   CLU 0.8019 best-rival 0.4176 worst-ctl 0.4388 bseq 0.2420
+    |   row value n=4000  CLU 0.4325 best-rival 0.4320 worst-ctl 0.2700 bseq 0.4730
+    |   rollout CLU validity 0.0000 per-step 0.9176
+    |     TRAIN mlp retrain-without params    4781  loss 0.4030  [2.9s]
+    |     TRAIN mlp as-trained params    4781  loss 0.3792  [2.9s]
+    |     TRAIN mlp retrain-without params    4781  loss 0.6053  [2.9s]
+    |     TRAIN mlp as-trained params    4781  loss 0.3792  [2.9s]
+    | [A seed 0 leg val] wrote runs/cmaze_t/asym_smoke/A_val_seed0.json [118.2s]
+
+## cmazet_holdout_support  rc=0  7.8s
+$ python scripts/cmazet_holdout_support.py runs/cmaze_t/holdout_support_smoke.json --seeds 0 --legs val
+    |     [3, 5, 3, 3]   open_door_tint   n=8    A REACHABLE-FROM-TRIPLE    rel:Y(83/1.00) (agent,door,tint) seen in train with the same outcome (directions [1]); only the direction is new
+    |     [1, 5, 1, 2]   open_door_tint   n=2    A REACHABLE-FROM-TRIPLE    rel:Y(83/1.00) (agent,door,tint) seen in train with the same outcome (directions [0, 1, 3]); only the direction is new
+    |     [3, 5, 3, 2]   open_door_tint   n=2    A REACHABLE-FROM-TRIPLE    rel:Y(83/1.00) (agent,door,tint) seen in train with the same outcome (directions [1]); only the direction is new
+    |     [3, 5, 3, 0]   open_door_tint   n=3    A REACHABLE-FROM-TRIPLE    rel:Y(83/1.00) (agent,door,tint) seen in train with the same outcome (directions [1]); only the direction is new
+    |     [1, 0, 2, 2]   free             n=91   A REACHABLE-FROM-TRIPLE    rel:Y(2681/1.00) (agent,door,tint) seen in train with the same outcome (directions [0, 1, 3]); only the direction is new
+    |     [1, 0, 3, 1]   free             n=85   A REACHABLE-FROM-TRIPLE    rel:Y(2681/1.00) (agent,door,tint) seen in train with the same outcome (directions [0, 2]); only the direction is new
+    |     [2, 0, 3, 1]   free             n=76   D UNREACHABLE-NO-SUPPORT   rel:Y(2681/1.00) no triple in train and colour pair(s) ['agent,tint'] have ZERO train rows; blocked by held-out 2-way pair(s) [[0, 2, 3, 3]] (word idx 0=agent,2=door,3=tint)
+    |     [1, 0, 3, 3]   free             n=82   A REACHABLE-FROM-TRIPLE    rel:Y(2681/1.00) (agent,door,tint) seen in train with the same outcome (directions [0, 2]); only the direction is new
+
+## task_figure_cmazet  rc=0  1.1s
+$ python figures/task_figures.py --only cmazet --assets runs/figures/task_assets --out runs/figures/task
+
+
+## results_figures_help  rc=0  0.2s
+$ python figures/results_figures_b.py --help
+    | usage: results_figures_b.py [-h] --out OUT [--panels PANELS] --merge MERGE
+    | 
+    | options:
+    |   -h, --help       show this help message and exit
+    |   --out OUT
+    |   --panels PANELS
+    |   --merge MERGE
+
+## cmazet_extract_help  rc=0  0.3s
+$ python figures/cmazet_extract.py --help
+    | 
+    | positional arguments:
+    |   root
+    |   out
+    | 
+    | options:
+    |   -h, --help     show this help message and exit
+    |   --seeds SEEDS
+

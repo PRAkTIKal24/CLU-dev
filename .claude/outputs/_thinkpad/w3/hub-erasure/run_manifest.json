@@ -1,0 +1,126 @@
+{
+ "config": {
+  "dataset": "shapes3d",
+  "bridge_seed": 0,
+  "attacked_judge": 0,
+  "held_out_judges": [
+   1,
+   2
+  ],
+  "n_store_train": 32768,
+  "n_atoms": 64,
+  "atom_selection": "kmeanspp",
+  "grouping_source": "store_plan.json (ward, K=5, frozen)",
+  "address_smoothing": 1.0,
+  "sigma_rule": "nn_median",
+  "sigma_frac": 1.0,
+  "launch_mode": "clamp_atom",
+  "read_mode": "state",
+  "store_seeds": [
+   0,
+   1,
+   2
+  ],
+  "rng_base": 20260919,
+  "byte_budget": 524288,
+  "byte_match_tolerance": 0,
+  "basis_m": 38,
+  "basis_ridge": 1.0,
+  "basis_lloyd_iters": 25,
+  "adv_n_candidates": 96,
+  "adv_steps": 100,
+  "adv_lr": 0.05,
+  "adv_lr_convex": 0.2,
+  "adv_l1_cap": 2.0,
+  "adv_seed": 4242,
+  "adv_n_probe": 256,
+  "sb_max_records": 0,
+  "adv_cell_seconds": 900.0,
+  "churn_delete_n": 8234,
+  "churn_n_requests": 4096,
+  "meta": {}
+ },
+ "cache": {
+  "scope": "full",
+  "n_rows": 480000,
+  "shortfall": 0,
+  "D": 2048,
+  "dtype": "float16",
+  "features_sha256": "d6728f01d102b0d0301198dc617f40bfb8ddb6c5b4a12b21a1ec08e1d974f2e2",
+  "feat_shape": [
+   128,
+   4,
+   4
+  ],
+  "consequence": "\u2b50 read-only: no run in this hub can extend the cache, so the re-encode gate cannot bind and there is no GPU case"
+ },
+ "byte_ledger": {
+  "budget_bytes": 524288,
+  "clu": {
+   "deployed_bytes": 524288,
+   "formula": "N*D*4",
+   "n_atoms": 64,
+   "exactly_the_budget": true
+  },
+  "knn_proto": {
+   "deployed_bytes": 475136,
+   "formula": "(sum_f C_f + 1)*D*4",
+   "headroom_bytes": 49152
+  },
+  "basis_head": {
+   "deployed_bytes": 524288,
+   "used_bytes": 521056,
+   "unused_bytes": 3232,
+   "m": 38,
+   "n_request_features": 1380,
+   "formula": "m*D*4 + P*m*4, P = singles + all pairs + bias",
+   "m_max_at_budget": 38,
+   "declared_at": "the FULL budget: the control is allotted 524,288 B and cannot spend the last 3232 B under its own parameterisation. Over-stating the control is the conservative direction"
+  },
+  "gate_bytes": 8,
+  "note": "the 8-byte gate is ADDED to the gated arms' deployed total and declared; it is never netted off the CLU's side"
+ },
+ "decoder_hash": "01ef91f75eeaae7be8d83a220c9cc6629120345357da9033db22375c278ab196",
+ "classifier_hashes": [
+  "c8741ac417d88ebf8ee82163ba9d7090ed66856aa9ee951e621791f08794669e",
+  "aa69b436989b2de5ae1d65e3cb8ea781898b027c21d924784b83ae4a3466d50d",
+  "ad16c4e532731958d7f31ec7552da0cacff2702b5a806cfc14af43d19da48d63"
+ ],
+ "classifier_gate": {
+  "verdict": "PASS",
+  "floor": 0.95,
+  "per_seed": {
+   "0": 1.0,
+   "1": 1.0,
+   "2": 1.0
+  },
+  "statistic": "in-corner shape balanced accuracy on REAL held-out images"
+ },
+ "adversary_moves": {
+  "M1_direct_request": "ask the deployed read for the deleted value directly, on-grid, 512 requests structurally matched to row-1 (the pinned row5_held_out set)",
+  "M2_weight_read": "THE decisive move against a gate. Decode EVERY deployed parameter vector as a feature vector and judge it: for clu the N stored train rows; for knn_proto the (sum_f C_f + 1) prototypes; for basis_head the m dictionary atoms AND the P head rows pushed through the dictionary. No gate can stop it, because it does not use the interface",
+  "M3_indirect_request": "name the value without naming it: off-grid terms bracketing the deleted value, and requests with the deleted factor's term OMITTED so the arm must fill it in from whatever it still holds",
+  "M4_span_sweep": "signed-coefficient gradient ascent on the ATTACKED judge's log p(target), over the arm's OWN deployed span, under a declared L1 cap. ADMISSIBLE ONLY IF its positive control returns ~0 -- measured, both ways, every run",
+  "M5_read_reachable": "enumerate what the deployed read can actually emit -- for clu the per-well atom-index tuples, sampled -- and judge every one. This is the reachable set of the interface, with no gradient anywhere"
+ },
+ "adversary_calibration": {
+  "sensitivity": "the SAME move against a store fitted on a pool that HOLDS the value must recover it. A move that cannot is too weak and its zero on the deleted store means nothing",
+  "specificity": "the SAME move against (a) a dimension-matched RANDOM span and (b) the landscape-removed store must recover ~nothing. A move that recovers from noise is measuring the decoder",
+  "verdict_rule": "a move is ADMISSIBLE iff sensitivity - specificity exceeds the pre-registered separation. Otherwise it is reported as a FAILED MOVE and its number is never quoted as evidence"
+ },
+ "conjunction_cell": {
+  "factor": "shape",
+  "factor_index": 4,
+  "value_index": 3,
+  "label": "shape = 3 (oblong/capsule)",
+  "why": "NON-CYLINDER, as the target file requires -- the wave-2 scored cell is entirely shape = cylinder. Not the cube, which is this hub's value deletion target and must stay independent; not the sphere, which is the shape a degraded render degrades towards"
+ },
+ "churn_prior": {
+  "wave2_clu": 0.188,
+  "wave2_clu_sd": 0.008,
+  "wave2_table": 0.014,
+  "wave2_table_sd": 0.0005,
+  "wave2_ratio": 13.4,
+  "caveat": "wave 2 kept aggregates only; these are quoted as the prior this hub tests, never as this hub's numbers"
+ }
+}

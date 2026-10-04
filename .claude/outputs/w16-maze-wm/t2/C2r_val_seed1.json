@@ -1,0 +1,516 @@
+{
+ "seed": 1,
+ "leg": "val",
+ "tag": "C2r",
+ "config": {
+  "K": 2,
+  "n_atoms": 32,
+  "ridge": 1.0,
+  "pair_block": true,
+  "space": "latent",
+  "dim": 128,
+  "partition": "ward_balanced"
+ },
+ "rival_steps": 30000,
+ "scored_run": false,
+ "tolerance_used": null,
+ "test_receipt": null,
+ "disjointness_val": true,
+ "clu_ledger": {
+  "read_floats": 138304,
+  "store_atom_floats": 4096,
+  "head_floats": 134208,
+  "deployed_bytes_float32": 553216,
+  "byte_convention": "DEPLOYED BYTES = 4 * (atom floats + address-book floats), float32; this is what turns nine words into a latent",
+  "statistic_floats_float64": 4290,
+  "statistic_bytes_float64": 34320,
+  "statistic_convention": "the float64 sufficient statistic S,t,n plus the head's A,Mx is what buys EXACT deletion; it is declared BESIDE the deployed bytes, never netted into them, and is never matched to a rival",
+  "K": 2,
+  "n_atoms": 32,
+  "dim": 128,
+  "design_width": 2097,
+  "dead_channels": 0,
+  "deployed_rank_per_well": [
+   31,
+   31
+  ],
+  "span_fraction": 0.484375
+ },
+ "rank_over_width_printed": 0.484375,
+ "request_only": {
+  "read_signature": [
+   "heads",
+   "store",
+   "Phi"
+  ],
+  "feature_argument_present": false,
+  "bitwise_stable_under_feature_perturbation": true,
+  "n_checked": 8,
+  "statement": "the read's only inputs are the head, the store and the request design; no feature tensor enters launch, settle or read (charter section B.3)"
+ },
+ "across_wells_derangement": [
+  1,
+  0
+ ],
+ "lookup_ledger": {
+  "items_held": 1080,
+  "read_floats": 138240,
+  "deployed_bytes_float32": 552960,
+  "byte_convention": "4 * (items held x latent width), float32"
+ },
+ "rivals": {
+  "mlp": {
+   "kind": "mlp",
+   "width": 285,
+   "params": 138068,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 552272,
+   "fit_seconds": 170.74311590194702
+  },
+  "cont_mlp": {
+   "kind": "cont_mlp",
+   "width": 305,
+   "params": 138293,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 553172,
+   "fit_seconds": 143.38529658317566
+  },
+  "lstm": {
+   "kind": "lstm",
+   "width": 123,
+   "params": 139118,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 556472,
+   "fit_seconds": 528.562572479248
+  },
+  "transformer": {
+   "kind": "transformer",
+   "width": 88,
+   "params": 138552,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 554208,
+   "fit_seconds": 707.8232481479645
+  }
+ },
+ "ROWS": {
+  "seen": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 600,
+    "valid": 0.7533333333333333,
+    "legal": 0.9733333333333334
+   },
+   "LOOKUP (printed floor)": {
+    "n": 600,
+    "valid": 0.08333333333333333,
+    "legal": 0.9083333333333333
+   },
+   "CLU": {
+    "n": 600,
+    "valid": 0.2966666666666667,
+    "legal": 0.8683333333333333
+   },
+   "CTRL:landscape_removed": {
+    "n": 600,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 600,
+    "valid": 0.2966666666666667,
+    "legal": 0.8683333333333333
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 600,
+    "valid": 0.015,
+    "legal": 0.7483333333333333
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 600,
+    "valid": 0.028333333333333332,
+    "legal": 0.7233333333333334
+   },
+   "CTRL:random_atoms": {
+    "n": 600,
+    "valid": 0.021666666666666667,
+    "legal": 0.7266666666666667
+   },
+   "RIVAL:mlp": {
+    "n": 600,
+    "valid": 0.71,
+    "legal": 0.9683333333333334
+   },
+   "RIVAL:cont_mlp": {
+    "n": 600,
+    "valid": 0.02,
+    "legal": 0.7933333333333333
+   },
+   "RIVAL:lstm": {
+    "n": 600,
+    "valid": 0.5216666666666666,
+    "legal": 0.925
+   },
+   "RIVAL:transformer": {
+    "n": 600,
+    "valid": 0.7166666666666667,
+    "legal": 0.9716666666666667
+   },
+   "BLIND-layout-free-cells": {
+    "n": 600,
+    "valid": 0.056666666666666664
+   },
+   "BLIND-colour-marginal": {
+    "n": 600,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 600,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 600,
+    "valid": 0.11833333333333333
+   },
+   "RANDOM": {
+    "n": 600,
+    "valid": 0.0
+   }
+  },
+  "unseen_2way": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 396,
+    "valid": 0.35858585858585856,
+    "legal": 0.898989898989899
+   },
+   "LOOKUP (printed floor)": {
+    "n": 396,
+    "valid": 0.0,
+    "legal": 0.8939393939393939
+   },
+   "CLU": {
+    "n": 396,
+    "valid": 0.14393939393939395,
+    "legal": 0.8333333333333334
+   },
+   "CTRL:landscape_removed": {
+    "n": 396,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 396,
+    "valid": 0.14393939393939395,
+    "legal": 0.8333333333333334
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 396,
+    "valid": 0.010101010101010102,
+    "legal": 0.6515151515151515
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 396,
+    "valid": 0.010101010101010102,
+    "legal": 0.702020202020202
+   },
+   "CTRL:random_atoms": {
+    "n": 396,
+    "valid": 0.012626262626262626,
+    "legal": 0.7045454545454546
+   },
+   "RIVAL:mlp": {
+    "n": 396,
+    "valid": 0.30303030303030304,
+    "legal": 0.8939393939393939
+   },
+   "RIVAL:cont_mlp": {
+    "n": 396,
+    "valid": 0.007575757575757576,
+    "legal": 0.8106060606060606
+   },
+   "RIVAL:lstm": {
+    "n": 396,
+    "valid": 0.17676767676767677,
+    "legal": 0.8156565656565656
+   },
+   "RIVAL:transformer": {
+    "n": 396,
+    "valid": 0.25,
+    "legal": 0.8560606060606061
+   },
+   "BLIND-layout-free-cells": {
+    "n": 396,
+    "valid": 0.022727272727272728
+   },
+   "BLIND-colour-marginal": {
+    "n": 396,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 396,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 396,
+    "valid": 0.05808080808080808
+   },
+   "RANDOM": {
+    "n": 396,
+    "valid": 0.0
+   }
+  },
+  "unseen_nway": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 400,
+    "valid": 0.5125,
+    "legal": 0.94
+   },
+   "LOOKUP (printed floor)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8825
+   },
+   "CLU": {
+    "n": 400,
+    "valid": 0.15,
+    "legal": 0.8975
+   },
+   "CTRL:landscape_removed": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 400,
+    "valid": 0.15,
+    "legal": 0.8975
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 400,
+    "valid": 0.0125,
+    "legal": 0.715
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 400,
+    "valid": 0.0125,
+    "legal": 0.695
+   },
+   "CTRL:random_atoms": {
+    "n": 400,
+    "valid": 0.015,
+    "legal": 0.7025
+   },
+   "RIVAL:mlp": {
+    "n": 400,
+    "valid": 0.4125,
+    "legal": 0.9325
+   },
+   "RIVAL:cont_mlp": {
+    "n": 400,
+    "valid": 0.0075,
+    "legal": 0.81
+   },
+   "RIVAL:lstm": {
+    "n": 400,
+    "valid": 0.2675,
+    "legal": 0.89
+   },
+   "RIVAL:transformer": {
+    "n": 400,
+    "valid": 0.4125,
+    "legal": 0.9075
+   },
+   "BLIND-layout-free-cells": {
+    "n": 400,
+    "valid": 0.08
+   },
+   "BLIND-colour-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 400,
+    "valid": 0.0175
+   },
+   "RANDOM": {
+    "n": 400,
+    "valid": 0.0
+   }
+  },
+  "value_holdout": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8325
+   },
+   "LOOKUP (printed floor)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.905
+   },
+   "CLU": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.7925
+   },
+   "CTRL:landscape_removed": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.7925
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.625
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.665
+   },
+   "CTRL:random_atoms": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.65
+   },
+   "RIVAL:mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8675
+   },
+   "RIVAL:cont_mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.6925
+   },
+   "RIVAL:lstm": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.7925
+   },
+   "RIVAL:transformer": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8175
+   },
+   "BLIND-layout-free-cells": {
+    "n": 400,
+    "valid": 0.055
+   },
+   "BLIND-colour-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 400,
+    "valid": 0.0925
+   },
+   "RANDOM": {
+    "n": 400,
+    "valid": 0.0
+   }
+  },
+  "value_slot_holdout": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 400,
+    "valid": 0.01,
+    "legal": 0.865
+   },
+   "LOOKUP (printed floor)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8975
+   },
+   "CLU": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.815
+   },
+   "CTRL:landscape_removed": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.815
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.645
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.65
+   },
+   "CTRL:random_atoms": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.655
+   },
+   "RIVAL:mlp": {
+    "n": 400,
+    "valid": 0.0025,
+    "legal": 0.885
+   },
+   "RIVAL:cont_mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8075
+   },
+   "RIVAL:lstm": {
+    "n": 400,
+    "valid": 0.0025,
+    "legal": 0.755
+   },
+   "RIVAL:transformer": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.87
+   },
+   "BLIND-layout-free-cells": {
+    "n": 400,
+    "valid": 0.0525
+   },
+   "BLIND-colour-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 400,
+    "valid": 0.0875
+   },
+   "RANDOM": {
+    "n": 400,
+    "valid": 0.0
+   }
+  }
+ },
+ "seconds": 1856.5896971225739
+}

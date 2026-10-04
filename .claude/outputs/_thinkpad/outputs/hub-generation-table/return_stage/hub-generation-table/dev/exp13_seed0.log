@@ -1,0 +1,88 @@
+[23:27:00] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[23:27:00]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[23:27:00]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[23:27:01]   channel geometry loaded from chan_geom_s0_pool32766.npz
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[23:27:04]   [+floor_huexwall_hue] agg=0.7708 (54/72) ridge=100 cols=158
+[23:27:06]   [+floor_huexobject_hue] agg=0.7824 (50/72) ridge=100 cols=158
+[23:27:09]   [+floor_huexscale] agg=0.8773 (64/72) ridge=10 cols=138
+[23:27:11]   [+floor_huexshape] agg=0.8102 (48/72) ridge=10 cols=98
+[23:27:14]   [+floor_huexorientation] agg=0.7755 (56/72) ridge=100 cols=208
+[23:27:16]   [+wall_huexobject_hue] agg=0.7662 (51/72) ridge=100 cols=158
+[23:27:18]   [+wall_huexscale] agg=0.7662 (49/72) ridge=100 cols=138
+[23:27:21]   [+wall_huexshape] agg=0.8032 (59/72) ridge=100 cols=98
+[23:27:23]   [+wall_huexorientation] agg=0.7847 (51/72) ridge=100 cols=208
+[23:27:26]   [+object_huexscale] agg=0.8565 (57/72) ridge=10 cols=138
+[23:27:28]   [+object_huexshape] agg=0.8032 (54/72) ridge=100 cols=98
+[23:27:30]   [+object_huexorientation] agg=0.7778 (51/72) ridge=100 cols=208
+[23:27:33]   [+scalexshape] agg=0.7639 (50/72) ridge=100 cols=90
+[23:27:35]   [+scalexorientation] agg=0.8032 (50/72) ridge=10 cols=178
+[23:27:37]   [+shapexorientation] agg=0.8171 (48/72) ridge=100 cols=118
+[23:27:37] pair ranking: floor_huexscale=0.8773, object_huexscale=0.8565, shapexorientation=0.8171, floor_huexshape=0.8102, wall_huexshape=0.8032, object_huexshape=0.8032, scalexorientation=0.8032, wall_huexorientation=0.7847, floor_huexobject_hue=0.7824, object_huexorientation=0.7778, floor_huexorientation=0.7755, floor_huexwall_hue=0.7708, wall_huexobject_hue=0.7662, wall_huexscale=0.7662, scalexshape=0.7639
+[23:27:41]   [top1] agg=0.8773 (64/72) cols=138 ridge=10 bytes_raw=1130496
+[23:27:45]   [top2] agg=0.9444 (68/72) cols=218 ridge=10 bytes_raw=1785856
+[23:27:49]   [top3] agg=0.9514 (70/72) cols=278 ridge=10 bytes_raw=2277376
+[23:27:53]   [top4] agg=0.9491 (69/72) cols=318 ridge=100 bytes_raw=2605056
+[23:27:57]   [top5] agg=0.9583 (69/72) cols=358 ridge=100 bytes_raw=2932736
+[23:28:02]   [top6] agg=0.9792 (69/72) cols=398 ridge=300 bytes_raw=3260416
+[23:28:07]   [top8] agg=0.9792 (71/72) cols=668 ridge=300 bytes_raw=5472256
+[23:28:13]   [top10] agg=0.9630 (69/72) cols=918 ridge=300 bytes_raw=7520256
+[23:28:53]   [K8_M37_p1] arm=0.6806(39) atomfloor=0.6574(47) sr=0.1389(10) | cols=138 store=303104 head=163392 total=466496 ⭐under [39.6s]
+[23:29:26]   [K16_M27_p1] arm=0.7523(47) atomfloor=0.7037(55) sr=0.0579(12) | cols=138 store=221184 head=238464 total=459648 ⭐under [33.1s]
+[23:29:55]   [K32_M18_p1] arm=0.7616(44) atomfloor=0.7662(54) sr=0.2824(13) | cols=138 store=147456 head=317952 total=465408 ⭐under [28.7s]
+[23:30:21]   [K64_M10_p1] arm=0.7083(42) atomfloor=0.7593(46) sr=0.3912(17) | cols=138 store=81920 head=353280 total=435200 ⭐under [26.4s]
+[23:30:59]   [K8_M31_p2] arm=0.6505(40) atomfloor=0.6343(51) sr=0.1389(2) | cols=218 store=253952 head=216256 total=470208 ⭐under [37.8s]
+[23:31:28]   [K16_M21_p2] arm=0.6829(35) atomfloor=0.6505(40) sr=0.1435(8) | cols=218 store=172032 head=292992 total=465024 ⭐under [29.4s]
+[23:31:54]   [K32_M13_p2] arm=0.6852(27) atomfloor=0.7361(45) sr=0.2060(15) | cols=218 store=106496 head=362752 total=469248 ⭐under [25.7s]
+[23:32:18]   [K64_M7_p2] arm=0.6644(38) atomfloor=0.7384(27) sr=0.2894(21) | cols=218 store=57344 head=390656 total=448000 ⭐under [23.8s]
+[23:32:52]   [K8_M27_p3] arm=0.6065(37) atomfloor=0.6944(35) sr=0.0556(6) | cols=278 store=221184 head=240192 total=461376 ⭐under [34.2s]
+[23:33:21]   [K16_M18_p3] arm=0.6806(34) atomfloor=0.6181(33) sr=0.0556(9) | cols=278 store=147456 head=320256 total=467712 ⭐under [28.5s]
+[23:33:45]   [K32_M10_p3] arm=0.7176(34) atomfloor=0.6806(21) sr=0.2731(12) | cols=278 store=81920 head=355840 total=437760 ⭐under [24.9s]
+[23:34:08]   [K64_M5_p3] arm=0.6412(38) atomfloor=0.5764(22) sr=0.1968(15) | cols=278 store=40960 head=355840 total=396800 ⭐under [22.3s]
+[23:34:44]   [K8_M25_p4] arm=0.6690(42) atomfloor=0.8310(46) sr=0.0926(6) | cols=318 store=204800 head=254400 total=459200 ⭐under [36.2s]
+[23:35:11]   [K16_M16_p4] arm=0.6319(37) atomfloor=0.7454(46) sr=0.2153(10) | cols=318 store=131072 head=325632 total=456704 ⭐under [27.0s]
+[23:35:36]   [K32_M9_p4] arm=0.7176(34) atomfloor=0.5324(31) sr=0.3333(11) | cols=318 store=73728 head=366336 total=440064 ⭐under [24.7s]
+[23:35:58]   [K64_M5_p4] arm=0.6412(35) atomfloor=0.5741(13) sr=0.2037(18) | cols=318 store=40960 head=407040 total=448000 ⭐under [22.2s]
+[23:35:58] done in 539.8s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table\dev\exp13_seed0.json
+exit=0

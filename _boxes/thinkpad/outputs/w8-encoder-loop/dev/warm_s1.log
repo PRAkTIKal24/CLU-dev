@@ -1,0 +1,73 @@
+[19:08:48] stage=warm seed=1 arm=None out=C:\chlu\outputs\w8-encoder-loop\run quick=False
+[19:08:48] chlu package: C:\chlu\worktrees\CHLU-w8-encoder-loop\chlu
+[19:08:48] jax devices: [CpuDevice(id=0)]
+[19:08:48]   rows: train=8192 probe_fit=8192 probe_eval=4096 (0 held-out rows fitted, asserted)
+[19:08:48]   streaming 8192 training images ...
+[19:09:55]   warm start: recon pretext, 1500 steps x 128 ...
+[19:10:11]     step 1/1500  loss=0.17509
+[19:19:32]     step 300/1500  loss=0.00798
+[19:29:03]     step 600/1500  loss=0.00542
+[19:38:25]     step 900/1500  loss=0.00402
+[19:47:21]     step 1200/1500  loss=0.00342
+[19:55:43]     step 1500/1500  loss=0.00292
+[19:55:53]   grouping: K=5 over D=2048 ...
+[19:56:02]   decoder recipe: w8_v1_short = v1_capacity_schedule's architecture at 400 steps (the gated winner runs 1800); DECLARED: these renders are NOT comparable with the incumbent's absolutes
+[19:56:02]   warm decoder: w8_v1_warm (200 steps, the winner's architecture) -- SHARED bit-identically by every arm ...
+[19:56:15]     step 1/200  loss=0.17098
+[20:00:11]     step 40/200  loss=0.02486
+[20:03:58]     step 80/200  loss=0.01411
+[20:07:38]     step 120/200  loss=0.01045
+[20:11:21]     step 160/200  loss=0.00883
+[20:15:08]     step 200/200  loss=0.00877
+[20:15:08]   judge: external classifier seed 1 aa69b436989b (hash-asserted)
+[20:15:08]   deriving FIXED ownership on 256 pinned pairs ...
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[20:15:12]     well 0 ( 369 ch): follow-j 0.000 0.137 0.000 0.109 0.109 0.117
+[20:15:15]     well 1 ( 346 ch): follow-j 0.000 0.266 0.000 0.109 0.094 0.133
+[20:15:19]     well 2 ( 493 ch): follow-j 1.000 0.000 0.027 0.207 0.301 0.055
+[20:15:22]     well 3 ( 310 ch): follow-j 0.000 0.000 0.000 0.082 0.086 0.055
+[20:15:25]     well 4 ( 530 ch): follow-j 0.000 0.000 0.355 0.117 0.266 0.055
+[20:15:27]   ownership FIXED at the warm start: own=[5, 1, 0, 4, 2] (identity ceiling exact=0.1367)
+[20:15:27]   warm start written -> C:\chlu\outputs\w8-encoder-loop\run\seed_1\warm_start.json
+[20:15:27] done in 3999.6s

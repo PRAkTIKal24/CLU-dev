@@ -1,0 +1,54 @@
+[01:11:30] oracle readouts loaded from C:\chlu\outputs\hub-unseen-valid\runs\oracle_n4096.npz -- both metrics will be scored
+[01:11:30] 4096 row-2 requests; 64 corners realised
+[01:12:01] heads fitted (two-sided ridge, phi=1e-2, atom=1e-6); basis variants: kmeans++ and PCA, both 64 x d_k = 524288 B
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:12:40] basis_head: HUEMAE 0.4232D  HUEMAE_ref 0.4029D  ROW2ACC 0.5984  SNAPFRAC 0.8752  tuples 4016  (37.8s)
+[01:13:13] basis_head_pca: HUEMAE 0.4170D  HUEMAE_ref 0.3875D  ROW2ACC 0.8752  SNAPFRAC 0.8662  tuples 4048  (32.8s)
+[01:13:51] knn_proto: HUEMAE 0.4401D  HUEMAE_ref 0.4546D  ROW2ACC 0.2327  SNAPFRAC 0.9070  tuples 3960  (38.0s)
+[01:14:29] clu_span: HUEMAE 0.4169D  HUEMAE_ref 0.3949D  ROW2ACC 0.5532  SNAPFRAC 0.8650  tuples 4020  (37.4s)
+[01:15:10] clu_discrete: HUEMAE 0.5191D  HUEMAE_ref 0.5570D  ROW2ACC 0.0288  SNAPFRAC 0.9575  tuples 3128  (40.8s)
+[01:15:52] store_removed_span: HUEMAE 2.1562D  HUEMAE_ref 2.2369D  ROW2ACC 0.0000  SNAPFRAC 1.0000  tuples 16  (41.9s)
+[01:16:27] store_removed_discrete: HUEMAE 2.1597D  HUEMAE_ref 2.2404D  ROW2ACC 0.0000  SNAPFRAC 1.0000  tuples 1  (35.5s)
+[01:17:01] store_scrambled_span: HUEMAE 1.7147D  HUEMAE_ref 1.8262D  ROW2ACC 0.0000  SNAPFRAC 0.9712  tuples 1367  (34.0s)
+[01:17:01] wrote C:\chlu\outputs\hub-unseen-valid\runs\dev4096/run_manifest.json

@@ -1,0 +1,31 @@
+[seed 0] layout bank: 6 layouts from 6 generator seeds
+  pool: train 500 (lb 0.270)  rows {'seen': 60, 'unseen_2way': 60, 'unseen_nway': 60, 'value_holdout': 60, 'value_slot_holdout': 60}
+[seed 0] disjointness pass=True []
+[seed 0] impossible-request check: 800 requests, 0 impossible
+    ae step     1  loss 8.39029
+    ae step    10  loss 7.69056
+    ae step    20  loss 5.41967
+    ae step    30  loss 5.25078
+    ae step    40  loss 5.14240
+[seed 0] AE trained in 18.7s; latents (500, 128)
+[seed 0] CLU read floats 170016 (atoms 1536 + head 168480), span 0.688
+[seed 0] lookup floor holds 500 items = 64000 floats (CLU read 170016)
+[seed 0] rival mlp          width  327 params  170168 (target  170016, matched=True) 1s
+[seed 0] rival cont_mlp     width  345 params  170213 (target  170016, matched=True) 1s
+[seed 0] rival lstm         width  137 params  169871 (target  170016, matched=True) 3s
+[seed 0] rival transformer  width  102 params  176328 (target  170016, matched=False) 3s
+[seed 0] row seen                 judged 60 requests x 16 arms
+[seed 0] row unseen_2way          judged 60 requests x 16 arms
+[seed 0] row unseen_nway          judged 60 requests x 16 arms
+[seed 0] row value_holdout        judged 60 requests x 16 arms
+[seed 0] row value_slot_holdout   judged 60 requests x 16 arms
+[seed 0 del] as-trained MLP fitted in 1s (170168 params)
+[seed 0 del] value deletion: 352 of 500 training states
+[seed 0 del]   store-scoped gap: |dS|=6.366e-12 |dt|=0.000e+00 |dn|=0 rel=2.211e-15
+[seed 0 del]   rival retrain-without: 0s (CLU adaptation 1.08s)
+[seed 0 del] conjunction deletion: 141 of 500 training states
+[seed 0 del]   store-scoped gap: |dS|=7.276e-12 |dt|=0.000e+00 |dn|=0 rel=1.027e-15
+[seed 0 del]   rival retrain-without: 1s (CLU adaptation 0.67s)
+[seed 0] done in 135s
+[seed 0] independent replay: 4800 states, 0 disagreements, bank mismatches 0
+VAL-SMOKE.json written; total 136s

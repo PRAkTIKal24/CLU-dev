@@ -1,0 +1,77 @@
+chlu.__file__ = C:\chlu\worktrees\CHLU-w13-encoder-adapt\chlu\__init__.py
+authorisation: {"scored": false, "condition": "val", "note": "val is the FREE selection condition (charter A.2)"}
+  features    -> C:\chlu\outputs\w13-encoder-adapt\run\seed_0\frozen\cache
+  decoder     -> C:\chlu\outputs\w13-encoder-adapt\run\seed_0\frozen\declift
+  rivals      -> C:\chlu\outputs\w13-encoder-adapt\run\seed_0\frozen\rivals
+  classifier  -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+K* = 32 from wave 12's CROSSOVER-val.json (rule frozen 11:10:24Z); nothing in this hub re-selects K
+cache asserted GENERATION 2: {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:\\chlu\\outputs\\w13-encoder-adapt\\run\\seed_0\\frozen\\cache'}
+val corners: row 3 = 0 pair sub-corners, row 4 = 24 n-way
+dead channels: frozen file 67, THIS ARM 53, union 110 of 2048
+store K=32 A=63 built 7.8s  wells 64..64  RANK/WIDTH 0.9375..0.9844
+address book 2292.4s  1,065,544 B
+FOUR-PART LEDGER (summed, never netted): atoms 516,096 | cov+count 560,608 | address 1,065,544 | coupling 6,610 = 2,148,858 B [4.0986x the 524,288 B REFERENCE column]
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cov_tensor (THE SINGLE DESIGN)         24 corners in 72s
+    landscape_removed                      24 corners in 50s
+    landscape_shuffled                     24 corners in 60s
+    landscape_shuffled_across_wells        24 corners in 63s
+    random_atoms                           24 corners in 62s
+    mlp                                    24 corners in 66s
+    mlp_180k                               24 corners in 66s
+    cont_mlp                               24 corners in 67s
+    transformer                            24 corners in 81s
+    lstm                                   24 corners in 80s
+wrote C:\chlu\outputs\w13-encoder-adapt\valscore\val_seed0_frozen_K32\score.json
+  cov_tensor                             novel/corner    0.000
+  landscape_removed                      novel/corner    0.000
+  landscape_shuffled                     novel/corner    0.000
+  landscape_shuffled_across_wells        novel/corner    0.000
+  random_atoms                           novel/corner    0.000
+  mlp                                    novel/corner    0.000
+  mlp_180k                               novel/corner    0.000
+  cont_mlp                               novel/corner    0.000
+  transformer                            novel/corner    0.000
+  lstm                                   novel/corner    0.000
+  MARGIN (frozen) = +0.0000 vs best learned baseline mlp

@@ -1,0 +1,71 @@
+chlu.__file__ = C:\chlu\worktrees\CHLU-w13-encoder-adapt\chlu\__init__.py
+  registered into exp_w8_encoder_loop: ['frozen', 'adapter', 'anchor']  K=5 A=64 min_well_frac=0.100000
+  rows: train=8192 probe_fit=8192 probe_eval=4096 (0 held-out rows fitted, asserted)
+  streaming 8192 training images ...
+  warm start: recon pretext, 1500 steps x 128 ...
+    step 1/1500  loss=0.17509
+    step 300/1500  loss=0.00819
+    step 600/1500  loss=0.00548
+    step 900/1500  loss=0.00379
+    step 1200/1500  loss=0.00398
+    step 1500/1500  loss=0.00334
+  grouping: K=5 over D=2048 ...
+  decoder recipe: w8_v1_short = v1_capacity_schedule's architecture at 400 steps (the gated winner runs 1800); DECLARED: these renders are NOT comparable with the incumbent's absolutes
+  warm decoder: w8_v1_warm (200 steps, the winner's architecture) -- SHARED bit-identically by every arm ...
+    step 1/200  loss=0.17176
+    step 40/200  loss=0.02554
+    step 80/200  loss=0.01631
+    step 120/200  loss=0.01043
+    step 160/200  loss=0.00870
+    step 200/200  loss=0.00870
+  judge: external classifier seed 1 aa69b436989b (hash-asserted)
+  deriving FIXED ownership on 256 pinned pairs ...
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    well 0 ( 307 ch): follow-j 0.000 0.152 0.000 0.109 0.109 0.094
+    well 1 ( 453 ch): follow-j 0.000 0.234 0.004 0.098 0.141 0.098
+    well 2 ( 457 ch): follow-j 0.996 0.000 0.027 0.195 0.293 0.066
+    well 3 ( 315 ch): follow-j 0.000 0.000 0.000 0.090 0.082 0.059
+    well 4 ( 516 ch): follow-j 0.000 0.000 0.527 0.145 0.262 0.074
+  ownership FIXED at the warm start: own=[4, 1, 0, 3, 2] (identity ceiling exact=0.1523)
+  warm start written -> C:\chlu\outputs\w13-encoder-adapt\run\seed_1\warm_start.json

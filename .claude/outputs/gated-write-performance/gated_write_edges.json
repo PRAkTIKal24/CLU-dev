@@ -1,0 +1,283 @@
+{
+  "experiment": "gated_write",
+  "shared_slot": {
+    "d_model": 64,
+    "n_layers": 2,
+    "target_block_params": 40000,
+    "train_steps": 1200,
+    "tune_steps": 400,
+    "batch_size": 32,
+    "eval_batch": 256,
+    "lr_grid": [
+      0.0003,
+      0.001,
+      0.003
+    ],
+    "n_seeds": 3,
+    "clu_dt": 0.1,
+    "clu_hidden": 32,
+    "clu_kinetic_mode": "newtonian_learned",
+    "clu_potential_type": "mlp",
+    "clu_read_mode": "endpoint",
+    "shipped_clu_gamma": 0.05,
+    "mqar_gamma": 0.0
+  },
+  "results": [
+    {
+      "item": "item3a_extrapolation",
+      "family": "adding",
+      "label": "clu_gated",
+      "overrides": {
+        "clu_write_mode": "gated",
+        "clu_gamma": 0.0
+      },
+      "train_T": 64,
+      "eval_Ts": [
+        64,
+        128,
+        256
+      ],
+      "best_lr": 0.001,
+      "width": 83,
+      "block_params": 39886,
+      "total_params": 56783,
+      "param_err": 0.002850000000000019,
+      "metric_name": "mse",
+      "metric_by_T": {
+        "64": 0.0019920247917373977,
+        "128": 2.0142685969670615,
+        "256": 2.9570857683817544
+      },
+      "std_by_T": {
+        "64": 0.0010883500373977178,
+        "128": 1.8835860529215993,
+        "256": 1.0543912722598678
+      },
+      "n_diverged": 0
+    },
+    {
+      "item": "item3a_extrapolation",
+      "family": "adding",
+      "label": "gru",
+      "overrides": {},
+      "train_T": 64,
+      "eval_Ts": [
+        64,
+        128,
+        256
+      ],
+      "best_lr": 0.001,
+      "width": 49,
+      "block_params": 40014,
+      "total_params": 56911,
+      "param_err": 0.0003500000000000725,
+      "metric_name": "mse",
+      "metric_by_T": {
+        "64": 0.00018475793573694924,
+        "128": 0.023942723870277405,
+        "256": 0.10297232617934544
+      },
+      "std_by_T": {
+        "64": 5.133743909685189e-05,
+        "128": 0.009663283613038922,
+        "256": 0.027032762985523137
+      },
+      "n_diverged": 0
+    },
+    {
+      "item": "item3a_extrapolation",
+      "family": "adding",
+      "label": "ssm",
+      "overrides": {},
+      "train_T": 64,
+      "eval_Ts": [
+        64,
+        128,
+        256
+      ],
+      "best_lr": 0.003,
+      "width": 101,
+      "block_params": 40052,
+      "total_params": 56949,
+      "param_err": 0.0013000000000000789,
+      "metric_name": "mse",
+      "metric_by_T": {
+        "64": 0.0007442535813121746,
+        "128": 0.014123102727656564,
+        "256": 0.017429488400618236
+      },
+      "std_by_T": {
+        "64": 0.00060548405419413,
+        "128": 0.011530856471192754,
+        "256": 0.008934136669489178
+      },
+      "n_diverged": 0
+    },
+    {
+      "item": "item3a_extrapolation",
+      "family": "parity",
+      "label": "clu_gated",
+      "overrides": {
+        "clu_write_mode": "gated",
+        "clu_gamma": 0.0
+      },
+      "train_T": 64,
+      "eval_Ts": [
+        64,
+        128,
+        256
+      ],
+      "best_lr": 0.003,
+      "width": 83,
+      "block_params": 39886,
+      "total_params": 56784,
+      "param_err": 0.002850000000000019,
+      "metric_name": "accuracy",
+      "metric_by_T": {
+        "64": 0.5590413411458334,
+        "128": 0.5281575520833334,
+        "256": 0.5153147379557291
+      },
+      "std_by_T": {
+        "64": 0.011581929066839648,
+        "128": 0.005435461576926173,
+        "256": 0.0010298144064693692
+      },
+      "n_diverged": 0
+    },
+    {
+      "item": "item3a_extrapolation",
+      "family": "parity",
+      "label": "gru",
+      "overrides": {},
+      "train_T": 64,
+      "eval_Ts": [
+        64,
+        128,
+        256
+      ],
+      "best_lr": 0.0003,
+      "width": 49,
+      "block_params": 40014,
+      "total_params": 56912,
+      "param_err": 0.0003500000000000725,
+      "metric_name": "accuracy",
+      "metric_by_T": {
+        "64": 1.0,
+        "128": 1.0,
+        "256": 1.0
+      },
+      "std_by_T": {
+        "64": 0.0,
+        "128": 0.0,
+        "256": 0.0
+      },
+      "n_diverged": 0
+    },
+    {
+      "item": "item3a_extrapolation",
+      "family": "parity",
+      "label": "ssm",
+      "overrides": {},
+      "train_T": 64,
+      "eval_Ts": [
+        64,
+        128,
+        256
+      ],
+      "best_lr": 0.003,
+      "width": 101,
+      "block_params": 40052,
+      "total_params": 56950,
+      "param_err": 0.0013000000000000789,
+      "metric_name": "accuracy",
+      "metric_by_T": {
+        "64": 0.6327718098958334,
+        "128": 0.5658060709635416,
+        "256": 0.532318115234375
+      },
+      "std_by_T": {
+        "64": 0.011032609823943176,
+        "128": 0.00670022831443976,
+        "256": 0.004337577509668489
+      },
+      "n_diverged": 0
+    },
+    {
+      "item": "item3c_robustness",
+      "family": "adding_T128",
+      "label": "clu_gated",
+      "overrides": {
+        "clu_write_mode": "gated",
+        "clu_gamma": 0.05
+      },
+      "best_lr": 0.0003,
+      "width": 65,
+      "block_params": 40200,
+      "metric_name": "mse",
+      "mse_by_noise": {
+        "0.0": 0.015136484056711197,
+        "0.05": 0.018941940739750862,
+        "0.1": 0.03075621339182059,
+        "0.2": 0.0861603965361913,
+        "0.4": 0.4212711950143178
+      },
+      "std_by_noise": {
+        "0.0": 0.006635048502037153,
+        "0.05": 0.005342040227487832,
+        "0.1": 0.0012630215492232873,
+        "0.2": 0.019668769262321868,
+        "0.4": 0.14682573549080097
+      }
+    },
+    {
+      "item": "item3c_robustness",
+      "family": "adding_T128",
+      "label": "gru",
+      "overrides": {},
+      "best_lr": 0.001,
+      "width": 49,
+      "block_params": 40014,
+      "metric_name": "mse",
+      "mse_by_noise": {
+        "0.0": 0.0007664542063139379,
+        "0.05": 0.006103122141212225,
+        "0.1": 0.021316250165303547,
+        "0.2": 0.07597406953573227,
+        "0.4": 0.24316854774951935
+      },
+      "std_by_noise": {
+        "0.0": 0.0004151313871205394,
+        "0.05": 0.000492846242390725,
+        "0.1": 0.0009969783670282033,
+        "0.2": 0.0032951496907437294,
+        "0.4": 0.012838215517999437
+      }
+    },
+    {
+      "item": "item3c_robustness",
+      "family": "adding_T128",
+      "label": "ssm",
+      "overrides": {},
+      "best_lr": 0.003,
+      "width": 101,
+      "block_params": 40052,
+      "metric_name": "mse",
+      "mse_by_noise": {
+        "0.0": 0.0007609439441390956,
+        "0.05": 0.005817872006446123,
+        "0.1": 0.02124711436529954,
+        "0.2": 0.08130823572476704,
+        "0.4": 0.28320252398649853
+      },
+      "std_by_noise": {
+        "0.0": 0.0009544502258492839,
+        "0.05": 0.0004812902570905065,
+        "0.1": 0.0009145088314719232,
+        "0.2": 0.007435366660602527,
+        "0.4": 0.054912253594882644
+      }
+    }
+  ],
+  "cost": null
+}

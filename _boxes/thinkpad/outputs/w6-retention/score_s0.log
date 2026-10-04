@@ -1,0 +1,93 @@
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  field(seed 0): already built, loading
+  evicted 6 item(s) holding factor 2 = value 0; 49,374 B of the image belong to them
+  decayed 6 item(s) by 0.5; 0 reached zero and were evicted
+  decayed 6 item(s) by 0.0; 6 reached zero and were evicted
+  HOLE punched at (f2=0) x (f4=1); coupling index 921; 1 B
+  tables(seed 0): fit 3.58s; row-removal 0.0000s; RETRAIN-FROM-SCRATCH 3.45s on 120,028 rows (11,044 dropped)
+  decay(seed 0): 17 horizons over 6 item(s) (5 by provenance, 5 by geometry); rho=0.974679434481, n_half=27.0268, refusal step 539
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+  score(seed 0): 100/4212 units, 61 judge passes, 84s elapsed
+  score(seed 0): 200/4212 units, 119 judge passes, 178s elapsed
+  score(seed 0): 300/4212 units, 178 judge passes, 271s elapsed
+  score(seed 0): 400/4212 units, 233 judge passes, 372s elapsed
+  score(seed 0): 500/4212 units, 292 judge passes, 471s elapsed
+  score(seed 0): 600/4212 units, 353 judge passes, 567s elapsed
+  score(seed 0): 700/4212 units, 412 judge passes, 662s elapsed
+  score(seed 0): 800/4212 units, 468 judge passes, 765s elapsed
+  score(seed 0): 900/4212 units, 525 judge passes, 881s elapsed
+  score(seed 0): 1000/4212 units, 586 judge passes, 1000s elapsed
+  score(seed 0): 1100/4212 units, 644 judge passes, 1090s elapsed
+  score(seed 0): 1200/4212 units, 703 judge passes, 1174s elapsed
+  score(seed 0): 1300/4212 units, 758 judge passes, 1266s elapsed
+  score(seed 0): 1400/4212 units, 817 judge passes, 1379s elapsed
+  score(seed 0): 1500/4212 units, 878 judge passes, 1491s elapsed
+  score(seed 0): 1600/4212 units, 937 judge passes, 1607s elapsed
+  score(seed 0): 1700/4212 units, 993 judge passes, 1717s elapsed
+  score(seed 0): 1800/4212 units, 1050 judge passes, 1831s elapsed
+  score(seed 0): 1900/4212 units, 1111 judge passes, 1924s elapsed
+  score(seed 0): 2000/4212 units, 1169 judge passes, 2011s elapsed
+  score(seed 0): 2100/4212 units, 1228 judge passes, 2101s elapsed
+  score(seed 0): 2200/4212 units, 1283 judge passes, 2180s elapsed
+  score(seed 0): 2300/4212 units, 1342 judge passes, 2257s elapsed
+  score(seed 0): 2400/4212 units, 1403 judge passes, 2338s elapsed
+  score(seed 0): 2500/4212 units, 1462 judge passes, 2417s elapsed
+  score(seed 0): 2600/4212 units, 1518 judge passes, 2490s elapsed
+  score(seed 0): 2700/4212 units, 1575 judge passes, 2566s elapsed
+  score(seed 0): 2800/4212 units, 1636 judge passes, 2646s elapsed
+  score(seed 0): 2900/4212 units, 1694 judge passes, 2727s elapsed
+  score(seed 0): 3000/4212 units, 1753 judge passes, 2812s elapsed
+  score(seed 0): 3100/4212 units, 1808 judge passes, 2886s elapsed
+  score(seed 0): 3200/4212 units, 1867 judge passes, 2958s elapsed
+  score(seed 0): 3300/4212 units, 1928 judge passes, 3036s elapsed
+  score(seed 0): 3400/4212 units, 1987 judge passes, 3110s elapsed
+  score(seed 0): 3500/4212 units, 2043 judge passes, 3181s elapsed
+  score(seed 0): 3600/4212 units, 2100 judge passes, 3248s elapsed
+  score(seed 0): 3700/4212 units, 2161 judge passes, 3328s elapsed
+  score(seed 0): 3800/4212 units, 2219 judge passes, 3397s elapsed
+  score(seed 0): 3900/4212 units, 2278 judge passes, 3477s elapsed
+  score(seed 0): 4000/4212 units, 2333 judge passes, 3609s elapsed
+  score(seed 0): 4100/4212 units, 2392 judge passes, 3780s elapsed
+  score(seed 0): 4200/4212 units, 2453 judge passes, 3961s elapsed
+  score(seed 0): 4212 units in 3971.2s

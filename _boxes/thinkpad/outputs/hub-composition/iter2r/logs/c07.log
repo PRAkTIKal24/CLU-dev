@@ -1,0 +1,132 @@
+[14:56:01] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[14:56:01]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[14:56:01]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[14:56:02]   K=   8  M= 44  bytes=474,880 (0.9995 x knn_proto)  [store 360,448 + head 114,432]
+[14:56:02]   K=  16  M= 35  bytes=462,720 (0.9739 x knn_proto)  [store 286,720 + head 176,000]
+[14:56:02]   K=  32  M= 26  bytes=469,504 (0.9881 x knn_proto)  [store 212,992 + head 256,512]
+[14:56:02]   K=  64  M= 17  bytes=471,552 (0.9925 x knn_proto)  [store 139,264 + head 332,288]
+[14:56:02]   K= 128  M= 10  bytes=471,040 (0.9914 x knn_proto)  [store 81,920 + head 389,120]
+[14:56:02] C07 tag=km seed=0: 5 (K, M) points x 8 corners
+[14:57:14]   store K=8 M=44 built and cached -> store_s0_c0_K8_M44_n32766.npz
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:57:17] [c0] K=   8 M= 44  tuples_valid_novel=  4  agg=0.7546  distinct= 46  (74s)
+[14:58:09]   store K=16 M=35 built and cached -> store_s0_c0_K16_M35_n32766.npz
+[14:58:12] [c0] K=  16 M= 35  tuples_valid_novel= 15  agg=0.8171  distinct= 52  (55s)
+[14:58:14] [c0] K=  32 M= 26  tuples_valid_novel= 38  agg=0.9097  distinct= 61  (2s)
+[14:59:00]   store K=64 M=17 built and cached -> store_s0_c0_K64_M17_n32766.npz
+[14:59:02] [c0] K=  64 M= 17  tuples_valid_novel= 33  agg=0.8958  distinct= 59  (48s)
+[14:59:46]   store K=128 M=10 built and cached -> store_s0_c0_K128_M10_n32766.npz
+[14:59:49] [c0] K= 128 M= 10  tuples_valid_novel= 30  agg=0.8981  distinct= 59  (47s)
+[14:59:49] [c0] done in 227.1s
+[15:00:53]   store K=8 M=44 built and cached -> store_s0_c2_K8_M44_n32764.npz
+[15:00:55] [c2] K=   8 M= 44  tuples_valid_novel= 12  agg=0.7801  distinct= 49  (65s)
+[15:01:35]   store K=16 M=35 built and cached -> store_s0_c2_K16_M35_n32764.npz
+[15:01:36] [c2] K=  16 M= 35  tuples_valid_novel=  9  agg=0.7731  distinct= 52  (41s)
+[15:01:38] [c2] K=  32 M= 26  tuples_valid_novel= 35  agg=0.8912  distinct= 61  (2s)
+[15:02:12]   store K=64 M=17 built and cached -> store_s0_c2_K64_M17_n32764.npz
+[15:02:14] [c2] K=  64 M= 17  tuples_valid_novel= 36  agg=0.9005  distinct= 59  (36s)
+[15:02:49]   store K=128 M=10 built and cached -> store_s0_c2_K128_M10_n32764.npz
+[15:02:50] [c2] K= 128 M= 10  tuples_valid_novel= 31  agg=0.8773  distinct= 57  (36s)
+[15:02:50] [c2] done in 181.2s
+[15:03:55]   store K=8 M=44 built and cached -> store_s0_c4_K8_M44_n32766.npz
+[15:03:57] [c4] K=   8 M= 44  tuples_valid_novel= 15  agg=0.8079  distinct= 52  (66s)
+[15:04:35]   store K=16 M=35 built and cached -> store_s0_c4_K16_M35_n32766.npz
+[15:04:37] [c4] K=  16 M= 35  tuples_valid_novel= 11  agg=0.8148  distinct= 45  (40s)
+[15:04:38] [c4] K=  32 M= 26  tuples_valid_novel= 35  agg=0.8935  distinct= 59  (2s)
+[15:05:12]   store K=64 M=17 built and cached -> store_s0_c4_K64_M17_n32766.npz
+[15:05:14] [c4] K=  64 M= 17  tuples_valid_novel= 23  agg=0.8588  distinct= 59  (35s)
+[15:05:49]   store K=128 M=10 built and cached -> store_s0_c4_K128_M10_n32766.npz
+[15:05:51] [c4] K= 128 M= 10  tuples_valid_novel= 30  agg=0.8935  distinct= 65  (37s)
+[15:05:51] [c4] done in 180.7s
+[15:06:43]   store K=8 M=44 built and cached -> store_s0_c6_K8_M44_n32762.npz
+[15:06:45] [c6] K=   8 M= 44  tuples_valid_novel= 21  agg=0.8287  distinct= 44  (53s)
+[15:07:19]   store K=16 M=35 built and cached -> store_s0_c6_K16_M35_n32762.npz
+[15:07:20] [c6] K=  16 M= 35  tuples_valid_novel= 31  agg=0.8657  distinct= 46  (36s)
+[15:07:22] [c6] K=  32 M= 26  tuples_valid_novel= 40  agg=0.8981  distinct= 51  (2s)
+[15:07:55]   store K=64 M=17 built and cached -> store_s0_c6_K64_M17_n32762.npz
+[15:07:57] [c6] K=  64 M= 17  tuples_valid_novel= 39  agg=0.8912  distinct= 54  (35s)
+[15:08:33]   store K=128 M=10 built and cached -> store_s0_c6_K128_M10_n32762.npz
+[15:08:35] [c6] K= 128 M= 10  tuples_valid_novel= 26  agg=0.8657  distinct= 47  (39s)
+[15:08:35] [c6] done in 164.2s
+[15:09:40]   store K=8 M=44 built and cached -> store_s0_c10_K8_M44_n32759.npz
+[15:09:41] [c10] K=   8 M= 44  tuples_valid_novel=  0  agg=0.7708  distinct= 26  (65s)
+[15:10:24]   store K=16 M=35 built and cached -> store_s0_c10_K16_M35_n32759.npz
+[15:10:26] [c10] K=  16 M= 35  tuples_valid_novel=  0  agg=0.7662  distinct= 42  (44s)
+[15:10:28] [c10] K=  32 M= 26  tuples_valid_novel=  0  agg=0.8264  distinct= 33  (2s)
+[15:11:06]   store K=64 M=17 built and cached -> store_s0_c10_K64_M17_n32759.npz
+[15:11:08] [c10] K=  64 M= 17  tuples_valid_novel=  0  agg=0.8310  distinct= 43  (40s)
+[15:11:50]   store K=128 M=10 built and cached -> store_s0_c10_K128_M10_n32759.npz
+[15:11:52] [c10] K= 128 M= 10  tuples_valid_novel=  0  agg=0.8218  distinct= 47  (44s)
+[15:11:52] [c10] done in 196.5s
+[15:12:54]   store K=8 M=44 built and cached -> store_s0_c12_K8_M44_n32757.npz
+[15:12:56] [c12] K=   8 M= 44  tuples_valid_novel=  2  agg=0.6944  distinct= 34  (63s)
+[15:13:32]   store K=16 M=35 built and cached -> store_s0_c12_K16_M35_n32757.npz
+[15:13:34] [c12] K=  16 M= 35  tuples_valid_novel=  3  agg=0.7292  distinct= 38  (38s)
+[15:13:35] [c12] K=  32 M= 26  tuples_valid_novel= 14  agg=0.8218  distinct= 50  (2s)
+[15:14:10]   store K=64 M=17 built and cached -> store_s0_c12_K64_M17_n32757.npz
+[15:14:12] [c12] K=  64 M= 17  tuples_valid_novel= 19  agg=0.8426  distinct= 41  (36s)
+[15:14:48]   store K=128 M=10 built and cached -> store_s0_c12_K128_M10_n32757.npz
+[15:14:50] [c12] K= 128 M= 10  tuples_valid_novel= 11  agg=0.8194  distinct= 46  (38s)
+[15:14:50] [c12] done in 177.3s
+[15:16:17]   store K=8 M=44 built and cached -> store_s0_c14_K8_M44_n32763.npz
+[15:16:19] [c14] K=   8 M= 44  tuples_valid_novel=  0  agg=0.5903  distinct= 31  (89s)
+[15:17:02]   store K=16 M=35 built and cached -> store_s0_c14_K16_M35_n32763.npz
+[15:17:04] [c14] K=  16 M= 35  tuples_valid_novel=  0  agg=0.6250  distinct= 34  (45s)
+[15:17:06] [c14] K=  32 M= 26  tuples_valid_novel=  0  agg=0.6620  distinct= 47  (2s)
+[15:17:47]   store K=64 M=17 built and cached -> store_s0_c14_K64_M17_n32763.npz
+[15:17:49] [c14] K=  64 M= 17  tuples_valid_novel=  0  agg=0.6852  distinct= 52  (43s)
+[15:18:31]   store K=128 M=10 built and cached -> store_s0_c14_K128_M10_n32763.npz
+[15:18:34] [c14] K= 128 M= 10  tuples_valid_novel=  3  agg=0.7199  distinct= 54  (44s)
+[15:18:34] [c14] done in 223.7s
+[15:19:46]   store K=8 M=44 built and cached -> store_s0_c16_K8_M44_n32761.npz
+[15:19:47] [c16] K=   8 M= 44  tuples_valid_novel= 12  agg=0.7662  distinct= 27  (73s)
+[15:20:32]   store K=16 M=35 built and cached -> store_s0_c16_K16_M35_n32761.npz
+[15:20:34] [c16] K=  16 M= 35  tuples_valid_novel= 20  agg=0.8380  distinct= 42  (47s)
+[15:20:36] [c16] K=  32 M= 26  tuples_valid_novel= 18  agg=0.8171  distinct= 35  (2s)
+[15:21:16]   store K=64 M=17 built and cached -> store_s0_c16_K64_M17_n32761.npz
+[15:21:18] [c16] K=  64 M= 17  tuples_valid_novel= 23  agg=0.8287  distinct= 44  (42s)
+[15:22:00]   store K=128 M=10 built and cached -> store_s0_c16_K128_M10_n32761.npz
+[15:22:02] [c16] K= 128 M= 10  tuples_valid_novel= 30  agg=0.8588  distinct= 51  (44s)
+[15:22:02] [c16] done in 208.3s
+[15:22:02] C07 done in 1563.7s

@@ -1,0 +1,63 @@
+[     0.0s] chlu.__file__ = C:\chlu\worktrees\CHLU-w12b-nr6-and-kstar\chlu\__init__.py
+[     0.0s] rung=2 seed=1 K=32  cache gen 2 scope full root C:/chlu/outputs/spoke-a-rivals/cache_generation2
+[     0.0s] partitions: partitions.npz copied from the w12 ladder leg; partitions.json copied from the w12 ladder leg
+[     1.1s] corners: {'n_corners': 60, 'n_rows': 2160, 'pairwise_disjoint': True, 'all_rows_held_out': True, 'rows_per_corner': [36]}
+[     1.1s]   partitions: already on disk, skipping
+[     1.4s]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     7.3s] FastJudge positive control: True (256 requests, 1536 elements)
+[    34.6s]   store K=32 A=63 built in 27.3s  wells 64..64  RANK/WIDTH 0.9688..0.9844
+[  1484.7s]   address book K=32 fitted in 1450.0s
+[  1484.8s] FOUR-PART LEDGER: atoms 516096 | cov+count 560608 | address 1066064 | coupling 6610 = 2149378 B [4.0996x the 524,288 B REFERENCE column] -> 1x target 537344 params
+[  1501.4s]   single_design_K32                  novel 32.5000  judge_acc 0.9028  in 16.7s
+[  1515.8s]   single_design_K32__landscape_removed novel 0.0000  judge_acc 0.0000  in 14.4s
+[  1530.6s]   single_design_K32__landscape_shuffled novel 0.0000  judge_acc 0.0000  in 14.8s
+[  1545.4s]   single_design_K32__random_atoms    novel 0.0000  judge_acc 0.0000  in 14.7s
+[  1555.9s]     matched width=254: 536972 params vs target 537344 (-0.07%)
+[  1571.8s]       epoch 10/20: train mse 0.01905
+[  1585.8s]       epoch 20/20: train mse 0.01614
+[  1585.9s]     learned_1x: width 254, 536972 params (-0.07% of target), fitted in 29.0s
+[  1600.6s]   learned_1x                         novel 29.3833  (536972 params, width 254)  in 55.3s
+[  1600.6s]   MARGIN store - learned_1x = +3.1167
+[  1600.6s] leg done -> C:\chlu\outputs\w12b-nr6-and-kstar\kstar_ladder\2_seed1_K32  failed=[]

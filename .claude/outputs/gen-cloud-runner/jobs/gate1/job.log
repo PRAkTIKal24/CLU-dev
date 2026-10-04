@@ -1,0 +1,16 @@
+=== chlu startup 2026-09-15T20:36:58Z on chlu-gate1 ===
+job=gate1 exp=gen_cell units=[0] image=us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:010435659b510551b64d2008361ac5c906bf127246d0d4fc678b8c204385c44c remote=gs://chlu-cloud-forgisprova/jobs zone=us-central1-a
+exp_args=[--dataset shapes3d --pretext recon --stage cell --quick] artefacts=[gs://chlu-cloud-forgisprova/artefacts-deliberately-absent] commit=6c148a94dbd31d65ec6fbb950458329cb43e598f
+[exp] gen_cell -> module=chlu.experiments.exp_gen_cell out_mode=sweep needs_artefacts=1
+[resume] restoring gs://chlu-cloud-forgisprova/jobs/gate1/out -> /var/chlu/out
+[artefacts] fetching gs://chlu-cloud-forgisprova/artefacts-deliberately-absent -> /var/chlu/artefacts
+ERROR: (gcloud.storage.rsync) Did not find existing container at: gs://chlu-cloud-forgisprova/artefacts-deliberately-absent
+FATAL[startup]: gen artefact root(s) MISSING, by name:
+    CHLU_GEN_DATA_ROOT -> /var/chlu/artefacts/data/gen
+    CHLU_GEN_BRIDGE_ROOT -> /var/chlu/artefacts/outputs/gen-feature-bridge/runs
+    CHLU_GEN_STORE_RUNS -> /var/chlu/artefacts/outputs/gen-store-grouping/runs
+    CHLU_GEN_DECLIFT_DIR -> /var/chlu/artefacts/outputs/gen-decoder-lift/winner
+       Stage them with scripts/cloud/stage_gcs.sh and pass --artefacts
+       gs://<bucket>/artefacts (⛔ do not improvise a staging path), or
+       set CHLU_SKIP_ARTEFACT_CHECK=1 if this run genuinely needs none.
+=== finishing rc=2 2026-09-15T20:37:04Z ===

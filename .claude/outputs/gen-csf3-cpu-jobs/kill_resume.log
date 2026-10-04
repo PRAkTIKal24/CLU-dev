@@ -1,0 +1,192 @@
+########## ATTEMPT 1 — will be kill -9'd after ~10s (mid unit 3 of 5) ##########
+--- kill -9 of the whole process group (pid 12632 + children) ---
+attempt-1 exit: 137
+[cpu-gen] GEN_LOCAL=1 — skipping module purge / env.sh / JAX preflight (plumbing only)
+[cpu-gen] artefact roots present: CHLU_CLAUDE_ROOT=/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art
+[cpu-gen] ⚠ GEN_GIT_COMMIT was unset; resolved from .git
+[cpu-gen] === EXP=atom_mean shapes3d_recon · units=0 1 2 3 4 · cores=16 ===
+[cpu-gen] job=<local> restart_count=0 host=batMac.local
+[cpu-gen] commit=d57937cc458ef234c3016cfbbbeb7e3604971436
+[cpu-gen] JAX_PLATFORMS=cpu  OMP_NUM_THREADS=16
+[cpu-gen] out=/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon
+[cpu-gen] ckpt=/Users/user/scratch/cpugen-killtest
+[resume] no journal at /Users/user/scratch/cpugen-killtest/journal.json — starting from scratch
+[cpu-gen] RUN  seed_0  (chlu.experiments.exp_gen_atom_mean)
+[cpu-gen] SMOKE=1 — trivial payload for seed 0 (plumbing only)
+[cpu-gen] smoke manifest -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_0/atom_manifest.json
+[ckpt] journal -> /Users/user/scratch/cpugen-killtest/journal.json (1 unit(s) done)
+[cpu-gen] DONE seed_0 in 4s
+[cpu-gen] RUN  seed_1  (chlu.experiments.exp_gen_atom_mean)
+[cpu-gen] SMOKE=1 — trivial payload for seed 1 (plumbing only)
+[cpu-gen] smoke manifest -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_1/atom_manifest.json
+[ckpt] journal -> /Users/user/scratch/cpugen-killtest/journal.json (2 unit(s) done)
+[cpu-gen] DONE seed_1 in 4s
+[cpu-gen] RUN  seed_2  (chlu.experiments.exp_gen_atom_mean)
+[cpu-gen] SMOKE=1 — trivial payload for seed 2 (plumbing only)
+scripts/csf3/job_cpu_gen.sh: line 553: 12770 Killed: 9               sleep "$SMOKE_SLEEP_S"
+
+--- journal after the kill ---
+{
+  "created_at": "2026-09-15T18:18:54.433888+00:00",
+  "fingerprint": "64c7ecd97eaee3af69bbf4282b818bb97def58dbe859a7804e5fc6aa1525c780",
+  "fingerprint_fields": {
+    "arm": "all",
+    "budgets": "",
+    "dataset": "shapes3d",
+    "exp": "atom_mean",
+    "extra_args": "",
+    "module": "chlu.experiments.exp_gen_atom_mean",
+    "out": "/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon",
+    "pretext": "recon",
+    "quick": "0",
+    "smoke": "1",
+    "unit_stage": "atoms"
+  },
+  "git_commit": "d57937cc458ef234c3016cfbbbeb7e3604971436",
+  "schema": "chlu-cpu-gen-journal/1",
+  "units_done": {
+    "seed_0": {
+      "finished_at": "2026-09-15T18:18:58.610098+00:00",
+      "git_commit": "d57937cc458ef234c3016cfbbbeb7e3604971436",
+      "job_id": "local",
+      "wall_s": 4.0
+    },
+    "seed_1": {
+      "finished_at": "2026-09-15T18:19:02.762055+00:00",
+      "git_commit": "d57937cc458ef234c3016cfbbbeb7e3604971436",
+      "job_id": "local",
+      "wall_s": 4.0
+    }
+  },
+  "updated_at": "2026-09-15T18:19:02.762055+00:00"
+}
+
+--- manifests on disk after the kill ---
+/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_0/atom_manifest.json
+/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_1/atom_manifest.json
+
+########## ATTEMPT 2 — same command line, RESUME=1 is the default ##########
+[cpu-gen] GEN_LOCAL=1 — skipping module purge / env.sh / JAX preflight (plumbing only)
+[cpu-gen] artefact roots present: CHLU_CLAUDE_ROOT=/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art
+[cpu-gen] ⚠ GEN_GIT_COMMIT was unset; resolved from .git
+[cpu-gen] === EXP=atom_mean shapes3d_recon · units=0 1 2 3 4 · cores=16 ===
+[cpu-gen] job=<local> restart_count=0 host=batMac.local
+[cpu-gen] commit=d57937cc458ef234c3016cfbbbeb7e3604971436
+[cpu-gen] JAX_PLATFORMS=cpu  OMP_NUM_THREADS=16
+[cpu-gen] out=/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon
+[cpu-gen] ckpt=/Users/user/scratch/cpugen-killtest
+[resume] journal /Users/user/scratch/cpugen-killtest/journal.json: fingerprint OK, 2 unit(s) complete: seed_0 seed_1
+[cpu-gen] SKIP seed_0 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_0/atom_manifest.json
+[cpu-gen] SKIP seed_1 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_1/atom_manifest.json
+[cpu-gen] RUN  seed_2  (chlu.experiments.exp_gen_atom_mean)
+[cpu-gen] SMOKE=1 — trivial payload for seed 2 (plumbing only)
+[cpu-gen] smoke manifest -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_2/atom_manifest.json
+[ckpt] journal -> /Users/user/scratch/cpugen-killtest/journal.json (3 unit(s) done)
+[cpu-gen] DONE seed_2 in 4s
+[cpu-gen] RUN  seed_3  (chlu.experiments.exp_gen_atom_mean)
+[cpu-gen] SMOKE=1 — trivial payload for seed 3 (plumbing only)
+[cpu-gen] smoke manifest -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_3/atom_manifest.json
+[ckpt] journal -> /Users/user/scratch/cpugen-killtest/journal.json (4 unit(s) done)
+[cpu-gen] DONE seed_3 in 4s
+[cpu-gen] RUN  seed_4  (chlu.experiments.exp_gen_atom_mean)
+[cpu-gen] SMOKE=1 — trivial payload for seed 4 (plumbing only)
+[cpu-gen] smoke manifest -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_4/atom_manifest.json
+[ckpt] journal -> /Users/user/scratch/cpugen-killtest/journal.json (5 unit(s) done)
+[cpu-gen] DONE seed_4 in 4s
+[cpu-gen] === summary: ran=3 skipped=2 failed=0 ===
+/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_0/atom_manifest.json
+/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_1/atom_manifest.json
+/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_2/atom_manifest.json
+/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_3/atom_manifest.json
+/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_4/atom_manifest.json
+[cpu-gen] journal: /Users/user/scratch/cpugen-killtest/journal.json
+[cpu-gen] ⚠ ~/scratch has NO BACKUP and a 3-month auto-cleanup — pull results promptly:
+[cpu-gen]   rsync -av csf3:/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/ ./.claude/outputs/<your-slug>/shapes3d_recon/
+[cpu-gen] === job_cpu_gen local DONE ===
+attempt-2 exit: 0
+
+--- final journal ---
+{
+  "created_at": "2026-09-15T18:18:54.433888+00:00",
+  "fingerprint": "64c7ecd97eaee3af69bbf4282b818bb97def58dbe859a7804e5fc6aa1525c780",
+  "fingerprint_fields": {
+    "arm": "all",
+    "budgets": "",
+    "dataset": "shapes3d",
+    "exp": "atom_mean",
+    "extra_args": "",
+    "module": "chlu.experiments.exp_gen_atom_mean",
+    "out": "/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon",
+    "pretext": "recon",
+    "quick": "0",
+    "smoke": "1",
+    "unit_stage": "atoms"
+  },
+  "git_commit": "d57937cc458ef234c3016cfbbbeb7e3604971436",
+  "schema": "chlu-cpu-gen-journal/1",
+  "units_done": {
+    "seed_0": {
+      "finished_at": "2026-09-15T18:18:58.610098+00:00",
+      "git_commit": "d57937cc458ef234c3016cfbbbeb7e3604971436",
+      "job_id": "local",
+      "wall_s": 4.0
+    },
+    "seed_1": {
+      "finished_at": "2026-09-15T18:19:02.762055+00:00",
+      "git_commit": "d57937cc458ef234c3016cfbbbeb7e3604971436",
+      "job_id": "local",
+      "wall_s": 4.0
+    },
+    "seed_2": {
+      "finished_at": "2026-09-15T18:19:08.699032+00:00",
+      "git_commit": "d57937cc458ef234c3016cfbbbeb7e3604971436",
+      "job_id": "local",
+      "wall_s": 4.0
+    },
+    "seed_3": {
+      "finished_at": "2026-09-15T18:19:12.853582+00:00",
+      "git_commit": "d57937cc458ef234c3016cfbbbeb7e3604971436",
+      "job_id": "local",
+      "wall_s": 4.0
+    },
+    "seed_4": {
+      "finished_at": "2026-09-15T18:19:17.011348+00:00",
+      "git_commit": "d57937cc458ef234c3016cfbbbeb7e3604971436",
+      "job_id": "local",
+      "wall_s": 4.0
+    }
+  },
+  "updated_at": "2026-09-15T18:19:17.011348+00:00"
+}
+
+########## ATTEMPT 3 — fully-resumed run: EVERY unit must SKIP ##########
+[cpu-gen] SKIP seed_0 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_0/atom_manifest.json
+[cpu-gen] SKIP seed_1 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_1/atom_manifest.json
+[cpu-gen] SKIP seed_2 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_2/atom_manifest.json
+[cpu-gen] SKIP seed_3 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_3/atom_manifest.json
+[cpu-gen] SKIP seed_4 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_4/atom_manifest.json
+[cpu-gen] === summary: ran=0 skipped=5 failed=0 ===
+
+########## FINGERPRINT REFUSAL — same CKPT_DIR, different config (QUICK=1) ##########
+[cpu-gen] commit=d57937cc458ef234c3016cfbbbeb7e3604971436
+[cpu-gen] JAX_PLATFORMS=cpu  OMP_NUM_THREADS=16
+[cpu-gen] out=/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon
+[cpu-gen] ckpt=/Users/user/scratch/cpugen-killtest
+⛔ REFUSING TO RESUME: /Users/user/scratch/cpugen-killtest/journal.json was written under a DIFFERENT config.
+    quick: journal='0' now='1'
+  A resumed sweep must be the SAME sweep. Give this leg its own OUT/CKPT_DIR,
+  or set FORCE_NEW=1 to archive the old journal and start over.
+refusal exit: 3
+
+########## JOURNAL ENTRY WITHOUT ITS MANIFEST — must NOT skip ##########
+[cpu-gen] SKIP seed_0 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_0/atom_manifest.json
+[cpu-gen] ⚠ seed_1 is in the journal but its manifest is GONE (/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_1/atom_manifest.json) — re-running
+[cpu-gen] RUN  seed_1  (chlu.experiments.exp_gen_atom_mean)
+[cpu-gen] DONE seed_1 in 4s
+[cpu-gen] SKIP seed_2 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_2/atom_manifest.json
+[cpu-gen] SKIP seed_3 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_3/atom_manifest.json
+[cpu-gen] SKIP seed_4 (manifest exists) -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k/art/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_4/atom_manifest.json
+[cpu-gen] === summary: ran=1 skipped=4 failed=0 ===
+[cpu-gen] === job_cpu_gen local DONE ===
+
+workdir=/var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.yy6qGH752k ckpt=/Users/user/scratch/cpugen-killtest

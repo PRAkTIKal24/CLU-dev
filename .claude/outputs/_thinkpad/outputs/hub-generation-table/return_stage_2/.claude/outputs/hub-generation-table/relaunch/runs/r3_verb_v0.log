@@ -1,0 +1,71 @@
+[21:18:14] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[21:18:14]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[21:18:14]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[21:18:19]   ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+[21:18:19]   ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+[21:18:20] SHIPPED store K=5 wells=[303, 305, 573, 501, 366] store=524288 + head=74240 = 598528 B  (loaded, NOT re-trained)
+[21:18:21] linear head 74240 B == the shipped addressing head, to the byte
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[21:18:26] [c13 9025728d08] argmax        =0.5787(14)  linear        =0.7222(35)  argmax_removed=0.1389( 1)
+[21:18:30] [c14 88b0f9e7b7] argmax        =0.5093(18)  linear        =0.8009(41)  argmax_removed=0.1389( 1)
+[21:18:34] [c16 6e27d52e84] argmax        =0.4838(12)  linear        =0.6227(37)  argmax_removed=0.1944( 1)
+[21:18:37] [c19 e87c55b7c8] argmax        =0.4722(12)  linear        =0.6968(39)  argmax_removed=0.0833( 1)
+[21:18:41] [c20 0516a0bb91] argmax        =0.6250(14)  linear        =0.7593(36)  argmax_removed=0.1944( 1)
+[21:18:45] [c21 8604e2959b] argmax        =0.6065(11)  linear        =0.7083(33)  argmax_removed=0.1389( 1)
+[21:18:49] [c22 09225c8ea1] argmax        =0.6065(12)  linear        =0.8032(40)  argmax_removed=0.1389( 1)
+[21:18:53] [c23 11b960f3fe] argmax        =0.5880(13)  linear        =0.8611(40)  argmax_removed=0.0833( 1)
+[21:18:57] [c24 015098345d] argmax        =0.6597(12)  linear        =0.8611(39)  argmax_removed=0.3611( 1)
+[21:19:01] [c25 37c75c3819] argmax        =0.5810(17)  linear        =0.7662(34)  argmax_removed=0.3056( 1)
+[21:19:05] [c26 b5c2db9d4d] argmax        =0.5579( 9)  linear        =0.7917(22)  argmax_removed=0.3056( 1)
+[21:19:09] [c28 1f6b16c27d] argmax        =0.5509(14)  linear        =0.8194(35)  argmax_removed=0.1944( 1)
+[21:19:13] [c29 1d997f9be4] argmax        =0.5370(14)  linear        =0.7222(32)  argmax_removed=0.1389( 1)
+[21:19:17] [c30 05064cb9f5] argmax        =0.5602(10)  linear        =0.7593(35)  argmax_removed=0.1389( 1)
+[21:19:21] [c31 06ee734253] argmax        =0.5833( 9)  linear        =0.7199(39)  argmax_removed=0.0833( 1)
+[21:19:25] [c32 fa7f5265a2] argmax        =0.5000(16)  linear        =0.5926(40)  argmax_removed=0.1944( 1)
+[21:19:29] [c33 ca39e06229] argmax        =0.5069(10)  linear        =0.5116(46)  argmax_removed=0.1389( 1)
+[21:19:33] [c34 f153055c63] argmax        =0.4491(15)  linear        =0.7014(47)  argmax_removed=0.1389( 1)
+[21:19:37] [c35 4d88305fcf] argmax        =0.4352(15)  linear        =0.8611(50)  argmax_removed=0.0833( 1)
+[21:19:41] [c36 a0f2b6d536] argmax        =0.5787(16)  linear        =0.7407(32)  argmax_removed=0.1944( 1)
+[21:19:45] [c37 cab07f2d2a] argmax        =0.6157(12)  linear        =0.6690(43)  argmax_removed=0.1389( 1)
+[21:19:45] r3_readverb done in 91.0s

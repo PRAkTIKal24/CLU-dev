@@ -1,0 +1,69 @@
+{
+ "seed": 1,
+ "steps": 80000,
+ "recipe_steps": 8000,
+ "target_floats": 4584,
+ "WHAT_THIS_IS": "CMAZE-T TRAINING-BUDGET DIAGNOSTIC (VAL only; never a matched rival row, never a bar).\n\n    python scripts/w16_cmaze_t_rivaldiag.py <seed> <out_dir> [mult]\n\nThe CMAZE-O C-field rivals, re-trained 10x longer, overturned that task's rival margin\n(matched MLP 0.99 vs CLU 0.70 on VAL unseen_nway).  The same objection is put to the\nCMAZE-T Config-A1 win here: the SAME three matched-parameter rivals (target = A1's read\nfloats), and the SAME trunks at 10x the read-path budget, each trained for ``mult`` x the\nrecipe's 8,000 gradient steps, SAME observation, SAME frozen encoder, SAME rows.\n",
+ "arms": {
+  "diagnostic: mlp at matched, 10x steps": {
+   "params": 4781,
+   "final_loss": 2.4760100841522217,
+   "rows": {
+    "seen": 0.0,
+    "pair": 0.0,
+    "nway": 0.0,
+    "value": 0.0
+   }
+  },
+  "diagnostic: lstm at matched, 10x steps": {
+   "params": 4290,
+   "final_loss": 0.8187336325645447,
+   "rows": {
+    "seen": 0.263,
+    "pair": 0.03300624442462088,
+    "nway": 0.01037037037037037,
+    "value": 0.09675
+   }
+  },
+  "diagnostic: transformer at matched, 10x steps": {
+   "params": 5129,
+   "final_loss": 0.01167825236916542,
+   "rows": {
+    "seen": 0.79725,
+    "pair": 0.28991971454058874,
+    "nway": 0.38814814814814813,
+    "value": 0.503
+   }
+  },
+  "diagnostic: mlp at 10x read floats, 10x steps": {
+   "params": 46109,
+   "final_loss": 6.528119342874561e-07,
+   "rows": {
+    "seen": 0.9225,
+    "pair": 0.3479036574487065,
+    "nway": 0.3762962962962963,
+    "value": 0.525
+   }
+  },
+  "diagnostic: lstm at 10x read floats, 10x steps": {
+   "params": 45825,
+   "final_loss": 3.054959233850241e-05,
+   "rows": {
+    "seen": 0.92,
+    "pair": 0.3184656556645852,
+    "nway": 0.43703703703703706,
+    "value": 0.39
+   }
+  },
+  "diagnostic: transformer at 10x read floats, 10x steps": {
+   "params": 46397,
+   "final_loss": 1.9001497548742918e-06,
+   "rows": {
+    "seen": 0.95275,
+    "pair": 0.3514719000892061,
+    "nway": 0.41185185185185186,
+    "value": 0.49875
+   }
+  }
+ }
+}

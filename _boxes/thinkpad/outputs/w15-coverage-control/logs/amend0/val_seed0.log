@@ -1,0 +1,58 @@
+[     0.0s] chlu.__file__ = C:\chlu\worktrees\CHLU-w15-coverage-control\chlu\__init__.py
+[     0.0s] seed=0 K=32 cache gen 2 scope full
+[     6.6s] val k=3: 6 cells (36000 rows), 60 corners, train 144000
+[     8.7s] val k=6: 60 cells (2880 rows), 60 corners, train 276480
+[     8.7s] pool recompute == w12 test pool: {'3': True, '6': True}
+[     9.0s]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[    23.8s] FastJudge positive control: True
+[    53.2s]   store K=32 A=63 built in 29.5s  wells 64..64  RANK/WIDTH 0.9531..0.9688
+[  3291.4s]   address book K=32 fitted in 3238.0s
+[  3387.4s]   A_store_pool3_est3                           novel 0.0000 judge_acc 0.0000 (96s)
+[  3471.0s]   A_store_pool3_est3__landscape_removed        novel 0.0000 judge_acc 0.0000 (84s)
+[  3560.4s]   A_store_pool3_est3__landscape_shuffled       novel 0.0000 judge_acc 0.0000 (89s)
+[  3649.5s]   A_store_pool3_est3__random_atoms             novel 0.0000 judge_acc 0.0000 (89s)
+[  3738.4s]   C_store_pool3_est6                           novel 0.0000 judge_acc 0.0000 (89s)
+[  3826.2s]   C_store_pool3_est6__landscape_removed        novel 0.0000 judge_acc 0.0000 (88s)
+[  3917.0s]   C_store_pool3_est6__landscape_shuffled       novel 0.0000 judge_acc 0.0000 (91s)

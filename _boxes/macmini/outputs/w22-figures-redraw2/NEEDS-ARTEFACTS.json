@@ -1,0 +1,14 @@
+{
+ "spoke": "w22 figures-redraw pass 2 (batmac)",
+ "written_utc": "2026-09-24",
+ "blocking": "Part 3 of the brief: per-row CMAZE-T panels (fig_cmazet_* style: generated s_{t+1} per arm) for CLU-REL-A10, drawn through the SAME gate as pass 1 (gate 1 hash + gate 2 local re-read equal to the scored artefact).",
+ "gate1_status": "PASSED on this machine: 192/192 staged REL objects (390 files), HASH-VERIFY-REL-seeds012.json + HASH-VERIFY-REL-seeds345.json; staged hashes == the peer replay's own hash records (HASH-CROSSCHECK-REL-vs-replay.json, 144 + 96 objects, 0 mismatches).",
+ "gate2_status": "CANNOT RUN: clu.pkl / control_*.pkl / clu_after_*.pkl / clu_fitted_without_*.pkl pickle classes from module `w21_clu` (pickletools scan, nothing executed). The CLU-REL-A10 design (rel='eq', rel_x [2,4], pair_scale 0.5, width 396) and the '+rel' rival input (1,032 wide) are built by w21 code that is not in any branch on batmac.",
+ "needed": [
+  {"what": "scripts/w21_clu.py (the module the REL pickles reference) at the commit that wrote the persisted objects", "where": "forgis-14: /c/chlu/worktrees/CHLU-w21-rel-newseeds and CHLU-w21-maze-t-clu-improve (branches w21/rel-newseeds, w21/maze-t-clu-improve)"},
+  {"what": "scripts/w21_relnew_replay.py (the replay that produced replay/BOTH_test_seed*_PERTUPLE.json) and whatever builds the +rel rival input", "where": "same branches"},
+  {"what": "simplest form: a git bundle of w21/rel-newseeds shipped to batmac:~/clu/ship/", "why": "then cmazet_extract.py gains a REL reader and the panel set in data/cmazet_panels.json flips to landed; no other code change"}
+ ],
+ "not_substituted": "No REL per-row panel was drawn from anything else. What IS drawn for REL comes from existing artefacts only: per-seed arm scores (run JSONs) and per-tuple counts (the peer's hash-linked replay PERTUPLE files).",
+ "why_not_fetched": "ssh batmac -> forgis-14: 'Host key verification failed'; host keys were not overridden."
+}

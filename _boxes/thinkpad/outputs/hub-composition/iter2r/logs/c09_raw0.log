@@ -1,0 +1,97 @@
+[16:41:01] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[16:41:01]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[16:41:01]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[16:41:02] C09 variant=mine_raw0 {'partition': 'mine', 'iters': 0} spec=all -> 64 corners; bytes 469,504
+[16:41:03]   partition: fast.balanced_labels — dead channels SPREAD at evenly spaced slots; dead=71; well sizes min 64 max 64
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[16:41:18] [c0] mine_raw0      tuples_valid_novel= 27  agg=0.8843  distinct= 62  (16s)
+[16:41:34] [c1] mine_raw0      tuples_valid_novel= 38  agg=0.9190  distinct= 62  (15s)
+[16:41:49] [c2] mine_raw0      tuples_valid_novel= 27  agg=0.8704  distinct= 61  (15s)
+[16:42:06] [c3] mine_raw0      tuples_valid_novel=  0  agg=0.7870  distinct= 39  (16s)
+[16:42:26] [c4] mine_raw0      tuples_valid_novel= 27  agg=0.8912  distinct= 54  (20s)
+[16:42:48] [c5] mine_raw0      tuples_valid_novel=  1  agg=0.6157  distinct= 67  (21s)
+[16:43:08] [c6] mine_raw0      tuples_valid_novel= 16  agg=0.8380  distinct= 49  (20s)
+[16:43:31] [c7] mine_raw0      tuples_valid_novel= 20  agg=0.8519  distinct= 41  (23s)
+[16:43:52] [c10] mine_raw0      tuples_valid_novel=  0  agg=0.8287  distinct= 33  (21s)
+[16:44:14] [c11] mine_raw0      tuples_valid_novel=  7  agg=0.7546  distinct= 59  (21s)
+[16:44:33] [c12] mine_raw0      tuples_valid_novel=  5  agg=0.7477  distinct= 37  (19s)
+[16:44:54] [c13] mine_raw0      tuples_valid_novel=  0  agg=0.6319  distinct= 48  (20s)
+[16:45:14] [c14] mine_raw0      tuples_valid_novel=  0  agg=0.7037  distinct= 51  (20s)
+[16:45:33] [c15] mine_raw0      tuples_valid_novel=  0  agg=0.7338  distinct= 54  (19s)
+[16:45:51] [c16] mine_raw0      tuples_valid_novel= 27  agg=0.8634  distinct= 50  (18s)
+[16:46:09] [c17] mine_raw0      tuples_valid_novel= 13  agg=0.7847  distinct= 50  (18s)
+[16:46:27] [c18] mine_raw0      tuples_valid_novel= 13  agg=0.8356  distinct= 60  (18s)
+[16:46:46] [c19] mine_raw0      tuples_valid_novel= 35  agg=0.9028  distinct= 58  (19s)
+[16:47:05] [c20] mine_raw0      tuples_valid_novel= 49  agg=0.9398  distinct= 50  (19s)
+[16:47:24] [c21] mine_raw0      tuples_valid_novel= 13  agg=0.8519  distinct= 52  (19s)
+[16:47:42] [c22] mine_raw0      tuples_valid_novel=  0  agg=0.8102  distinct= 43  (18s)
+[16:48:02] [c24] mine_raw0      tuples_valid_novel= 14  agg=0.8333  distinct= 59  (19s)
+[16:48:22] [c25] mine_raw0      tuples_valid_novel=  6  agg=0.7292  distinct= 47  (20s)
+[16:48:45] [c30] mine_raw0      tuples_valid_novel= 30  agg=0.8750  distinct= 53  (24s)
+[16:49:08] [c31] mine_raw0      tuples_valid_novel= 14  agg=0.8218  distinct= 39  (22s)
+[16:49:31] [c33] mine_raw0      tuples_valid_novel= 63  agg=0.9745  distinct= 64  (22s)
+[16:49:52] [c37] mine_raw0      tuples_valid_novel= 49  agg=0.9444  distinct= 58  (21s)
+[16:50:11] [c38] mine_raw0      tuples_valid_novel= 11  agg=0.7824  distinct= 44  (19s)
+[16:50:30] [c40] mine_raw0      tuples_valid_novel= 33  agg=0.8935  distinct= 69  (19s)
+[16:50:52] [c43] mine_raw0      tuples_valid_novel=  0  agg=0.6944  distinct= 53  (21s)
+[16:51:14] [c44] mine_raw0      tuples_valid_novel= 47  agg=0.9329  distinct= 66  (22s)
+[16:51:36] [c45] mine_raw0      tuples_valid_novel=  2  agg=0.7269  distinct= 41  (22s)
+[16:51:58] [c46] mine_raw0      tuples_valid_novel=  0  agg=0.7801  distinct= 50  (22s)
+[16:52:18] [c47] mine_raw0      tuples_valid_novel= 24  agg=0.8681  distinct= 45  (20s)
+[16:52:38] [c49] mine_raw0      tuples_valid_novel= 19  agg=0.8449  distinct= 47  (19s)
+[16:52:58] [c50] mine_raw0      tuples_valid_novel=  0  agg=0.8125  distinct= 38  (20s)
+[16:53:21] [c51] mine_raw0      tuples_valid_novel=  8  agg=0.7569  distinct= 51  (22s)
+[16:53:43] [c52] mine_raw0      tuples_valid_novel=  7  agg=0.7454  distinct= 60  (22s)
+[16:54:05] [c53] mine_raw0      tuples_valid_novel=  0  agg=0.6875  distinct= 43  (22s)
+[16:54:28] [c54] mine_raw0      tuples_valid_novel= 14  agg=0.7940  distinct= 54  (22s)
+[16:54:50] [c55] mine_raw0      tuples_valid_novel= 15  agg=0.8009  distinct= 49  (22s)
+[16:55:13] [c56] mine_raw0      tuples_valid_novel=  1  agg=0.7199  distinct= 58  (23s)
+[16:55:37] [c57] mine_raw0      tuples_valid_novel=  9  agg=0.8056  distinct= 51  (24s)
+[16:56:00] [c58] mine_raw0      tuples_valid_novel= 29  agg=0.8727  distinct= 48  (23s)
+[16:56:22] [c59] mine_raw0      tuples_valid_novel= 14  agg=0.7940  distinct= 44  (22s)
+[16:56:42] [c60] mine_raw0      tuples_valid_novel= 24  agg=0.8704  distinct= 50  (20s)
+[16:57:04] [c61] mine_raw0      tuples_valid_novel=  3  agg=0.7361  distinct= 60  (21s)
+[16:57:24] [c62] mine_raw0      tuples_valid_novel=  0  agg=0.8264  distinct= 47  (20s)
+[16:57:40] [c63] mine_raw0      tuples_valid_novel=  6  agg=0.7847  distinct= 60  (16s)
+[16:57:40] C09 mine_raw0 done: 49 corners, 15 refused/skipped [8, 9, 23, 26, 27, 28, 29, 32, 34, 35, 36, 39, 41, 42, 48], 1002.1s

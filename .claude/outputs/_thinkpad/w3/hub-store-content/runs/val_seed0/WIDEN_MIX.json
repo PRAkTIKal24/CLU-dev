@@ -1,0 +1,267 @@
+{
+ "spec": {
+  "name": "WIDEN_MIX",
+  "blocks": [
+   "p",
+   "b3",
+   "b2"
+  ],
+  "half_channels": [
+   "b3"
+  ],
+  "shuffle": [],
+  "shuffle_seed": 0,
+  "D": 4096,
+  "n_atoms": 32,
+  "store_bytes": 524288,
+  "budget_bytes": 524288,
+  "byte_matched": true,
+  "dims_per_block": {
+   "p": 2048,
+   "b3": 1024,
+   "b2": 1024
+  },
+  "bytes_formula": "n_atoms * D * 4",
+  "note": "The added 2048 dims spread over TWO earlier depths instead of one: half of b3's channels (1024) + all of b2's (1024). D=4096, N=32, byte-matched. Answers 'is one block back enough, or is it depth?'"
+ },
+ "set": "val",
+ "set_label": "val (store pool, held back)",
+ "n_requests": 512,
+ "seed": 0,
+ "grouping": {
+  "well_sizes": [
+   489,
+   499,
+   488,
+   787,
+   1833
+  ],
+  "K": 5,
+  "method_used": "ward",
+  "n_dead_channels": 99,
+  "well_block_composition": [
+   {
+    "p": 265,
+    "b3": 108,
+    "b2": 116
+   },
+   {
+    "p": 210,
+    "b3": 146,
+    "b2": 143
+   },
+   {
+    "p": 179,
+    "b3": 120,
+    "b2": 189
+   },
+   {
+    "p": 369,
+    "b3": 211,
+    "b2": 207
+   },
+   {
+    "p": 1025,
+    "b3": 439,
+    "b2": 369
+   }
+  ],
+  "mean_well_purity": 0.475624151888906,
+  "global_block_fractions": {
+   "p": 0.5,
+   "b3": 0.25,
+   "b2": 0.25
+  },
+  "mixing": 1.0,
+  "mixing_note": "1.0 = every well holds the global block mixture; 0.0 = every well is a single block. A low value means the joint store is two stores side by side."
+ },
+ "byte_ledger": {
+  "n_atoms_per_well": 32,
+  "dim": 4096,
+  "well_sizes": [
+   489,
+   499,
+   488,
+   787,
+   1833
+  ],
+  "store_bytes": 524288,
+  "dtype": "float32",
+  "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+  "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72).",
+  "deployed_bytes": 524288,
+  "budget_bytes": 524288,
+  "what": "32 atoms x 4096 float32 = the store, content=['p', 'b3', 'b2']"
+ },
+ "provenance": {
+  "spec": {
+   "name": "WIDEN_MIX",
+   "blocks": [
+    "p",
+    "b3",
+    "b2"
+   ],
+   "half_channels": [
+    "b3"
+   ],
+   "shuffle": [],
+   "shuffle_seed": 0,
+   "D": 4096,
+   "n_atoms": 32,
+   "store_bytes": 524288,
+   "budget_bytes": 524288,
+   "byte_matched": true,
+   "dims_per_block": {
+    "p": 2048,
+    "b3": 1024,
+    "b2": 1024
+   },
+   "bytes_formula": "n_atoms * D * 4",
+   "note": "The added 2048 dims spread over TWO earlier depths instead of one: half of b3's channels (1024) + all of b2's (1024). D=4096, N=32, byte-matched. Answers 'is one block back enough, or is it depth?'"
+  },
+  "scales": {
+   "p": 0.714904851475324,
+   "b3": 0.5920819192148573,
+   "b2": 0.6205955304473424
+  },
+  "sigma": [
+   8.4807710647583,
+   8.922444343566895,
+   8.332574844360352,
+   8.778124809265137,
+   20.77829933166504
+  ],
+  "atom_selection": "kmeanspp",
+  "seed": 0,
+  "launch_mode": "clamp_atom",
+  "settling_steps": 0,
+  "read_mode": "state",
+  "sigma_rule": "nn_median",
+  "book_smoothing": 1.0
+ },
+ "rows": {
+  "full": {
+   "n": 512,
+   "aggregate": 0.5113932291666666,
+   "exact_match": 0.001953125,
+   "per_factor": {
+    "floor_hue": 0.900390625,
+    "wall_hue": 0.96484375,
+    "object_hue": 0.48828125,
+    "scale": 0.171875,
+    "shape": 0.439453125,
+    "orientation": 0.103515625
+   },
+   "n_distinct_index_tuples": 436,
+   "mean_confidence": 0.1351412832736969,
+   "launch_mode": "clamp_atom",
+   "per_corner": {
+    "val": {
+     "n": 512,
+     "aggregate": 0.5113932291666666,
+     "exact_match": 0.001953125,
+     "per_factor": {
+      "floor_hue": 0.900390625,
+      "wall_hue": 0.96484375,
+      "object_hue": 0.48828125,
+      "scale": 0.171875,
+      "shape": 0.439453125,
+      "orientation": 0.103515625
+     }
+    }
+   }
+  },
+  "atom_mean_lookup": {
+   "n": 512,
+   "aggregate": 0.4345703125,
+   "exact_match": 0.001953125,
+   "per_factor": {
+    "floor_hue": 0.880859375,
+    "wall_hue": 0.951171875,
+    "object_hue": 0.205078125,
+    "scale": 0.134765625,
+    "shape": 0.3515625,
+    "orientation": 0.083984375
+   },
+   "n_distinct_index_tuples": 436,
+   "mean_confidence": 0.1351412832736969,
+   "launch_mode": "posterior_mean",
+   "per_corner": {
+    "val": {
+     "n": 512,
+     "aggregate": 0.4345703125,
+     "exact_match": 0.001953125,
+     "per_factor": {
+      "floor_hue": 0.880859375,
+      "wall_hue": 0.951171875,
+      "object_hue": 0.205078125,
+      "scale": 0.134765625,
+      "shape": 0.3515625,
+      "orientation": 0.083984375
+     }
+    }
+   }
+  },
+  "row_lookup": {
+   "n": 512,
+   "aggregate": 0.3102213541666667,
+   "exact_match": 0.0,
+   "per_factor": {
+    "floor_hue": 0.515625,
+    "wall_hue": 0.595703125,
+    "object_hue": 0.18359375,
+    "scale": 0.15234375,
+    "shape": 0.345703125,
+    "orientation": 0.068359375
+   },
+   "n_distinct_rows_returned": 32,
+   "launch_mode": "row_lookup",
+   "per_corner": {
+    "val": {
+     "n": 512,
+     "aggregate": 0.3102213541666667,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.515625,
+      "wall_hue": 0.595703125,
+      "object_hue": 0.18359375,
+      "scale": 0.15234375,
+      "shape": 0.345703125,
+      "orientation": 0.068359375
+     }
+    }
+   }
+  },
+  "atoms_shuffled": {
+   "n": 512,
+   "aggregate": 0.12825520833333334,
+   "exact_match": 0.0,
+   "per_factor": {
+    "floor_hue": 0.01171875,
+    "wall_hue": 0.076171875,
+    "object_hue": 0.119140625,
+    "scale": 0.146484375,
+    "shape": 0.361328125,
+    "orientation": 0.0546875
+   },
+   "n_distinct_index_tuples": 436,
+   "launch_mode": "atoms_shuffled",
+   "per_corner": {
+    "val": {
+     "n": 512,
+     "aggregate": 0.12825520833333334,
+     "exact_match": 0.0,
+     "per_factor": {
+      "floor_hue": 0.01171875,
+      "wall_hue": 0.076171875,
+      "object_hue": 0.119140625,
+      "scale": 0.146484375,
+      "shape": 0.361328125,
+      "orientation": 0.0546875
+     }
+    }
+   }
+  }
+ },
+ "wall_seconds": 101.86961555480957
+}

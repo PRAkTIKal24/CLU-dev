@@ -1,0 +1,78 @@
+vec_vs_scalar: {"n": 300, "mismatches": [], "ok": true}
+--- GATE O: rule-blind oracles
+{
+  "optimal_control": {
+    "valid_and_reached": 1.0,
+    "all_steps_valid": 1.0,
+    "reached_goal": 1.0,
+    "held_at_goal": 1.0,
+    "n_speed": 0,
+    "n_obstacle": 0,
+    "n_out": 0
+  },
+  "O1_obstacle_blind": {
+    "valid_and_reached": 0.03866666666666667,
+    "all_steps_valid": 0.03866666666666667,
+    "reached_goal": 0.03866666666666667,
+    "held_at_goal": 0.03866666666666667,
+    "n_speed": 0,
+    "n_obstacle": 5673,
+    "n_out": 0
+  },
+  "O2_speed_blind": {
+    "valid_and_reached": 0.42133333333333334,
+    "all_steps_valid": 0.42133333333333334,
+    "reached_goal": 0.42133333333333334,
+    "held_at_goal": 0.42133333333333334,
+    "n_speed": 3533,
+    "n_obstacle": 0,
+    "n_out": 0
+  },
+  "O3_composition_blind": {
+    "valid_and_reached": 1.0,
+    "all_steps_valid": 1.0,
+    "reached_goal": 1.0,
+    "held_at_goal": 1.0,
+    "n_speed": 0,
+    "n_obstacle": 0,
+    "n_out": 0
+  },
+  "O3_stats": {
+    "n_route_decisions": 1347,
+    "n_route_choice_differs_from_true_optimum": 117,
+    "frac_route_differs": 0.08685968819599109,
+    "mean_extra_steps_vs_optimum": 0.16406829992576094,
+    "frac_strictly_costlier": 0.05790645879732739
+  }
+}
+GATE O: {
+  "O1_obstacle_blind": {
+    "valid_and_reached": 0.03866666666666667,
+    "pass_below_0.90": true
+  },
+  "O2_speed_blind": {
+    "valid_and_reached": 0.42133333333333334,
+    "pass_below_0.90": true
+  },
+  "O3_composition_blind": {
+    "valid_and_reached": 1.0,
+    "pass_below_0.90": false
+  },
+  "GATE_O_PASS": false
+}
+  lstm held h48: vr=0.1127 valid=0.3900 reach=0.1127 held=0.1127 (2s)
+  lstm held h96: vr=0.1127 valid=0.3900 reach=0.1127 held=0.1127 (3s)
+  lstm held_novel_layout h48: vr=0.0887 valid=0.3293 reach=0.0887 held=0.0887 (1s)
+  lstm held_novel_layout h96: vr=0.0887 valid=0.3293 reach=0.0887 held=0.0887 (3s)
+  lstm ablate_map_shuffled: vr=0.0613
+  lstm ablate_V_shuffled: vr=0.0767
+  lstm refusal: all_valid=0.1350 collisions=10467
+  transformer held h48: vr=0.1733 valid=0.3020 reach=0.2347 held=0.0087 (75s)
+  transformer held h96: vr=0.1100 valid=0.1627 reach=0.2547 held=0.0113 (285s)
+  transformer held_novel_layout h48: vr=0.1293 valid=0.2640 reach=0.1647 held=0.0093 (67s)
+  transformer held_novel_layout h96: vr=0.1027 valid=0.1560 reach=0.1940 held=0.0053 (243s)
+  transformer ablate_map_shuffled: vr=0.0987
+  transformer ablate_V_shuffled: vr=0.1193
+  transformer refusal: all_valid=0.0850 collisions=16977
+GATE H: {"best_baseline_valid_and_reached": 0.17333333333333334, "lower": 0.05, "upper": 0.95, "GATE_H_PASS": true}
+TOTAL 827s

@@ -1,0 +1,5660 @@
+{
+  "schema": "chlu-gen-pretrain/1",
+  "factor_names": [
+    "floor_hue",
+    "wall_hue",
+    "object_hue",
+    "scale",
+    "shape",
+    "orientation"
+  ],
+  "headline_probe": "linear",
+  "bar": 0.9,
+  "bar_factors": [
+    "scale",
+    "orientation"
+  ],
+  "by_variant": {
+    "recon_control": {
+      "n_seeds": 2,
+      "seeds": [
+        0,
+        1
+      ],
+      "encoder": {
+        "family": "recon",
+        "note": "the shipped pretext='recon' path, called verbatim",
+        "is_control": true,
+        "is_comparison_arm": false,
+        "enc_channels": [
+          32,
+          64,
+          128,
+          128
+        ],
+        "dec_channels": [
+          128,
+          64,
+          32
+        ],
+        "dec_blocks_per_stage": 1,
+        "steps": 400,
+        "steps_mult": 1,
+        "encoder_param_count": 428576,
+        "pretext_head_param_count": 250467,
+        "D": 2048,
+        "feat_shape": [
+          128,
+          4,
+          4
+        ],
+        "objective": "mean((dec(enc(x)) - x)**2)"
+      },
+      "loss_final": {
+        "mean": 0.006976826814934611,
+        "std": 0.00033319112844765186,
+        "min": 0.0066436356864869595,
+        "max": 0.007310017943382263,
+        "n_seeds": 2,
+        "values": [
+          0.007310017943382263,
+          0.0066436356864869595
+        ]
+      },
+      "train_seconds": {
+        "mean": 508.62391197681427,
+        "std": 116.01328504085541,
+        "min": 392.61062693595886,
+        "max": 624.6371970176697,
+        "n_seeds": 2,
+        "values": [
+          392.61062693595886,
+          624.6371970176697
+        ]
+      },
+      "by_probe": {
+        "linear": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.90380859375,
+              "std": 0.0017903645833333703,
+              "min": 0.9020182291666666,
+              "max": 0.9055989583333334,
+              "n_seeds": 2,
+              "values": [
+                0.9020182291666666,
+                0.9055989583333334
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.9990234375,
+                "std": 0.00048828125
+              },
+              "wall_hue": {
+                "mean": 0.998779296875,
+                "std": 0.000732421875
+              },
+              "object_hue": {
+                "mean": 0.998779296875,
+                "std": 0.000244140625
+              },
+              "scale": {
+                "mean": 0.665283203125,
+                "std": 0.000732421875
+              },
+              "shape": {
+                "mean": 0.953125,
+                "std": 0.001953125
+              },
+              "orientation": {
+                "mean": 0.807861328125,
+                "std": 0.010498046875
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.665283203125,
+                "orientation": 0.807861328125
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.23471679687500002,
+                "orientation": -0.09213867187500002
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.8747283081203269,
+              "std": 0.030592505651191093,
+              "min": 0.8441358024691358,
+              "max": 0.905320813771518,
+              "n_seeds": 2,
+              "values": [
+                0.905320813771518,
+                0.8441358024691358
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.5435902451747523,
+                "std": 0.06673839332290038
+              },
+              "shape": {
+                "mean": 0.8326486697965572,
+                "std": 0.06875978090766827
+              },
+              "orientation": {
+                "mean": 0.872130933750652,
+                "std": 0.04805685967657797
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.5435902451747523,
+                "orientation": 0.872130933750652
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.3564097548252477,
+                "orientation": -0.02786906624934804
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          }
+        },
+        "mlp": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.9143880208333333,
+              "std": 0.002034505208333315,
+              "min": 0.912353515625,
+              "max": 0.9164225260416666,
+              "n_seeds": 2,
+              "values": [
+                0.912353515625,
+                0.9164225260416666
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.9990234375,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.99853515625,
+                "std": 0.00048828125
+              },
+              "object_hue": {
+                "mean": 0.99609375,
+                "std": 0.00146484375
+              },
+              "scale": {
+                "mean": 0.7255859375,
+                "std": 0.0009765625
+              },
+              "shape": {
+                "mean": 0.952880859375,
+                "std": 0.000244140625
+              },
+              "orientation": {
+                "mean": 0.814208984375,
+                "std": 0.011962890625
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.7255859375,
+                "orientation": 0.814208984375
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.17441406250000002,
+                "orientation": -0.08579101562500002
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.8742609980872893,
+              "std": 0.01932272648235095,
+              "min": 0.8549382716049383,
+              "max": 0.8935837245696402,
+              "n_seeds": 2,
+              "values": [
+                0.8935837245696402,
+                0.8549382716049383
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.4716027647365676,
+                "std": 0.10586202399582681
+              },
+              "shape": {
+                "mean": 0.8901278038601983,
+                "std": 0.04505738132498699
+              },
+              "orientation": {
+                "mean": 0.8838354199269692,
+                "std": 0.055131716223265514
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.4716027647365676,
+                "orientation": 0.8838354199269692
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.42839723526343243,
+                "orientation": -0.016164580073030788
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          }
+        }
+      }
+    },
+    "random_init": {
+      "n_seeds": 2,
+      "seeds": [
+        0,
+        1
+      ],
+      "encoder": {
+        "family": "random",
+        "note": "LAUNDERING FLOOR: random init, zero training steps",
+        "is_control": true,
+        "is_comparison_arm": false,
+        "enc_channels": [
+          32,
+          64,
+          128,
+          128
+        ],
+        "dec_channels": [
+          128,
+          64,
+          32
+        ],
+        "dec_blocks_per_stage": 1,
+        "steps": 0,
+        "steps_mult": 0,
+        "encoder_param_count": 428576,
+        "pretext_head_param_count": 250467,
+        "D": 2048,
+        "feat_shape": [
+          128,
+          4,
+          4
+        ],
+        "objective": "NONE (untrained)"
+      },
+      "loss_final": {
+        "mean": NaN,
+        "std": NaN,
+        "min": NaN,
+        "max": NaN,
+        "n_seeds": 2,
+        "values": [
+          NaN,
+          NaN
+        ]
+      },
+      "train_seconds": {
+        "mean": 0.01858508586883545,
+        "std": 0.005383133888244629,
+        "min": 0.01320195198059082,
+        "max": 0.023968219757080078,
+        "n_seeds": 2,
+        "values": [
+          0.01320195198059082,
+          0.023968219757080078
+        ]
+      },
+      "by_probe": {
+        "linear": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.947265625,
+              "std": 0.0011393229166666297,
+              "min": 0.9461263020833334,
+              "max": 0.9484049479166666,
+              "n_seeds": 2,
+              "values": [
+                0.9461263020833334,
+                0.9484049479166666
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.99609375,
+                "std": 0.00146484375
+              },
+              "wall_hue": {
+                "mean": 0.995361328125,
+                "std": 0.001708984375
+              },
+              "object_hue": {
+                "mean": 0.994384765625,
+                "std": 0.000732421875
+              },
+              "scale": {
+                "mean": 0.817138671875,
+                "std": 0.014892578125
+              },
+              "shape": {
+                "mean": 0.94580078125,
+                "std": 0.00244140625
+              },
+              "orientation": {
+                "mean": 0.934814453125,
+                "std": 0.006591796875
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.817138671875,
+                "orientation": 0.934814453125
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.08286132812500002,
+                "orientation": 0.03481445312499998
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.9307348721961397,
+              "std": 0.016024387063119427,
+              "min": 0.9147104851330203,
+              "max": 0.9467592592592592,
+              "n_seeds": 2,
+              "values": [
+                0.9147104851330203,
+                0.9467592592592592
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.9930555555555556,
+                "std": 0.00694444444444442
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.7295252999478352,
+                "std": 0.01121544079290554
+              },
+              "shape": {
+                "mean": 0.8712180490349504,
+                "std": 0.0824856546687533
+              },
+              "orientation": {
+                "mean": 0.9906103286384976,
+                "std": 0.009389671361502372
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.7295252999478352,
+                "orientation": 0.9906103286384976
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.1704747000521648,
+                "orientation": 0.0906103286384976
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          }
+        },
+        "mlp": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.9381510416666667,
+              "std": 0.0005696614583333148,
+              "min": 0.9375813802083334,
+              "max": 0.938720703125,
+              "n_seeds": 2,
+              "values": [
+                0.9375813802083334,
+                0.938720703125
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.995849609375,
+                "std": 0.001708984375
+              },
+              "wall_hue": {
+                "mean": 0.994873046875,
+                "std": 0.001220703125
+              },
+              "object_hue": {
+                "mean": 0.99267578125,
+                "std": 0.00146484375
+              },
+              "scale": {
+                "mean": 0.798828125,
+                "std": 0.0078125
+              },
+              "shape": {
+                "mean": 0.943603515625,
+                "std": 0.001220703125
+              },
+              "orientation": {
+                "mean": 0.903076171875,
+                "std": 0.001220703125
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.798828125,
+                "orientation": 0.903076171875
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.10117187500000002,
+                "orientation": 0.003076171874999978
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.9233557207442185,
+              "std": 0.015687489132324706,
+              "min": 0.9076682316118937,
+              "max": 0.9390432098765431,
+              "n_seeds": 2,
+              "values": [
+                0.9076682316118937,
+                0.9390432098765431
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.9976851851851851,
+                "std": 0.002314814814814825
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.6758607198748043,
+                "std": 0.018583724569640026
+              },
+              "shape": {
+                "mean": 0.9015062597809077,
+                "std": 0.08460485133020346
+              },
+              "orientation": {
+                "mean": 0.9650821596244132,
+                "std": 0.0067488262910798125
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.6758607198748043,
+                "orientation": 0.9650821596244132
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.22413928012519568,
+                "orientation": 0.06508215962441322
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          }
+        }
+      }
+    },
+    "ae_plain": {
+      "n_seeds": 2,
+      "seeds": [
+        0,
+        1
+      ],
+      "encoder": {
+        "family": "ae",
+        "note": "plumbing null: the control objective through THIS loop",
+        "is_control": true,
+        "is_comparison_arm": false,
+        "enc_channels": [
+          32,
+          64,
+          128,
+          128
+        ],
+        "dec_channels": [
+          128,
+          64,
+          32
+        ],
+        "dec_blocks_per_stage": 1,
+        "steps": 400,
+        "steps_mult": 1,
+        "encoder_param_count": 428576,
+        "pretext_head_param_count": 250467,
+        "D": 2048,
+        "feat_shape": [
+          128,
+          4,
+          4
+        ],
+        "objective": "mean((dec(enc(x)) - x)**2)"
+      },
+      "loss_final": {
+        "mean": 0.006976826814934611,
+        "std": 0.00033319112844765186,
+        "min": 0.0066436356864869595,
+        "max": 0.007310017943382263,
+        "n_seeds": 2,
+        "values": [
+          0.007310017943382263,
+          0.0066436356864869595
+        ]
+      },
+      "train_seconds": {
+        "mean": 1429.9851746559143,
+        "std": 1116.7102904319763,
+        "min": 313.274884223938,
+        "max": 2546.6954650878906,
+        "n_seeds": 2,
+        "values": [
+          313.274884223938,
+          2546.6954650878906
+        ]
+      },
+      "by_probe": {
+        "linear": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.90380859375,
+              "std": 0.0017903645833333703,
+              "min": 0.9020182291666666,
+              "max": 0.9055989583333334,
+              "n_seeds": 2,
+              "values": [
+                0.9020182291666666,
+                0.9055989583333334
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.9990234375,
+                "std": 0.00048828125
+              },
+              "wall_hue": {
+                "mean": 0.998779296875,
+                "std": 0.000732421875
+              },
+              "object_hue": {
+                "mean": 0.998779296875,
+                "std": 0.000244140625
+              },
+              "scale": {
+                "mean": 0.665283203125,
+                "std": 0.000732421875
+              },
+              "shape": {
+                "mean": 0.953125,
+                "std": 0.001953125
+              },
+              "orientation": {
+                "mean": 0.807861328125,
+                "std": 0.010498046875
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.665283203125,
+                "orientation": 0.807861328125
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.23471679687500002,
+                "orientation": -0.09213867187500002
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.8747283081203269,
+              "std": 0.030592505651191093,
+              "min": 0.8441358024691358,
+              "max": 0.905320813771518,
+              "n_seeds": 2,
+              "values": [
+                0.905320813771518,
+                0.8441358024691358
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.5435902451747523,
+                "std": 0.06673839332290038
+              },
+              "shape": {
+                "mean": 0.8326486697965572,
+                "std": 0.06875978090766827
+              },
+              "orientation": {
+                "mean": 0.872130933750652,
+                "std": 0.04805685967657797
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.5435902451747523,
+                "orientation": 0.872130933750652
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.3564097548252477,
+                "orientation": -0.02786906624934804
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          }
+        },
+        "mlp": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.9143880208333333,
+              "std": 0.002034505208333315,
+              "min": 0.912353515625,
+              "max": 0.9164225260416666,
+              "n_seeds": 2,
+              "values": [
+                0.912353515625,
+                0.9164225260416666
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.9990234375,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.99853515625,
+                "std": 0.00048828125
+              },
+              "object_hue": {
+                "mean": 0.99609375,
+                "std": 0.00146484375
+              },
+              "scale": {
+                "mean": 0.7255859375,
+                "std": 0.0009765625
+              },
+              "shape": {
+                "mean": 0.952880859375,
+                "std": 0.000244140625
+              },
+              "orientation": {
+                "mean": 0.814208984375,
+                "std": 0.011962890625
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.7255859375,
+                "orientation": 0.814208984375
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.17441406250000002,
+                "orientation": -0.08579101562500002
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.8742609980872893,
+              "std": 0.01932272648235095,
+              "min": 0.8549382716049383,
+              "max": 0.8935837245696402,
+              "n_seeds": 2,
+              "values": [
+                0.8935837245696402,
+                0.8549382716049383
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.4716027647365676,
+                "std": 0.10586202399582681
+              },
+              "shape": {
+                "mean": 0.8901278038601983,
+                "std": 0.04505738132498699
+              },
+              "orientation": {
+                "mean": 0.8838354199269692,
+                "std": 0.055131716223265514
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.4716027647365676,
+                "orientation": 0.8838354199269692
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.42839723526343243,
+                "orientation": -0.016164580073030788
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL"
+            ]
+          }
+        }
+      }
+    },
+    "recon_control_2x": {
+      "n_seeds": 1,
+      "seeds": [
+        0
+      ],
+      "encoder": {
+        "family": "recon",
+        "note": "COMPUTE control: the shipped path at N x steps",
+        "is_control": true,
+        "is_comparison_arm": false,
+        "enc_channels": [
+          32,
+          64,
+          128,
+          128
+        ],
+        "dec_channels": [
+          128,
+          64,
+          32
+        ],
+        "dec_blocks_per_stage": 1,
+        "steps": 800,
+        "steps_mult": 2,
+        "encoder_param_count": 428576,
+        "pretext_head_param_count": 250467,
+        "D": 2048,
+        "feat_shape": [
+          128,
+          4,
+          4
+        ],
+        "objective": "mean((dec(enc(x)) - x)**2)"
+      },
+      "loss_final": {
+        "mean": 0.004452814813703299,
+        "std": 0.0,
+        "min": 0.004452814813703299,
+        "max": 0.004452814813703299,
+        "n_seeds": 1,
+        "values": [
+          0.004452814813703299
+        ]
+      },
+      "train_seconds": {
+        "mean": 588.8378357887268,
+        "std": 0.0,
+        "min": 588.8378357887268,
+        "max": 588.8378357887268,
+        "n_seeds": 1,
+        "values": [
+          588.8378357887268
+        ]
+      },
+      "by_probe": {
+        "linear": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.92919921875,
+              "std": 0.0,
+              "min": 0.92919921875,
+              "max": 0.92919921875,
+              "n_seeds": 1,
+              "values": [
+                0.92919921875
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.99755859375,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.9970703125,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.99853515625,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.7265625,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.96826171875,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.88720703125,
+                "std": 0.0
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.7265625,
+                "orientation": 0.88720703125
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.17343750000000002,
+                "orientation": -0.012792968750000022
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.9295774647887324,
+              "std": 0.0,
+              "min": 0.9295774647887324,
+              "max": 0.9295774647887324,
+              "n_seeds": 1,
+              "values": [
+                0.9295774647887324
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.6948356807511737,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.9061032863849765,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.9765258215962441,
+                "std": 0.0
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.6948356807511737,
+                "orientation": 0.9765258215962441
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.20516431924882628,
+                "orientation": 0.0765258215962441
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          }
+        },
+        "mlp": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.937744140625,
+              "std": 0.0,
+              "min": 0.937744140625,
+              "max": 0.937744140625,
+              "n_seeds": 1,
+              "values": [
+                0.937744140625
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.99658203125,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.99755859375,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.99658203125,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.7880859375,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.962890625,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.884765625,
+                "std": 0.0
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.7880859375,
+                "orientation": 0.884765625
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.11191406250000002,
+                "orientation": -0.015234375000000022
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.9107981220657276,
+              "std": 0.0,
+              "min": 0.9107981220657276,
+              "max": 0.9107981220657276,
+              "n_seeds": 1,
+              "values": [
+                0.9107981220657276
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.6338028169014085,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.8356807511737089,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.9953051643192489,
+                "std": 0.0
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.6338028169014085,
+                "orientation": 0.9953051643192489
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.2661971830985915,
+                "orientation": 0.09530516431924885
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          }
+        }
+      }
+    },
+    "ae_deep": {
+      "n_seeds": 1,
+      "seeds": [
+        0
+      ],
+      "encoder": {
+        "family": "ae",
+        "note": "reconstruction PRESSURE: wider, 2-blocks-per-stage decoder",
+        "is_control": false,
+        "is_comparison_arm": false,
+        "enc_channels": [
+          32,
+          64,
+          128,
+          128
+        ],
+        "dec_channels": [
+          128,
+          64,
+          32
+        ],
+        "dec_blocks_per_stage": 2,
+        "steps": 400,
+        "steps_mult": 1,
+        "encoder_param_count": 428576,
+        "pretext_head_param_count": 453987,
+        "D": 2048,
+        "feat_shape": [
+          128,
+          4,
+          4
+        ],
+        "objective": "mean((dec(enc(x)) - x)**2)"
+      },
+      "loss_final": {
+        "mean": 0.007876898162066936,
+        "std": 0.0,
+        "min": 0.007876898162066936,
+        "max": 0.007876898162066936,
+        "n_seeds": 1,
+        "values": [
+          0.007876898162066936
+        ]
+      },
+      "train_seconds": {
+        "mean": 706.9430139064789,
+        "std": 0.0,
+        "min": 706.9430139064789,
+        "max": 706.9430139064789,
+        "n_seeds": 1,
+        "values": [
+          706.9430139064789
+        ]
+      },
+      "by_probe": {
+        "linear": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.8701985677083334,
+              "std": 0.0,
+              "min": 0.8701985677083334,
+              "max": 0.8701985677083334,
+              "n_seeds": 1,
+              "values": [
+                0.8701985677083334
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.998046875,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.9970703125,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.61572265625,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.921875,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.6884765625,
+                "std": 0.0
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.61572265625,
+                "orientation": 0.6884765625
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.28427734375,
+                "orientation": -0.21152343750000002
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.8763693270735523,
+              "std": 0.0,
+              "min": 0.8763693270735523,
+              "max": 0.8763693270735523,
+              "n_seeds": 1,
+              "values": [
+                0.8763693270735523
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.48826291079812206,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.9295774647887324,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.8403755868544601,
+                "std": 0.0
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.48826291079812206,
+                "orientation": 0.8403755868544601
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.41173708920187796,
+                "orientation": -0.0596244131455399
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          }
+        },
+        "mlp": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.8856608072916666,
+              "std": 0.0,
+              "min": 0.8856608072916666,
+              "max": 0.8856608072916666,
+              "n_seeds": 1,
+              "values": [
+                0.8856608072916666
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.998046875,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.998046875,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.99609375,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.66943359375,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.92822265625,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.72412109375,
+                "std": 0.0
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.66943359375,
+                "orientation": 0.72412109375
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.23056640625000002,
+                "orientation": -0.17587890625000002
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.8982785602503913,
+              "std": 0.0,
+              "min": 0.8982785602503913,
+              "max": 0.8982785602503913,
+              "n_seeds": 1,
+              "values": [
+                0.8982785602503913
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.5539906103286385,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.9577464788732394,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.8779342723004695,
+                "std": 0.0
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.5539906103286385,
+                "orientation": 0.8779342723004695
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.3460093896713615,
+                "orientation": -0.022065727699530524
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          }
+        }
+      }
+    },
+    "mae": {
+      "n_seeds": 1,
+      "seeds": [
+        0
+      ],
+      "encoder": {
+        "family": "mae",
+        "note": "masked autoencoding: patch-masked input, loss on masked pixels",
+        "is_control": false,
+        "is_comparison_arm": false,
+        "enc_channels": [
+          32,
+          64,
+          128,
+          128
+        ],
+        "dec_channels": [
+          128,
+          64,
+          32
+        ],
+        "dec_blocks_per_stage": 1,
+        "steps": 400,
+        "steps_mult": 1,
+        "encoder_param_count": 428576,
+        "pretext_head_param_count": 250467,
+        "D": 2048,
+        "feat_shape": [
+          128,
+          4,
+          4
+        ],
+        "objective": "masked MSE, patch=8, ratio=0.5, masked pixels only"
+      },
+      "loss_final": {
+        "mean": 0.01313155610114336,
+        "std": 0.0,
+        "min": 0.01313155610114336,
+        "max": 0.01313155610114336,
+        "n_seeds": 1,
+        "values": [
+          0.01313155610114336
+        ]
+      },
+      "train_seconds": {
+        "mean": 478.4633672237396,
+        "std": 0.0,
+        "min": 478.4633672237396,
+        "max": 478.4633672237396,
+        "n_seeds": 1,
+        "values": [
+          478.4633672237396
+        ]
+      },
+      "by_probe": {
+        "linear": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.8638509114583334,
+              "std": 0.0,
+              "min": 0.8638509114583334,
+              "max": 0.8638509114583334,
+              "n_seeds": 1,
+              "values": [
+                0.8638509114583334
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.99658203125,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.99658203125,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.9912109375,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.57763671875,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.8759765625,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.7451171875,
+                "std": 0.0
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.57763671875,
+                "orientation": 0.7451171875
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.32236328125,
+                "orientation": -0.15488281250000002
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.878716744913928,
+              "std": 0.0,
+              "min": 0.878716744913928,
+              "max": 0.878716744913928,
+              "n_seeds": 1,
+              "values": [
+                0.878716744913928
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.5492957746478874,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.9389671361502347,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.784037558685446,
+                "std": 0.0
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.5492957746478874,
+                "orientation": 0.784037558685446
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.35070422535211265,
+                "orientation": -0.11596244131455402
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          }
+        },
+        "mlp": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.8672688802083334,
+              "std": 0.0,
+              "min": 0.8672688802083334,
+              "max": 0.8672688802083334,
+              "n_seeds": 1,
+              "values": [
+                0.8672688802083334
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.99609375,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.99755859375,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.994140625,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.615234375,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.880859375,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.7197265625,
+                "std": 0.0
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.615234375,
+                "orientation": 0.7197265625
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.284765625,
+                "orientation": -0.18027343750000002
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.8724569640062598,
+              "std": 0.0,
+              "min": 0.8724569640062598,
+              "max": 0.8724569640062598,
+              "n_seeds": 1,
+              "values": [
+                0.8724569640062598
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.9906103286384976,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.568075117370892,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.8967136150234741,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.7793427230046949,
+                "std": 0.0
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.568075117370892,
+                "orientation": 0.7793427230046949
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.331924882629108,
+                "orientation": -0.12065727699530515
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          }
+        }
+      }
+    },
+    "ae_hires": {
+      "n_seeds": 1,
+      "seeds": [
+        0
+      ],
+      "encoder": {
+        "family": "ae",
+        "note": "one fewer downsample: features stay 8x8 (D=8192)",
+        "is_control": false,
+        "is_comparison_arm": false,
+        "enc_channels": [
+          32,
+          64,
+          128
+        ],
+        "dec_channels": [
+          128,
+          64,
+          32
+        ],
+        "dec_blocks_per_stage": 1,
+        "steps": 400,
+        "steps_mult": 1,
+        "encoder_param_count": 166048,
+        "pretext_head_param_count": 241155,
+        "D": 8192,
+        "feat_shape": [
+          128,
+          8,
+          8
+        ],
+        "objective": "mean((dec(enc(x)) - x)**2)"
+      },
+      "loss_final": {
+        "mean": 0.003768885973840952,
+        "std": 0.0,
+        "min": 0.003768885973840952,
+        "max": 0.003768885973840952,
+        "n_seeds": 1,
+        "values": [
+          0.003768885973840952
+        ]
+      },
+      "train_seconds": {
+        "mean": 795.4222106933594,
+        "std": 0.0,
+        "min": 795.4222106933594,
+        "max": 795.4222106933594,
+        "n_seeds": 1,
+        "values": [
+          795.4222106933594
+        ]
+      },
+      "by_probe": {
+        "linear": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.962158203125,
+              "std": 0.0,
+              "min": 0.962158203125,
+              "max": 0.962158203125,
+              "n_seeds": 1,
+              "values": [
+                0.962158203125
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.99560546875,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.99560546875,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.99560546875,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.8466796875,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.978515625,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.9609375,
+                "std": 0.0
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.8466796875,
+                "orientation": 0.9609375
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.05332031250000002,
+                "orientation": 0.06093749999999998
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.9334898278560252,
+              "std": 0.0,
+              "min": 0.9334898278560252,
+              "max": 0.9334898278560252,
+              "n_seeds": 1,
+              "values": [
+                0.9334898278560252
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.971830985915493,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.9671361502347418,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.9953051643192489,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.7934272300469484,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.9107981220657277,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.9624413145539906,
+                "std": 0.0
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.7934272300469484,
+                "orientation": 0.9624413145539906
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.10657276995305165,
+                "orientation": 0.0624413145539906
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          }
+        },
+        "mlp": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.94873046875,
+              "std": 0.0,
+              "min": 0.94873046875,
+              "max": 0.94873046875,
+              "n_seeds": 1,
+              "values": [
+                0.94873046875
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.99658203125,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.9951171875,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.9951171875,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.810546875,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.978515625,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.91650390625,
+                "std": 0.0
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.810546875,
+                "orientation": 0.91650390625
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.08945312500000002,
+                "orientation": 0.016503906249999978
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.92018779342723,
+              "std": 0.0,
+              "min": 0.92018779342723,
+              "max": 0.92018779342723,
+              "n_seeds": 1,
+              "values": [
+                0.92018779342723
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.971830985915493,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 0.9765258215962441,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.9812206572769953,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.7183098591549296,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.92018779342723,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.9530516431924883,
+                "std": 0.0
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.7183098591549296,
+                "orientation": 0.9530516431924883
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.1816901408450704,
+                "orientation": 0.05305164319248823
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          }
+        }
+      }
+    },
+    "random_init_hires": {
+      "n_seeds": 3,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "encoder": {
+        "family": "random",
+        "note": "LAUNDERING FLOOR at ae_hires' D: random init, zero steps",
+        "is_control": true,
+        "is_comparison_arm": false,
+        "enc_channels": [
+          32,
+          64,
+          128
+        ],
+        "dec_channels": [
+          128,
+          64,
+          32
+        ],
+        "dec_blocks_per_stage": 1,
+        "steps": 0,
+        "steps_mult": 0,
+        "encoder_param_count": 166048,
+        "pretext_head_param_count": 241155,
+        "D": 8192,
+        "feat_shape": [
+          128,
+          8,
+          8
+        ],
+        "objective": "NONE (untrained)"
+      },
+      "loss_final": {
+        "mean": NaN,
+        "std": NaN,
+        "min": NaN,
+        "max": NaN,
+        "n_seeds": 3,
+        "values": [
+          NaN,
+          NaN,
+          NaN
+        ]
+      },
+      "train_seconds": {
+        "mean": 1.1589747269948323,
+        "std": 1.6017709065110273,
+        "min": 0.02472233772277832,
+        "max": 3.424220085144043,
+        "n_seeds": 3,
+        "values": [
+          3.424220085144043,
+          0.02472233772277832,
+          0.02798175811767578
+        ]
+      },
+      "by_probe": {
+        "linear": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.9679090711805555,
+              "std": 0.0011911077691026748,
+              "min": 0.9662272135416666,
+              "max": 0.9688313802083334,
+              "n_seeds": 3,
+              "values": [
+                0.9686686197916666,
+                0.9662272135416666,
+                0.9688313802083334
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.9890950520833334,
+                "std": 0.0004603559773349919
+              },
+              "wall_hue": {
+                "mean": 0.9899088541666666,
+                "std": 0.0004603559773349919
+              },
+              "object_hue": {
+                "mean": 0.9881184895833334,
+                "std": 0.0019666415972647414
+              },
+              "scale": {
+                "mean": 0.8971354166666666,
+                "std": 0.002800236089532105
+              },
+              "shape": {
+                "mean": 0.9713541666666666,
+                "std": 0.004262956007066665
+              },
+              "orientation": {
+                "mean": 0.9718424479166666,
+                "std": 0.002045866713863368
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.8971354166666666,
+                "orientation": 0.9718424479166666
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.0028645833333333925,
+                "orientation": 0.07184244791666661
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL",
+              "PASS"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.9054151182335662,
+              "std": 0.02429324769638503,
+              "min": 0.8742283950617283,
+              "max": 0.933489827856025,
+              "n_seeds": 3,
+              "values": [
+                0.933489827856025,
+                0.8742283950617283,
+                0.9085271317829458
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.9752871088142406,
+                "std": 0.0257214267440437
+              },
+              "wall_hue": {
+                "mean": 0.9566824576514499,
+                "std": 0.030878925036196464
+              },
+              "object_hue": {
+                "mean": 0.9473797276914429,
+                "std": 0.030785579282247778
+              },
+              "scale": {
+                "mean": 0.7410269397031053,
+                "std": 0.06155470520314569
+              },
+              "shape": {
+                "mean": 0.8710021108563527,
+                "std": 0.027354106175873884
+              },
+              "orientation": {
+                "mean": 0.9411123646848071,
+                "std": 0.024111641772953454
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.7410269397031053,
+                "orientation": 0.9411123646848071
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.15897306029689473,
+                "orientation": 0.04111236468480706
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL",
+              "FAIL"
+            ]
+          }
+        },
+        "mlp": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.9591200086805557,
+              "std": 0.0019512402895349805,
+              "min": 0.9563802083333334,
+              "max": 0.9607747395833334,
+              "n_seeds": 3,
+              "values": [
+                0.9563802083333334,
+                0.960205078125,
+                0.9607747395833334
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.9899088541666666,
+                "std": 0.0008299185406238257
+              },
+              "wall_hue": {
+                "mean": 0.9886067708333334,
+                "std": 0.0006089937152952378
+              },
+              "object_hue": {
+                "mean": 0.9881184895833334,
+                "std": 0.0010033225916290653
+              },
+              "scale": {
+                "mean": 0.86865234375,
+                "std": 0.009790008620978233
+              },
+              "shape": {
+                "mean": 0.9689127604166666,
+                "std": 0.0039934388497347975
+              },
+              "orientation": {
+                "mean": 0.9505208333333334,
+                "std": 0.003682847818679935
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.86865234375,
+                "orientation": 0.9505208333333334
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.03134765625000002,
+                "orientation": 0.05052083333333335
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL",
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.8955931661362566,
+              "std": 0.02890883028766201,
+              "min": 0.8557098765432097,
+              "max": 0.9233176838810642,
+              "n_seeds": 3,
+              "values": [
+                0.9233176838810642,
+                0.8557098765432097,
+                0.9077519379844962
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 0.9598262991673844,
+                "std": 0.03631224122079246
+              },
+              "wall_hue": {
+                "mean": 0.9690855584266437,
+                "std": 0.024597973306559315
+              },
+              "object_hue": {
+                "mean": 0.9350129198966407,
+                "std": 0.04738238884990862
+              },
+              "scale": {
+                "mean": 0.7146832906713897,
+                "std": 0.08961108260879004
+              },
+              "shape": {
+                "mean": 0.875667831277068,
+                "std": 0.029092470728845358
+              },
+              "orientation": {
+                "mean": 0.9192830973784134,
+                "std": 0.013122798294894324
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.7146832906713897,
+                "orientation": 0.9192830973784134
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.18531670932861033,
+                "orientation": 0.019283097378413383
+              }
+            },
+            "per_seed_bar": [
+              "FAIL",
+              "FAIL",
+              "FAIL"
+            ]
+          }
+        }
+      }
+    },
+    "vae": {
+      "n_seeds": 1,
+      "seeds": [
+        0
+      ],
+      "encoder": {
+        "family": "vae",
+        "note": "DECLARED COMPARISON ARM: mse + beta*KL, features = mu",
+        "is_control": false,
+        "is_comparison_arm": true,
+        "enc_channels": [
+          32,
+          64,
+          128,
+          128
+        ],
+        "dec_channels": [
+          128,
+          64,
+          32
+        ],
+        "dec_blocks_per_stage": 1,
+        "steps": 400,
+        "steps_mult": 1,
+        "encoder_param_count": 461600,
+        "pretext_head_param_count": 250467,
+        "D": 2048,
+        "feat_shape": [
+          128,
+          4,
+          4
+        ],
+        "objective": "mean((dec(z)-x)**2) + 0.05 * KL,  z = mu + sigma*eps"
+      },
+      "loss_final": {
+        "mean": 0.016243431717157364,
+        "std": 0.0,
+        "min": 0.016243431717157364,
+        "max": 0.016243431717157364,
+        "n_seeds": 1,
+        "values": [
+          0.016243431717157364
+        ]
+      },
+      "train_seconds": {
+        "mean": 615.7788519859314,
+        "std": 0.0,
+        "min": 615.7788519859314,
+        "max": 615.7788519859314,
+        "n_seeds": 1,
+        "values": [
+          615.7788519859314
+        ]
+      },
+      "by_probe": {
+        "linear": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.9228515625,
+              "std": 0.0,
+              "min": 0.9228515625,
+              "max": 0.9228515625,
+              "n_seeds": 1,
+              "values": [
+                0.9228515625
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.6650390625,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.93408203125,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.93798828125,
+                "std": 0.0
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.6650390625,
+                "orientation": 0.93798828125
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.23496093750000002,
+                "orientation": 0.03798828124999998
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.9092331768388107,
+              "std": 0.0,
+              "min": 0.9092331768388107,
+              "max": 0.9092331768388107,
+              "n_seeds": 1,
+              "values": [
+                0.9092331768388107
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.6244131455399061,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.8591549295774648,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.971830985915493,
+                "std": 0.0
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.6244131455399061,
+                "orientation": 0.971830985915493
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.2755868544600939,
+                "orientation": 0.07183098591549297
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          }
+        },
+        "mlp": {
+          "grid": {
+            "aggregate": {
+              "mean": 0.9419759114583334,
+              "std": 0.0,
+              "min": 0.9419759114583334,
+              "max": 0.9419759114583334,
+              "n_seeds": 1,
+              "values": [
+                0.9419759114583334
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 0.99853515625,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.76171875,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.95556640625,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.93603515625,
+                "std": 0.0
+              }
+            },
+            "n": 2048,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10888671875,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.1162109375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 10,
+                "chance": 0.1,
+                "majority_rate": 0.10400390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 8,
+                "chance": 0.125,
+                "majority_rate": 0.13427734375,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 4,
+                "chance": 0.25,
+                "majority_rate": 0.26220703125,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 15,
+                "chance": 0.06666666666666667,
+                "majority_rate": 0.07275390625,
+                "values": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.76171875,
+                "orientation": 0.93603515625
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.13828125000000002,
+                "orientation": 0.03603515624999998
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          },
+          "corner": {
+            "aggregate": {
+              "mean": 0.9014084507042254,
+              "std": 0.0,
+              "min": 0.9014084507042254,
+              "max": 0.9014084507042254,
+              "n_seeds": 1,
+              "values": [
+                0.9014084507042254
+              ]
+            },
+            "per_factor": {
+              "floor_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "wall_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "object_hue": {
+                "mean": 1.0,
+                "std": 0.0
+              },
+              "scale": {
+                "mean": 0.7136150234741784,
+                "std": 0.0
+              },
+              "shape": {
+                "mean": 0.8028169014084507,
+                "std": 0.0
+              },
+              "orientation": {
+                "mean": 0.892018779342723,
+                "std": 0.0
+              }
+            },
+            "n": 213,
+            "realised": {
+              "floor_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "wall_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "object_hue": {
+                "n_values_realised": 2,
+                "chance": 0.5,
+                "majority_rate": 0.5023474178403756,
+                "values": [
+                  8,
+                  9
+                ]
+              },
+              "scale": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  5,
+                  6,
+                  7
+                ]
+              },
+              "shape": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3333333333333333,
+                "values": [
+                  0,
+                  2,
+                  3
+                ]
+              },
+              "orientation": {
+                "n_values_realised": 3,
+                "chance": 0.3333333333333333,
+                "majority_rate": 0.3380281690140845,
+                "values": [
+                  12,
+                  13,
+                  14
+                ]
+              }
+            },
+            "bar": {
+              "bar": 0.9,
+              "factors": [
+                "scale",
+                "orientation"
+              ],
+              "values": {
+                "scale": 0.7136150234741784,
+                "orientation": 0.892018779342723
+              },
+              "verdict": "FAIL",
+              "margin": {
+                "scale": -0.18638497652582164,
+                "orientation": -0.007981220657277022
+              }
+            },
+            "per_seed_bar": [
+              "FAIL"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "variants_clearing_bar_grid_linear": [],
+  "variants_clearing_bar_grid_mlp_only": [],
+  "verdict": "FAIL",
+  "note": "\u26d4 NO variant clears the bar on the spread grid with the headline linear probe. Per the pre-registered stop rule: report and STOP \u2014 the store is not touched and no cache is promoted.",
+  "flags": {
+    "quick": false,
+    "dataset": "shapes3d",
+    "variants": [
+      "recon_control",
+      "random_init",
+      "ae_plain",
+      "recon_control_2x",
+      "ae_deep",
+      "mae",
+      "ae_hires",
+      "random_init_hires",
+      "vae"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "n_enc_train": 4096,
+    "n_probe_train": 4096,
+    "n_probe_eval": 2048,
+    "enc_channels": [
+      32,
+      64,
+      128,
+      128
+    ],
+    "hires_channels": [
+      32,
+      64,
+      128
+    ],
+    "enc_kernel": 4,
+    "enc_stride": 2,
+    "enc_groups": 8,
+    "enc_steps": 400,
+    "enc_batch": 128,
+    "enc_lr": 0.001,
+    "dec_channels": [
+      128,
+      64,
+      32
+    ],
+    "dec_groups": 8,
+    "deep_width_mult": 1.0,
+    "deep_blocks_per_stage": 2,
+    "mae_mask_ratio": 0.5,
+    "mae_patch": 8,
+    "mae_loss_on_masked": true,
+    "vae_beta": 0.05,
+    "compute_control_mult": 2,
+    "probe_kinds": [
+      "linear",
+      "mlp"
+    ],
+    "probe_hidden": 256,
+    "probe_steps": 1500,
+    "probe_batch": 256,
+    "probe_lr": 0.001,
+    "pass_bar": 0.9,
+    "bar_factors": [
+      "scale",
+      "orientation"
+    ],
+    "jax_version": "0.9.0"
+  }
+}

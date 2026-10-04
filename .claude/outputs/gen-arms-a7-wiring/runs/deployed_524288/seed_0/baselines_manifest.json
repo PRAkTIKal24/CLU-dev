@@ -1,0 +1,1373 @@
+{
+  "NO_KILL_RULE_VERDICT": "\u26d4 This spoke reports arm numbers only; gen-cell-run renders verdicts against a filed prereg.",
+  "arms": {
+    "knn": {
+      "arm": "knn",
+      "byte_ledger": {
+        "fp16": {
+          "bits_per_read_formula": "k * log2(n_entries)",
+          "budget_bytes": 524288,
+          "bytes_formula": "n_entries * D * itemsize + overhead",
+          "bytes_per_entry": 4096,
+          "deployment": "fp16",
+          "dim": 2048,
+          "n_entries": 128,
+          "overhead_bytes": 0,
+          "realised_bytes": 524288,
+          "slack_bytes": 0,
+          "within_budget": true
+        },
+        "fp32": {
+          "bits_per_read_formula": "k * log2(n_entries)",
+          "budget_bytes": 524288,
+          "bytes_formula": "n_entries * D * itemsize + overhead",
+          "bytes_per_entry": 8192,
+          "deployment": "fp32",
+          "dim": 2048,
+          "n_entries": 64,
+          "overhead_bytes": 0,
+          "realised_bytes": 524288,
+          "slack_bytes": 0,
+          "within_budget": true
+        },
+        "int8": {
+          "bits_per_read_formula": "k * log2(n_entries)",
+          "budget_bytes": 524288,
+          "bytes_formula": "n_entries * D * itemsize + overhead",
+          "bytes_per_entry": 2048,
+          "deployment": "int8",
+          "dim": 2048,
+          "n_entries": 248,
+          "overhead_bytes": 16384,
+          "realised_bytes": 524288,
+          "slack_bytes": 0,
+          "within_budget": true
+        }
+      },
+      "byte_ledger_store_only_SUPERSEDED": {
+        "fp16": {
+          "bits_per_read_formula": "k * log2(n_entries)",
+          "budget_bytes": 524288,
+          "bytes_formula": "n_entries * D * itemsize + overhead",
+          "bytes_per_entry": 4096,
+          "deployment": "fp16",
+          "dim": 2048,
+          "n_entries": 128,
+          "overhead_bytes": 0,
+          "realised_bytes": 524288,
+          "slack_bytes": 0,
+          "within_budget": true
+        },
+        "fp32": {
+          "bits_per_read_formula": "k * log2(n_entries)",
+          "budget_bytes": 524288,
+          "bytes_formula": "n_entries * D * itemsize + overhead",
+          "bytes_per_entry": 8192,
+          "deployment": "fp32",
+          "dim": 2048,
+          "n_entries": 64,
+          "overhead_bytes": 0,
+          "realised_bytes": 524288,
+          "slack_bytes": 0,
+          "within_budget": true
+        },
+        "int8": {
+          "bits_per_read_formula": "k * log2(n_entries)",
+          "budget_bytes": 524288,
+          "bytes_formula": "n_entries * D * itemsize + overhead",
+          "bytes_per_entry": 2048,
+          "deployment": "int8",
+          "dim": 2048,
+          "n_entries": 248,
+          "overhead_bytes": 16384,
+          "realised_bytes": 524288,
+          "slack_bytes": 0,
+          "within_budget": true
+        }
+      },
+      "byte_target": {
+        "K": null,
+        "assertion": "realised == expect_byte_target_bytes",
+        "coupling_bytes": 0,
+        "coupling_bytes_formula": "K(K-1)/2 * M^2 * 4",
+        "expected_total_bytes": 524288,
+        "n_modes": null,
+        "rationale": "\u26d4 R26 ruling 3 (2026-09-13) SUPERSEDES the 2026-09-12 Head ruling that set this target to store + inter-well PMI coupling. Conditional dreaming is dropped as the composition mechanism, so gen_dream's coupling field is neither fitted nor deployed and the target reverts 688,128 -> 524,288 B (= store_bytes). The historical 3-seed run at 688,128 B gave the kNN arm a declared ~31 % byte ADVANTAGE \u2014 conservative in direction, \u26d4 but it is NOT byte-matched and must never be quoted as such. \u2b50 bits_per_read is untouched at K*log2(M) either way (R20).",
+        "source_coupling": "excluded (include_coupling_bytes=False)",
+        "source_store": "/Users/user/Desktop/CHLU/.claude/outputs/gen-store-grouping/runs/shapes3d_recon/store_bytes.json",
+        "store_bytes": 524288,
+        "store_meta": {
+          "bits_per_read": 30.0,
+          "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+          "dataset": "shapes3d",
+          "dim": 2048,
+          "dtype": "float32",
+          "n_modes": 64,
+          "n_wells": 5,
+          "note": "\u2b50 gen-baselines byte-matches its kNN arm to `store_bytes`. The addressing head is NOT included; it is reported in store_results.json under arms.*.bits_per_read.",
+          "pretext": "recon",
+          "schema": "chlu-gen-store-bytes/1",
+          "store_bytes": 524288,
+          "store_bytes_per_well": [
+            77568,
+            78080,
+            146688,
+            128256,
+            93696
+          ]
+        },
+        "superseded_by_R26_ruling_3": false,
+        "total_bytes": 524288
+      },
+      "prototype_table_ledger": {
+        "bytes": 475136,
+        "bytes_formula": "(sum_k C_k + 1) * D * 4",
+        "dim": 2048,
+        "dtype": "float32",
+        "n_prototypes": 57,
+        "role": "request embedding == the kNN arm's ADDRESSING HEAD; the store's own byte count excludes the CLU addressing head by the same convention"
+      },
+      "refusal_axis": {
+        "n_distinct_refusal_configurations": 12,
+        "note": "\u2b50 measured: with reduce='min' the refusal score is the distance to the first neighbour, so k does not enter it",
+        "refusal_score_is_invariant_in_k": true
+      },
+      "refusal_reduction_sensitivity": {
+        "mean": 0.3759645061728395,
+        "min": 0.4228395061728395
+      },
+      "store_bytes_target": 524288,
+      "tuning": {
+        "ORACLE_UPPER_BOUND_auroc_c_vs_b": {
+          "auroc_c_vs_a_union_b_at_that_trial": 0.8426221613949716,
+          "max_auroc_c_vs_a_union_b_over_all_trials": 0.8426221613949716,
+          "note": "\u2b50 ORACLE-SELECTED over all trials using C \u2014 an explicitly labelled UPPER BOUND, \u26d4 not an achievable arm result. It ships so the selection rule cannot flatter the CLU.",
+          "trial": {
+            "deployment": "fp32",
+            "k": 1,
+            "metric": "euclidean",
+            "normaliser": "zscore"
+          },
+          "value": 0.6844135802469136
+        },
+        "axes": {
+          "deployment": [
+            "fp32",
+            "fp16",
+            "int8"
+          ],
+          "k": [
+            1,
+            3,
+            5
+          ],
+          "metric": [
+            "euclidean",
+            "cosine"
+          ],
+          "normaliser": [
+            "none",
+            "zscore"
+          ]
+        },
+        "budget": 36,
+        "selected": {
+          "auroc_c_vs_a_ORACLE_ONLY": 0.7627495659722222,
+          "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7404197080291971,
+          "auroc_c_vs_b_ORACLE_ONLY": 0.4228395061728395,
+          "bits_per_read": 39.770981551934376,
+          "deployment": "int8",
+          "k": 5,
+          "metric": "cosine",
+          "n_entries": 248,
+          "normaliser": "zscore",
+          "val_aggregate": 0.5087890625,
+          "val_compositional": 0.255859375
+        },
+        "selected_compositional_rule": {
+          "auroc_c_vs_a_ORACLE_ONLY": 0.8112521701388888,
+          "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7987251622060016,
+          "auroc_c_vs_b_ORACLE_ONLY": 0.6205632716049383,
+          "bits_per_read": 35.0,
+          "deployment": "fp16",
+          "k": 5,
+          "metric": "cosine",
+          "n_entries": 128,
+          "normaliser": "none",
+          "val_aggregate": 0.4495442708333333,
+          "val_compositional": 0.291015625
+        },
+        "selection_criterion": "validation aggregate probe accuracy (\u26d4 C never enters)",
+        "selection_rules_coincide": false,
+        "trials": [
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8408338758680556,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8284037915652879,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6516203703703703,
+            "bits_per_read": 6.0,
+            "deployment": "fp32",
+            "k": 1,
+            "metric": "euclidean",
+            "n_entries": 64,
+            "normaliser": "none",
+            "val_aggregate": 0.17447916666666666,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8408338758680556,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8284037915652879,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6516203703703703,
+            "bits_per_read": 18.0,
+            "deployment": "fp32",
+            "k": 3,
+            "metric": "euclidean",
+            "n_entries": 64,
+            "normaliser": "none",
+            "val_aggregate": 0.41015625,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8408338758680556,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8284037915652879,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6516203703703703,
+            "bits_per_read": 30.0,
+            "deployment": "fp32",
+            "k": 5,
+            "metric": "euclidean",
+            "n_entries": 64,
+            "normaliser": "none",
+            "val_aggregate": 0.38671875,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8176812065972222,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8019312652068127,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.5779320987654321,
+            "bits_per_read": 6.0,
+            "deployment": "fp32",
+            "k": 1,
+            "metric": "cosine",
+            "n_entries": 64,
+            "normaliser": "none",
+            "val_aggregate": 0.17415364583333334,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8176812065972222,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8019312652068127,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.5779320987654321,
+            "bits_per_read": 18.0,
+            "deployment": "fp32",
+            "k": 3,
+            "metric": "cosine",
+            "n_entries": 64,
+            "normaliser": "none",
+            "val_aggregate": 0.4078776041666667,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8176812065972222,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8019312652068127,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.5779320987654321,
+            "bits_per_read": 30.0,
+            "deployment": "fp32",
+            "k": 5,
+            "metric": "cosine",
+            "n_entries": 64,
+            "normaliser": "none",
+            "val_aggregate": 0.3863932291666667,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8537462022569444,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8426221613949716,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6844135802469136,
+            "bits_per_read": 6.0,
+            "deployment": "fp32",
+            "k": 1,
+            "metric": "euclidean",
+            "n_entries": 64,
+            "normaliser": "zscore",
+            "val_aggregate": 0.17447916666666666,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8537462022569444,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8426221613949716,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6844135802469136,
+            "bits_per_read": 18.0,
+            "deployment": "fp32",
+            "k": 3,
+            "metric": "euclidean",
+            "n_entries": 64,
+            "normaliser": "zscore",
+            "val_aggregate": 0.4182942708333333,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8537462022569444,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8426221613949716,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6844135802469136,
+            "bits_per_read": 30.0,
+            "deployment": "fp32",
+            "k": 5,
+            "metric": "euclidean",
+            "n_entries": 64,
+            "normaliser": "zscore",
+            "val_aggregate": 0.4202473958333333,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.7706841362847222,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7481498377939984,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.42766203703703703,
+            "bits_per_read": 6.0,
+            "deployment": "fp32",
+            "k": 1,
+            "metric": "cosine",
+            "n_entries": 64,
+            "normaliser": "zscore",
+            "val_aggregate": 0.17447916666666666,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.7706841362847222,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7481498377939984,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.42766203703703703,
+            "bits_per_read": 18.0,
+            "deployment": "fp32",
+            "k": 3,
+            "metric": "cosine",
+            "n_entries": 64,
+            "normaliser": "zscore",
+            "val_aggregate": 0.4127604166666667,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.7706841362847222,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7481498377939984,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.42766203703703703,
+            "bits_per_read": 30.0,
+            "deployment": "fp32",
+            "k": 5,
+            "metric": "cosine",
+            "n_entries": 64,
+            "normaliser": "zscore",
+            "val_aggregate": 0.4169921875,
+            "val_compositional": 0.244140625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8276638454861112,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8158201540957015,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6473765432098766,
+            "bits_per_read": 7.0,
+            "deployment": "fp16",
+            "k": 1,
+            "metric": "euclidean",
+            "n_entries": 128,
+            "normaliser": "none",
+            "val_aggregate": 0.2392578125,
+            "val_compositional": 0.2578125
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8276638454861112,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8158201540957015,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6473765432098766,
+            "bits_per_read": 21.0,
+            "deployment": "fp16",
+            "k": 3,
+            "metric": "euclidean",
+            "n_entries": 128,
+            "normaliser": "none",
+            "val_aggregate": 0.4261067708333333,
+            "val_compositional": 0.287109375
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8276638454861112,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8158201540957015,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6473765432098766,
+            "bits_per_read": 35.0,
+            "deployment": "fp16",
+            "k": 5,
+            "metric": "euclidean",
+            "n_entries": 128,
+            "normaliser": "none",
+            "val_aggregate": 0.44921875,
+            "val_compositional": 0.27734375
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8112521701388888,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7987251622060016,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6205632716049383,
+            "bits_per_read": 7.0,
+            "deployment": "fp16",
+            "k": 1,
+            "metric": "cosine",
+            "n_entries": 128,
+            "normaliser": "none",
+            "val_aggregate": 0.2392578125,
+            "val_compositional": 0.2578125
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8112521701388888,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7987251622060016,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6205632716049383,
+            "bits_per_read": 21.0,
+            "deployment": "fp16",
+            "k": 3,
+            "metric": "cosine",
+            "n_entries": 128,
+            "normaliser": "none",
+            "val_aggregate": 0.4222005208333333,
+            "val_compositional": 0.2890625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8112521701388888,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7987251622060016,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6205632716049383,
+            "bits_per_read": 35.0,
+            "deployment": "fp16",
+            "k": 5,
+            "metric": "cosine",
+            "n_entries": 128,
+            "normaliser": "none",
+            "val_aggregate": 0.4495442708333333,
+            "val_compositional": 0.291015625
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8300509982638888,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8170873884833739,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6327160493827161,
+            "bits_per_read": 7.0,
+            "deployment": "fp16",
+            "k": 1,
+            "metric": "euclidean",
+            "n_entries": 128,
+            "normaliser": "zscore",
+            "val_aggregate": 0.22493489583333334,
+            "val_compositional": 0.23046875
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8300509982638888,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8170873884833739,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6327160493827161,
+            "bits_per_read": 21.0,
+            "deployment": "fp16",
+            "k": 3,
+            "metric": "euclidean",
+            "n_entries": 128,
+            "normaliser": "zscore",
+            "val_aggregate": 0.427734375,
+            "val_compositional": 0.23046875
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8300509982638888,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8170873884833739,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6327160493827161,
+            "bits_per_read": 35.0,
+            "deployment": "fp16",
+            "k": 5,
+            "metric": "euclidean",
+            "n_entries": 128,
+            "normaliser": "zscore",
+            "val_aggregate": 0.4313151041666667,
+            "val_compositional": 0.236328125
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.7593451605902778,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7384935117599352,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.4419367283950617,
+            "bits_per_read": 7.0,
+            "deployment": "fp16",
+            "k": 1,
+            "metric": "cosine",
+            "n_entries": 128,
+            "normaliser": "zscore",
+            "val_aggregate": 0.24283854166666666,
+            "val_compositional": 0.2421875
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.7593451605902778,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7384935117599352,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.4419367283950617,
+            "bits_per_read": 21.0,
+            "deployment": "fp16",
+            "k": 3,
+            "metric": "cosine",
+            "n_entries": 128,
+            "normaliser": "zscore",
+            "val_aggregate": 0.4443359375,
+            "val_compositional": 0.263671875
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.7593451605902778,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7384935117599352,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.4419367283950617,
+            "bits_per_read": 35.0,
+            "deployment": "fp16",
+            "k": 5,
+            "metric": "cosine",
+            "n_entries": 128,
+            "normaliser": "zscore",
+            "val_aggregate": 0.4508463541666667,
+            "val_compositional": 0.26953125
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8233506944444444,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8118537104622872,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6483410493827161,
+            "bits_per_read": 7.954196310386875,
+            "deployment": "int8",
+            "k": 1,
+            "metric": "euclidean",
+            "n_entries": 248,
+            "normaliser": "none",
+            "val_aggregate": 0.2789713541666667,
+            "val_compositional": 0.236328125
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8233506944444444,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8118537104622872,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6483410493827161,
+            "bits_per_read": 23.862588931160623,
+            "deployment": "int8",
+            "k": 3,
+            "metric": "euclidean",
+            "n_entries": 248,
+            "normaliser": "none",
+            "val_aggregate": 0.4417317708333333,
+            "val_compositional": 0.25
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8233506944444444,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8118537104622872,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6483410493827161,
+            "bits_per_read": 39.770981551934376,
+            "deployment": "int8",
+            "k": 5,
+            "metric": "euclidean",
+            "n_entries": 248,
+            "normaliser": "none",
+            "val_aggregate": 0.5016276041666666,
+            "val_compositional": 0.25
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8039279513888888,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.791463909164639,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6141975308641975,
+            "bits_per_read": 7.954196310386875,
+            "deployment": "int8",
+            "k": 1,
+            "metric": "cosine",
+            "n_entries": 248,
+            "normaliser": "none",
+            "val_aggregate": 0.2802734375,
+            "val_compositional": 0.236328125
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8039279513888888,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.791463909164639,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6141975308641975,
+            "bits_per_read": 23.862588931160623,
+            "deployment": "int8",
+            "k": 3,
+            "metric": "cosine",
+            "n_entries": 248,
+            "normaliser": "none",
+            "val_aggregate": 0.4459635416666667,
+            "val_compositional": 0.25
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8039279513888888,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.791463909164639,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6141975308641975,
+            "bits_per_read": 39.770981551934376,
+            "deployment": "int8",
+            "k": 5,
+            "metric": "cosine",
+            "n_entries": 248,
+            "normaliser": "none",
+            "val_aggregate": 0.498046875,
+            "val_compositional": 0.2421875
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8231336805555556,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8118283657745337,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6510416666666666,
+            "bits_per_read": 7.954196310386875,
+            "deployment": "int8",
+            "k": 1,
+            "metric": "euclidean",
+            "n_entries": 248,
+            "normaliser": "zscore",
+            "val_aggregate": 0.3063151041666667,
+            "val_compositional": 0.234375
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8231336805555556,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8118283657745337,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6510416666666666,
+            "bits_per_read": 23.862588931160623,
+            "deployment": "int8",
+            "k": 3,
+            "metric": "euclidean",
+            "n_entries": 248,
+            "normaliser": "zscore",
+            "val_aggregate": 0.4404296875,
+            "val_compositional": 0.232421875
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.8231336805555556,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.8118283657745337,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.6510416666666666,
+            "bits_per_read": 39.770981551934376,
+            "deployment": "int8",
+            "k": 5,
+            "metric": "euclidean",
+            "n_entries": 248,
+            "normaliser": "zscore",
+            "val_aggregate": 0.4837239583333333,
+            "val_compositional": 0.251953125
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.7627495659722222,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7404197080291971,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.4228395061728395,
+            "bits_per_read": 7.954196310386875,
+            "deployment": "int8",
+            "k": 1,
+            "metric": "cosine",
+            "n_entries": 248,
+            "normaliser": "zscore",
+            "val_aggregate": 0.3219401041666667,
+            "val_compositional": 0.220703125
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.7627495659722222,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7404197080291971,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.4228395061728395,
+            "bits_per_read": 23.862588931160623,
+            "deployment": "int8",
+            "k": 3,
+            "metric": "cosine",
+            "n_entries": 248,
+            "normaliser": "zscore",
+            "val_aggregate": 0.462890625,
+            "val_compositional": 0.24609375
+          },
+          {
+            "auroc_c_vs_a_ORACLE_ONLY": 0.7627495659722222,
+            "auroc_c_vs_a_union_b_ORACLE_ONLY": 0.7404197080291971,
+            "auroc_c_vs_b_ORACLE_ONLY": 0.4228395061728395,
+            "bits_per_read": 39.770981551934376,
+            "deployment": "int8",
+            "k": 5,
+            "metric": "cosine",
+            "n_entries": 248,
+            "normaliser": "zscore",
+            "val_aggregate": 0.5087890625,
+            "val_compositional": 0.255859375
+          }
+        ]
+      },
+      "variants": {
+        "knn": {
+          "channel": {
+            "bits_per_read": 39.770981551934376,
+            "config": {
+              "deployment": "int8",
+              "k": 5,
+              "metric": "cosine",
+              "normaliser": "zscore"
+            },
+            "note": "k * log2(n_entries); the request embedding NEVER reaches the decoder",
+            "selection": "PRE-REGISTERED (validation aggregate)"
+          },
+          "composition_A": {
+            "aggregate": 0.4820963541666667,
+            "decoded_mean": 0.5627809166908264,
+            "exact_match": 0.001953125,
+            "n": 1024,
+            "per_factor": {
+              "floor_hue": 0.9755859375,
+              "object_hue": 0.4404296875,
+              "orientation": 0.0703125,
+              "scale": 0.125,
+              "shape": 0.2939453125,
+              "wall_hue": 0.9873046875
+            }
+          },
+          "composition_B": {
+            "aggregate": 0.46759259259259256,
+            "decoded_mean": 0.5938163995742798,
+            "exact_match": 0.0,
+            "n": 72,
+            "per_factor": {
+              "floor_hue": 1.0,
+              "object_hue": 0.25,
+              "orientation": 0.0,
+              "scale": 0.0,
+              "shape": 0.6805555555555556,
+              "wall_hue": 0.875
+            }
+          },
+          "in_corner_discrimination": {
+            "auroc": 0.5377384960718294,
+            "balanced_accuracy": 0.4892676767676768,
+            "detection_rate": 0.6805555555555556,
+            "n_neg": 198,
+            "n_pos": 72,
+            "sufficient": true,
+            "target": 1,
+            "targets_realised": [
+              1
+            ],
+            "tnr": 0.29797979797979796,
+            "tpr": 0.6805555555555556
+          },
+          "refusal": {
+            "a7_controlled": {
+              "auroc_by_kind": {
+                "duplicate_factor": {
+                  "auroc": 0.4494598765432099,
+                  "control": "a7_redundant",
+                  "control_set": "A7",
+                  "n_c": 36,
+                  "n_control": 72
+                },
+                "out_of_range": {
+                  "auroc": 0.6450617283950617,
+                  "control": "base",
+                  "control_set": "B",
+                  "n_c": 36,
+                  "n_control": 72
+                }
+              },
+              "auroc_by_kind_PER_CONTROL": {
+                "A7": {
+                  "duplicate_factor": {
+                    "auroc": 0.4494598765432099,
+                    "n_c": 36
+                  },
+                  "out_of_range": {
+                    "auroc": 0.8595679012345679,
+                    "n_c": 36
+                  }
+                },
+                "A7D": {
+                  "duplicate_factor": {
+                    "auroc": 0.5563271604938271,
+                    "n_c": 36
+                  },
+                  "out_of_range": {
+                    "auroc": 0.9189814814814815,
+                    "n_c": 36
+                  }
+                },
+                "B": {
+                  "duplicate_factor": {
+                    "auroc": 0.2006172839506173,
+                    "n_c": 36
+                  },
+                  "out_of_range": {
+                    "auroc": 0.6450617283950617,
+                    "n_c": 36
+                  }
+                }
+              },
+              "control_map": {
+                "duplicate_factor": "a7_redundant",
+                "out_of_range": "base"
+              },
+              "note": "\u2b50 per-kind controls read from query_sets.json on disk. out_of_range's control is `base` (the ordinary valid pool) \u21d2 it is A7-clean as shipped and MUST reproduce bit-identically; only duplicate_factor moves.",
+              "pooled_COMPANION": {
+                "definition": "n_c-weighted mean of the per-kind CONTROLLED AUROCs \u2014 \u26d4 a COMPANION, never the reported number (R27.4: always by kind)",
+                "kinds": {
+                  "duplicate_factor": 0.4494598765432099,
+                  "out_of_range": 0.6450617283950617
+                },
+                "value": 0.5472608024691358
+              }
+            },
+            "auroc_c_vs_a": 0.7627495659722222,
+            "auroc_c_vs_a_union_b": 0.7404197080291971,
+            "auroc_c_vs_b": 0.4228395061728395,
+            "auroc_c_vs_b_by_kind": {
+              "duplicate_factor": {
+                "auroc": 0.2006172839506173,
+                "n_c": 36
+              },
+              "out_of_range": {
+                "auroc": 0.6450617283950617,
+                "n_c": 36
+              }
+            },
+            "auroc_c_vs_control_POOLED_COMPANION": {
+              "A7": 0.6545138888888888,
+              "A7D": 0.7376543209876543
+            },
+            "refused_fraction": {
+              "A": 0.05078125,
+              "A7": 0.2361111111111111,
+              "A7D": 0.05555555555555555,
+              "B": 0.5,
+              "C": 0.4722222222222222,
+              "MS": 0.5303030303030303
+            },
+            "score_summary": {
+              "A": {
+                "mean": 0.16461123304907233,
+                "n": 1024,
+                "std": 0.03941491741056924
+              },
+              "A7": {
+                "mean": 0.19086359524064594,
+                "n": 72,
+                "std": 0.05223864160206303
+              },
+              "A7D": {
+                "mean": 0.16678643226623535,
+                "n": 72,
+                "std": 0.04168545878511493
+              },
+              "B": {
+                "mean": 0.2542279420627488,
+                "n": 72,
+                "std": 0.06843215509225578
+              },
+              "C": {
+                "mean": 0.24168466611040962,
+                "n": 72,
+                "std": 0.09083910697940414
+              },
+              "MS": {
+                "mean": 0.26781843015641876,
+                "n": 198,
+                "std": 0.07059601426401708
+              }
+            },
+            "threshold": {
+              "quantile": 0.95,
+              "set": "A only (valid, seen) \u2014 \u26d4 no C item and no held-out item participates",
+              "value": 0.23031795024871818
+            }
+          }
+        },
+        "knn_compsel": {
+          "channel": {
+            "bits_per_read": 35.0,
+            "config": {
+              "deployment": "fp16",
+              "k": 5,
+              "metric": "cosine",
+              "normaliser": "none"
+            },
+            "note": "k * log2(n_entries); the request embedding NEVER reaches the decoder",
+            "selection": "DECLARED 2nd rule (validation `shape`) \u2014 same supervision class"
+          },
+          "composition_A": {
+            "aggregate": 0.46044921875,
+            "decoded_mean": 0.5604304671287537,
+            "exact_match": 0.0009765625,
+            "n": 1024,
+            "per_factor": {
+              "floor_hue": 0.9375,
+              "object_hue": 0.349609375,
+              "orientation": 0.0625,
+              "scale": 0.12890625,
+              "shape": 0.29296875,
+              "wall_hue": 0.9912109375
+            }
+          },
+          "composition_B": {
+            "aggregate": 0.4537037037037037,
+            "decoded_mean": 0.5926649570465088,
+            "exact_match": 0.0,
+            "n": 72,
+            "per_factor": {
+              "floor_hue": 1.0,
+              "object_hue": 0.125,
+              "orientation": 0.0,
+              "scale": 0.0,
+              "shape": 0.5972222222222222,
+              "wall_hue": 1.0
+            }
+          },
+          "in_corner_discrimination": {
+            "auroc": 0.5394219977553311,
+            "balanced_accuracy": 0.5435606060606061,
+            "detection_rate": 0.5972222222222222,
+            "n_neg": 198,
+            "n_pos": 72,
+            "sufficient": true,
+            "target": 1,
+            "targets_realised": [
+              1
+            ],
+            "tnr": 0.4898989898989899,
+            "tpr": 0.5972222222222222
+          },
+          "refusal": {
+            "a7_controlled": {
+              "auroc_by_kind": {
+                "duplicate_factor": {
+                  "auroc": 0.29475308641975306,
+                  "control": "a7_redundant",
+                  "control_set": "A7",
+                  "n_c": 36,
+                  "n_control": 72
+                },
+                "out_of_range": {
+                  "auroc": 0.8348765432098766,
+                  "control": "base",
+                  "control_set": "B",
+                  "n_c": 36,
+                  "n_control": 72
+                }
+              },
+              "auroc_by_kind_PER_CONTROL": {
+                "A7": {
+                  "duplicate_factor": {
+                    "auroc": 0.29475308641975306,
+                    "n_c": 36
+                  },
+                  "out_of_range": {
+                    "auroc": 0.7777777777777778,
+                    "n_c": 36
+                  }
+                },
+                "A7D": {
+                  "duplicate_factor": {
+                    "auroc": 0.6624228395061729,
+                    "n_c": 36
+                  },
+                  "out_of_range": {
+                    "auroc": 0.9467592592592593,
+                    "n_c": 36
+                  }
+                },
+                "B": {
+                  "duplicate_factor": {
+                    "auroc": 0.40625,
+                    "n_c": 36
+                  },
+                  "out_of_range": {
+                    "auroc": 0.8348765432098766,
+                    "n_c": 36
+                  }
+                }
+              },
+              "control_map": {
+                "duplicate_factor": "a7_redundant",
+                "out_of_range": "base"
+              },
+              "note": "\u2b50 per-kind controls read from query_sets.json on disk. out_of_range's control is `base` (the ordinary valid pool) \u21d2 it is A7-clean as shipped and MUST reproduce bit-identically; only duplicate_factor moves.",
+              "pooled_COMPANION": {
+                "definition": "n_c-weighted mean of the per-kind CONTROLLED AUROCs \u2014 \u26d4 a COMPANION, never the reported number (R27.4: always by kind)",
+                "kinds": {
+                  "duplicate_factor": 0.29475308641975306,
+                  "out_of_range": 0.8348765432098766
+                },
+                "value": 0.5648148148148149
+              }
+            },
+            "auroc_c_vs_a": 0.8112521701388888,
+            "auroc_c_vs_a_union_b": 0.7987251622060016,
+            "auroc_c_vs_b": 0.6205632716049383,
+            "auroc_c_vs_b_by_kind": {
+              "duplicate_factor": {
+                "auroc": 0.40625,
+                "n_c": 36
+              },
+              "out_of_range": {
+                "auroc": 0.8348765432098766,
+                "n_c": 36
+              }
+            },
+            "auroc_c_vs_control_POOLED_COMPANION": {
+              "A7": 0.5362654320987654,
+              "A7D": 0.8045910493827161
+            },
+            "refused_fraction": {
+              "A": 0.05078125,
+              "A7": 0.5833333333333334,
+              "A7D": 0.08333333333333333,
+              "B": 0.5,
+              "C": 0.5,
+              "MS": 0.51010101010101
+            },
+            "score_summary": {
+              "A": {
+                "mean": 0.05127358186291531,
+                "n": 1024,
+                "std": 0.012425912228861169
+              },
+              "A7": {
+                "mean": 0.07711753166384167,
+                "n": 72,
+                "std": 0.020543091177272058
+              },
+              "A7D": {
+                "mean": 0.05195255660348468,
+                "n": 72,
+                "std": 0.013549774019857451
+              },
+              "B": {
+                "mean": 0.06892811920907763,
+                "n": 72,
+                "std": 0.01930108439603346
+              },
+              "C": {
+                "mean": 0.09753465155760448,
+                "n": 72,
+                "std": 0.05780336971145323
+              },
+              "MS": {
+                "mean": 0.07396323211265332,
+                "n": 198,
+                "std": 0.020087161489982054
+              }
+            },
+            "threshold": {
+              "quantile": 0.95,
+              "set": "A only (valid, seen) \u2014 \u26d4 no C item and no held-out item participates",
+              "value": 0.0739350378513336
+            }
+          }
+        },
+        "knn_proto": {
+          "channel": {
+            "bits_per_read": Infinity,
+            "note": "\u2b50 the byte-matched PROTOTYPE arm: the composed prototype is decoded directly, so the whole D-float vector reaches the decoder. In-budget (475,136 B < 524,288 B) and reported as its own arm \u26d4 never in the same column as knn's bits/read.",
+            "selection": "N/A \u2014 the prototype read depends on NO tuning axis"
+          },
+          "composition_A": {
+            "aggregate": 0.7841796875,
+            "decoded_mean": 0.5638273358345032,
+            "exact_match": 0.126953125,
+            "n": 1024,
+            "per_factor": {
+              "floor_hue": 1.0,
+              "object_hue": 1.0,
+              "orientation": 0.853515625,
+              "scale": 0.224609375,
+              "shape": 0.626953125,
+              "wall_hue": 1.0
+            }
+          },
+          "composition_B": {
+            "aggregate": 0.7962962962962963,
+            "decoded_mean": 0.6031069159507751,
+            "exact_match": 0.06944444444444445,
+            "n": 72,
+            "per_factor": {
+              "floor_hue": 1.0,
+              "object_hue": 1.0,
+              "orientation": 0.6666666666666666,
+              "scale": 0.1111111111111111,
+              "shape": 1.0,
+              "wall_hue": 1.0
+            }
+          },
+          "in_corner_discrimination": {
+            "auroc": 0.9944584736251403,
+            "balanced_accuracy": 0.8762626262626263,
+            "detection_rate": 1.0,
+            "n_neg": 198,
+            "n_pos": 72,
+            "sufficient": true,
+            "target": 1,
+            "targets_realised": [
+              1
+            ],
+            "tnr": 0.7525252525252525,
+            "tpr": 1.0
+          },
+          "refusal": {
+            "a7_controlled": {
+              "auroc_by_kind": {
+                "duplicate_factor": {
+                  "auroc": 0.4494598765432099,
+                  "control": "a7_redundant",
+                  "control_set": "A7",
+                  "n_c": 36,
+                  "n_control": 72
+                },
+                "out_of_range": {
+                  "auroc": 0.6450617283950617,
+                  "control": "base",
+                  "control_set": "B",
+                  "n_c": 36,
+                  "n_control": 72
+                }
+              },
+              "auroc_by_kind_PER_CONTROL": {
+                "A7": {
+                  "duplicate_factor": {
+                    "auroc": 0.4494598765432099,
+                    "n_c": 36
+                  },
+                  "out_of_range": {
+                    "auroc": 0.8595679012345679,
+                    "n_c": 36
+                  }
+                },
+                "A7D": {
+                  "duplicate_factor": {
+                    "auroc": 0.5563271604938271,
+                    "n_c": 36
+                  },
+                  "out_of_range": {
+                    "auroc": 0.9189814814814815,
+                    "n_c": 36
+                  }
+                },
+                "B": {
+                  "duplicate_factor": {
+                    "auroc": 0.2006172839506173,
+                    "n_c": 36
+                  },
+                  "out_of_range": {
+                    "auroc": 0.6450617283950617,
+                    "n_c": 36
+                  }
+                }
+              },
+              "control_map": {
+                "duplicate_factor": "a7_redundant",
+                "out_of_range": "base"
+              },
+              "note": "\u2b50 per-kind controls read from query_sets.json on disk. out_of_range's control is `base` (the ordinary valid pool) \u21d2 it is A7-clean as shipped and MUST reproduce bit-identically; only duplicate_factor moves.",
+              "pooled_COMPANION": {
+                "definition": "n_c-weighted mean of the per-kind CONTROLLED AUROCs \u2014 \u26d4 a COMPANION, never the reported number (R27.4: always by kind)",
+                "kinds": {
+                  "duplicate_factor": 0.4494598765432099,
+                  "out_of_range": 0.6450617283950617
+                },
+                "value": 0.5472608024691358
+              }
+            },
+            "auroc_c_vs_a": 0.7627495659722222,
+            "auroc_c_vs_a_union_b": 0.7404197080291971,
+            "auroc_c_vs_b": 0.4228395061728395,
+            "auroc_c_vs_b_by_kind": {
+              "duplicate_factor": {
+                "auroc": 0.2006172839506173,
+                "n_c": 36
+              },
+              "out_of_range": {
+                "auroc": 0.6450617283950617,
+                "n_c": 36
+              }
+            },
+            "auroc_c_vs_control_POOLED_COMPANION": {
+              "A7": 0.6545138888888888,
+              "A7D": 0.7376543209876543
+            },
+            "refused_fraction": {
+              "A": 0.05078125,
+              "A7": 0.2361111111111111,
+              "A7D": 0.05555555555555555,
+              "B": 0.5,
+              "C": 0.4722222222222222,
+              "MS": 0.5303030303030303
+            },
+            "score_summary": {
+              "A": {
+                "mean": 0.16461123304907233,
+                "n": 1024,
+                "std": 0.03941491741056924
+              },
+              "A7": {
+                "mean": 0.19086359524064594,
+                "n": 72,
+                "std": 0.05223864160206303
+              },
+              "A7D": {
+                "mean": 0.16678643226623535,
+                "n": 72,
+                "std": 0.04168545878511493
+              },
+              "B": {
+                "mean": 0.2542279420627488,
+                "n": 72,
+                "std": 0.06843215509225578
+              },
+              "C": {
+                "mean": 0.24168466611040962,
+                "n": 72,
+                "std": 0.09083910697940414
+              },
+              "MS": {
+                "mean": 0.26781843015641876,
+                "n": 198,
+                "std": 0.07059601426401708
+              }
+            },
+            "threshold": {
+              "quantile": 0.95,
+              "set": "A only (valid, seen) \u2014 \u26d4 no C item and no held-out item participates",
+              "value": 0.23031795024871818
+            }
+          }
+        }
+      },
+      "wall_clock_s": 135.72047686576843
+    }
+  },
+  "bridge_dir": "/Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0",
+  "ceilings": {
+    "decoder_ceiling": {
+      "composition_A": {
+        "aggregate": 0.9892578125,
+        "decoded_mean": 0.5618813037872314,
+        "exact_match": 0.94140625,
+        "n": 1024,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "object_hue": 1.0,
+          "orientation": 0.99609375,
+          "scale": 0.96875,
+          "shape": 0.970703125,
+          "wall_hue": 1.0
+        }
+      },
+      "in_corner_discrimination": {
+        "auroc": 0.9720117845117845,
+        "balanced_accuracy": 0.9223484848484849,
+        "detection_rate": 0.9305555555555556,
+        "n_neg": 198,
+        "n_pos": 72,
+        "sufficient": true,
+        "target": 1,
+        "targets_realised": [
+          1
+        ],
+        "tnr": 0.9141414141414141,
+        "tpr": 0.9305555555555556
+      },
+      "note": "re-measured in-run from REAL cached features through THE frozen decoder"
+    },
+    "store_ceiling_balanced_accuracy": 0.6866,
+    "store_ceiling_note": "R22/R23: the in-corner store read, 0.6866 vs the 0.9414 real-feature ceiling. \u26d4 A number quoted against only one of the two ceilings is incomplete."
+  },
+  "condition": "recomb2element",
+  "dataset": "shapes3d",
+  "no_leak": {
+    "n_checked": 32768,
+    "n_holdout_excluded": 72,
+    "n_holdout_leaked": 0,
+    "n_holdout_total": 72,
+    "n_train_rows_used": 32768
+  },
+  "pretext": "recon",
+  "provenance": {
+    "byte_target": {
+      "K": null,
+      "assertion": "realised == expect_byte_target_bytes",
+      "coupling_bytes": 0,
+      "coupling_bytes_formula": "K(K-1)/2 * M^2 * 4",
+      "expected_total_bytes": 524288,
+      "n_modes": null,
+      "rationale": "\u26d4 R26 ruling 3 (2026-09-13) SUPERSEDES the 2026-09-12 Head ruling that set this target to store + inter-well PMI coupling. Conditional dreaming is dropped as the composition mechanism, so gen_dream's coupling field is neither fitted nor deployed and the target reverts 688,128 -> 524,288 B (= store_bytes). The historical 3-seed run at 688,128 B gave the kNN arm a declared ~31 % byte ADVANTAGE \u2014 conservative in direction, \u26d4 but it is NOT byte-matched and must never be quoted as such. \u2b50 bits_per_read is untouched at K*log2(M) either way (R20).",
+      "source_coupling": "excluded (include_coupling_bytes=False)",
+      "source_store": "/Users/user/Desktop/CHLU/.claude/outputs/gen-store-grouping/runs/shapes3d_recon/store_bytes.json",
+      "store_bytes": 524288,
+      "store_meta": {
+        "bits_per_read": 30.0,
+        "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+        "dataset": "shapes3d",
+        "dim": 2048,
+        "dtype": "float32",
+        "n_modes": 64,
+        "n_wells": 5,
+        "note": "\u2b50 gen-baselines byte-matches its kNN arm to `store_bytes`. The addressing head is NOT included; it is reported in store_results.json under arms.*.bits_per_read.",
+        "pretext": "recon",
+        "schema": "chlu-gen-store-bytes/1",
+        "store_bytes": 524288,
+        "store_bytes_per_well": [
+          77568,
+          78080,
+          146688,
+          128256,
+          93696
+        ]
+      },
+      "superseded_by_R26_ruling_3": false,
+      "total_bytes": 524288
+    },
+    "c_invalid_path": "/Users/user/Desktop/CHLU/.claude/data/gen/shapes3d/c_invalid.json",
+    "cache_reencode_check": {
+      "max_abs_delta": 0.0,
+      "n_checked": 64
+    },
+    "decoder": {
+      "decoder_source": "decoder_lift_v1",
+      "encoder_param_hash_it_was_fit_against": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+      "param_count": 1516227,
+      "param_hash": "01ef91f75eeaae7be8d83a220c9cc6629120345357da9033db22375c278ab196",
+      "recipe": "v1_capacity_schedule",
+      "superseded": false
+    },
+    "encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+    "feature_cache_n_rows": 480000,
+    "feature_cache_scope": "full",
+    "feature_cache_sha256": "d6728f01d102b0d0301198dc617f40bfb8ddb6c5b4a12b21a1ec08e1d974f2e2",
+    "probe_param_hash": "c03bfb8916d00932754df37973ff74de3ecec97a5d07ffc306414e466ba7960b",
+    "registered_controls": {
+      "base_is_instantiated_by": "B",
+      "control_map": {
+        "duplicate_factor": "a7_redundant",
+        "out_of_range": "base"
+      },
+      "dedup_sensitivity_sets": {
+        "A7D": {
+          "derived_from": "A7",
+          "n_records": 72,
+          "n_terms": 6,
+          "role": "\u2b50 DECLARED SENSITIVITY \u2014 isolates R8's double-counted redundant term; \u26d4 never a registered control"
+        }
+      },
+      "note": "\u2b50 out_of_range declares `base` (the ordinary valid pool) so it is A7-CLEAN AS SHIPPED and must reproduce bit-identically; \u26d4 only the duplicate_factor half and the pooled companion move.",
+      "registry": "/Users/user/Desktop/CHLU/.claude/data/gen/shapes3d/query_sets.json",
+      "scored": true,
+      "sets": {
+        "A7": {
+          "file": "/Users/user/Desktop/CHLU/.claude/data/gen/shapes3d/a7_redundant.json",
+          "held_out_rows_spent": 0,
+          "n_records": 72,
+          "n_terms": 7,
+          "registered_as": "a7_redundant",
+          "sha256_registered": "536773ed9c1bb8cdede0dbd956a5921f0f0bc7746f14c1cb6a261ff9c4e01191"
+        }
+      }
+    }
+  },
+  "request_embedding": {
+    "n_rows_fit": 32256,
+    "offgrid_report": {
+      "max_distance_outside_range": 17.14285714285714,
+      "n_offgrid_terms": 36,
+      "n_terms": 468
+    },
+    "prototype_ledger": {
+      "bytes": 475136,
+      "bytes_formula": "(sum_k C_k + 1) * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_prototypes": 57,
+      "role": "request embedding == the kNN arm's ADDRESSING HEAD; the store's own byte count excludes the CLU addressing head by the same convention"
+    },
+    "rule": "R8 \u2014 composed per-factor prototypes: x_hat = mu + sum_terms (mu_{k,v} - mu); off-grid values are LINEARLY EXTRAPOLATED in value space, \u26d4 never clipped onto the grid"
+  },
+  "rows": {
+    "A": 1024,
+    "B": 72,
+    "MS": 198,
+    "fit": 32256,
+    "val": 512
+  },
+  "schema": "chlu-gen-baselines/1",
+  "seed": 0,
+  "wall_clock_s": 145.6220247745514
+}

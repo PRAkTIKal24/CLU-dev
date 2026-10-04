@@ -1,0 +1,44 @@
+[OBS_val seed 0] config {'latent': 128, 'K': 2, 'n_atoms': 6, 'ridge': 1.0} rival_steps 8000 / 80000
+  CODEC latent 128  loss 0.00023  [9.2s]
+  extractor floats 21275  train tuple-acc 0.4044
+  across-wells derangement [1, 0] (no fixed point: asserted)
+  MATCHED PARAMETERS (target 25859 = CLU read floats, obs 636, out 21)
+    mlp          width  36  params   26141  (+1.09%)
+    lstm         width  28  params   25841  (-0.07%)
+    transformer  width  28  params   26205  (+1.34%)  n_layers=1 heads=2
+  MATCHED PARAMETERS (target 258590 = CLU read floats, obs 636, out 21)
+    mlp          width 273  params  258164  (-0.16%)
+    lstm         width 142  params  257603  (-0.38%)
+    transformer  width 142  params  259449  (+0.33%)  n_layers=1 heads=2
+    TRAIN rival: mlp   params   26141  loss 0.1170  [50.4s]
+    TRAIN rival@10x-steps: mlp params   26141  loss 0.0049  [521.8s]
+    TRAIN diagnostic@10x-read-floats: mlp params  258164  loss 0.0154  [107.5s]
+    TRAIN rival: lstm  params   25841  loss 0.0114  [81.0s]
+    TRAIN rival@10x-steps: lstm params   25841  loss 0.0101  [1127.1s]
+    TRAIN diagnostic@10x-read-floats: lstm params  257603  loss 0.0051  [254.6s]
+    TRAIN rival: transformer params   26205  loss 0.0004  [161.9s]
+    TRAIN rival@10x-steps: transformer params   26205  loss 0.0002  [1335.2s]
+    TRAIN diagnostic@10x-read-floats: transformer params  259449  loss 0.0281  [264.3s]
+  MATCHED PARAMETERS (target 25859 = CLU read floats, obs 663, out 21)
+    mlp          width  34  params   25579  (-1.08%)
+    lstm         width  27  params   25457  (-1.55%)
+    transformer  width  28  params   26961  (+4.26%)  n_layers=1 heads=2
+  MATCHED PARAMETERS (target 258590 = CLU read floats, obs 663, out 21)
+    mlp          width 267  params  258113  (-0.18%)
+    lstm         width 141  params  258473  (-0.05%)
+    transformer  width 140  params  257345  (-0.48%)  n_layers=1 heads=2
+    TRAIN rival: mlp +extractor params   25579  loss 0.0372  [119.8s]
+    TRAIN rival@10x-steps: mlp +extractor params   25579  loss 0.0006  [854.1s]
+    TRAIN diagnostic@10x-read-floats: mlp +extractor params  258113  loss 0.0016  [147.2s]
+    TRAIN rival: lstm +extractor params   25457  loss 0.0263  [109.5s]
+    TRAIN rival@10x-steps: lstm +extractor params   25457  loss 0.0053  [1144.5s]
+    TRAIN diagnostic@10x-read-floats: lstm +extractor params  258473  loss 0.0013  [280.2s]
+    TRAIN rival: transformer +extractor params   26961  loss 0.0065  [149.6s]
+    TRAIN rival@10x-steps: transformer +extractor params   26961  loss 0.0000  [1556.4s]
+    TRAIN diagnostic@10x-read-floats: transformer +extractor params  257345  loss 0.0005  [291.0s]
+  row seen  n=4000  CLU 0.4412 best-rival8k 0.8872 best-rival80k 0.9243 worst-ctl 0.2970 bseq 0.3842 bcol 0.2587  ext-tuple-acc 0.3595
+  row pair  n=812   CLU 0.1860 best-rival8k 0.4126 best-rival80k 0.4643 worst-ctl 0.3473 bseq 0.1933 bcol 0.0123  ext-tuple-acc 0.0000
+  row nway  n=752   CLU 0.2407 best-rival8k 0.4202 best-rival80k 0.4641 worst-ctl 0.4388 bseq 0.2926 bcol 0.0266  ext-tuple-acc 0.0652
+  row value n=4000  CLU 0.1740 best-rival8k 0.5463 best-rival80k 0.5110 worst-ctl 0.1273 bseq 0.1633 bcol 0.1087  ext-tuple-acc 0.0000
+  rollout CLU validity 0.0000 per-step 0.3478
+[OBS_val seed 0] wrote C:/chlu/outputs/w19-maze-t-symmetric/val\OBS_val_seed0.json [9585.8s]

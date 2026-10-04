@@ -1,0 +1,50 @@
+{
+ "address_bytes": {
+  "address_bytes": 194544,
+  "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )",
+  "dtype": "float32",
+  "normalisation_bytes": 2544,
+  "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger.",
+  "per_factor_tables_bytes": 29184,
+  "per_well_maps_bytes": 162816,
+  "rank": 128
+ },
+ "arm": "pca_tensor",
+ "byte_ledger": {
+  "budget_bytes": 524288,
+  "deployed_bytes": 524288,
+  "matches_budget": true,
+  "param_count": 131072,
+  "variance_explained_per_well": [
+   0.984071,
+   0.975133,
+   0.966539,
+   1.0,
+   1.0
+  ],
+  "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy"
+ },
+ "content": "per-well principal subspace of the fit pool (unsupervised)",
+ "fit_seconds": 381.1978487968445,
+ "head_bytes": {
+  "head_bytes": 0,
+  "note": "this read's address book IS the tensor book, declared beside the store and never netted in"
+ },
+ "kind": "span",
+ "label_use": "labels align the wells ONCE at fit time and ground the address book; the CONTENT is unsupervised (charter B.6)",
+ "partition": "factor (K=5, inherited label-MI wells)",
+ "read": "tensor",
+ "request_only": {
+  "bitwise_stable_under_feature_perturbation": true,
+  "feature_argument_present": false,
+  "n_checked": 64,
+  "read_signature": [
+   "self",
+   "store",
+   "values",
+   "grid_values",
+   "basis"
+  ],
+  "statement": "the read's only inputs are the address book, the store and the request; no feature tensor enters launch, settle or read (charter B.3)"
+ }
+}

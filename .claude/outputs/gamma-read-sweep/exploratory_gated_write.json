@@ -1,0 +1,123 @@
+{
+  "sweep": "gamma_read",
+  "complete": true,
+  "shared_slot": {
+    "d_model": 64,
+    "n_layers": 2,
+    "target_block_params": 40000,
+    "train_steps": 1200,
+    "tune_steps": 400,
+    "batch_size": 32,
+    "eval_batch": 256,
+    "lr_grid": [
+      0.0003,
+      0.001,
+      0.003
+    ],
+    "n_seeds": 3,
+    "clu_dt": 0.1,
+    "clu_hidden": 32,
+    "clu_kinetic_mode": "newtonian_learned",
+    "clu_potential_type": "mlp",
+    "clu_read_mode": "endpoint",
+    "clu_write_mode": "gated"
+  },
+  "results": [
+    {
+      "primitive": "clu",
+      "family": "adding_T128",
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 48905,
+      "param_err": 0.004999999999999893,
+      "best_lr": 0.001,
+      "metric_name": "mse",
+      "metric_mean": 0.008486912741015354,
+      "metric_std": 0.006035421637599421,
+      "metric_per_seed": [
+        0.0026497007347643375,
+        0.016798540949821472,
+        0.006012496538460255
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.04079208383336663,
+      "fwd_flops": 8951710.0,
+      "cell": {
+        "clu_gamma": 0.0
+      },
+      "half_life_tokens": Infinity,
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "adding_T128",
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 48905,
+      "param_err": 0.004999999999999893,
+      "best_lr": 0.001,
+      "metric_name": "mse",
+      "metric_mean": 0.0028408559349675975,
+      "metric_std": 0.0006739691165175017,
+      "metric_per_seed": [
+        0.002558728214353323,
+        0.003770370502024889,
+        0.00219346908852458
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.042583916103467345,
+      "fwd_flops": 8951840.0,
+      "cell": {
+        "clu_gamma": 0.02
+      },
+      "half_life_tokens": 68.61923698304135,
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "adding_T128",
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 48905,
+      "param_err": 0.004999999999999893,
+      "best_lr": 0.0003,
+      "metric_name": "mse",
+      "metric_mean": 0.015358527501424154,
+      "metric_std": 0.008225396019911424,
+      "metric_per_seed": [
+        0.025538763031363487,
+        0.015142608433961868,
+        0.005394211038947105
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.044950374867767096,
+      "fwd_flops": 8951840.0,
+      "cell": {
+        "clu_gamma": 0.05
+      },
+      "half_life_tokens": 27.02681466792977,
+      "seq_len": 128
+    }
+  ]
+}

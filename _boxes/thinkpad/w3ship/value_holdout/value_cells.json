@@ -1,0 +1,2271 @@
+{
+  "cells": [
+    {
+      "cell_id": "value-object_hue",
+      "meta": {
+        "family": "value",
+        "held_out_factor": "object_hue",
+        "held_out_value": 0.5,
+        "note": "every other factor is UNCONSTRAINED \u2014 the value is held out across every shape, scale and pose, which is what makes it a VALUE hold-out and not a combination hold-out",
+        "rationale": {
+          "factor": "object_hue",
+          "grid_index": 5,
+          "rejected": {
+            "0.0 / 0.9 (as range endpoints)": "one-sided in the realised range: the nearest off-grid values are exactly where out_of_range (row 6) lives.",
+            "0.8 / 0.9": "Montero's held-out hue band. A value hold-out placed there is entangled with the headline combination condition and its 72 rows.",
+            "scale / orientation (any value)": "\u26d4 ineligible per task \u00a73.1: wave 2 measured both as PHYSICAL DEFAULTS the model degrades towards, so a held-out default is unremovable for reasons that have nothing to do with the store."
+          },
+          "value": 0.5,
+          "why": "The interior mid-point of the 10-value hue ring. (a) It is the object's own photometric property \u2014 the thing the request names and the judge scores \u2014 unlike floor_hue/wall_hue, which are background. (b) Hue is CIRCULAR, so no hue value is a physical default the model degrades towards; the \u00a73.1 hazard that rules out scale and orientation does not apply to it. (c) It sits four grid steps from Montero's retained band (object_hue >= 0.8), so the value hole does not sit inside the region the headline and wide COMBINATION conditions already spend. (d) It is interior, so BOTH of its grid neighbours are retained and the hole is two-sided \u2014 a hole at 0.0 or 0.9 would sit on the realised range boundary, where build_c_invalid's out_of_range records are also placed, and rows 5 and 6 would become adjacent in value space."
+        }
+      },
+      "n_rows_realised": 48000,
+      "values": {
+        "object_hue": [
+          0.5
+        ]
+      }
+    },
+    {
+      "cell_id": "value-shape",
+      "meta": {
+        "family": "value",
+        "held_out_factor": "shape",
+        "held_out_value": 0.0,
+        "note": "the object_hue constraint carves out ONLY the rows the object_hue cell already owns, so the two cells are disjoint; their union is every row carrying either held-out value",
+        "rationale": {
+          "factor": "shape",
+          "grid_index": 0,
+          "label": "cube",
+          "rejected": {
+            "1.0 (cylinder)": "Montero's held-out shape, and the wide condition's cell-0 shape. Already entangled with both combination conditions.",
+            "2.0 (sphere)": "\u26d4 the shape hazard of \u00a73.1, exactly: a degraded render is a rounded blob, so the SPHERE is the shape the model degrades TOWARDS. A held-out sphere would be unremovable for rendering reasons, not store reasons \u2014 the same argument that rules out the median scale and the null pose.",
+            "3.0 (oblong/capsule)": "visually intermediate between the cylinder and the sphere, both retained. A retained near-neighbour weakens 'held out entirely' \u2014 refusal could be declined on interpolation grounds, and the row would stop being a refusal row."
+          },
+          "value": 0.0,
+          "why": "The cube is the shape most distant from the retained set under the only degradation mode we have measured. Shape is CATEGORICAL \u2014 it cannot be interpolated \u2014 so 'held out entirely' is only weakened by a retained NEAR-NEIGHBOUR, and the cube has none among {cylinder, sphere, oblong}: it is the one shape with flat faces and hard edges."
+        }
+      },
+      "n_rows_realised": 108000,
+      "values": {
+        "object_hue": [
+          0.0,
+          0.1,
+          0.2,
+          0.30000000000000004,
+          0.4,
+          0.6000000000000001,
+          0.7000000000000001,
+          0.8,
+          0.9
+        ],
+        "shape": [
+          0.0
+        ]
+      }
+    },
+    {
+      "cell_id": "pair-000",
+      "meta": {
+        "axes": [
+          "object_hue",
+          "shape"
+        ],
+        "family": "pair",
+        "note": "both values are RETAINED elsewhere in the grid; only their co-occurrence is held out \u2014 the row-3 request",
+        "pair": {
+          "object_hue": 0.0,
+          "shape": 1.0
+        }
+      },
+      "n_rows_realised": 12000,
+      "values": {
+        "object_hue": [
+          0.0
+        ],
+        "shape": [
+          1.0
+        ]
+      }
+    },
+    {
+      "cell_id": "pair-001",
+      "meta": {
+        "axes": [
+          "object_hue",
+          "shape"
+        ],
+        "family": "pair",
+        "note": "both values are RETAINED elsewhere in the grid; only their co-occurrence is held out \u2014 the row-3 request",
+        "pair": {
+          "object_hue": 0.30000000000000004,
+          "shape": 2.0
+        }
+      },
+      "n_rows_realised": 12000,
+      "values": {
+        "object_hue": [
+          0.30000000000000004
+        ],
+        "shape": [
+          2.0
+        ]
+      }
+    },
+    {
+      "cell_id": "pair-002",
+      "meta": {
+        "axes": [
+          "object_hue",
+          "shape"
+        ],
+        "family": "pair",
+        "note": "both values are RETAINED elsewhere in the grid; only their co-occurrence is held out \u2014 the row-3 request",
+        "pair": {
+          "object_hue": 0.7000000000000001,
+          "shape": 3.0
+        }
+      },
+      "n_rows_realised": 12000,
+      "values": {
+        "object_hue": [
+          0.7000000000000001
+        ],
+        "shape": [
+          3.0
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-000",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-001",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-002",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-003",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-004",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-005",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-006",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-007",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-008",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-009",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-010",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-011",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-012",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-013",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-014",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-015",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-016",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-017",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-018",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-019",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-020",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-021",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-022",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-023",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 0,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.0,
+          0.1
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.0,
+          0.1
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-024",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-025",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-026",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-027",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-028",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-029",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-030",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-031",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-032",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-033",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-034",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-035",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "high",
+        "scale_corner": "low",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-036",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-037",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-038",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-039",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-040",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-041",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "high",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-042",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-043",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-044",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-045",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-046",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 2.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          2.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-047",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 2,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 8,
+        "orientation_corner": "low",
+        "scale_corner": "low",
+        "shape_value": 3.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.2,
+          0.30000000000000004
+        ],
+        "object_hue": [
+          0.8,
+          0.9
+        ],
+        "orientation": [
+          -30.0,
+          -25.714285714285715,
+          -21.42857142857143
+        ],
+        "scale": [
+          0.75,
+          0.8214285714285714,
+          0.8928571428571428
+        ],
+        "shape": [
+          3.0
+        ],
+        "wall_hue": [
+          0.2,
+          0.30000000000000004
+        ]
+      }
+    },
+    {
+      "cell_id": "nway-048",
+      "meta": {
+        "family": "nway",
+        "floor_band_start_index": 4,
+        "hue_band_width": 2,
+        "note": "Montero-shaped: a wave-3 corner is comparable with a wave-2 corner because only the PLACEMENT differs",
+        "object_band_start_index": 1,
+        "orientation_corner": "high",
+        "scale_corner": "high",
+        "shape_value": 1.0
+      },
+      "n_rows_realised": 72,
+      "values": {
+        "floor_hue": [
+          0.4,
+          0.5
+        ],
+        "object_hue": [
+          0.1,
+          0.2
+        ],
+        "orientation": [
+          21.42857142857143,
+          25.714285714285715,
+          30.0
+        ],
+        "scale": [
+          1.1071428571428572,
+          1.1785714285714286,
+          1.25
+        ],
+        "shape": [
+          1.0
+        ],
+        "wall_hue": [
+          0.4,
+          0.5
+        ]
+      }
+    }
+  ],
+  "condition": "value_holdout",
+  "config": {
+    "a7_n_requests": 512,
+    "a7_seed": 0,
+    "c_invalid_n_per_kind": 256,
+    "c_invalid_seed": 0,
+    "dataset": "shapes3d",
+    "detector_tolerance": 0.05,
+    "held_out_hue_factor": "object_hue",
+    "held_out_hue_value": 0.5,
+    "held_out_shape_factor": "shape",
+    "held_out_shape_value": 0.0,
+    "meta": {},
+    "n_nway_cells": 49,
+    "n_pair_cells": 3,
+    "nway_seed": 0,
+    "pair_seed": 0,
+    "row1_n_per_kind": 256,
+    "row1_seed": 0,
+    "row1_seen_hue_value": 0.4,
+    "row1_seen_shape_value": 3.0,
+    "row2_n_requests": 512,
+    "row2_seed": 0,
+    "row5_n_per_kind": 256,
+    "row5_seed": 0
+  },
+  "dataset": "shapes3d",
+  "frozen_artifact_warning": "\u26d4 The encoder/decoder/judge frozen under `recomb2element` were fitted on rows this condition holds out. That is DELIBERATE and is the scope statement above: the hold-out is from the STORE's fit pool only. \u26d4 Do not quote a row from this condition as an end-to-end 'never seen' result.",
+  "held_out_values": {
+    "object_hue": 0.5,
+    "shape": 0.0
+  },
+  "n_cells_by_family": {
+    "nway": 49,
+    "pair": 3,
+    "value": 2
+  },
+  "n_test_realised": 195528,
+  "n_total": 480000,
+  "n_train_realised": 284472,
+  "rationale": {
+    "hue": {
+      "factor": "object_hue",
+      "grid_index": 5,
+      "rejected": {
+        "0.0 / 0.9 (as range endpoints)": "one-sided in the realised range: the nearest off-grid values are exactly where out_of_range (row 6) lives.",
+        "0.8 / 0.9": "Montero's held-out hue band. A value hold-out placed there is entangled with the headline combination condition and its 72 rows.",
+        "scale / orientation (any value)": "\u26d4 ineligible per task \u00a73.1: wave 2 measured both as PHYSICAL DEFAULTS the model degrades towards, so a held-out default is unremovable for reasons that have nothing to do with the store."
+      },
+      "value": 0.5,
+      "why": "The interior mid-point of the 10-value hue ring. (a) It is the object's own photometric property \u2014 the thing the request names and the judge scores \u2014 unlike floor_hue/wall_hue, which are background. (b) Hue is CIRCULAR, so no hue value is a physical default the model degrades towards; the \u00a73.1 hazard that rules out scale and orientation does not apply to it. (c) It sits four grid steps from Montero's retained band (object_hue >= 0.8), so the value hole does not sit inside the region the headline and wide COMBINATION conditions already spend. (d) It is interior, so BOTH of its grid neighbours are retained and the hole is two-sided \u2014 a hole at 0.0 or 0.9 would sit on the realised range boundary, where build_c_invalid's out_of_range records are also placed, and rows 5 and 6 would become adjacent in value space."
+    },
+    "shape": {
+      "factor": "shape",
+      "grid_index": 0,
+      "label": "cube",
+      "rejected": {
+        "1.0 (cylinder)": "Montero's held-out shape, and the wide condition's cell-0 shape. Already entangled with both combination conditions.",
+        "2.0 (sphere)": "\u26d4 the shape hazard of \u00a73.1, exactly: a degraded render is a rounded blob, so the SPHERE is the shape the model degrades TOWARDS. A held-out sphere would be unremovable for rendering reasons, not store reasons \u2014 the same argument that rules out the median scale and the null pose.",
+        "3.0 (oblong/capsule)": "visually intermediate between the cylinder and the sphere, both retained. A retained near-neighbour weakens 'held out entirely' \u2014 refusal could be declined on interpolation grounds, and the row would stop being a refusal row."
+      },
+      "value": 0.0,
+      "why": "The cube is the shape most distant from the retained set under the only degradation mode we have measured. Shape is CATEGORICAL \u2014 it cannot be interpolated \u2014 so 'held out entirely' is only weakened by a retained NEAR-NEIGHBOUR, and the cube has none among {cylinder, sphere, oblong}: it is the one shape with flat faces and hard edges."
+    }
+  },
+  "row1_seen_rationale": {
+    "object_hue": {
+      "boundary_distance": 4,
+      "grid_index": 4,
+      "mirrored_boundary_distance": 4,
+      "mirrors": {
+        "grid_index": 5,
+        "value": 0.5
+      },
+      "rejected": {
+        "0.0 / 0.9": "boundary distance 0 against the held-out value's 4 \u2014 an unsigned boundary rule would separate the legs for free",
+        "a uniform draw over all 9 retained hues": "\u26d4 row 5 holds its hue CONSTANT; a control whose hue varies is separable by a transductive constant-detector with no model in it"
+      },
+      "value": 0.4,
+      "why": "the retained hue whose grid index sits at the SAME distance from the realised range boundary as the held-out index 5, so an unsigned boundary/interior rule is blind to the difference"
+    },
+    "shape": {
+      "boundary_distance": 0,
+      "grid_index": 3,
+      "label": "oblong/capsule",
+      "mirrored_boundary_distance": 0,
+      "mirrors": {
+        "grid_index": 0,
+        "label": "cube",
+        "value": 0.0
+      },
+      "rejected": {
+        "1.0 (cylinder) / 2.0 (sphere)": "boundary distance 1 against the held-out cube's 0 \u2014 an unsigned boundary rule would separate the legs for free"
+      },
+      "value": 3.0,
+      "why": "the only retained shape at the SAME boundary distance (0) as the held-out cube, i.e. the other end of the shape axis. \u26a0 HELD_OUT_SHAPE_RATIONALE rejects 3.0 as a HOLD-OUT (a retained near-neighbour would weaken refusal); that argument does not apply to an ACCEPT-leg, whose job is to be a value the store demonstrably holds."
+    }
+  },
+  "row_evidence_ranking": {
+    "r5_comp_refusal": {
+      "evidential": true,
+      "rank": 2,
+      "why": "\u2b50 Evidential UNDER THE AMENDED PAIRING ONLY: the accept-leg is row 1, a STORED on-grid request. Both halves are well-formed on-grid requests and differ only in whether the store holds the value. \u26d4 With row 2 as the accept-leg it was free (grid look-up, 1.0000, zero bytes)."
+    },
+    "r6_invalid_refusal": {
+      "evidential": false,
+      "rank": 3,
+      "why": "\u26d4 SANITY CHECK ONLY, and it can never be anything else: out-of-range is decidable from the factor grid alone. Kept as the degenerate-arm guard; \u26d4 a row-6 number is NOT evidence that the store computes a barrier."
+    },
+    "r7_deletion": {
+      "evidential": true,
+      "rank": 1,
+      "why": "\u2b50 THE strongest instrument. Deleting a value from the store does not move the factor grid, so the no-model rule's delta_reject is exactly 0.0. A changed refusal after a deletion, with NO retraining, is not producible by any syntactic rule."
+    }
+  },
+  "rows_by_family": {
+    "nway": 3528,
+    "pair": 36000,
+    "value": 156000
+  },
+  "scope": "SCOPE OF THE VALUE HOLD-OUT (\u26d4 quote no row without this). The hold-out is from the STORE'S FIT POOL, not from the encoder, the decoder or the judge. Those three are frozen, hash-pinned and read-only (charter \u00a7A.4) and were fitted on a train split containing EVERY hue and EVERY shape; re-fitting them on a value hold-out would void every wave-2 number and is out of scope. Therefore 'never trained on' means here: THE STORE NEVER HELD A ROW CARRYING THAT VALUE. The decoder can still render the value and the judge can still recognise it \u2014 which is what makes rows 2/5/6/7 scorable at all. \u26d4 Read end-to-end, 'never seen' is false and the claim dies with it.",
+  "variant": "value_cells_plus_combination_cells"
+}

@@ -1,0 +1,296 @@
+[gen-dream] dataset=shapes3d pretext=recon condition=recomb2element stage=dream seeds=[0, 1, 2] -> /Users/user/Desktop/CHLU/.claude/outputs/gen-dream-sampler/runs/shapes3d_recon
+[     0.0s] seed 0 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (asserted)
+[     2.4s]   split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+[     4.2s] cache 480000 rows (scope=full), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     7.5s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     7.5s] rows: store_train=32768 eval_a=1024 -> 512 A-split requests (⛔ A only: no B, no C)
+[     7.9s] features gathered: store (32768, 2048) dream (512, 2048)
+[     8.3s] ⭐ store plan loaded VERBATIM: K=5 n_modes=64 well sizes [303, 305, 573, 501, 366]
+[     9.7s] store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-dream-sampler/runs/shapes3d_recon/seed_0/store_s0.pkl
+[     9.7s] store: 524288 B, 30 bits/read
+[    14.3s] ⭐ no-bypass: pure codebook gather, 30 bits/read
+[    15.4s] ⭐ coupling fitted from 32768 train codes (+163840 B, EXTRA to store_bytes; channel unchanged at 30 bits)
+[    37.2s] ⭐ ceilings: decoder aggregate=0.9922 shape=0.9785 | STORE aggregate=0.6195 shape=0.5840
+[    42.0s] [full] calibrated: tau 11.13 -> 2.782 (mode_distance), T 1.518 -> 0.1518 (energy_scale); mean_max_pi at tau_start = 0.0242
+[    45.1s]   ⭐ step size tuned to 0.1 (target accept 0.7, 1 round(s): 0.1->0.61)
+[    46.2s] [full] mean_n_clamped=4.42/5 mean_n_relaxed=0.58 mean_confidence=0.755
+[    92.7s]   full__clu__mala__full: aggregate=0.5684 bal=0.5655 shape=0.5234 | acc_prob=0.848 ΔE=-0.5499 moved=0.39 maxpi=0.025 cfgs=502
+[   104.4s]   full__clu__mala__zero_step: aggregate=0.5654 bal=0.5627 shape=0.5117 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.025 cfgs=497
+[   114.4s]   full__clu__mala__prior_mode: aggregate=0.5540 bal=0.5527 shape=0.5273 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.026 cfgs=497
+[   138.6s]   full__clu__ula__full: aggregate=0.5645 bal=0.5629 shape=0.5195 | acc_prob=0.938 ΔE=-0.6361 moved=0.39 maxpi=0.025 cfgs=501
+[   175.8s]   full__clu__uld__full: aggregate=0.5615 bal=0.5589 shape=0.5273 | acc_prob=0.925 ΔE=-0.8072 moved=0.36 maxpi=0.025 cfgs=499
+[   201.6s]   full__store_removed__mala__full: aggregate=0.1025 bal=0.1069 shape=0.2305 | acc_prob=0.842 ΔE=-0.7076 moved=0.00 maxpi=0.016 cfgs=1
+[   209.5s]   full__store_removed__mala__zero_step: aggregate=0.1025 bal=0.1069 shape=0.2305 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[   218.1s]   full__store_removed__mala__prior_mode: aggregate=0.1025 bal=0.1069 shape=0.2305 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[   243.0s]   full__no_coupling__mala__full: aggregate=0.5579 bal=0.5558 shape=0.5234 | acc_prob=0.845 ΔE=-0.4820 moved=0.32 maxpi=0.025 cfgs=502
+[   252.2s]   full__no_coupling__mala__zero_step: aggregate=0.5654 bal=0.5627 shape=0.5117 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.025 cfgs=497
+[   262.2s]   full__no_coupling__mala__prior_mode: aggregate=0.5540 bal=0.5527 shape=0.5273 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.026 cfgs=497
+[   262.4s] [partial] calibrated: tau 11.13 -> 2.782 (mode_distance), T 0.4321 -> 0.04321 (energy_scale); mean_max_pi at tau_start = 0.0200
+[   266.4s]   ⭐ step size tuned to 0.025 (target accept 0.7, 8 round(s): 0.1->0.05, 0.05->0.41, 0.025->0.82, 0.05->0.41, 0.025->0.82, 0.05->0.41, 0.025->0.82, 0.05->0.40)
+[   266.4s] [partial] mean_n_clamped=1.46/5 mean_n_relaxed=3.54 mean_confidence=0.388
+[   304.7s]   partial__clu__mala__full: aggregate=0.3507 bal=0.3457 shape=0.3739 | acc_prob=0.951 ΔE=-1.5321 moved=0.96 maxpi=0.020 cfgs=496
+[   312.5s]   partial__clu__mala__zero_step: aggregate=0.3310 bal=0.3301 shape=0.3478 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.020 cfgs=282
+[   320.8s]   partial__clu__mala__prior_mode: aggregate=0.3144 bal=0.3176 shape=0.3565 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.026 cfgs=277
+[   341.5s]   partial__clu__ula__full: aggregate=0.3443 bal=0.3406 shape=0.3507 | acc_prob=0.961 ΔE=-1.5258 moved=0.96 maxpi=0.020 cfgs=500
+[   379.2s]   partial__clu__uld__full: aggregate=0.3447 bal=0.3424 shape=0.3478 | acc_prob=0.948 ΔE=-1.5935 moved=0.96 maxpi=0.020 cfgs=502
+[   403.7s]   partial__store_removed__mala__full: aggregate=0.1064 bal=0.1069 shape=0.2058 | acc_prob=0.951 ΔE=-0.4175 moved=0.00 maxpi=0.016 cfgs=1
+[   413.6s]   partial__store_removed__mala__zero_step: aggregate=0.1064 bal=0.1069 shape=0.2058 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[   424.4s]   partial__store_removed__mala__prior_mode: aggregate=0.1064 bal=0.1069 shape=0.2058 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[   443.5s]   partial__no_coupling__mala__full: aggregate=0.3397 bal=0.3340 shape=0.3565 | acc_prob=0.951 ΔE=-0.9083 moved=0.95 maxpi=0.020 cfgs=502
+[   452.2s]   partial__no_coupling__mala__zero_step: aggregate=0.3310 bal=0.3301 shape=0.3478 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.020 cfgs=282
+[   461.5s]   partial__no_coupling__mala__prior_mode: aggregate=0.3144 bal=0.3176 shape=0.3565 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.026 cfgs=277
+/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py:922: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py:923: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=140)
+[   473.4s] seed 0 done
+[     0.0s] seed 1 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1
+[     2.5s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (asserted)
+[     4.6s]   split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+[    10.0s] cache 9288 rows (scope=used), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[    11.8s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[    11.8s] rows: store_train=32768 eval_a=1024 -> 512 A-split requests (⛔ A only: no B, no C)
+[    11.8s]     extending cache coverage: 32199 row(s) encoded through the frozen encoder
+[   165.6s] features gathered: store (32768, 2048) dream (512, 2048)
+[   165.8s] ⭐ store plan loaded VERBATIM: K=5 n_modes=64 well sizes [303, 305, 573, 501, 366]
+[   170.2s] training the modes (1200 steps, store-only objective) …
+[   171.4s]     step 1/1200  loss=55.85137  tau=1.000
+[   350.4s]     step 240/1200  loss=44.05746  tau=0.632
+[   557.2s]     step 480/1200  loss=41.44281  tau=0.399
+[   799.4s]     step 720/1200  loss=41.92947  tau=0.251
+[  1104.0s]     step 960/1200  loss=39.22557  tau=0.159
+[  1426.6s]     step 1200/1200  loss=37.97622  tau=0.100
+[  1427.7s] store: 524288 B, 30 bits/read
+[  1428.0s] ⭐ no-bypass: pure codebook gather, 30 bits/read
+[  1428.8s] ⭐ coupling fitted from 32768 train codes (+163840 B, EXTRA to store_bytes; channel unchanged at 30 bits)
+[  1452.3s] ⭐ ceilings: decoder aggregate=0.9870 shape=0.9551 | STORE aggregate=0.5579 shape=0.4824
+[  1453.5s] [full] calibrated: tau 11.7 -> 2.926 (mode_distance), T 1.76 -> 0.176 (energy_scale); mean_max_pi at tau_start = 0.0235
+[  1454.1s]   ⭐ step size tuned to 0.1 (target accept 0.7, 1 round(s): 0.1->0.73)
+[  1455.1s] [full] mean_n_clamped=4.34/5 mean_n_relaxed=0.66 mean_confidence=0.749
+[  1510.5s]   full__clu__mala__full: aggregate=0.4899 bal=0.4869 shape=0.4121 | acc_prob=0.817 ΔE=-0.7504 moved=0.43 maxpi=0.023 cfgs=481
+[  1522.6s]   full__clu__mala__zero_step: aggregate=0.4915 bal=0.4894 shape=0.4297 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.023 cfgs=468
+[  1535.9s]   full__clu__mala__prior_mode: aggregate=0.4792 bal=0.4759 shape=0.4277 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.025 cfgs=469
+[  1561.0s]   full__clu__ula__full: aggregate=0.4987 bal=0.4960 shape=0.4219 | acc_prob=0.929 ΔE=-0.8250 moved=0.46 maxpi=0.023 cfgs=482
+[  1602.8s]   full__clu__uld__full: aggregate=0.4844 bal=0.4814 shape=0.4160 | acc_prob=0.914 ΔE=-0.8932 moved=0.46 maxpi=0.023 cfgs=486
+[  1631.1s]   full__store_removed__mala__full: aggregate=0.1504 bal=0.1403 shape=0.2637 | acc_prob=0.809 ΔE=-0.8047 moved=0.00 maxpi=0.016 cfgs=1
+[  1640.6s]   full__store_removed__mala__zero_step: aggregate=0.1504 bal=0.1403 shape=0.2637 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[  1649.3s]   full__store_removed__mala__prior_mode: aggregate=0.1504 bal=0.1403 shape=0.2637 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[  1671.1s]   full__no_coupling__mala__full: aggregate=0.4850 bal=0.4832 shape=0.4297 | acc_prob=0.804 ΔE=-0.6467 moved=0.40 maxpi=0.023 cfgs=483
+[  1681.1s]   full__no_coupling__mala__zero_step: aggregate=0.4915 bal=0.4894 shape=0.4297 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.023 cfgs=468
+[  1690.5s]   full__no_coupling__mala__prior_mode: aggregate=0.4792 bal=0.4759 shape=0.4277 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.025 cfgs=469
+[  1690.6s] [partial] calibrated: tau 11.7 -> 2.926 (mode_distance), T 0.4249 -> 0.04249 (energy_scale); mean_max_pi at tau_start = 0.0190
+[  1694.5s]   ⭐ step size tuned to 0.025 (target accept 0.7, 8 round(s): 0.1->0.07, 0.05->0.43, 0.025->0.82, 0.05->0.42, 0.025->0.83, 0.05->0.42, 0.025->0.82, 0.05->0.44)
+[  1695.2s] [partial] mean_n_clamped=1.44/5 mean_n_relaxed=3.56 mean_confidence=0.392
+[  1735.7s]   partial__clu__mala__full: aggregate=0.2943 bal=0.2989 shape=0.2888 | acc_prob=0.951 ΔE=-1.4159 moved=0.94 maxpi=0.019 cfgs=491
+[  1748.1s]   partial__clu__mala__zero_step: aggregate=0.2937 bal=0.2949 shape=0.3009 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.019 cfgs=266
+[  1756.7s]   partial__clu__mala__prior_mode: aggregate=0.2446 bal=0.2527 shape=0.3009 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.025 cfgs=267
+[  1777.7s]   partial__clu__ula__full: aggregate=0.2879 bal=0.2900 shape=0.2979 | acc_prob=0.961 ΔE=-1.4282 moved=0.93 maxpi=0.019 cfgs=497
+[  1813.5s]   partial__clu__uld__full: aggregate=0.2897 bal=0.2917 shape=0.2948 | acc_prob=0.948 ΔE=-1.3453 moved=0.94 maxpi=0.019 cfgs=503
+[  1838.9s]   partial__store_removed__mala__full: aggregate=0.1528 bal=0.1403 shape=0.2553 | acc_prob=0.951 ΔE=-0.3417 moved=0.00 maxpi=0.016 cfgs=1
+[  1848.0s]   partial__store_removed__mala__zero_step: aggregate=0.1528 bal=0.1403 shape=0.2553 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[  1857.5s]   partial__store_removed__mala__prior_mode: aggregate=0.1528 bal=0.1403 shape=0.2553 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[  1883.4s]   partial__no_coupling__mala__full: aggregate=0.2718 bal=0.2750 shape=0.2888 | acc_prob=0.951 ΔE=-1.0205 moved=0.90 maxpi=0.019 cfgs=497
+[  1894.4s]   partial__no_coupling__mala__zero_step: aggregate=0.2937 bal=0.2949 shape=0.3009 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.019 cfgs=266
+[  1902.9s]   partial__no_coupling__mala__prior_mode: aggregate=0.2446 bal=0.2527 shape=0.3009 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.025 cfgs=267
+/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py:922: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py:923: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=140)
+[  1906.1s] seed 1 done
+[     0.0s] seed 2 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2
+[     1.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=2d7eea75add77044… (asserted)
+[     3.3s]   split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+[     4.3s] cache 9288 rows (scope=used), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     6.3s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     6.3s] rows: store_train=32768 eval_a=1024 -> 512 A-split requests (⛔ A only: no B, no C)
+[     7.4s]     extending cache coverage: 32241 row(s) encoded through the frozen encoder
+[   168.8s] features gathered: store (32768, 2048) dream (512, 2048)
+[   170.1s] ⭐ store plan loaded VERBATIM: K=5 n_modes=64 well sizes [303, 305, 573, 501, 366]
+[   175.8s] training the modes (1200 steps, store-only objective) …
+[   178.3s]     step 1/1200  loss=62.04879  tau=1.000
+E0912 11:29:49.148705   56409 slow_operation_alarm.cc:73] 
+********************************
+[Compiling module jit_step for CPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+E0912 11:31:31.981675   55011 slow_operation_alarm.cc:140] The operation took 3m42.953365s
+
+********************************
+[Compiling module jit_step for CPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+[  1634.0s]     step 240/1200  loss=50.69544  tau=0.632
+[  1901.6s]     step 480/1200  loss=48.59584  tau=0.399
+[  2096.4s]     step 720/1200  loss=45.10828  tau=0.251
+[  2258.7s]     step 960/1200  loss=44.33706  tau=0.159
+[  2387.1s]     step 1200/1200  loss=43.69512  tau=0.100
+[  2387.2s] store: 524288 B, 30 bits/read
+[  2387.3s] ⭐ no-bypass: pure codebook gather, 30 bits/read
+[  2387.6s] ⭐ coupling fitted from 32768 train codes (+163840 B, EXTRA to store_bytes; channel unchanged at 30 bits)
+[  2396.1s] ⭐ ceilings: decoder aggregate=0.9938 shape=0.9863 | STORE aggregate=0.5628 shape=0.5723
+[  2396.3s] [full] calibrated: tau 11.88 -> 2.97 (mode_distance), T 1.751 -> 0.1751 (energy_scale); mean_max_pi at tau_start = 0.0239
+[  2396.4s]   ⭐ step size tuned to 0.1 (target accept 0.7, 1 round(s): 0.1->0.74)
+[  2396.4s] [full] mean_n_clamped=4.30/5 mean_n_relaxed=0.70 mean_confidence=0.748
+[  2415.2s]   full__clu__mala__full: aggregate=0.4997 bal=0.4978 shape=0.5234 | acc_prob=0.806 ΔE=-0.7031 moved=0.48 maxpi=0.024 cfgs=500
+[  2419.6s]   full__clu__mala__zero_step: aggregate=0.4993 bal=0.4955 shape=0.5234 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.024 cfgs=490
+[  2424.0s]   full__clu__mala__prior_mode: aggregate=0.4883 bal=0.4859 shape=0.5078 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.025 cfgs=490
+[  2433.4s]   full__clu__ula__full: aggregate=0.5036 bal=0.5024 shape=0.5195 | acc_prob=0.927 ΔE=-0.8128 moved=0.51 maxpi=0.024 cfgs=498
+[  2444.6s]   full__clu__uld__full: aggregate=0.4964 bal=0.4957 shape=0.5254 | acc_prob=0.913 ΔE=-0.8972 moved=0.50 maxpi=0.024 cfgs=502
+[  2451.2s]   full__store_removed__mala__full: aggregate=0.1081 bal=0.1069 shape=0.2676 | acc_prob=0.804 ΔE=-0.8159 moved=0.00 maxpi=0.016 cfgs=1
+[  2454.5s]   full__store_removed__mala__zero_step: aggregate=0.1081 bal=0.1069 shape=0.2676 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[  2457.8s]   full__store_removed__mala__prior_mode: aggregate=0.1081 bal=0.1069 shape=0.2676 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[  2464.3s]   full__no_coupling__mala__full: aggregate=0.4906 bal=0.4873 shape=0.5117 | acc_prob=0.812 ΔE=-0.6270 moved=0.49 maxpi=0.024 cfgs=499
+[  2467.6s]   full__no_coupling__mala__zero_step: aggregate=0.4993 bal=0.4955 shape=0.5234 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.024 cfgs=490
+[  2471.0s]   full__no_coupling__mala__prior_mode: aggregate=0.4883 bal=0.4859 shape=0.5078 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.025 cfgs=490
+[  2471.0s] [partial] calibrated: tau 11.88 -> 2.97 (mode_distance), T 0.7285 -> 0.07285 (energy_scale); mean_max_pi at tau_start = 0.0193
+[  2472.1s]   ⭐ step size tuned to 0.025 (target accept 0.7, 8 round(s): 0.1->0.05, 0.05->0.44, 0.025->0.83, 0.05->0.45, 0.025->0.83, 0.05->0.45, 0.025->0.83, 0.05->0.46)
+[  2472.2s] [partial] mean_n_clamped=1.64/5 mean_n_relaxed=3.36 mean_confidence=0.404
+[  2486.3s]   partial__clu__mala__full: aggregate=0.3162 bal=0.3178 shape=0.2928 | acc_prob=0.953 ΔE=-1.2687 moved=0.97 maxpi=0.019 cfgs=511
+[  2489.8s]   partial__clu__mala__zero_step: aggregate=0.3219 bal=0.3198 shape=0.3420 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.019 cfgs=290
+[  2493.4s]   partial__clu__mala__prior_mode: aggregate=0.3172 bal=0.3125 shape=0.3420 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.024 cfgs=284
+[  2501.0s]   partial__clu__ula__full: aggregate=0.3229 bal=0.3221 shape=0.3333 | acc_prob=0.962 ΔE=-1.2750 moved=0.97 maxpi=0.019 cfgs=512
+[  2510.7s]   partial__clu__uld__full: aggregate=0.3140 bal=0.3150 shape=0.3275 | acc_prob=0.951 ΔE=-1.2281 moved=0.97 maxpi=0.019 cfgs=512
+[  2517.7s]   partial__store_removed__mala__full: aggregate=0.1073 bal=0.1069 shape=0.2696 | acc_prob=0.953 ΔE=-0.5580 moved=0.00 maxpi=0.016 cfgs=1
+[  2524.5s]   partial__store_removed__mala__zero_step: aggregate=0.1073 bal=0.1069 shape=0.2696 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[  2527.8s]   partial__store_removed__mala__prior_mode: aggregate=0.1073 bal=0.1069 shape=0.2696 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[  2533.7s]   partial__no_coupling__mala__full: aggregate=0.3107 bal=0.3119 shape=0.3043 | acc_prob=0.953 ΔE=-1.6565 moved=0.98 maxpi=0.019 cfgs=512
+[  2536.7s]   partial__no_coupling__mala__zero_step: aggregate=0.3219 bal=0.3198 shape=0.3420 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.019 cfgs=290
+[  2539.7s]   partial__no_coupling__mala__prior_mode: aggregate=0.3172 bal=0.3125 shape=0.3420 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.024 cfgs=284
+/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py:922: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py:923: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=140)
+[  2539.9s] seed 2 done
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py", line 1057, in <module>
+  File "/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py", line 1033, in main
+  File "/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py", line 969, in run_experiment_gen_dream
+  File "/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py", line 780, in aggregate_runs
+PermissionError: [Errno 1] Operation not permitted: '/Users/user/Desktop/CHLU/.claude/outputs/gen-dream-sampler/runs/shapes3d_recon/seed_0/dream_manifest.json'

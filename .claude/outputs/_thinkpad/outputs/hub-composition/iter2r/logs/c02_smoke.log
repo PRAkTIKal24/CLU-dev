@@ -1,0 +1,68 @@
+[13:06:00] C02 tag=ref seed=0 spec=0,2 -> 2 corners: [0, 2]
+[13:06:02] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[13:06:02]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[13:06:02]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[13:06:03] context ready in 3.1s
+[13:06:04] [c0] pool 32766 rows / 32766 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu']
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:06:47] [c0] clu_linear             tuples_valid_novel= 38  agg=0.9097  distinct= 61  exact=0.5278  bytes=469,504
+[13:06:50] [c0] knn_proto              tuples_valid_novel=  5  agg=0.7801  distinct= 53  exact=0.0694  bytes=475,136
+[13:06:51] [c0] store_removed_zero     tuples_valid_novel=  0  agg=0.2222  distinct=  1  exact=0.0000  bytes=469,504
+[13:06:52] [c0] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1782  distinct= 65  exact=0.0000  bytes=469,504
+[13:06:54] [c0] head_additive_only     tuples_valid_novel=  4  agg=0.7477  distinct= 42  exact=0.0556  bytes=406,016
+[13:07:14] [c0] lookup_feat            tuples_valid_novel=  0  agg=0.3264  distinct=  6  exact=0.0000  bytes=466,944
+[13:07:15] [c0] lookup_tuple           tuples_valid_novel=  0  agg=0.5347  distinct=  9  exact=0.0000  bytes=466,944
+[13:07:16] [c0] const_mu               tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=8,192
+[13:07:16] [c0] done in 73.2s
+[13:07:17] [c2] pool 32764 rows / 32764 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu']
+[13:07:55] [c2] clu_linear             tuples_valid_novel= 35  agg=0.8912  distinct= 61  exact=0.4861  bytes=469,504
+[13:07:57] [c2] knn_proto              tuples_valid_novel= 24  agg=0.8750  distinct= 49  exact=0.3333  bytes=475,136
+[13:07:59] [c2] store_removed_zero     tuples_valid_novel=  0  agg=0.0000  distinct=  1  exact=0.0000  bytes=469,504
+[13:08:00] [c2] store_removed_shuffle  tuples_valid_novel=  0  agg=0.0833  distinct= 30  exact=0.0000  bytes=469,504
+[13:08:01] [c2] head_additive_only     tuples_valid_novel= 41  agg=0.9213  distinct= 60  exact=0.5694  bytes=406,016
+[13:08:22] [c2] lookup_feat            tuples_valid_novel=  0  agg=0.5000  distinct=  5  exact=0.0000  bytes=466,944
+[13:08:23] [c2] lookup_tuple           tuples_valid_novel=  0  agg=0.4745  distinct=  9  exact=0.0000  bytes=466,944
+[13:08:25] [c2] const_mu               tuples_valid_novel=  0  agg=0.0833  distinct=  1  exact=0.0000  bytes=8,192
+[13:08:25] [c2] done in 68.8s
+[13:08:25] C02 done: 2 corners scored, 0 refused [], 145.2s total

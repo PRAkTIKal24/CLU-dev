@@ -1,0 +1,304 @@
+"""Fit one read-path-matched baseline family (mlp, lstm, transformer, cont_mlp) on the n-CLU's fit pool.
+
+    python scripts/shapes_fit_baseline.py --where test --seed 0 --family mlp
+    python scripts/shapes_fit_baseline.py --where rung:3 --seed 0 --family mlp --hp-from test
+    python scripts/shapes_fit_baseline.py --where test --seed 0 --family mlp --delete-scope value
+
+Protocol: six short learning-rate x weight-decay trials and the epoch grid, selected on a fixed 10%
+held-out split, then the selected schedule refitted on all rows (declared) and at ten times the
+optimiser steps (tenx; --epochs-mult 3 gives the thirty-times diagnostic). --delete-scope
+value|conjunction_live|item retrains without the rows the n-CLU deletion removes.
+"""
+
+from __future__ import annotations
+import argparse
+import sys
+import time
+import zlib
+from pathlib import Path
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from shapes_common import (
+    D,
+    OUT,
+    SEL_RNG,
+    TENX,
+    assert_worktree,
+    jdump,
+    load_pool,
+    log,
+    selection_split,
+    train_curve,
+)
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--where", required=True, help="val | test | rung:<k>")
+    ap.add_argument("--seed", type=int, required=True)
+    ap.add_argument("--family", required=True)
+    ap.add_argument("--hp-from", default=None, help="transfer the selection from val|test")
+    ap.add_argument("--no-tenx", action="store_true")
+    ap.add_argument("--npool", type=int, default=131072)
+    ap.add_argument(
+        "--suffix", default="", help="separate output tree (DEV smoke, or a declared diagnostic)"
+    )
+    ap.add_argument(
+        "--delete-scope",
+        default=None,
+        help="value | conjunction_live | item: RETRAIN-WITHOUT on the store's pool minus EXACTLY the rows deletion_rows.py downdates",
+    )
+    ap.add_argument(
+        "--epochs-mult", type=int, default=1, help="DIAGNOSTIC: multiply the declared epochs"
+    )
+    a = ap.parse_args(argv)
+    wt = assert_worktree()
+    log("nclu.__file__ = %s" % wt)
+    import jax
+    from nclu.eval.baselines import api as baseline_api, learners as L
+    from nclu.eval.baselines import refusal_comparator as RCB
+    from nclu.experiments import factor_wells as fw
+
+    seed, fam = (int(a.seed), a.family)
+    tag = a.where.replace(":", "") + a.suffix
+    d = OUT / "rivals" / tag / ("seed%d" % seed) / fam
+    d.mkdir(parents=True, exist_ok=True)
+    root = OUT / "rivals" / tag / "ckpt"
+    fw.PINS["seed"] = seed
+    fw.PINS["condition"] = "val" if a.where == "val" else "test"
+    cond = fw.load_condition()
+    grid = cond["grid"]
+    cards = [int(c) for c in grid.cardinalities]
+    pool, _dead, pfile = load_pool(a.where, seed)
+    pool = pool[: int(a.npool)]
+    del_info = None
+    if a.delete_scope:
+        import shapes_deletion_rows as DR
+
+        idx = DR.factor_indices(pool, cards)
+        red = idx[:, DR.RED_FACTOR] == DR.RED_INDEX
+        if a.delete_scope == "value":
+            m = red
+        elif a.delete_scope == "conjunction_live":
+            m = red & (idx[:, DR.SHAPE_FACTOR] == DR.SPHERE_INDEX)
+        elif a.delete_scope == "item":
+            rng = np.random.default_rng(20260921 + seed)
+            m = np.zeros(pool.size, bool)
+            m[rng.choice(pool.size, int(round(DR.ITEM_FRACTION * pool.size)), replace=False)] = True
+        else:
+            raise SystemExit("unknown scope %r" % a.delete_scope)
+        del_info = {
+            "scope": a.delete_scope,
+            "n_deleted": int(m.sum()),
+            "n_survivors_read": int((~m).sum()),
+            "mask_definition": "deletion_rows.py masks, same pool, same RNG",
+        }
+        pool = pool[~m]
+        log(
+            "RETRAIN-WITHOUT %s: deleted %d rows, refit on %d survivors"
+            % (a.delete_scope, int(m.sum()), pool.size)
+        )
+    log("where=%s seed=%d family=%s  pool %s rows from %s" % (a.where, seed, fam, pool.size, pfile))
+    man = fw.feature_cache_manifest(seed)
+    from nclu.experiments.gen_deletion import assert_generation2
+
+    log("cache %s" % assert_generation2(seed))
+    F = fw.features_mmap(seed)
+    t = time.time()
+    Y = np.asarray(fw.gather(F, pool), np.float32)
+    log("gathered %s in %.0fs" % (Y.shape, time.time() - t))
+    key = jax.random.PRNGKey(seed * 7717 + SEL_RNG + zlib.crc32(fam.encode()) % 10000)
+    key, k0 = jax.random.split(key)
+    arm = RCB.matched_arm(fam, cards, D, k0, log=log)
+    X = RCB._encode(arm, grid, pool, cards)
+    meta_arm = {k: v for k, v in arm.items() if k != "build"}
+    sel_path = d / "selection.json"
+    if a.hp_from:
+        src = OUT / "rivals" / a.hp_from / ("seed%d" % seed) / fam / "selection.json"
+        import json
+
+        sel = json.loads(src.read_text(encoding="utf-8"))
+        sel = {
+            "TRANSFERRED_FROM": str(src),
+            "selected": sel["selected"],
+            "epochs_mult": int(a.epochs_mult),
+            "why": "the ladder rungs' pools are the same size (131,072) in the same feature space; the earlier baseline set selection made on the rows 3-4 pool for this seed and family is transferred, not re-run",
+        }
+        jdump(sel, sel_path)
+    elif sel_path.exists():
+        import json
+
+        sel = json.loads(sel_path.read_text(encoding="utf-8"))
+        log("selection already on disk: %s" % sel["selected"])
+    else:
+        fi, vi = selection_split(pool.size, seed)
+        Xf, Yf, Xv, Yv = (X[fi], Y[fi], X[vi], Y[vi])
+        short, t0 = ([], time.time())
+        for lr in L.LR_GRID:
+            for wd in L.WD_GRID:
+                key, tk = jax.random.split(key)
+                m, info = train_curve(
+                    arm["build"](arm["width"]),
+                    Xf,
+                    Yf,
+                    tk,
+                    L.TUNE_EPOCHS,
+                    lr,
+                    wd,
+                    Xv=Xv,
+                    Yv=Yv,
+                    val_every=L.TUNE_EPOCHS,
+                )
+                v = info["curve"][-1]["val_mse"]
+                short.append(
+                    {
+                        "lr": lr,
+                        "weight_decay": wd,
+                        "epochs": L.TUNE_EPOCHS,
+                        "short_val_mse": v,
+                        "curve": info["curve"],
+                    }
+                )
+                log("  short %d/6 lr=%g wd=%g val %.5f" % (len(short), lr, wd, v))
+        sb = short[int(np.argmin([s["short_val_mse"] for s in short]))]
+        full = []
+        for ep in L.EPOCH_GRID:
+            key, fk = jax.random.split(key)
+            m, info = train_curve(
+                arm["build"](arm["width"]),
+                Xf,
+                Yf,
+                fk,
+                int(ep),
+                sb["lr"],
+                sb["weight_decay"],
+                Xv=Xv,
+                Yv=Yv,
+                val_every=1,
+                logf=log,
+            )
+            v = info["curve"][-1]["val_mse"]
+            full.append(
+                {
+                    "lr": sb["lr"],
+                    "weight_decay": sb["weight_decay"],
+                    "epochs": int(ep),
+                    "full_val_mse": v,
+                    "curve": info["curve"],
+                }
+            )
+            log("  full epochs=%d val %.5f" % (ep, v))
+        fb = full[int(np.argmin([f["full_val_mse"] for f in full]))]
+        sel = {
+            "protocol": "the earlier baseline set / round-4 (learners.fit_family): 6 short trials lr x wd at TUNE_EPOCHS, then EPOCH_GRID at full length",
+            "LR_GRID": list(L.LR_GRID),
+            "WD_GRID": list(L.WD_GRID),
+            "TUNE_EPOCHS": L.TUNE_EPOCHS,
+            "EPOCH_GRID": list(L.EPOCH_GRID),
+            "selection_split": {
+                "fit": int(fi.size),
+                "heldout": int(vi.size),
+                "rng": SEL_RNG + seed,
+            },
+            "short": short,
+            "full": full,
+            "selected": {
+                "lr": fb["lr"],
+                "weight_decay": fb["weight_decay"],
+                "epochs": fb["epochs"],
+                "heldout_mse": fb["full_val_mse"],
+            },
+            "seconds": round(time.time() - t0, 1),
+            "arm": meta_arm,
+        }
+        jdump(sel, sel_path)
+        log("SELECTED %s" % sel["selected"])
+    s = sel["selected"]
+    stages = [("declared", int(s["epochs"]) * int(a.epochs_mult))]
+    if not a.no_tenx:
+        stages.append(("tenx", TENX * int(s["epochs"])))
+    for stage, E in stages:
+        rp = d / ("%s.json" % stage)
+        if rp.exists():
+            log("%s already on disk" % stage)
+            continue
+        key, fk = jax.random.split(
+            jax.random.PRNGKey(
+                seed * 7717 + SEL_RNG + 1 + len(stage) + zlib.crc32(fam.encode()) % 10000
+            )
+        )
+        log(
+            "%s: %d epochs on ALL %d rows (lr=%g wd=%g)"
+            % (stage, E, pool.size, s["lr"], s["weight_decay"])
+        )
+        m, info = train_curve(
+            arm["build"](arm["width"]),
+            X,
+            Y,
+            fk,
+            E,
+            float(s["lr"]),
+            float(s["weight_decay"]),
+            logf=log,
+        )
+        name = "%s__%s" % (fam, stage)
+        baseline_api.save_learner(
+            seed,
+            name,
+            m,
+            arm["width"],
+            arm["in_kind"],
+            grid,
+            D,
+            man,
+            root=str(root),
+            extra={
+                "base_family": fam,
+                "partial_ok": False,
+                "matched_stage": stage,
+                "n_fit_rows": int(pool.size),
+                "where": a.where,
+                "param_target": 131072,
+            },
+        )
+        c = info["curve"]
+        tail = [r["train_mse"] for r in c[-max(2, len(c) // 10) :]]
+        jdump(
+            {
+                "stage": stage,
+                "where": a.where,
+                "seed": seed,
+                "family": fam,
+                "n_fit_rows": int(pool.size),
+                "pool_file": pfile,
+                "param_count": arm["param_count"],
+                "param_target": arm["param_target"],
+                "param_error": arm["param_error"],
+                "width": arm["width"],
+                "in_kind": arm["in_kind"],
+                "selected": s,
+                "epochs": E,
+                "optimizer_steps": info["steps"],
+                "batch": info["batch"],
+                "train_info": {k: v for k, v in info.items() if k != "curve"},
+                "curve": c,
+                "last_decile_rel_change": float((tail[0] - tail[-1]) / max(tail[0], 1e-12)),
+                "deletion": del_info,
+                "cost_line": {
+                    "seconds": info["seconds"],
+                    "data_rows_read": int(pool.size),
+                    "bytes_rewritten": int(arm["param_count"]) * 4,
+                    "gradient_row_visits": int(info["steps"]) * int(info["batch"]),
+                },
+                "checkpoint": str(root / ("seed_%d" % seed) / name),
+                "package_file": wt,
+            },
+            rp,
+        )
+        log("%s done: final train mse %.5f in %.0fs" % (stage, c[-1]["train_mse"], info["seconds"]))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

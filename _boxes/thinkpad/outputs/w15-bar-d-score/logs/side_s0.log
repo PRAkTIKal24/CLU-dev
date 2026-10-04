@@ -1,0 +1,261 @@
+[10:52:15] stage=rivals seed=0 arm=alone out=C:\chlu\outputs\w15-bar-d-score\gpu-run quick=False
+[10:52:15] chlu package: C:\chlu\worktrees\CHLU-w15-bar-d-score\chlu
+[10:52:15] jax devices: [CpuDevice(id=0)]
+[10:52:15]   COMPUTE OVERRIDES (equal for every arm in this launch): {'joint_steps': {'from': 400, 'to': 4000}, 'dec_refit_steps': {'from': 400, 'to': 1800}, 'warm_steps': {'from': 1500, 'to': 4000}, 'n_train': {'from': 8192, 'to': 32768}}
+[10:52:46]   rival pool: 131072 rows from THIS ARM's cache (fit 130560 / val 512), D=2048
+[10:54:53]     [mlp_180k] matched width 84 -> 178952 params vs target 179968 (-0.56%)
+[10:57:31]     [mlp_180k] short trial 1/6 lr=0.0003 wd=0: val mse 0.02512
+[11:00:13]     [mlp_180k] short trial 2/6 lr=0.0003 wd=0.0001: val mse 0.02511
+[11:02:56]     [mlp_180k] short trial 3/6 lr=0.001 wd=0: val mse 0.01038
+[11:05:40]     [mlp_180k] short trial 4/6 lr=0.001 wd=0.0001: val mse 0.01032
+[11:08:23]     [mlp_180k] short trial 5/6 lr=0.003 wd=0: val mse 0.00581
+[11:10:57]     [mlp_180k] short trial 6/6 lr=0.003 wd=0.0001: val mse 0.00587
+[11:17:12]     [mlp_180k] full trial epochs=20: val mse 0.00450
+[11:29:39]     [mlp_180k] full trial epochs=40: val mse 0.00409
+[11:29:39]     [mlp_180k] SELECTED lr=0.003 wd=0 epochs=40 (validation MSE on cached features)
+[11:29:41] done in 2245.6s
+[score] cond=val seed=0 encoder-arm=alone
+[score]   features  -> C:/chlu/outputs/w15-bar-d-score/gpu-run/seed_0/alone/cache
+[score]   decoder   -> C:/chlu/outputs/w15-bar-d-score/gpu-run/seed_0/alone/declift   (this arm's own refit; NOT the gated winner)
+[score]   rivals    -> C:/chlu/outputs/w15-bar-d-score/gpu-run/seed_0/alone/rivals       (refit on THIS arm's features)
+[score]   judge     -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier   *** INVARIANT, does not move ***
+[leg] classifier root -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[leg] cache root -> C:/chlu/outputs/w15-bar-d-score/gpu-run/seed_0/alone/cache (generation 2)
+[leg] condition=val seed=0 leg=C:/chlu/outputs/w15-bar-d-score/score/alone/val_seed0 arms=pca_tensor rival_mlp_180k pca_landscape_removed
+  "pre_existing_unchanged": true
+ }
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[11:31:32] stage=prepare arm=None out=C:\chlu\outputs\w15-bar-d-score\score\alone\val_seed0 seed=0 cond=val install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[11:31:43]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+[11:32:12]   dead channels: 232
+[11:35:03]   channel-factor relevance: (2048, 6) in 170.8s; mean top-factor MI 0.5341 bits
+[11:35:37]   partitions written -> C:\chlu\outputs\w15-bar-d-score\score\alone\val_seed0\partitions.json
+[11:35:38] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- pca_tensor ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[11:36:36] stage=fit arm=pca_tensor out=C:\chlu\outputs\w15-bar-d-score\score\alone\val_seed0 seed=0 cond=val install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[11:36:36]   partitions: already on disk, skipping
+[12:03:43]   principal content: 64 atoms x 2048 float32 = 524,288 B, wells [822, 781, 177, 134, 134], variance explained [0.989, 0.9862, 0.9917, 1.0, 1.0]
+[12:05:30]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 63) (131072, 63)
+[12:07:35]     als 1/40 train_mse=0.03313 val_mse=0.03327
+[12:09:42]     als 2/40 train_mse=0.01087 val_mse=0.01088
+[12:11:40]     als 3/40 train_mse=0.00795 val_mse=0.00796
+[12:13:35]     als 4/40 train_mse=0.00691 val_mse=0.00692
+[12:15:35]     als 5/40 train_mse=0.00632 val_mse=0.00634
+[12:18:12]     als 6/40 train_mse=0.00592 val_mse=0.00594
+[12:21:15]     als 7/40 train_mse=0.00563 val_mse=0.00564
+[12:22:36]     als 8/40 train_mse=0.00540 val_mse=0.00542
+[12:23:50]     als 9/40 train_mse=0.00522 val_mse=0.00523
+[12:25:22]     als 10/40 train_mse=0.00507 val_mse=0.00508
+[12:26:30]     als 11/40 train_mse=0.00494 val_mse=0.00495
+[12:28:00]     als 12/40 train_mse=0.00483 val_mse=0.00484
+[12:29:16]     als 13/40 train_mse=0.00473 val_mse=0.00474
+[12:30:39]     als 14/40 train_mse=0.00464 val_mse=0.00466
+[12:32:00]     als 15/40 train_mse=0.00457 val_mse=0.00458
+[12:33:33]     als 16/40 train_mse=0.00450 val_mse=0.00451
+[12:35:17]     als 17/40 train_mse=0.00443 val_mse=0.00445
+[12:37:09]     als 18/40 train_mse=0.00438 val_mse=0.00439
+[12:39:07]     als 19/40 train_mse=0.00433 val_mse=0.00434
+[12:41:10]     als 20/40 train_mse=0.00428 val_mse=0.00429
+[12:43:18]     als 21/40 train_mse=0.00423 val_mse=0.00425
+[12:45:20]     als 22/40 train_mse=0.00419 val_mse=0.00421
+[12:47:31]     als 23/40 train_mse=0.00415 val_mse=0.00417
+[12:49:26]     als 24/40 train_mse=0.00412 val_mse=0.00413
+[12:51:28]     als 25/40 train_mse=0.00408 val_mse=0.00410
+[12:53:16]     als 26/40 train_mse=0.00405 val_mse=0.00407
+[12:54:41]     als 27/40 train_mse=0.00402 val_mse=0.00404
+[12:56:05]     als 28/40 train_mse=0.00399 val_mse=0.00401
+[12:57:29]     als 29/40 train_mse=0.00396 val_mse=0.00398
+[12:58:49]     als 30/40 train_mse=0.00394 val_mse=0.00396
+[13:00:15]     als 31/40 train_mse=0.00391 val_mse=0.00393
+[13:01:36]     als 32/40 train_mse=0.00389 val_mse=0.00391
+[13:02:59]     als 33/40 train_mse=0.00387 val_mse=0.00388
+[13:04:21]     als 34/40 train_mse=0.00385 val_mse=0.00386
+[13:05:54]     als 35/40 train_mse=0.00382 val_mse=0.00384
+[13:07:29]     als 36/40 train_mse=0.00381 val_mse=0.00382
+[13:08:56]     als 37/40 train_mse=0.00379 val_mse=0.00380
+[13:10:04]     als 38/40 train_mse=0.00377 val_mse=0.00379
+[13:11:20]     als 39/40 train_mse=0.00375 val_mse=0.00377
+[13:12:34]     als 40/40 train_mse=0.00373 val_mse=0.00375
+[13:12:34]   arm pca_tensor: fitted in 5758.5s; store 524,288 B + address 194,544 B
+[13:12:35] {"arm": "pca_tensor", "address_bytes": {"address_bytes": 194544, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 162816, "normalisation_bytes": 2544, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.988961, 0.986184, 0.99175, 1.0, 1.0]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[13:13:09] stage=run arm=pca_tensor out=C:\chlu\outputs\w15-bar-d-score\score\alone\val_seed0 seed=0 cond=val install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[13:13:09]   arm pca_tensor: already fitted, loading
+[13:13:09]   arm pca_tensor: already fitted, loading
+[13:13:10]   judge: decoder 8c18ee131342 (w8_v1_short) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:15:50]   arm pca_tensor: VAL corners done in 145.2s
+[13:15:50] {"incomplete": false, "n_done": 24}
+[leg] ---- rival_mlp_180k ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[13:16:25] stage=fit arm=rival_mlp_180k out=C:\chlu\outputs\w15-bar-d-score\score\alone\val_seed0 seed=0 cond=val install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[13:16:31]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[13:16:31] {"arm": "rival_mlp_180k", "address_bytes": {"address_bytes": 0, "note": "a rival's parameters ARE its address book"}, "byte_ledger": {"deployed_bytes": 0, "what": "spoke A's fitted mlp_180k, generation 2", "param_count": 178952}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[13:17:04] stage=run arm=rival_mlp_180k out=C:\chlu\outputs\w15-bar-d-score\score\alone\val_seed0 seed=0 cond=val install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[13:17:10]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[13:17:10]   arm rival_mlp_180k: loaded spoke A rival 'mlp_180k' (params=178952)
+[13:17:10]   judge: decoder 8c18ee131342 (w8_v1_short) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:20:13]   arm rival_mlp_180k: VAL corners done in 165.3s
+[13:20:13] {"incomplete": false, "n_done": 24}
+[leg] ---- pca_landscape_removed ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[13:21:09] stage=fit arm=pca_landscape_removed out=C:\chlu\outputs\w15-bar-d-score\score\alone\val_seed0 seed=0 cond=val install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[13:21:09]   address book: reused address_pca_prod_R128_lam0.01_sw40_n131072.pkl
+[13:21:10]   arm pca_landscape_removed: fitted in 0.7s; store 524,288 B + address 194,544 B
+[13:21:10] {"arm": "pca_landscape_removed", "address_bytes": {"address_bytes": 194544, "per_factor_tables_bytes": 29184, "per_well_maps_bytes": 162816, "normalisation_bytes": 2544, "rank": 128, "dtype": "float32", "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )", "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger."}, "byte_ledger": {"deployed_bytes": 524288, "budget_bytes": 524288, "matches_budget": true, "param_count": 131072, "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy", "variance_explained_per_well": [0.988961, 0.986184, 0.99175, 1.0, 1.0]}}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[13:21:56] stage=run arm=pca_landscape_removed out=C:\chlu\outputs\w15-bar-d-score\score\alone\val_seed0 seed=0 cond=val install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[13:21:56]   arm pca_landscape_removed: already fitted, loading
+[13:21:57]   arm pca_landscape_removed: already fitted, loading
+[13:21:57]   judge: decoder 8c18ee131342 (w8_v1_short) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:25:19]   arm pca_landscape_removed: VAL corners done in 183.0s
+[13:25:19] {"incomplete": false, "n_done": 24}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[13:26:27] stage=table arm=None out=C:\chlu\outputs\w15-bar-d-score\score\alone\val_seed0 seed=0 cond=val install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[13:26:49]   arms with rows: ['rival_mlp_180k', 'pca_tensor', 'pca_landscape_removed']
+[13:26:49]   declared NOT-RUN: []
+C:\chlu\worktrees\CHLU-w15-bar-d-score\chlu\experiments\exp_gen_factor_wells.py:1158: RuntimeWarning: Mean of empty slice
+  boot = np.array([d[rng.integers(0, n, n)].mean() for _ in range(10_000)])
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\numpy\_core\_methods.py:142: RuntimeWarning: invalid value encountered in scalar divide
+  ret = ret.dtype.type(ret / rcount)
+C:\chlu\worktrees\CHLU-w15-bar-d-score\chlu\experiments\exp_gen_factor_wells.py:1171: RuntimeWarning: Mean of empty slice
+  "arm_mean": float(a.mean()), "control_mean": float(b.mean()),
+C:\chlu\worktrees\CHLU-w15-bar-d-score\chlu\experiments\exp_gen_factor_wells.py:1172: RuntimeWarning: Mean of empty slice
+  "mean_paired_delta": float(d.mean()),
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\numpy\_core\fromnumeric.py:3824: RuntimeWarning: Mean of empty slice
+  return _methods._mean(a, axis=axis, dtype=dtype,
+C:\chlu\worktrees\CHLU-w15-bar-d-score\chlu\experiments\exp_gen_factor_wells.py:1180: RuntimeWarning: Mean of empty slice
+  "beats_beyond_margin": bool(d.mean() > float(margin)
+[13:26:52]   table written -> C:\chlu\outputs\w15-bar-d-score\score\alone\val_seed0\READ-TABLE.json
+[13:26:52]     rival_mlp_180k         RIVAL                                    r4=  0.000 r3=    nan
+[13:26:52]     pca_tensor             ARM                                      r4= 40.958 r3=    nan
+[13:26:52]     pca_landscape_removed  CONTROL (charter C.2, atoms zeroed)      r4=  0.000 r3=    nan
+[leg] done: C:/chlu/outputs/w15-bar-d-score/score/alone/val_seed0

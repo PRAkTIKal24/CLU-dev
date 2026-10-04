@@ -1,0 +1,92 @@
+condition=val  pool 131,072  red rows 11,024  dead channels 67
+
+### seed 0: cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+    24 val corners, judge seed 0
+
+===== K=5 seed=0 cond=val  wells 409..410  A=64 =====
+  built 10.4s  deployed_rank 63..63  span_rank 64..64 (sum 320)
+  RANK/WIDTH  min 0.1561  max 0.1565  (A/width_min = 0.1565)
+  address book fitted 378.4s  195,584 B  (90/10 split, 117,964 train)
+  LEDGER  atoms 524,288 | cov+count 3,391,552 | address 195,584 | coupling 6,610
+          TOTAL 4,118,034 B = 7.8545x the 524,288 B REFERENCE (not a budget here)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cov_tensor K=5                     valid 0.8918 +- 0.1007 [0.7222, 1.0000]  (35s)
+    landscape_removed                  valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (36s)
+    landscape_shuffled                 valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (43s)
+    landscape_shuffled_across_wells    valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (44s)
+    random_atoms                       valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (46s)
+  EXACTNESS  downdate 1.55s vs refit 12.5s  max|mode dev| 1.455e-11  max subspace dist 1.430e-11  ranks agree True
+  wrote C:\chlu\outputs\w12-single-design-crossover\val_sweep\val_K5_seed0\row.json
+
+===== K=32 seed=0 cond=val  wells 64..64  A=63 =====
+  built 11.5s  deployed_rank 61..62  span_rank 61..62 (sum 1982)
+  RANK/WIDTH  min 0.9531  max 0.9688  (A/width_min = 0.9844)
+  address book fitted 1054.9s  1,059,824 B  (90/10 split, 117,964 train)
+  LEDGER  atoms 516,096 | cov+count 560,608 | address 1,059,824 | coupling 6,610
+          TOTAL 2,143,138 B = 4.0877x the 524,288 B REFERENCE (not a budget here)
+    cov_tensor K=32                    valid 0.9016 +- 0.0886 [0.7083, 1.0000]  (59s)
+    landscape_removed                  valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (61s)
+Traceback (most recent call last):
+  File "C:\chlu\worktrees\CHLU-w12-single-design-crossover\scripts\w12_val_sweep.py", line 274, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "C:\chlu\worktrees\CHLU-w12-single-design-crossover\scripts\w12_val_sweep.py", line 264, in main
+    all_rows.append(run_one(K, int(seed), a.condition, corr, dead, pool, X, red,
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\chlu\worktrees\CHLU-w12-single-design-crossover\scripts\w12_val_sweep.py", line 168, in run_one
+    sc = score_corners(cobj, corners, cond, grid, judge, bitmap, name)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\chlu\worktrees\CHLU-w12-single-design-crossover\scripts\w12_val_sweep.py", line 70, in score_corners
+    feats, oor = R.arm_features(obj, vals, grid)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\chlu\worktrees\CHLU-w12-single-design-crossover\chlu\experiments\exp_gen_read.py", line 734, in arm_features
+    return addr.read(store, values, grid.values, basis)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\chlu\worktrees\CHLU-w12-single-design-crossover\chlu\core\gen_read.py", line 257, in read
+    return render_span(store, coeffs, basis), oor
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\chlu\worktrees\CHLU-w12-single-design-crossover\chlu\core\gen_read.py", line 133, in render_span
+    out[:, idx] = (np.asarray(C, np.float32) @ Uk.T).astype(np.float32)
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~
+ValueError: matmul: Input operand 1 has a mismatch in its core dimension 0, with gufunc signature (n?,k),(k,m?)->(n?,m?) (size 63 is different from 62)

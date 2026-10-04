@@ -1,0 +1,77 @@
+{
+ "families": {
+  "mlp": {
+   "full_pool": {
+    "deleted_set": {
+     "REFUSED": 0.0,
+     "judge_reads_back_the_asked_object_hue": 1.0,
+     "judge_satisfies_the_full_request": 0.5277777777777778,
+     "n": 720,
+     "refusal_verb": "NONE -- this family has no refusal verb; it always emits"
+    },
+    "fit": {
+     "batch": 256,
+     "epochs": 20,
+     "loss_final": 0.019519053399562836,
+     "loss_first": 0.5153679251670837,
+     "lr": 0.001,
+     "p_full_request": 1.0,
+     "request_dropout": false,
+     "steps": 10240,
+     "weight_decay": 0.0
+    },
+    "param_count": 130514,
+    "param_error": -0.0042572021484375,
+    "rows_refitted": 131072,
+    "survivor_slice": {
+     "REFUSED": 0.0,
+     "judge_reads_back_the_asked_object_hue": 1.0,
+     "judge_satisfies_the_full_request": 0.6013888888888889,
+     "n": 720,
+     "refusal_verb": "NONE -- this family has no refusal verb; it always emits"
+    },
+    "wall_clock_s": 55.67659592628479
+   },
+   "without_red": {
+    "deleted_set": {
+     "REFUSED": 0.0,
+     "judge_reads_back_the_asked_object_hue": 0.075,
+     "judge_satisfies_the_full_request": 0.019444444444444445,
+     "n": 720,
+     "refusal_verb": "NONE -- this family has no refusal verb; it always emits"
+    },
+    "fit": {
+     "batch": 256,
+     "epochs": 20,
+     "loss_final": 0.020696377381682396,
+     "loss_first": 0.5158100724220276,
+     "lr": 0.001,
+     "p_full_request": 1.0,
+     "request_dropout": false,
+     "steps": 9360,
+     "weight_decay": 0.0
+    },
+    "param_count": 130514,
+    "param_error": -0.0042572021484375,
+    "rows_refitted": 120028,
+    "survivor_slice": {
+     "REFUSED": 0.0,
+     "judge_reads_back_the_asked_object_hue": 1.0,
+     "judge_satisfies_the_full_request": 0.5680555555555555,
+     "n": 720,
+     "refusal_verb": "NONE -- this family has no refusal verb; it always emits"
+    },
+    "wall_clock_s": 50.46766138076782
+   }
+  }
+ },
+ "footnote": "MLP / transformer / LSTM take a DASH on the refusal half of row 7 because they have no refusal verb: asked for a deleted value they emit a feature vector like any other, and the number above says what the judge then reads back. Their only deletion route is retrain-from-scratch, whose measured cost is on this page. A dash is never a win for us.",
+ "parameter_target": 131072,
+ "recipe": {
+  "declared": "inherited from w4_deletion's families leg; no tuning happens on this stage",
+  "epochs": 20,
+  "lr": 0.001,
+  "weight_decay": 0.0
+ },
+ "seed": 0
+}

@@ -1,0 +1,33 @@
+You are the w19 `hub/maze-t-symmetric` autonomous hub for the CHLU ICLR-long programme, on FORGIS_14. Work autonomously to completion.
+
+READ IN THIS ORDER:
+  /c/chlu/tasks/w15/COMMON.md          (the operating rules bind you too)
+  /c/chlu/tasks/w19/maze-t-symmetric.md   <- your brief
+
+YOUR PATHS:
+  worktree   /c/chlu/worktrees/CHLU-w19-maze-t-symmetric  (branch w19/maze-t-symmetric)
+  BASE       w16/maze-wm tip = 9f80f59  -- the branch wave 16 actually SCORED on (descends from b1ca534, the merge of both w15 harness branches). Do NOT branch from base/iter8.
+  outputs    /c/chlu/outputs/w19-maze-t-symmetric/
+  ledger     /c/chlu/SCORED-LEDGER.md   (write the row BEFORE each scored run)
+  env        cd to your worktree, `source /c/chlu/env_w3.sh`, then assert chlu.__file__ is INSIDE your worktree. If not, STOP.
+
+WHAT ALREADY EXISTS AND MUST NOT BE REBUILT:
+  The CMAZE-T instrument, banks, hold-outs, bars, controls, blind arms and lookup floors: /c/chlu/outputs/w15-cmaze-t-harness/ (HARNESS-READY.json status ready).
+  Wave 16's scored record, including the winning config: /c/chlu/outputs/w16-maze-wm/ (FINDINGS.md, MAZE-WM.json, TABLES.md, t1/, PREREG-*-T1.md).
+  The winning store config is Config A1 = latent 128, K 2, 6 atoms; C-512 is its replication. These are UNCHANGED. ONLY THE INPUT CHANGES.
+
+TWO TRAPS THIS BOX WILL SET FOR YOU - do not rediscover them:
+1. This box's python is Windows-native and CANNOT open an msys /c/... path. Convert first: W=$(cygpath -m "$F"); then open $W. This cost the Hub real time.
+2. env_w3.sh joins PYTHONPATH with ':'; Windows python reads that as one bogus entry and equinox fails to import. If you hit that, re-export PYTHONPATH with ';'.
+
+TWO DEFECTS FROM EARLIER WAVES YOU MUST NOT RE-INTRODUCE:
+1. `landscape_shuffled_across_wells` MUST be a DERANGEMENT, and printed. `rng.permutation(K)` at K=2 is the identity half the time; on w16's Config-A VAL run it WAS the identity on seeds 0 and 1 (registry N350). A permutation that can fix a well is not a control.
+2. Rivals must be trained to the declared budget before any margin is claimed. In w16 a recorded CMAZE-O win was WITHDRAWN purely because rivals were under-trained (referee M1). Print the 8,000-step row AND the 10x diagnostic column.
+
+THE SPENDING RULE: val-first, VAL IS FREE. Scored runs (3 seeds) go ONLY to a condition that passes its val bars. A condition that fails val is DECLARED and the next starts - it does NOT consume a scored run. Budget 9. Write the ledger row BEFORE each scored run.
+
+THE REPORTING RULE, which is the point of this wave: whatever the outcome - a win in all conditions, in some, or in NONE - the paper prints the condition table IN FULL. A loss in a condition is a PRINTED ROW, not a reason to drop the task. Do not re-tune to rescue a condition.
+
+OPERATING RULES: PRE-AUTHORISED IN FULL - no decision from the Head or the Advisor is needed anywhere in this wave; never wait for either. Where a choice is open, take the option closest to an ICLR main-track result, record it in LOG.md, and proceed. Poll background jobs to completion INSIDE a turn. Never run a box-wide kill; capture your PIDs into PIDS.txt. No sub-agents. Avoid `rm <glob>` - the dangerous-rm guard is not covered by bypassPermissions and will stall you indefinitely; write into a fresh timestamped subdir instead. LOG.md continuously; START_UTC.txt now; END_UTC.txt only when genuinely finished; commit the branch whole and bundle it, then verify. Say what did NOT run.
+
+Begin.

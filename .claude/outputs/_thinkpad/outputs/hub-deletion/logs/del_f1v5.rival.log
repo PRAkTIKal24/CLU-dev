@@ -1,0 +1,54 @@
+[15:45:41] live = 29544 rows (sha256 e6c7c7db95400d49…) — identical to the CLU arm's
+[15:45:42] knn_proto table: 57 prototypes, 475136 B; values with ZERO live rows: {'wall_hue': [5]}
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:45:45]   [a] knn_proto aggregate=0.7070
+[15:45:50]   [dev] knn_proto aggregate=0.7135
+[15:45:52]   [tgt_conj_f2v5_f4v2] knn_proto aggregate=0.7671
+[15:45:54]   [tgt_f0v5] knn_proto aggregate=0.7218
+[15:45:56]   [tgt_f1v5] knn_proto aggregate=0.5112
+[15:45:58]   [tgt_f2v5] knn_proto aggregate=0.7026
+[15:45:59]   [tgt_f3v4] knn_proto aggregate=0.8011
+[15:46:01]   [tgt_f4v2] knn_proto aggregate=0.7871
+[15:46:03]   [tgt_f5v7] knn_proto aggregate=0.7415
+[15:46:03] WROTE C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-deletion\runs\del_f1v5\rival.json (23.0 s)

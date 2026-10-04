@@ -1,0 +1,137 @@
+====================================================================================================
+1. ⭐ BIT-IDENTITY REGRESSION — leg H (historical 688,128 B) vs the PUBLISHED run
+====================================================================================================
+  seed 0 knn                      out_of_range     published 0.6628086419753086 -> 0.6628086419753086  ✅ bit-identical
+  seed 0 knn_proto                out_of_range     published 0.6628086419753086 -> 0.6628086419753086  ✅ bit-identical
+  seed 0 lace_ld_corrected        out_of_range     published 0.6130401234567902 -> 0.6130401234567902  ✅ bit-identical
+  seed 0 lace_ld_published        out_of_range     published 0.2881944444444444 -> 0.2881944444444444  ✅ bit-identical
+  seed 0 lace_ode                 out_of_range     published 0.5135030864197531 -> 0.5135030864197531  ✅ bit-identical
+  seed 1 knn                      out_of_range     published 0.8753858024691358 -> 0.8753858024691358  ✅ bit-identical
+  seed 1 knn_compsel              out_of_range     published 0.7368827160493827 -> 0.7368827160493827  ✅ bit-identical
+  seed 1 knn_proto                out_of_range     published 0.8753858024691358 -> 0.8753858024691358  ✅ bit-identical
+  seed 1 lace_ld_corrected        out_of_range     published 0.4544753086419753 -> 0.4544753086419753  ✅ bit-identical
+  seed 1 lace_ld_published        out_of_range     published 0.5216049382716049 -> 0.5216049382716049  ✅ bit-identical
+  seed 1 lace_ode                 out_of_range     published 0.3788580246913580 -> 0.3788580246913580  ✅ bit-identical
+  seed 2 knn                      out_of_range     published 0.8753858024691358 -> 0.8753858024691358  ✅ bit-identical
+  seed 2 knn_compsel              out_of_range     published 0.9170524691358025 -> 0.9170524691358025  ✅ bit-identical
+  seed 2 knn_proto                out_of_range     published 0.8753858024691358 -> 0.8753858024691358  ✅ bit-identical
+  seed 2 lace_ld_corrected        out_of_range     published 0.3406635802469136 -> 0.3406635802469136  ✅ bit-identical
+  seed 2 lace_ld_published        out_of_range     published 0.5050154320987654 -> 0.5050154320987654  ✅ bit-identical
+  seed 2 lace_ode                 out_of_range     published 0.2989969135802469 -> 0.2989969135802469  ✅ bit-identical
+
+  ⭐ worst absolute difference over EVERY shared refusal + composition number: 0.000e+00
+
+====================================================================================================
+2. ⭐ REFUSAL BY KIND — CONTAMINATED vs A7-CONTROLLED (⛔ never merged)
+====================================================================================================
+
+-- leg historical_688128 (byte target 688128 B), seeds [0, 1, 2]
+  variant                   kind               CONTAMINATED(vs B)     A7-CONTROLLED       A7D (dedup)      seen-valid A
+  knn                       out_of_range            0.8045±0.1002     0.8045±0.1002     0.9525±0.0210     0.9554±0.0181
+  knn                       duplicate_factor        0.3907±0.1364     0.3338±0.0692     0.6560±0.0689     0.6726±0.0623
+  knn_compsel               out_of_range            0.8270±0.0901     0.8270±0.0901     0.9556±0.0120     0.9591±0.0148
+  knn_compsel               duplicate_factor        0.4498±0.0652     0.3708±0.1138     0.6590±0.0135     0.6784±0.0140
+  knn_proto                 out_of_range            0.8045±0.1002     0.8045±0.1002     0.9525±0.0210     0.9554±0.0181
+  knn_proto                 duplicate_factor        0.3907±0.1364     0.3338±0.0692     0.6560±0.0689     0.6726±0.0623
+  lace_ld_corrected         out_of_range            0.4694±0.1117     0.4694±0.1117     0.4655±0.0667     0.4768±0.0530
+  lace_ld_corrected         duplicate_factor        0.9697±0.0210     0.8192±0.0674     0.9547±0.0378     0.9601±0.0317
+  lace_ld_corrected_wexact  out_of_range            0.4794±0.0897     0.4794±0.0897     0.5384±0.0114     0.5166±0.0000
+  lace_ld_corrected_wexact  duplicate_factor        0.9522±0.0459     0.9030±0.0287     0.9770±0.0218     0.9661±0.0275
+  lace_ld_published         out_of_range            0.4383±0.1063     0.4383±0.1063     0.5773±0.1111     0.6037±0.0702
+  lace_ld_published         duplicate_factor        0.9925±0.0103     0.8797±0.0851     1.0000±0.0000     0.9958±0.0029
+  lace_ld_published_wexact  out_of_range            0.4614±0.1130     0.4614±0.1130     0.6694±0.0513     0.6208±0.0426
+  lace_ld_published_wexact  duplicate_factor        0.9994±0.0006     0.9211±0.0789     0.9990±0.0010     0.9982±0.0016
+  lace_ode                  out_of_range            0.3971±0.0885     0.3971±0.0885     0.4599±0.0375     0.4815±0.0207
+  lace_ode                  duplicate_factor        0.9991±0.0010     0.9936±0.0057     0.9981±0.0025     0.9967±0.0009
+  lace_ode_wexact           out_of_range            0.5183±0.0114     0.5183±0.0114     0.5150±0.0448     0.4995±0.0159
+  lace_ode_wexact           duplicate_factor        0.9994±0.0006     0.9967±0.0033     0.9963±0.0033     0.9973±0.0003
+
+-- leg deployed_524288 (byte target 524288 B), seeds [0, 1, 2]
+  variant                   kind               CONTAMINATED(vs B)     A7-CONTROLLED       A7D (dedup)      seen-valid A
+  knn                       out_of_range            0.8281±0.1299     0.8281±0.1299     0.9478±0.0276     0.9517±0.0222
+  knn                       duplicate_factor        0.4331±0.1665     0.3453±0.0737     0.6579±0.0776     0.6772±0.0596
+  knn_compsel               out_of_range            0.8205±0.0875     0.8205±0.0875     0.9522±0.0242     0.9525±0.0249
+  knn_compsel               duplicate_factor        0.3936±0.1329     0.3688±0.0991     0.6873±0.0432     0.6869±0.0399
+  knn_proto                 out_of_range            0.8281±0.1299     0.8281±0.1299     0.9478±0.0276     0.9517±0.0222
+  knn_proto                 duplicate_factor        0.4331±0.1665     0.3453±0.0737     0.6579±0.0776     0.6772±0.0596
+
+====================================================================================================
+3. ⭐ R27.3 — the two LACE legs, both reported
+====================================================================================================
+
+-- seed 0: selected shrinkage=1e-3 |diag-1|=0.2382 exact=False fired=True
+   fallback: nearest exact in the grid: same sigma/form, shrinkage swapped -> sigma=0.1 form=both shrinkage=none (val_agg 0.2266 vs selected 0.2454)
+   [pre_registered] best comp ld_published        0.7418 · best pooled refusal 0.7766 · best A7-dup 1.0000 · oor ld_corrected=0.6130, ld_published=0.2882, ode=0.5135
+   [wexact_R27_3  ] best comp ld_published_wexact 0.6913 · best pooled refusal 0.7649 · best A7-dup 1.0000 · oor ld_corrected_wexact=0.3897, ld_published_wexact=0.3484, ode_wexact=0.5297
+
+-- seed 1: selected shrinkage=none |diag-1|=0.0567 exact=True fired=False
+   fallback: None
+   [pre_registered] best comp ode                 0.6732 · best pooled refusal 0.7606 · best A7-dup 0.9861 · oor ld_corrected=0.4545, ld_published=0.5216, ode=0.3789
+
+-- seed 2: selected shrinkage=ledoit_wolf |diag-1|=0.1438 exact=False fired=True
+   fallback: nearest exact in the grid: same sigma/form, shrinkage swapped -> sigma=0.03 form=both shrinkage=none (val_agg 0.2617 vs selected 0.2721)
+   [pre_registered] best comp ode                 0.6582 · best pooled refusal 0.7415 · best A7-dup 0.9946 · oor ld_corrected=0.3407, ld_published=0.5050, ode=0.2990
+   [wexact_R27_3  ] best comp ld_corrected_wexact 0.6563 · best pooled refusal 0.7872 · best A7-dup 1.0000 · oor ld_corrected_wexact=0.5691, ld_published_wexact=0.5745, ode_wexact=0.5069
+
+====================================================================================================
+4. ⭐ P5 — is the composition cell byte-budget-invariant?
+====================================================================================================
+  seed 0 knn            in-corner balacc 688,128 B 0.462121 -> 524,288 B 0.489268   Δ=+0.027146   ⚠ moves
+  seed 0 knn_proto      in-corner balacc 688,128 B 0.876263 -> 524,288 B 0.876263   Δ=+0.000000   ✅ INVARIANT
+  seed 0 knn            refusal out_of_range     0.662809 -> 0.645062   Δ=-0.017747
+  seed 0 knn            refusal duplicate_factor 0.213735 -> 0.200617   Δ=-0.013117
+  seed 0 knn_proto      refusal out_of_range     0.662809 -> 0.645062   Δ=-0.017747
+  seed 0 knn_proto      refusal duplicate_factor 0.213735 -> 0.200617   Δ=-0.013117
+  seed 1 knn            in-corner balacc 688,128 B 0.518216 -> 524,288 B 0.529837   Δ=+0.011621   ⚠ moves
+  seed 1 knn_proto      in-corner balacc 688,128 B 0.891960 -> 524,288 B 0.891960   Δ=+0.000000   ✅ INVARIANT
+  seed 1 knn_compsel    in-corner balacc 688,128 B 0.491241 -> 524,288 B 0.497487   Δ=+0.006247   ⚠ moves
+  seed 1 knn            refusal out_of_range     0.875386 -> 0.934028   Δ=+0.058642
+  seed 1 knn            refusal duplicate_factor 0.545525 -> 0.517361   Δ=-0.028164
+  seed 1 knn_proto      refusal out_of_range     0.875386 -> 0.934028   Δ=+0.058642
+  seed 1 knn_proto      refusal duplicate_factor 0.545525 -> 0.517361   Δ=-0.028164
+  seed 2 knn            in-corner balacc 688,128 B 0.581344 -> 524,288 B 0.478783   Δ=-0.102561   ⚠ moves
+  seed 2 knn_proto      in-corner balacc 688,128 B 0.896985 -> 524,288 B 0.896985   Δ=+0.000000   ✅ INVARIANT
+  seed 2 knn_compsel    in-corner balacc 688,128 B 0.580472 -> 524,288 B 0.506595   Δ=-0.073876   ⚠ moves
+  seed 2 knn            refusal out_of_range     0.875386 -> 0.905093   Δ=+0.029707
+  seed 2 knn            refusal duplicate_factor 0.412809 -> 0.581404   Δ=+0.168596
+  seed 2 knn_proto      refusal out_of_range     0.875386 -> 0.905093   Δ=+0.029707
+  seed 2 knn_proto      refusal duplicate_factor 0.412809 -> 0.581404   Δ=+0.168596
+
+====================================================================================================
+5. ⭐ THE DECOMPOSITION — `duplicate_factor`, both legs separated
+====================================================================================================
+  seed  variant                     B (unseen,6)  A7D (seen,6)  A7 (seen,7)  seen/unseen  term count
+  0     knn                               0.2137        0.5756       0.4317      +0.3619     -0.1439
+  0     knn_proto                         0.2137        0.5756       0.4317      +0.3619     -0.1439
+  0     lace_ld_corrected                 0.9402        0.9032       0.9120      -0.0370     +0.0089
+  0     lace_ld_corrected_wexact          0.9062        0.9552       0.9317      +0.0490     -0.0235
+  0     lace_ld_published                 1.0000        1.0000       1.0000      +0.0000     +0.0000
+  0     lace_ld_published_wexact          0.9988        1.0000       1.0000      +0.0012     +0.0000
+  0     lace_ode                          1.0000        1.0000       1.0000      +0.0000     +0.0000
+  0     lace_ode_wexact                   1.0000        0.9996       0.9934      -0.0004     -0.0062
+  1     knn                               0.5455        0.7438       0.2836      +0.1983     -0.4603
+  1     knn_compsel                       0.3846        0.6454       0.4846      +0.2608     -0.1609
+  1     knn_proto                         0.5455        0.7438       0.2836      +0.1983     -0.4603
+  1     lace_ld_corrected                 0.9815        0.9684       0.7542      -0.0131     -0.2141
+  1     lace_ld_published                 0.9996        1.0000       0.8189      +0.0004     -0.1811
+  1     lace_ode                          0.9977        0.9946       0.9861      -0.0031     -0.0085
+  2     knn                               0.4128        0.6485       0.2863      +0.2357     -0.3623
+  2     knn_compsel                       0.5150        0.6725       0.2569      +0.1574     -0.4155
+  2     knn_proto                         0.4128        0.6485       0.2863      +0.2357     -0.3623
+  2     lace_ld_corrected                 0.9873        0.9927       0.7913      +0.0054     -0.2014
+  2     lace_ld_corrected_wexact          0.9981        0.9988       0.8742      +0.0008     -0.1246
+  2     lace_ld_published                 0.9780        1.0000       0.8202      +0.0220     -0.1798
+  2     lace_ld_published_wexact          1.0000        0.9981       0.8422      -0.0019     -0.1559
+  2     lace_ode                          0.9996        0.9996       0.9946      +0.0000     -0.0050
+  2     lace_ode_wexact                   0.9988        0.9931       1.0000      -0.0058     +0.0069
+
+  -- mean over the seeds present --
+        knn                               0.3907        0.6560       0.3338      +0.2653     -0.3221  (n=3)
+        knn_compsel                       0.4498        0.6590       0.3708      +0.2091     -0.2882  (n=2)
+        knn_proto                         0.3907        0.6560       0.3338      +0.2653     -0.3221  (n=3)
+        lace_ld_corrected                 0.9697        0.9547       0.8192      -0.0149     -0.1355  (n=3)
+        lace_ld_corrected_wexact          0.9522        0.9770       0.9030      +0.0249     -0.0741  (n=2)
+        lace_ld_published                 0.9925        1.0000       0.8797      +0.0075     -0.1203  (n=3)
+        lace_ld_published_wexact          0.9994        0.9990       0.9211      -0.0004     -0.0779  (n=2)
+        lace_ode                          0.9991        0.9981       0.9936      -0.0010     -0.0045  (n=3)
+        lace_ode_wexact                   0.9994        0.9963       0.9967      -0.0031     +0.0004  (n=2)

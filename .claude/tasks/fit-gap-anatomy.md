@@ -1,0 +1,13 @@
+# Task: fit-gap-anatomy — decompose the "physics costs raw fit" gap + the paid-access recovery ladder (brainstorm Thread 8; Head-commissioned)
+
+- **Agent:** `results-analyst` · **Output:** `.claude/outputs/fit-gap-anatomy.md` (+ figures in `.claude/outputs/fit-gap-anatomy/`)
+- **Read first:** protocol · `.claude/brainstorm_log.md` **Thread 8** (the hypothesis under test + falsifiables a/b/c) · `.claude/outputs/minus-the-physics.md` Part A (apparatus: twins, arms, harness) · `.claude/claims_matrix.md` CM-1 (the scope this task exists to fill) · `.claude/outputs/v1-wormhole-routing.md` + `gamma-field-build.md` (the paid mechanisms).
+- Repo **read-only**; scratch in `.claude/scratch/fit-gap-anatomy/`; laptop-CPU. The twins/wormholes/γ_φ/squeeze machinery all exist on main — this is measurement, not building.
+
+## Items
+1. **Decompose the gap (falsifiable a):** on the minus-the-physics testbed (+1 richer task, e.g. multi-region data the Head's mechanism predicts CLU fails at), attribute CLU-vs-twin error to: **contraction-forbidden** (error persists along the flow: measure error-volume non-decay / final-error vs initial-error correlation) vs **reach-priced** (required latent displacement per unit time vs v_max,i = c/√M_i; is error concentrated on far-region targets?). Run a **relativistic arm** (cap active, sweep c) vs newtonian to isolate the reach term directly — the w5 arm never had the cap on.
+2. **The loan curve (falsifiable b):** fit-vs-horizon MSE curves for CLU / broken-volume / twin / LSTM, horizon 10→5000 steps, 3+ seeds. Where (if anywhere) do the curves cross? This makes legacy Exp-I/II quantitative against a matched control — the number every short's Pareto framing wants.
+3. **Recovery ladder (falsifiable c):** starting from the conservative CLU, add one paid mechanism at a time and measure (fit recovered, structure retained): +γ global · +γ_φ learned field · +S^(M) squeeze (inference-time, bounded-energy certificate) · +inter-unit wormhole (2-unit lattice variant of the task). Deliverable: the ladder table — % of the twin gap recovered vs which CM-1 guarantees survive (BIBO, latch, μ²-protection re-measured per rung).
+4. **Intra-unit wormhole scoping (design report, no build):** what would a within-node nonlocal channel take (mechanism sketch, where it lives in `chlu/core/`, expected certificate form per F5 §7.4)? Report for the Hub/engineer — Head's new mechanism candidate, [design hypothesis].
+
+**Report:** per-falsifiable verdicts + the ladder table + the CM-1 scope update this licenses (proposed wording for the Hub). Negatives fully written (C-9). Flag-provenance per §5.

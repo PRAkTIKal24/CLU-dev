@@ -1,0 +1,63 @@
+[12:02:41]   split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+[12:02:41]   ⭐ R3.3 no-leak: 8192 decoder-training rows checked, 72/72 held-out images excluded, 0 leaked
+[12:02:45]   streaming 9288 images (train + eval_A + eval_B, one pass) …
+[12:05:25]   fitting THE shared decoder (1200 steps, encoder frozen) …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[12:06:03]     step 1/1800  loss=0.16399
+[13:27:44]     step 360/1800  loss=0.00338
+[14:51:22]     step 720/1800  loss=0.00164
+[16:37:22]     step 1080/1800  loss=0.00116
+[18:05:46]     step 1440/1800  loss=0.00100
+[19:05:06]     step 1800/1800  loss=0.00097
+[19:05:07]   fitting the probe on REAL images (1500 steps) …
+[19:05:22]     step 1/1500  loss=2.23690
+[19:08:26]     step 300/1500  loss=0.00633
+[19:11:31]     step 600/1500  loss=0.00108
+[19:14:23]     step 900/1500  loss=0.00047
+[19:17:08]     step 1200/1500  loss=0.00023
+[19:20:01]     step 1500/1500  loss=0.00015
+[19:20:54]   A: n=1024  ceiling=0.9893  probe_on_real=1.0000  decode_mse=0.00108
+[19:21:02]   B: n=72  ceiling=0.9745  probe_on_real=1.0000  decode_mse=0.00118
+[19:21:02]   ⭐ seed 0: ceiling_A=0.9893 ceiling_B=0.9745 ratio=0.9851 -> PROCEED
+[19:21:17] ⭐ Montero reproduction: {'expected_prefix': {'decoder_param_hash': '01ef91f75eeaae7b', 'probe_param_hash': 'c03bfb8916d00932'}, 'got_prefix': {'decoder_param_hash': '01ef91f75eeaae7b', 'probe_param_hash': 'c03bfb8916d00932'}, 'match': {'decoder_param_hash': True, 'probe_param_hash': True}, 'shape_on_B': 0.9305555555555556, 'aggregate_B': 0.9745370370370371, 'aggregate_A': 0.9892578125, 'condition': 'recomb2element'}

@@ -1,0 +1,61 @@
+{
+ "probe": "ae_loss_probe",
+ "what_it_measures": "the SHARED autoencoder's own ceiling: encode the TRUE picture, decode it, judge it.  No arm is involved.",
+ "is_an_arm_number": false,
+ "protocol": "2,000 admissible requests, 12 layouts, latent D = 128, batch 64",
+ "rows": [
+  {
+   "loss_on_object_and_colour_channels": "per-cell BCE everywhere",
+   "item_tensor": "22 channels, per-slot colour block",
+   "ae_steps": 1500,
+   "exact_objects": 0.0025,
+   "exact_layout": null,
+   "legal": 0.8275,
+   "log": "artefacts/ae_probe_v1.log"
+  },
+  {
+   "loss_on_object_and_colour_channels": "spatial softmax over the 225 cells for the four objects; colour still BCE",
+   "item_tensor": "11 channels, shared colour field",
+   "ae_steps": 2500,
+   "exact_objects": 0.02,
+   "exact_layout": 0.985,
+   "legal": 0.9725,
+   "object_cells_exact": {
+    "agent": 1.0,
+    "key": 1.0,
+    "door": 1.0,
+    "goal": 1.0
+   },
+   "object_colours_exact": {
+    "agent": 0.3625,
+    "key": 0.3575,
+    "door": 0.34,
+    "tint": 0.4425
+   },
+   "log": "artefacts/ae_probe_v2.log"
+  },
+  {
+   "loss_on_object_and_colour_channels": "spatial softmax for the four objects + MASKED per-cell softmax over the 5 colours wherever a colour lives",
+   "item_tensor": "11 channels, shared colour field",
+   "ae_steps": 1500,
+   "exact_objects": 0.3375,
+   "exact_layout": 0.9825,
+   "legal": 0.84,
+   "object_cells_exact": {
+    "agent": 0.5325,
+    "key": 0.995,
+    "door": 0.9225,
+    "goal": 0.995
+   },
+   "object_colours_exact": {
+    "agent": 0.66,
+    "key": 0.995,
+    "door": 0.935,
+    "tint": 0.725
+   },
+   "log": "artefacts/ae_probe_v3.log",
+   "note": "still improving at 1,500 steps -- the VAL smoke trains the shared autoencoder for 6,000 steps and reports the realised ceiling on every row"
+  }
+ ],
+ "decision": "the judge takes an argmax over 225 cells and an argmax over 5 colours, so every piece of the loss is the cross-entropy of exactly that argmax.  A per-cell BCE never makes the correct cell compete against the other 224."
+}

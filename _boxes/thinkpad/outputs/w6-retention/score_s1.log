@@ -1,0 +1,308 @@
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+=== chunk 1 (seed 1) 06:59:02Z
+  field(seed 1): already built, loading
+  evicted 6 item(s) holding factor 2 = value 0; 49,374 B of the image belong to them
+  decayed 6 item(s) by 0.5; 0 reached zero and were evicted
+  decayed 6 item(s) by 0.0; 6 reached zero and were evicted
+  HOLE punched at (f2=0) x (f4=1); coupling index 921; 1 B
+  tables(seed 1): already built, loading
+  decay(seed 1): 17 horizons over 6 item(s) (6 by provenance, 5 by geometry); rho=0.974679434481, n_half=27.0268, refusal step 539
+  judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  score(seed 1): 100/4212 units, 61 judge passes, 81s elapsed
+  score(seed 1): 200/4212 units, 119 judge passes, 160s elapsed
+  score(seed 1): 300/4212 units, 178 judge passes, 241s elapsed
+  score(seed 1): 400/4212 units, 233 judge passes, 314s elapsed
+  score(seed 1): 500/4212 units, 292 judge passes, 398s elapsed
+  score(seed 1): 600/4212 units, 353 judge passes, 481s elapsed
+  score(seed 1): 700/4212 units, 412 judge passes, 566s elapsed
+  score(seed 1): 800/4212 units, 468 judge passes, 652s elapsed
+  score(seed 1): 900/4212 units, 525 judge passes, 728s elapsed
+  score(seed 1): 1000/4212 units, 586 judge passes, 799s elapsed
+  score(seed 1): 1100/4212 units, 644 judge passes, 885s elapsed
+=== chunk 1 (seed 1) 07:46:39Z
+  field(seed 1): already built, loading
+  evicted 6 item(s) holding factor 2 = value 0; 49,374 B of the image belong to them
+  decayed 6 item(s) by 0.5; 0 reached zero and were evicted
+  decayed 6 item(s) by 0.0; 6 reached zero and were evicted
+  HOLE punched at (f2=0) x (f4=1); coupling index 921; 1 B
+  tables(seed 1): already built, loading
+  decay(seed 1): 17 horizons over 6 item(s) (6 by provenance, 5 by geometry); rho=0.974679434481, n_half=27.0268, refusal step 539
+  judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  score(seed 1): 100/4212 units, 61 judge passes, 70s elapsed
+  score(seed 1): 200/4212 units, 119 judge passes, 135s elapsed
+  score(seed 1): 300/4212 units, 178 judge passes, 219s elapsed
+  score(seed 1): 400/4212 units, 233 judge passes, 286s elapsed
+  score(seed 1): 500/4212 units, 292 judge passes, 354s elapsed
+  score(seed 1): 600/4212 units, 353 judge passes, 428s elapsed
+  score(seed 1): 700/4212 units, 412 judge passes, 500s elapsed
+  score(seed 1): 800/4212 units, 468 judge passes, 589s elapsed
+  score(seed 1): 900/4212 units, 525 judge passes, 672s elapsed
+  score(seed 1): 1000/4212 units, 586 judge passes, 763s elapsed
+  score(seed 1): 1100/4212 units, 644 judge passes, 857s elapsed
+  score(seed 1): 1200/4212 units, 703 judge passes, 944s elapsed
+  score(seed 1): 1300/4212 units, 758 judge passes, 1033s elapsed
+  score(seed 1): 1400/4212 units, 817 judge passes, 1128s elapsed
+  score(seed 1): 1500/4212 units, 878 judge passes, 1246s elapsed
+  score(seed 1): 1600/4212 units, 937 judge passes, 1358s elapsed
+  score(seed 1): 1700/4212 units, 993 judge passes, 1473s elapsed
+  score(seed 1): wall-clock cap after 1005 new units -- state saved, rerun to continue
+INCOMPLETE -- rerun to continue
+=== chunk 2 (seed 1) 08:14:50Z
+  field(seed 1): already built, loading
+  evicted 6 item(s) holding factor 2 = value 0; 49,374 B of the image belong to them
+  decayed 6 item(s) by 0.5; 0 reached zero and were evicted
+  decayed 6 item(s) by 0.0; 6 reached zero and were evicted
+  HOLE punched at (f2=0) x (f4=1); coupling index 921; 1 B
+  tables(seed 1): already built, loading
+  decay(seed 1): 17 horizons over 6 item(s) (6 by provenance, 5 by geometry); rho=0.974679434481, n_half=27.0268, refusal step 539
+  judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+  score(seed 1): resuming with 1717 (arm, corner) units done
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  score(seed 1): 1800/4212 units, 45 judge passes, 49s elapsed
+  score(seed 1): 1900/4212 units, 106 judge passes, 110s elapsed
+  score(seed 1): 2000/4212 units, 164 judge passes, 171s elapsed
+  score(seed 1): 2100/4212 units, 223 judge passes, 223s elapsed
+  score(seed 1): 2200/4212 units, 278 judge passes, 270s elapsed
+  score(seed 1): 2300/4212 units, 337 judge passes, 321s elapsed
+  score(seed 1): 2400/4212 units, 398 judge passes, 383s elapsed
+  score(seed 1): 2500/4212 units, 457 judge passes, 446s elapsed
+  score(seed 1): 2600/4212 units, 513 judge passes, 501s elapsed
+  score(seed 1): 2700/4212 units, 570 judge passes, 559s elapsed
+  score(seed 1): 2800/4212 units, 631 judge passes, 626s elapsed
+  score(seed 1): 2900/4212 units, 689 judge passes, 690s elapsed
+  score(seed 1): 3000/4212 units, 748 judge passes, 757s elapsed
+  score(seed 1): 3100/4212 units, 803 judge passes, 822s elapsed
+  score(seed 1): 3200/4212 units, 862 judge passes, 894s elapsed
+  score(seed 1): 3300/4212 units, 923 judge passes, 971s elapsed
+  score(seed 1): 3400/4212 units, 982 judge passes, 1046s elapsed
+  score(seed 1): 3500/4212 units, 1038 judge passes, 1121s elapsed
+  score(seed 1): 3600/4212 units, 1095 judge passes, 1197s elapsed
+  score(seed 1): 3700/4212 units, 1156 judge passes, 1276s elapsed
+  score(seed 1): 3800/4212 units, 1214 judge passes, 1362s elapsed
+  score(seed 1): 3900/4212 units, 1273 judge passes, 1457s elapsed
+  score(seed 1): wall-clock cap after 1291 new units -- state saved, rerun to continue
+INCOMPLETE -- rerun to continue
+=== chunk 3 (seed 1) 08:42:34Z
+  field(seed 1): already built, loading
+  evicted 6 item(s) holding factor 2 = value 0; 49,374 B of the image belong to them
+  decayed 6 item(s) by 0.5; 0 reached zero and were evicted
+  decayed 6 item(s) by 0.0; 6 reached zero and were evicted
+  HOLE punched at (f2=0) x (f4=1); coupling index 921; 1 B
+  tables(seed 1): already built, loading
+  decay(seed 1): 17 horizons over 6 item(s) (6 by provenance, 5 by geometry); rho=0.974679434481, n_half=27.0268, refusal step 539
+  judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+  score(seed 1): resuming with 3933 (arm, corner) units done
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  score(seed 1): 4000/4212 units, 42 judge passes, 94s elapsed
+  score(seed 1): 4100/4212 units, 101 judge passes, 237s elapsed
+  score(seed 1): 4200/4212 units, 162 judge passes, 388s elapsed
+  score(seed 1): 4212 units in 395.9s
+seed 1 complete after 3 chunk(s)
+RUNNER DONE seed 1 08:49:23Z

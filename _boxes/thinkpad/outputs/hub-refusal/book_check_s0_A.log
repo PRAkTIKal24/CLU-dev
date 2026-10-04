@@ -1,0 +1,97 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+    [A] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04854 (lambda* = 0.05393)
+    [A] N=64 r=16 store=524,288 B coupling=524,288 B total=1,048,576 B = 2.00x budget (PREREG §3 match: True)
+    [A] sigma per well = 4.6343 5.0714 9.1827 6.3054 5.1006
+  CHECK1 shipped expH=42.594 mine=42.594 prior=63.041
+  CHECK2 shuffle 1/8: pearson(Q, PR) = +0.9657  spearman = +0.9671
+  CHECK2 shuffle 2/8: pearson(Q, PR) = +0.9761  spearman = +0.9784
+  CHECK2 shuffle 3/8: pearson(Q, PR) = +0.9662  spearman = +0.9695
+  CHECK2 shuffle 4/8: pearson(Q, PR) = +0.9762  spearman = +0.9732
+  CHECK2 shuffle 5/8: pearson(Q, PR) = +0.9625  spearman = +0.9653
+  CHECK2 shuffle 6/8: pearson(Q, PR) = +0.9727  spearman = +0.9730
+  CHECK2 shuffle 7/8: pearson(Q, PR) = +0.9672  spearman = +0.9641
+  CHECK2 shuffle 8/8: pearson(Q, PR) = +0.9570  spearman = +0.9482
+
+{
+ "schema": "hub-refusal-2/book-check/1",
+ "DECLARED": "MECHANISM ONLY, val + fit-derived synthetic. NOT scored, NOT adopted. Two attempts to BREAK this hub's own diagnosis.",
+ "seed": 0,
+ "budget": "A",
+ "check1_is_the_deficit_mine_or_the_pins": {
+  "n_atoms": 64,
+  "log_N_nats": 4.1588830833596715,
+  "SHIPPED_atom_posterior": {
+   "mean_entropy_nats": 3.68969896068272,
+   "mean_effective_atoms_expH": 42.59387598163714,
+   "mean_max_posterior": 0.06748104024195795
+  },
+  "MY_term_posterior": {
+   "mean_entropy_nats": 3.689698960507959,
+   "mean_effective_atoms_expH": 42.59387597534667,
+   "mean_max_posterior": 0.06748104028005655
+  },
+  "max_abs_entropy_delta": 5.01615051717863e-08,
+  "PRIOR_no_request_at_all": {
+   "mean_entropy_nats": 4.1437328692169775,
+   "mean_effective_atoms_expH": 63.04145282562057
+  },
+  "nats_the_REQUEST_actually_buys_per_well": 0.4540339085342575,
+  "verdict_note": "If SHIPPED and MINE agree, the addressability deficit is the PIN's and not this hub's. The prior row is the honest floor: what the request buys is H_prior - H_posterior, not log N - H."
+ },
+ "check2_participation_ratio_identity": {
+  "claim": "under the section C.2 shuffle, Q(x_read) is a monotone read-out of the posterior participation ratio PR = sum_a P_a^2, because the permutation preserves the column means and variances exactly",
+  "predicted_sign": "NEGATIVE pearson/spearman: larger PR (more concentrated) => x_read further from abar => larger Q",
+  "shuffled_realisations": [
+   {
+    "shuffle_seed": 1000,
+    "pearson_Q_vs_PR": 0.9657320995666653,
+    "spearman_Q_vs_PR": 0.967149226544613
+   },
+   {
+    "shuffle_seed": 2000,
+    "pearson_Q_vs_PR": 0.9761172957094806,
+    "spearman_Q_vs_PR": 0.9783979262876037
+   },
+   {
+    "shuffle_seed": 3000,
+    "pearson_Q_vs_PR": 0.9661555866258398,
+    "spearman_Q_vs_PR": 0.9694711609600272
+   },
+   {
+    "shuffle_seed": 4000,
+    "pearson_Q_vs_PR": 0.97623467625515,
+    "spearman_Q_vs_PR": 0.9732445717329256
+   },
+   {
+    "shuffle_seed": 5000,
+    "pearson_Q_vs_PR": 0.9624957519854289,
+    "spearman_Q_vs_PR": 0.9653321733931418
+   },
+   {
+    "shuffle_seed": 6000,
+    "pearson_Q_vs_PR": 0.9727229032528235,
+    "spearman_Q_vs_PR": 0.9730377971173041
+   },
+   {
+    "shuffle_seed": 7000,
+    "pearson_Q_vs_PR": 0.967152980267939,
+    "spearman_Q_vs_PR": 0.9640651352709855
+   },
+   {
+    "shuffle_seed": 8000,
+    "pearson_Q_vs_PR": 0.9570009092334691,
+    "spearman_Q_vs_PR": 0.9482115090285859
+   }
+  ],
+  "mean_pearson_shuffled": 0.9679515253620996,
+  "mean_spearman_shuffled": 0.9673636875418983,
+  "FULL_STORE_pearson_Q_vs_PR": 0.4853604511885406,
+  "FULL_STORE_spearman_Q_vs_PR": 0.48925127531245954
+ }
+}
+wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-refusal\BOOK_CHECK_seed0_A.json

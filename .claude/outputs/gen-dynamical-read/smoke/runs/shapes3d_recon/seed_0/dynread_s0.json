@@ -1,0 +1,3450 @@
+{
+  "bridge_dir": "/Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0",
+  "budgets": {
+    "A": {
+      "atoms_are_train_rows": {
+        "atom_selection": "kmeanspp",
+        "atoms_are_train_rows": true,
+        "max_abs_delta_vs_train_rows": 0.0,
+        "n_atoms": 64,
+        "n_distinct_atom_rows": 64,
+        "note": "\u26d4 The minima are NOT the k-means centres: every atom is a verbatim train feature row. Per-value weights over centres would be the old flat count table wearing a different hat."
+      },
+      "build_wall_clock_s": 1.2574939727783203,
+      "byte_ledger": {
+        "budget_bytes": 524288,
+        "coupling": {
+          "bytes_formula": "sum_{k<l} r*(d_k + d_l)*4",
+          "coupling_bytes": 524288,
+          "derived_free": "the per-well centre m_k and radius s_k are functions of the ATOMS (0 additional bytes)",
+          "dtype": "float32",
+          "identity": "= r*(K-1)*D*4 when the wells partition D",
+          "n_pairs": 10,
+          "note": "\u26d4 EXTRA to store_bytes \u2014 a byte-matched rival must be told about it.",
+          "per_pair": [
+            {
+              "bytes": 38912,
+              "k": 0,
+              "l": 1
+            },
+            {
+              "bytes": 56064,
+              "k": 0,
+              "l": 2
+            },
+            {
+              "bytes": 51456,
+              "k": 0,
+              "l": 3
+            },
+            {
+              "bytes": 42816,
+              "k": 0,
+              "l": 4
+            },
+            {
+              "bytes": 56192,
+              "k": 1,
+              "l": 2
+            },
+            {
+              "bytes": 51584,
+              "k": 1,
+              "l": 3
+            },
+            {
+              "bytes": 42944,
+              "k": 1,
+              "l": 4
+            },
+            {
+              "bytes": 68736,
+              "k": 2,
+              "l": 3
+            },
+            {
+              "bytes": 60096,
+              "k": 2,
+              "l": 4
+            },
+            {
+              "bytes": 55488,
+              "k": 3,
+              "l": 4
+            }
+          ],
+          "rank": 16
+        },
+        "d3_rule": "store + coupling <= 2x budget",
+        "d3_rule_binding": true,
+        "d3_rule_satisfied": true,
+        "label": "budget A (MATCHED)",
+        "multiple_of_budget": 2.0,
+        "store": {
+          "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+          "dim": 2048,
+          "dtype": "float32",
+          "n_atoms_per_well": 64,
+          "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72).",
+          "store_bytes": 524288,
+          "well_sizes": [
+            303,
+            305,
+            573,
+            501,
+            366
+          ]
+        },
+        "total_bytes": 1048576
+      },
+      "byte_ledger_got": {
+        "coupling_bytes": 524288,
+        "store_bytes": 524288,
+        "total_bytes": 1048576
+      },
+      "byte_ledger_matches_prereg": {
+        "coupling_bytes": true,
+        "multiple_of_budget": true,
+        "store_bytes": true,
+        "total_bytes": true
+      },
+      "byte_ledger_measured": {
+        "coupling_bytes": 524288,
+        "store_bytes": 524288
+      },
+      "byte_ledger_prereg": {
+        "coupling_bytes": 524288,
+        "multiple_of_budget": 2.0,
+        "store_bytes": 524288,
+        "total_bytes": 1048576
+      },
+      "coupling_certificate": {
+        "certificate": {
+          "bounded_below": false,
+          "certificate_min_eigenvalue": -1.8844271926579896,
+          "coupling_present": true,
+          "coupling_strength": 1.0,
+          "max_safe_coupling_strength": 0.054283060153287495,
+          "note": "\u26d4 An unbounded-below landscape does not settle, it diverges \u2014 measured at E = -1.6e28 on the first smoke. The certificate is computed from the ATOMS, never hand-tuned.",
+          "pair_spectral_norms": [
+            0.999999996615643,
+            1.0000000013735926,
+            1.0000000010361287,
+            0.9999999956476757,
+            0.9999999998830387,
+            1.0000000007161434,
+            1.0000000040622836,
+            1.0000000036332448,
+            0.9999999955257705,
+            1.0000000074411066
+          ],
+          "rank": 16,
+          "rule": "E >= u^T C u - const with C_kk = s_k^2/2 and C_kl = -lambda*||W_kl||_2/2; coercive iff C >= 0, so lambda* = 1/rho(D^-1/2 S D^-1/2)",
+          "well_radii": [
+            0.5002018213272095,
+            0.5128174424171448,
+            0.4488304555416107,
+            0.36440834403038025,
+            0.5585821866989136
+          ]
+        },
+        "certificate_bound_the_strength": true,
+        "coupling_strength_used": 0.04885475413795875,
+        "declared_coupling_strength": 1.0,
+        "max_safe_coupling_strength": 0.054283060153287495,
+        "safety_frac": 0.9
+      },
+      "declared_channel": {
+        "declared_channel_bits": 65536,
+        "declared_channel_floats": 2048,
+        "dtype": "float32",
+        "note": "\u26d4 NOT K*log2(M): the settled state is continuous. The width is declared at the store's full float width and the empirical spread of the settled states is reported beside it (settled_state_spread).",
+        "parity_with": "knn_proto (also D floats to the decoder)",
+        "read_mode": "state"
+      },
+      "decoder_guard": {
+        "checked": true,
+        "decoder_param_hash": "01ef91f75eeaae7be8d83a220c9cc6629120345357da9033db22375c278ab196",
+        "decoder_recipe": "v1_capacity_schedule",
+        "expected_recipe": "v1_capacity_schedule"
+      },
+      "n_coupling_fit_rows": 1024,
+      "request_sets": {
+        "CORNER_B": {
+          "arms": {
+            "coupling_off": {
+              "arm": "coupling_off",
+              "coupling_strength": 0.0,
+              "displacement_from_launch": {
+                "max": 2.2145330905914307,
+                "rms": 0.3448764979839325
+              },
+              "dynamics": {
+                "accepted_fraction": 0.6818333333333333,
+                "displacement_final_step": 0.00023664378770465392,
+                "displacement_mean": 0.0005016188500959894,
+                "displacement_step_1": 0.0720245869209369,
+                "energy_absolute_change": -88.26075320773657,
+                "energy_final": -614.7250730726454,
+                "energy_first": -526.4643198649088,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.14357760415818654,
+                "frac_still_descending": 0.0,
+                "mean_accept_prob": 0.6818333333333333,
+                "n_chains": 72,
+                "n_steps": 1000,
+                "n_still_descending": 0,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -7.885621920668009e-06,
+                  "mean": -1.2832350789896007e-05,
+                  "min": -2.355896494511568e-05
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 0.5016188500959894,
+                "verdict": "settled (no chain descending in the final window)",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.050751505853054074,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.09154929577464789,
+                  "mean_pairwise_rms_distance": 0.24781503195519355,
+                  "median_pairwise_rms_distance": 0.2594188712838944,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.12690431810469655,
+                  "median_pairwise_rms_distance": 0.15643800628282642,
+                  "min_pairwise_rms_distance": 0.007795153156207452,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 10.063680097676162,
+                "dim": 2048,
+                "mean_coordinate_std": 0.057384779886584594,
+                "n": 72,
+                "n_distinct_states": 72,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.12690431810469655,
+                  "median_pairwise_rms_distance": 0.15643800628282642,
+                  "min_pairwise_rms_distance": 0.007795153156207452,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 1.4714016932633298,
+                "total_variance": 21.71708746840195
+              },
+              "stability": {
+                "atom_rms_radius": 0.5986768766162032,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.0133081421547456,
+                "settled_rms": 0.6066441535949707,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 16.290136098861694
+            },
+            "full": {
+              "arm": "full",
+              "coupling_strength": 0.04885475413795875,
+              "displacement_from_launch": {
+                "max": 4.037765026092529,
+                "rms": 0.4602395296096802
+              },
+              "dynamics": {
+                "accepted_fraction": 0.7859861111111112,
+                "displacement_final_step": 0.0007788908587826882,
+                "displacement_mean": 0.0006841719916028524,
+                "displacement_step_1": 0.0664693396538496,
+                "energy_absolute_change": -90.78912607828784,
+                "energy_final": -642.4492679172092,
+                "energy_first": -551.6601418389214,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.14131719127429623,
+                "frac_still_descending": 0.0,
+                "mean_accept_prob": 0.7859861111111112,
+                "n_chains": 72,
+                "n_steps": 1000,
+                "n_still_descending": 0,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -2.5541284056162254e-05,
+                  "mean": -0.0001266344420039255,
+                  "min": -0.00028128805244394603
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 0.6841719916028524,
+                "verdict": "settled (no chain descending in the final window)",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.050751505853054074,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.09154929577464789,
+                  "mean_pairwise_rms_distance": 0.24781503195519355,
+                  "median_pairwise_rms_distance": 0.2594188712838944,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.3852499319814406,
+                  "median_pairwise_rms_distance": 0.5224545895550164,
+                  "min_pairwise_rms_distance": 0.012003461771814786,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 10.063680097676162,
+                "dim": 2048,
+                "mean_coordinate_std": 0.2217873345868142,
+                "n": 72,
+                "n_distinct_states": 72,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.3852499319814406,
+                  "median_pairwise_rms_distance": 0.5224545895550164,
+                  "min_pairwise_rms_distance": 0.012003461771814786,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 1.0816282431051985,
+                "total_variance": 234.86671822591285
+              },
+              "stability": {
+                "atom_rms_radius": 0.5986768766162032,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.2222657854704029,
+                "settled_rms": 0.731742262840271,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 21.891000986099243
+            },
+            "request_off": {
+              "arm": "request_off",
+              "coupling_strength": 0.04885475413795875,
+              "displacement_from_launch": {
+                "max": 4.495569705963135,
+                "rms": 0.7635514736175537
+              },
+              "dynamics": {
+                "accepted_fraction": 0.7810972222222222,
+                "displacement_final_step": 0.0034534304124665344,
+                "displacement_mean": 0.0011405962089051577,
+                "displacement_step_1": 0.08246726139138143,
+                "energy_absolute_change": -135.27441999647357,
+                "energy_final": -626.4596210055881,
+                "energy_first": -491.18520100911456,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.21593477929085375,
+                "frac_still_descending": 1.0,
+                "mean_accept_prob": 0.7810972222222222,
+                "n_chains": 72,
+                "n_steps": 1000,
+                "n_still_descending": 72,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -0.0021020619014706,
+                  "mean": -0.002102152906043527,
+                  "min": -0.0021022215387296816
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 1.1405962089051576,
+                "verdict": "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.050751505853054074,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 0.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.09154929577464789,
+                  "mean_pairwise_rms_distance": 0.24781503195519355,
+                  "median_pairwise_rms_distance": 0.2594188712838944,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.07863849765258216,
+                  "mean_pairwise_rms_distance": 5.9075768071428625e-08,
+                  "median_pairwise_rms_distance": 6.143906154658885e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 10.063680097676162,
+                "dim": 2048,
+                "mean_coordinate_std": 2.826073113880853e-08,
+                "n": 72,
+                "n_distinct_states": 19,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.07863849765258216,
+                  "mean_pairwise_rms_distance": 5.9075768071428625e-08,
+                  "median_pairwise_rms_distance": 6.143906154658885e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 4.952554268833569,
+                "total_variance": 3.821700303044835e-12
+              },
+              "stability": {
+                "atom_rms_radius": 0.5986768766162032,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.3263796178722882,
+                "settled_rms": 0.7940728068351746,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 14.5104341506958
+            },
+            "request_off_launch": {
+              "arm": "request_off_launch",
+              "coupling_strength": 0.04885475413795875,
+              "displacement_from_launch": {
+                "max": 4.136194705963135,
+                "rms": 0.6914694309234619
+              },
+              "dynamics": {
+                "accepted_fraction": 0.786,
+                "displacement_final_step": 0.0034534307196736336,
+                "displacement_mean": 0.0010712035381948226,
+                "displacement_step_1": 0.08113156259059906,
+                "energy_absolute_change": -134.08935546875,
+                "energy_final": -626.4595947265625,
+                "energy_first": -492.3702392578125,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.2140431028553045,
+                "frac_still_descending": 1.0,
+                "mean_accept_prob": 0.786,
+                "n_chains": 72,
+                "n_steps": 1000,
+                "n_still_descending": 72,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -0.0021021505751690293,
+                  "mean": -0.0021021505751690293,
+                  "min": -0.0021021505751690293
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 1.0712035381948226,
+                "verdict": "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "prior_atom",
+                "mean_confidence": 0.050751505853054074,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 0.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": true,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 1.0,
+                  "mean_pairwise_rms_distance": 0.0,
+                  "median_pairwise_rms_distance": 0.0,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.8012519561815337,
+                  "mean_pairwise_rms_distance": 2.9615766379008645e-09,
+                  "median_pairwise_rms_distance": 0.0,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 10.063680097676162,
+                "dim": 2048,
+                "mean_coordinate_std": 0.0,
+                "n": 72,
+                "n_distinct_states": 1,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.8012519561815337,
+                  "mean_pairwise_rms_distance": 2.9615766379008645e-09,
+                  "median_pairwise_rms_distance": 0.0,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 0.0,
+                "total_variance": 0.0
+              },
+              "stability": {
+                "atom_rms_radius": 0.5986768766162032,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.3263796178722882,
+                "settled_rms": 0.7940728068351746,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 13.127851009368896
+            },
+            "zero_step": {
+              "arm": "zero_step",
+              "coupling_strength": 0.04885475413795875,
+              "displacement_from_launch": {
+                "max": 0.0,
+                "rms": 0.0
+              },
+              "dynamics": {
+                "accepted_fraction": NaN,
+                "displacement_final_step": NaN,
+                "displacement_mean": NaN,
+                "displacement_step_1": NaN,
+                "energy_absolute_change": 0.0,
+                "energy_final": -551.6601418389214,
+                "energy_first": -551.6601418389214,
+                "energy_is_flat": true,
+                "energy_relative_drop": 0.0,
+                "frac_still_descending": NaN,
+                "mean_accept_prob": NaN,
+                "n_chains": 72,
+                "n_steps": 0,
+                "n_still_descending": 0,
+                "note": "\u2b50 dreaming's laundering control: it took ESSENTIALLY ALL of that spoke's apparent gain, so it is never optional.",
+                "relative_tail_drop": {
+                  "max": NaN,
+                  "mean": NaN,
+                  "min": NaN
+                },
+                "rule": "zero-step control: no step was taken, so nothing can descend",
+                "tol": 0.001,
+                "total_displacement": 0.0,
+                "verdict": "ZERO-STEP CONTROL (the launch, decoded; no chain was run)",
+                "window": 0,
+                "zero_step": true
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.050751505853054074,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.09154929577464789,
+                  "mean_pairwise_rms_distance": 0.24781503195519355,
+                  "median_pairwise_rms_distance": 0.2594188712838944,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.09154929577464789,
+                  "mean_pairwise_rms_distance": 0.24781503195519355,
+                  "median_pairwise_rms_distance": 0.2594188712838944,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 0,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 10.063680097676162,
+                "dim": 2048,
+                "mean_coordinate_std": 0.1109873314524989,
+                "n": 72,
+                "n_distinct_states": 19,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.09154929577464789,
+                  "mean_pairwise_rms_distance": 0.24781503195519355,
+                  "median_pairwise_rms_distance": 0.2594188712838944,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 5.310079411727732,
+                "total_variance": 74.58011752646121
+              },
+              "stability": {
+                "atom_rms_radius": 0.5986768766162032,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.2014394945438553,
+                "settled_rms": 0.7192740440368652,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 0.19745612144470215
+            }
+          },
+          "bypass": {
+            "all_stages_caught": true,
+            "deliberately_bypassed_variants": {
+              "launch": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) launch, settle, read: two DIFFERENT feature tensors (max |\u0394| = 21.72725486755371) produced DIFFERENT outputs {'launch': 0.21727254986763, 'settle': 0.006658315658569336, 'read': 0.006658315658569336}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it is",
+                "raised": true
+              },
+              "read": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) read: two DIFFERENT feature tensors (max |\u0394| = 21.72725486755371) produced DIFFERENT outputs {'launch': 0.0, 'settle': 0.0, 'read': 0.21727254986763}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it is void.",
+                "raised": true
+              },
+              "settle": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) settle, read: two DIFFERENT feature tensors (max |\u0394| = 21.72725486755371) produced DIFFERENT outputs {'launch': 0.0, 'settle': 0.21727254986763, 'read': 0.21727254986763}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it is void.",
+                "raised": true
+              }
+            },
+            "real_path": {
+              "banned_names": [
+                "x_features",
+                "features",
+                "feats",
+                "feature",
+                "zf",
+                "z_features",
+                "encoded",
+                "embeddings",
+                "images",
+                "imgs",
+                "X_train",
+                "Z_train",
+                "X",
+                "Z"
+              ],
+              "bypass_alpha": 0.0,
+              "bypass_stage": "none",
+              "declared_channel": {
+                "declared_channel_bits": 65536,
+                "declared_channel_floats": 2048,
+                "dtype": "float32",
+                "note": "\u26d4 NOT K*log2(M): the settled state is continuous. The width is declared at the store's full float width and the empirical spread of the settled states is reported beside it (settled_state_spread).",
+                "parity_with": "knn_proto (also D floats to the decoder)",
+                "read_mode": "state"
+              },
+              "feature_tensor_max_abs_difference": 21.72725486755371,
+              "max_abs_delta_per_stage": {
+                "launch": 0.0,
+                "read": 0.0,
+                "settle": 0.0
+              },
+              "n_requests": 32,
+              "note": "\u2b50 The guarantee is over the WHOLE path \u2014 launch, settle and read \u2014 not over the read alone. \u26d4 soft_read(store, X, tau) takes FEATURES and is not on this path.",
+              "request_only_over_launch_settle_read": true,
+              "signature_ok": true,
+              "stages_checked": [
+                "launch_state",
+                "settle_chain",
+                "read_settled"
+              ],
+              "steps": 25
+            }
+          },
+          "decoded": {
+            "arms": {
+              "coupling_off": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9993569254875183,
+                "mean": 0.581182062625885,
+                "min": 0.00011676502617774531,
+                "std": 0.3697656989097595
+              },
+              "full": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9994475245475769,
+                "mean": 0.5700750350952148,
+                "min": 6.209915591171011e-05,
+                "std": 0.3718969225883484
+              },
+              "request_off": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999294281005859,
+                "mean": 0.5786068439483643,
+                "min": 4.9618152843322605e-05,
+                "std": 0.3705476224422455
+              },
+              "request_off_launch": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999294281005859,
+                "mean": 0.5786067843437195,
+                "min": 4.9618152843322605e-05,
+                "std": 0.3705476224422455
+              },
+              "zero_step": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9995934367179871,
+                "mean": 0.6179633736610413,
+                "min": 3.181025749654509e-05,
+                "std": 0.37285083532333374
+              }
+            },
+            "grid_png": "/Users/user/Desktop/CHLU/.claude/outputs/gen-dynamical-read/smoke/runs/shapes3d_recon/seed_0/decoded_s0_A_CORNER_B.png",
+            "n_rows": 16
+          },
+          "n_requests": 72,
+          "n_values_realised": {
+            "floor_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            },
+            "object_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            },
+            "orientation": {
+              "cardinality": 15,
+              "n_values_realised": 3
+            },
+            "scale": {
+              "cardinality": 8,
+              "n_values_realised": 3
+            },
+            "shape": {
+              "cardinality": 4,
+              "n_values_realised": 1
+            },
+            "wall_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            }
+          },
+          "protocol": "full (\u2b50 HEADLINE: the arm's job is RESOLUTION INSIDE the addressed wells, D1)",
+          "steering": {
+            "per_arm": {
+              "coupling_off": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 2.97649884223938,
+                "rms_delta_relative_to_spread": 0.9701919100011938,
+                "rms_delta_vs_full": 0.32626187801361084
+              },
+              "request_off": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 6.323322296142578,
+                "rms_delta_relative_to_spread": 2.0902099038070494,
+                "rms_delta_vs_full": 0.7029081583023071
+              },
+              "request_off_launch": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 6.323322772979736,
+                "rms_delta_relative_to_spread": 2.0902099038070494,
+                "rms_delta_vs_full": 0.7029081583023071
+              },
+              "zero_step": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 4.037765026092529,
+                "rms_delta_relative_to_spread": 1.3685958991244416,
+                "rms_delta_vs_full": 0.4602395296096802
+              }
+            },
+            "reading": "request-off moves the trajectory; the request energy is doing work. \u26d4 Whether that work is a GAIN is a scored-run question and is not answered here.",
+            "reference": "full",
+            "settled_state_rms_spread": 0.33628591895103455
+          }
+        },
+        "SPREAD": {
+          "arms": {
+            "coupling_off": {
+              "arm": "coupling_off",
+              "coupling_strength": 0.0,
+              "displacement_from_launch": {
+                "max": 3.792299747467041,
+                "rms": 0.3451019525527954
+              },
+              "dynamics": {
+                "accepted_fraction": 0.6374765625,
+                "displacement_final_step": 0.00020472889218581258,
+                "displacement_mean": 0.00047992008384291297,
+                "displacement_step_1": 0.07293667655903846,
+                "energy_absolute_change": -93.96598172187805,
+                "energy_final": -632.0003037452698,
+                "energy_first": -538.0343220233917,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.14868027936858622,
+                "frac_still_descending": 0.0,
+                "mean_accept_prob": 0.6374765625,
+                "n_chains": 128,
+                "n_steps": 1000,
+                "n_still_descending": 0,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -4.050003511609487e-06,
+                  "mean": -1.0918849873882838e-05,
+                  "min": -7.790942455103291e-05
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 0.47992008384291296,
+                "verdict": "settled (no chain descending in the final window)",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.05580399394329271,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.00024606299212598425,
+                  "mean_pairwise_rms_distance": 0.6771553951516711,
+                  "median_pairwise_rms_distance": 0.6872878739859284,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.3918271247734659,
+                  "median_pairwise_rms_distance": 0.408930013783275,
+                  "min_pairwise_rms_distance": 0.01943622863007822,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 10.063680097676162,
+                "dim": 2048,
+                "mean_coordinate_std": 0.1942124858829802,
+                "n": 128,
+                "n_distinct_states": 128,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.3918271247734659,
+                  "median_pairwise_rms_distance": 0.408930013783275,
+                  "min_pairwise_rms_distance": 0.01943622863007822,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 4.077271440861915,
+                "total_variance": 171.39184863414093
+              },
+              "stability": {
+                "atom_rms_radius": 0.5986768766162032,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.0138688676019558,
+                "settled_rms": 0.6069798469543457,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 28.326863050460815
+            },
+            "full": {
+              "arm": "full",
+              "coupling_strength": 0.04885475413795875,
+              "displacement_from_launch": {
+                "max": 4.959166526794434,
+                "rms": 0.4388289451599121
+              },
+              "dynamics": {
+                "accepted_fraction": 0.784,
+                "displacement_final_step": 0.0007568666778752231,
+                "displacement_mean": 0.0006490119056265371,
+                "displacement_step_1": 0.06654380497639067,
+                "energy_absolute_change": -101.8975522518158,
+                "energy_final": -681.78737449646,
+                "energy_first": -579.8898222446442,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.14945649635573427,
+                "frac_still_descending": 0.0,
+                "mean_accept_prob": 0.784,
+                "n_chains": 128,
+                "n_steps": 1000,
+                "n_still_descending": 0,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -1.918227039039712e-05,
+                  "mean": -0.000112603934141764,
+                  "min": -0.0006156257260723712
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 0.6490119056265371,
+                "verdict": "settled (no chain descending in the final window)",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.05580399394329271,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.00024606299212598425,
+                  "mean_pairwise_rms_distance": 0.6771553951516711,
+                  "median_pairwise_rms_distance": 0.6872878739859284,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.7692085447333051,
+                  "median_pairwise_rms_distance": 0.766470535947167,
+                  "min_pairwise_rms_distance": 0.02375189582747472,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 10.063680097676162,
+                "dim": 2048,
+                "mean_coordinate_std": 0.4374969989837314,
+                "n": 128,
+                "n_distinct_states": 128,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.7692085447333051,
+                  "median_pairwise_rms_distance": 0.766470535947167,
+                  "min_pairwise_rms_distance": 0.02375189582747472,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 2.418371588763561,
+                "total_variance": 694.1706572599726
+              },
+              "stability": {
+                "atom_rms_radius": 0.5986768766162032,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.3220307101557423,
+                "settled_rms": 0.7914692163467407,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 29.27317500114441
+            },
+            "request_off": {
+              "arm": "request_off",
+              "coupling_strength": 0.04885475413795875,
+              "displacement_from_launch": {
+                "max": 5.872412204742432,
+                "rms": 0.7430920004844666
+              },
+              "dynamics": {
+                "accepted_fraction": 0.78815625,
+                "displacement_final_step": 0.003453430126683088,
+                "displacement_mean": 0.0011657596209790882,
+                "displacement_step_1": 0.08115982462186366,
+                "energy_absolute_change": -132.20904684066772,
+                "energy_final": -626.4596338272095,
+                "energy_first": -494.25058698654175,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.2110416053991656,
+                "frac_still_descending": 1.0,
+                "mean_accept_prob": 0.78815625,
+                "n_chains": 128,
+                "n_steps": 1000,
+                "n_still_descending": 128,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -0.0021019909789117453,
+                  "mean": -0.002102153130889507,
+                  "min": -0.002102262848720689
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 1.1657596209790881,
+                "verdict": "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.05580399394329271,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 0.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.00024606299212598425,
+                  "mean_pairwise_rms_distance": 0.6771553951516711,
+                  "median_pairwise_rms_distance": 0.6872878739859284,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.004921259842519685,
+                  "mean_pairwise_rms_distance": 6.629249456796111e-08,
+                  "median_pairwise_rms_distance": 6.495265578539184e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 10.063680097676162,
+                "dim": 2048,
+                "mean_coordinate_std": 3.062385641083348e-08,
+                "n": 128,
+                "n_distinct_states": 126,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.004921259842519685,
+                  "mean_pairwise_rms_distance": 6.629249456796111e-08,
+                  "median_pairwise_rms_distance": 6.495265578539184e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 9.054044284905311,
+                "total_variance": 4.315452511044387e-12
+              },
+              "stability": {
+                "atom_rms_radius": 0.5986768766162032,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.3263797174329144,
+                "settled_rms": 0.7940728664398193,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 17.05152702331543
+            },
+            "request_off_launch": {
+              "arm": "request_off_launch",
+              "coupling_strength": 0.04885475413795875,
+              "displacement_from_launch": {
+                "max": 4.136194705963135,
+                "rms": 0.6914694309234619
+              },
+              "dynamics": {
+                "accepted_fraction": 0.783375,
+                "displacement_final_step": 0.003453427867498249,
+                "displacement_mean": 0.0010712083238458945,
+                "displacement_step_1": 0.08113156259059906,
+                "energy_absolute_change": -134.08938217163086,
+                "energy_final": -626.4596214294434,
+                "energy_first": -492.3702392578125,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.2140431363567668,
+                "frac_still_descending": 1.0,
+                "mean_accept_prob": 0.783375,
+                "n_chains": 128,
+                "n_steps": 1000,
+                "n_still_descending": 128,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -0.0021021505751690293,
+                  "mean": -0.0021021583412927447,
+                  "min": -0.00210216832630895
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 1.0712083238458945,
+                "verdict": "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "prior_atom",
+                "mean_confidence": 0.05580399394329271,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 0.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": true,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 1.0,
+                  "mean_pairwise_rms_distance": 0.0,
+                  "median_pairwise_rms_distance": 0.0,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.4562007874015748,
+                  "mean_pairwise_rms_distance": 3.9022603507979635e-08,
+                  "median_pairwise_rms_distance": 1.4901161193847656e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 10.063680097676162,
+                "dim": 2048,
+                "mean_coordinate_std": 1.3711868890666533e-08,
+                "n": 128,
+                "n_distinct_states": 2,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.4562007874015748,
+                  "mean_pairwise_rms_distance": 3.9022603507979635e-08,
+                  "median_pairwise_rms_distance": 1.4901161193847656e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 1.0,
+                "total_variance": 1.960633498350187e-12
+              },
+              "stability": {
+                "atom_rms_radius": 0.5986768766162032,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.3263797174329144,
+                "settled_rms": 0.7940728664398193,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 20.92277979850769
+            },
+            "zero_step": {
+              "arm": "zero_step",
+              "coupling_strength": 0.04885475413795875,
+              "displacement_from_launch": {
+                "max": 0.0,
+                "rms": 0.0
+              },
+              "dynamics": {
+                "accepted_fraction": NaN,
+                "displacement_final_step": NaN,
+                "displacement_mean": NaN,
+                "displacement_step_1": NaN,
+                "energy_absolute_change": 0.0,
+                "energy_final": -579.8898222446442,
+                "energy_first": -579.8898222446442,
+                "energy_is_flat": true,
+                "energy_relative_drop": 0.0,
+                "frac_still_descending": NaN,
+                "mean_accept_prob": NaN,
+                "n_chains": 128,
+                "n_steps": 0,
+                "n_still_descending": 0,
+                "note": "\u2b50 dreaming's laundering control: it took ESSENTIALLY ALL of that spoke's apparent gain, so it is never optional.",
+                "relative_tail_drop": {
+                  "max": NaN,
+                  "mean": NaN,
+                  "min": NaN
+                },
+                "rule": "zero-step control: no step was taken, so nothing can descend",
+                "tol": 0.001,
+                "total_displacement": 0.0,
+                "verdict": "ZERO-STEP CONTROL (the launch, decoded; no chain was run)",
+                "window": 0,
+                "zero_step": true
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.05580399394329271,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.00024606299212598425,
+                  "mean_pairwise_rms_distance": 0.6771553951516711,
+                  "median_pairwise_rms_distance": 0.6872878739859284,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.00024606299212598425,
+                  "mean_pairwise_rms_distance": 0.6771553951516711,
+                  "median_pairwise_rms_distance": 0.6872878739859284,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 0,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 10.063680097676162,
+                "dim": 2048,
+                "mean_coordinate_std": 0.4034212585129982,
+                "n": 128,
+                "n_distinct_states": 126,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.00024606299212598425,
+                  "mean_pairwise_rms_distance": 0.6771553951516711,
+                  "median_pairwise_rms_distance": 0.6872878739859284,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 11.73666075247473,
+                "total_variance": 480.89548184734616
+              },
+              "stability": {
+                "atom_rms_radius": 0.5986768766162032,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.2114470300156635,
+                "settled_rms": 0.7252653241157532,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 0.44901013374328613
+            }
+          },
+          "bypass": {
+            "all_stages_caught": true,
+            "deliberately_bypassed_variants": {
+              "launch": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) launch, settle, read: two DIFFERENT feature tensors (max |\u0394| = 25.455909729003906) produced DIFFERENT outputs {'launch': 0.25455909967422485, 'settle': 0.013821959495544434, 'read': 0.013821959495544434}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through i",
+                "raised": true
+              },
+              "read": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) read: two DIFFERENT feature tensors (max |\u0394| = 25.455909729003906) produced DIFFERENT outputs {'launch': 0.0, 'settle': 0.0, 'read': 0.25455909967422485}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it is void.",
+                "raised": true
+              },
+              "settle": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) settle, read: two DIFFERENT feature tensors (max |\u0394| = 25.455909729003906) produced DIFFERENT outputs {'launch': 0.0, 'settle': 0.25455909967422485, 'read': 0.25455909967422485}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it is void.",
+                "raised": true
+              }
+            },
+            "real_path": {
+              "banned_names": [
+                "x_features",
+                "features",
+                "feats",
+                "feature",
+                "zf",
+                "z_features",
+                "encoded",
+                "embeddings",
+                "images",
+                "imgs",
+                "X_train",
+                "Z_train",
+                "X",
+                "Z"
+              ],
+              "bypass_alpha": 0.0,
+              "bypass_stage": "none",
+              "declared_channel": {
+                "declared_channel_bits": 65536,
+                "declared_channel_floats": 2048,
+                "dtype": "float32",
+                "note": "\u26d4 NOT K*log2(M): the settled state is continuous. The width is declared at the store's full float width and the empirical spread of the settled states is reported beside it (settled_state_spread).",
+                "parity_with": "knn_proto (also D floats to the decoder)",
+                "read_mode": "state"
+              },
+              "feature_tensor_max_abs_difference": 25.455909729003906,
+              "max_abs_delta_per_stage": {
+                "launch": 0.0,
+                "read": 0.0,
+                "settle": 0.0
+              },
+              "n_requests": 32,
+              "note": "\u2b50 The guarantee is over the WHOLE path \u2014 launch, settle and read \u2014 not over the read alone. \u26d4 soft_read(store, X, tau) takes FEATURES and is not on this path.",
+              "request_only_over_launch_settle_read": true,
+              "signature_ok": true,
+              "stages_checked": [
+                "launch_state",
+                "settle_chain",
+                "read_settled"
+              ],
+              "steps": 25
+            }
+          },
+          "decoded": {
+            "arms": {
+              "coupling_off": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9995797276496887,
+                "mean": 0.5521361827850342,
+                "min": 2.023605520662386e-05,
+                "std": 0.37935367226600647
+              },
+              "full": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9998319149017334,
+                "mean": 0.5845934748649597,
+                "min": 4.1955609049182385e-05,
+                "std": 0.3915533423423767
+              },
+              "request_off": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999294281005859,
+                "mean": 0.5786068439483643,
+                "min": 4.961805825587362e-05,
+                "std": 0.3705476224422455
+              },
+              "request_off_launch": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999294281005859,
+                "mean": 0.5786067843437195,
+                "min": 4.9618152843322605e-05,
+                "std": 0.3705476224422455
+              },
+              "zero_step": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9994210004806519,
+                "mean": 0.5435237288475037,
+                "min": 6.96300485287793e-05,
+                "std": 0.40437182784080505
+              }
+            },
+            "grid_png": "/Users/user/Desktop/CHLU/.claude/outputs/gen-dynamical-read/smoke/runs/shapes3d_recon/seed_0/decoded_s0_A_SPREAD.png",
+            "n_rows": 16
+          },
+          "n_requests": 128,
+          "n_values_realised": {
+            "floor_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            },
+            "object_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            },
+            "orientation": {
+              "cardinality": 15,
+              "n_values_realised": 15
+            },
+            "scale": {
+              "cardinality": 8,
+              "n_values_realised": 8
+            },
+            "shape": {
+              "cardinality": 4,
+              "n_values_realised": 4
+            },
+            "wall_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            }
+          },
+          "protocol": "full (\u2b50 HEADLINE: the arm's job is RESOLUTION INSIDE the addressed wells, D1)",
+          "steering": {
+            "per_arm": {
+              "coupling_off": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 4.844196319580078,
+                "rms_delta_relative_to_spread": 0.6669043147071949,
+                "rms_delta_vs_full": 0.38674840331077576
+              },
+              "request_off": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 9.090392112731934,
+                "rms_delta_relative_to_spread": 1.4207630418976596,
+                "rms_delta_vs_full": 0.8239230513572693
+              },
+              "request_off_launch": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 9.090392112731934,
+                "rms_delta_relative_to_spread": 1.4207630418976596,
+                "rms_delta_vs_full": 0.8239230513572693
+              },
+              "zero_step": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 4.959166526794434,
+                "rms_delta_relative_to_spread": 0.7567113773198564,
+                "rms_delta_vs_full": 0.4388289451599121
+              }
+            },
+            "reading": "request-off moves the trajectory; the request energy is doing work. \u26d4 Whether that work is a GAIN is a scored-run question and is not answered here.",
+            "reference": "full",
+            "settled_state_rms_spread": 0.5799158811569214
+          }
+        }
+      },
+      "sigma": [
+        4.4907941818237305,
+        4.9164137840271,
+        8.927690505981445,
+        6.379706382751465,
+        4.916677951812744
+      ],
+      "spec": {
+        "budget_bytes": 524288,
+        "label": "A",
+        "n_atoms": 64,
+        "rank": 16,
+        "role": "MATCHED"
+      }
+    },
+    "B": {
+      "atoms_are_train_rows": {
+        "atom_selection": "kmeanspp",
+        "atoms_are_train_rows": true,
+        "max_abs_delta_vs_train_rows": 0.0,
+        "n_atoms": 512,
+        "n_distinct_atom_rows": 512,
+        "note": "\u26d4 The minima are NOT the k-means centres: every atom is a verbatim train feature row. Per-value weights over centres would be the old flat count table wearing a different hat."
+      },
+      "build_wall_clock_s": 2.5582337379455566,
+      "byte_ledger": {
+        "budget_bytes": 4194304,
+        "coupling": {
+          "bytes_formula": "sum_{k<l} r*(d_k + d_l)*4",
+          "coupling_bytes": 4194304,
+          "derived_free": "the per-well centre m_k and radius s_k are functions of the ATOMS (0 additional bytes)",
+          "dtype": "float32",
+          "identity": "= r*(K-1)*D*4 when the wells partition D",
+          "n_pairs": 10,
+          "note": "\u26d4 EXTRA to store_bytes \u2014 a byte-matched rival must be told about it.",
+          "per_pair": [
+            {
+              "bytes": 311296,
+              "k": 0,
+              "l": 1
+            },
+            {
+              "bytes": 448512,
+              "k": 0,
+              "l": 2
+            },
+            {
+              "bytes": 411648,
+              "k": 0,
+              "l": 3
+            },
+            {
+              "bytes": 342528,
+              "k": 0,
+              "l": 4
+            },
+            {
+              "bytes": 449536,
+              "k": 1,
+              "l": 2
+            },
+            {
+              "bytes": 412672,
+              "k": 1,
+              "l": 3
+            },
+            {
+              "bytes": 343552,
+              "k": 1,
+              "l": 4
+            },
+            {
+              "bytes": 549888,
+              "k": 2,
+              "l": 3
+            },
+            {
+              "bytes": 480768,
+              "k": 2,
+              "l": 4
+            },
+            {
+              "bytes": 443904,
+              "k": 3,
+              "l": 4
+            }
+          ],
+          "rank": 128
+        },
+        "d3_rule": "store + coupling <= 2x budget",
+        "d3_rule_binding": true,
+        "d3_rule_satisfied": true,
+        "label": "budget B (DECLARED LARGER)",
+        "multiple_of_budget": 2.0,
+        "store": {
+          "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+          "dim": 2048,
+          "dtype": "float32",
+          "n_atoms_per_well": 512,
+          "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72).",
+          "store_bytes": 4194304,
+          "well_sizes": [
+            303,
+            305,
+            573,
+            501,
+            366
+          ]
+        },
+        "total_bytes": 8388608
+      },
+      "byte_ledger_got": {
+        "coupling_bytes": 4194304,
+        "store_bytes": 4194304,
+        "total_bytes": 8388608
+      },
+      "byte_ledger_matches_prereg": {
+        "coupling_bytes": true,
+        "multiple_of_budget": true,
+        "store_bytes": true,
+        "total_bytes": true
+      },
+      "byte_ledger_measured": {
+        "coupling_bytes": 4194304,
+        "store_bytes": 4194304
+      },
+      "byte_ledger_prereg": {
+        "coupling_bytes": 4194304,
+        "multiple_of_budget": 2.0,
+        "store_bytes": 4194304,
+        "total_bytes": 8388608
+      },
+      "coupling_certificate": {
+        "certificate": {
+          "bounded_below": false,
+          "certificate_min_eigenvalue": -1.8838832748075478,
+          "coupling_present": true,
+          "coupling_strength": 1.0,
+          "max_safe_coupling_strength": 0.054730339261707665,
+          "note": "\u26d4 An unbounded-below landscape does not settle, it diverges \u2014 measured at E = -1.6e28 on the first smoke. The certificate is computed from the ATOMS, never hand-tuned.",
+          "pair_spectral_norms": [
+            0.9999999946724779,
+            1.000000002853481,
+            0.9999999970933356,
+            0.9999999963741016,
+            0.9999999914046265,
+            0.9999999994157536,
+            1.0000000006871546,
+            1.0000000029581535,
+            1.0000000018216866,
+            1.0000000048524964
+          ],
+          "rank": 128,
+          "rule": "E >= u^T C u - const with C_kk = s_k^2/2 and C_kl = -lambda*||W_kl||_2/2; coercive iff C >= 0, so lambda* = 1/rho(D^-1/2 S D^-1/2)",
+          "well_radii": [
+            0.4746750593185425,
+            0.5327040553092957,
+            0.455929696559906,
+            0.3709903657436371,
+            0.5570001006126404
+          ]
+        },
+        "certificate_bound_the_strength": true,
+        "coupling_strength_used": 0.0492573053355369,
+        "declared_coupling_strength": 1.0,
+        "max_safe_coupling_strength": 0.054730339261707665,
+        "safety_frac": 0.9
+      },
+      "declared_channel": {
+        "declared_channel_bits": 65536,
+        "declared_channel_floats": 2048,
+        "dtype": "float32",
+        "note": "\u26d4 NOT K*log2(M): the settled state is continuous. The width is declared at the store's full float width and the empirical spread of the settled states is reported beside it (settled_state_spread).",
+        "parity_with": "knn_proto (also D floats to the decoder)",
+        "read_mode": "state"
+      },
+      "decoder_guard": {
+        "checked": true,
+        "decoder_param_hash": "01ef91f75eeaae7be8d83a220c9cc6629120345357da9033db22375c278ab196",
+        "decoder_recipe": "v1_capacity_schedule",
+        "expected_recipe": "v1_capacity_schedule"
+      },
+      "n_coupling_fit_rows": 1024,
+      "request_sets": {
+        "CORNER_B": {
+          "arms": {
+            "coupling_off": {
+              "arm": "coupling_off",
+              "coupling_strength": 0.0,
+              "displacement_from_launch": {
+                "max": 2.8873867988586426,
+                "rms": 0.5356942415237427
+              },
+              "dynamics": {
+                "accepted_fraction": 0.7935972222222222,
+                "displacement_final_step": 0.000234799342959175,
+                "displacement_mean": 0.000742282897432536,
+                "displacement_step_1": 0.10069609547240867,
+                "energy_absolute_change": -154.5164154900445,
+                "energy_final": -534.2035140991211,
+                "energy_first": -379.6870986090766,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.2892463479028595,
+                "frac_still_descending": 0.0,
+                "mean_accept_prob": 0.7935972222222222,
+                "n_chains": 72,
+                "n_steps": 1000,
+                "n_still_descending": 0,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -1.146246469026813e-05,
+                  "mean": -1.4062266448615144e-05,
+                  "min": -1.8534084852180525e-05
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 0.7422828974325361,
+                "verdict": "settled (no chain descending in the final window)",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.01254762277381204,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.10993740219092332,
+                  "mean_pairwise_rms_distance": 0.4152983155742745,
+                  "median_pairwise_rms_distance": 0.463245376713891,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.08727624723976728,
+                  "median_pairwise_rms_distance": 0.10136360164048927,
+                  "min_pairwise_rms_distance": 0.005456909041663858,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 12.257778916242774,
+                "dim": 2048,
+                "mean_coordinate_std": 0.038030904150944206,
+                "n": 72,
+                "n_distinct_states": 72,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.08727624723976728,
+                  "median_pairwise_rms_distance": 0.10136360164048927,
+                  "min_pairwise_rms_distance": 0.005456909041663858,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 1.9061290401986815,
+                "total_variance": 9.87221350008894
+              },
+              "stability": {
+                "atom_rms_radius": 0.600577764414973,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.0191173763634525,
+                "settled_rms": 0.6120592355728149,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 24.98471713066101
+            },
+            "full": {
+              "arm": "full",
+              "coupling_strength": 0.0492573053355369,
+              "displacement_from_launch": {
+                "max": 6.765913009643555,
+                "rms": 0.8584792017936707
+              },
+              "dynamics": {
+                "accepted_fraction": 0.869875,
+                "displacement_final_step": 0.003097454104540197,
+                "displacement_mean": 0.001348623740713669,
+                "displacement_step_1": 0.10316092313991652,
+                "energy_absolute_change": -211.25601323445642,
+                "energy_final": -593.4883626302084,
+                "energy_first": -382.23234939575195,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.3559564543072366,
+                "frac_still_descending": 0.4166666666666667,
+                "mean_accept_prob": 0.869875,
+                "n_chains": 72,
+                "n_steps": 1000,
+                "n_still_descending": 30,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -7.315977503749106e-05,
+                  "mean": -0.003026493728350413,
+                  "min": -0.019005136518817065
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 1.348623740713669,
+                "verdict": "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.01254762277381204,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.10993740219092332,
+                  "mean_pairwise_rms_distance": 0.4152983155742745,
+                  "median_pairwise_rms_distance": 0.463245376713891,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0019561815336463224,
+                  "mean_pairwise_rms_distance": 0.7463069315729003,
+                  "median_pairwise_rms_distance": 0.6251926643779315,
+                  "min_pairwise_rms_distance": 0.006331802552802014,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 12.257778916242774,
+                "dim": 2048,
+                "mean_coordinate_std": 0.45169961575064665,
+                "n": 72,
+                "n_distinct_states": 72,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0019561815336463224,
+                  "mean_pairwise_rms_distance": 0.7463069315729003,
+                  "median_pairwise_rms_distance": 0.6251926643779315,
+                  "min_pairwise_rms_distance": 0.006331802552802014,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 1.127152830652116,
+                "total_variance": 911.7638544889126
+              },
+              "stability": {
+                "atom_rms_radius": 0.600577764414973,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.5087286108299711,
+                "settled_rms": 0.9061088562011719,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 43.40392017364502
+            },
+            "request_off": {
+              "arm": "request_off",
+              "coupling_strength": 0.0492573053355369,
+              "displacement_from_launch": {
+                "max": 7.812845230102539,
+                "rms": 0.9839349389076233
+              },
+              "dynamics": {
+                "accepted_fraction": 0.8727777777777778,
+                "displacement_final_step": 0.0009662207076972765,
+                "displacement_mean": 0.0014948021700838582,
+                "displacement_step_1": 0.10790289876361688,
+                "energy_absolute_change": -292.51705890231665,
+                "energy_final": -621.1698320176866,
+                "energy_first": -328.65277311537,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.4709131767590216,
+                "frac_still_descending": 0.0,
+                "mean_accept_prob": 0.8727777777777778,
+                "n_chains": 72,
+                "n_steps": 1000,
+                "n_still_descending": 0,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -0.00018194095593257597,
+                  "mean": -0.000182073382784654,
+                  "min": -0.00018214939713637047
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 1.494802170083858,
+                "verdict": "settled (no chain descending in the final window)",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.01254762277381204,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 0.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.10993740219092332,
+                  "mean_pairwise_rms_distance": 0.4152983155742745,
+                  "median_pairwise_rms_distance": 0.463245376713891,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.05594679186228482,
+                  "mean_pairwise_rms_distance": 7.066252717057301e-08,
+                  "median_pairwise_rms_distance": 7.884953353001448e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 12.257778916242774,
+                "dim": 2048,
+                "mean_coordinate_std": 3.1808811920738426e-08,
+                "n": 72,
+                "n_distinct_states": 21,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.05594679186228482,
+                  "mean_pairwise_rms_distance": 7.066252717057301e-08,
+                  "median_pairwise_rms_distance": 7.884953353001448e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 7.585126521887259,
+                "total_variance": 5.166677143318988e-12
+              },
+              "stability": {
+                "atom_rms_radius": 0.600577764414973,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.6884026768628375,
+                "settled_rms": 1.014017105102539,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 20.924731969833374
+            },
+            "request_off_launch": {
+              "arm": "request_off_launch",
+              "coupling_strength": 0.0492573053355369,
+              "displacement_from_launch": {
+                "max": 6.236673355102539,
+                "rms": 0.8939591646194458
+              },
+              "dynamics": {
+                "accepted_fraction": 0.867,
+                "displacement_final_step": 0.0009662149241194129,
+                "displacement_mean": 0.0013227429515536642,
+                "displacement_step_1": 0.07510858029127121,
+                "energy_absolute_change": -160.39157104492188,
+                "energy_final": -621.1697998046875,
+                "energy_first": -460.7782287597656,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.2582089005218111,
+                "frac_still_descending": 0.0,
+                "mean_accept_prob": 0.867,
+                "n_chains": 72,
+                "n_steps": 1000,
+                "n_still_descending": 0,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -0.0001821553616002555,
+                  "mean": -0.00018215536160025547,
+                  "min": -0.0001821553616002555
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 1.3227429515536642,
+                "verdict": "settled (no chain descending in the final window)",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "prior_atom",
+                "mean_confidence": 0.01254762277381204,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 0.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": true,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 1.0,
+                  "mean_pairwise_rms_distance": 0.0,
+                  "median_pairwise_rms_distance": 0.0,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": true,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 1.0,
+                  "mean_pairwise_rms_distance": 0.0,
+                  "median_pairwise_rms_distance": 0.0,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 12.257778916242774,
+                "dim": 2048,
+                "mean_coordinate_std": 0.0,
+                "n": 72,
+                "n_distinct_states": 1,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": true,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 1.0,
+                  "mean_pairwise_rms_distance": 0.0,
+                  "median_pairwise_rms_distance": 0.0,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 0.0,
+                "total_variance": 0.0
+              },
+              "stability": {
+                "atom_rms_radius": 0.600577764414973,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.6884026768628375,
+                "settled_rms": 1.014017105102539,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 19.687538862228394
+            },
+            "zero_step": {
+              "arm": "zero_step",
+              "coupling_strength": 0.0492573053355369,
+              "displacement_from_launch": {
+                "max": 0.0,
+                "rms": 0.0
+              },
+              "dynamics": {
+                "accepted_fraction": NaN,
+                "displacement_final_step": NaN,
+                "displacement_mean": NaN,
+                "displacement_step_1": NaN,
+                "energy_absolute_change": 0.0,
+                "energy_final": -382.23234939575195,
+                "energy_first": -382.23234939575195,
+                "energy_is_flat": true,
+                "energy_relative_drop": 0.0,
+                "frac_still_descending": NaN,
+                "mean_accept_prob": NaN,
+                "n_chains": 72,
+                "n_steps": 0,
+                "n_still_descending": 0,
+                "note": "\u2b50 dreaming's laundering control: it took ESSENTIALLY ALL of that spoke's apparent gain, so it is never optional.",
+                "relative_tail_drop": {
+                  "max": NaN,
+                  "mean": NaN,
+                  "min": NaN
+                },
+                "rule": "zero-step control: no step was taken, so nothing can descend",
+                "tol": 0.001,
+                "total_displacement": 0.0,
+                "verdict": "ZERO-STEP CONTROL (the launch, decoded; no chain was run)",
+                "window": 0,
+                "zero_step": true
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.01254762277381204,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.10993740219092332,
+                  "mean_pairwise_rms_distance": 0.4152983155742745,
+                  "median_pairwise_rms_distance": 0.463245376713891,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.10993740219092332,
+                  "mean_pairwise_rms_distance": 0.4152983155742745,
+                  "median_pairwise_rms_distance": 0.463245376713891,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 0,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 12.257778916242774,
+                "dim": 2048,
+                "mean_coordinate_std": 0.1674313602446813,
+                "n": 72,
+                "n_distinct_states": 21,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.10993740219092332,
+                  "mean_pairwise_rms_distance": 0.4152983155742745,
+                  "median_pairwise_rms_distance": 0.463245376713891,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 72,
+                  "n_total": 72,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 3.6259414081457755,
+                "total_variance": 209.0527442721518
+              },
+              "stability": {
+                "atom_rms_radius": 0.600577764414973,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.32674262070948,
+                "settled_rms": 0.796812117099762,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 0.19916629791259766
+            }
+          },
+          "bypass": {
+            "all_stages_caught": true,
+            "deliberately_bypassed_variants": {
+              "launch": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) launch, settle, read: two DIFFERENT feature tensors (max |\u0394| = 21.72725486755371) produced DIFFERENT outputs {'launch': 0.21727254986763, 'settle': 0.01353919506072998, 'read': 0.01353919506072998}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it is v",
+                "raised": true
+              },
+              "read": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) read: two DIFFERENT feature tensors (max |\u0394| = 21.72725486755371) produced DIFFERENT outputs {'launch': 0.0, 'settle': 0.0, 'read': 0.21727254986763}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it is void.",
+                "raised": true
+              },
+              "settle": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) settle, read: two DIFFERENT feature tensors (max |\u0394| = 21.72725486755371) produced DIFFERENT outputs {'launch': 0.0, 'settle': 0.21727254986763, 'read': 0.21727254986763}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it is void.",
+                "raised": true
+              }
+            },
+            "real_path": {
+              "banned_names": [
+                "x_features",
+                "features",
+                "feats",
+                "feature",
+                "zf",
+                "z_features",
+                "encoded",
+                "embeddings",
+                "images",
+                "imgs",
+                "X_train",
+                "Z_train",
+                "X",
+                "Z"
+              ],
+              "bypass_alpha": 0.0,
+              "bypass_stage": "none",
+              "declared_channel": {
+                "declared_channel_bits": 65536,
+                "declared_channel_floats": 2048,
+                "dtype": "float32",
+                "note": "\u26d4 NOT K*log2(M): the settled state is continuous. The width is declared at the store's full float width and the empirical spread of the settled states is reported beside it (settled_state_spread).",
+                "parity_with": "knn_proto (also D floats to the decoder)",
+                "read_mode": "state"
+              },
+              "feature_tensor_max_abs_difference": 21.72725486755371,
+              "max_abs_delta_per_stage": {
+                "launch": 0.0,
+                "read": 0.0,
+                "settle": 0.0
+              },
+              "n_requests": 32,
+              "note": "\u2b50 The guarantee is over the WHOLE path \u2014 launch, settle and read \u2014 not over the read alone. \u26d4 soft_read(store, X, tau) takes FEATURES and is not on this path.",
+              "request_only_over_launch_settle_read": true,
+              "signature_ok": true,
+              "stages_checked": [
+                "launch_state",
+                "settle_chain",
+                "read_settled"
+              ],
+              "steps": 25
+            }
+          },
+          "decoded": {
+            "arms": {
+              "coupling_off": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9991023540496826,
+                "mean": 0.5985697507858276,
+                "min": 0.00010736717376857996,
+                "std": 0.36809101700782776
+              },
+              "full": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999837875366211,
+                "mean": 0.565280020236969,
+                "min": 3.562953497748822e-05,
+                "std": 0.38298627734184265
+              },
+              "request_off": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999690055847168,
+                "mean": 0.5908978581428528,
+                "min": 3.126195588265546e-05,
+                "std": 0.3835453391075134
+              },
+              "request_off_launch": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999690055847168,
+                "mean": 0.5908978581428528,
+                "min": 3.126201409031637e-05,
+                "std": 0.3835453391075134
+              },
+              "zero_step": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999213218688965,
+                "mean": 0.5394628643989563,
+                "min": 6.504317570943385e-05,
+                "std": 0.38253042101860046
+              }
+            },
+            "grid_png": "/Users/user/Desktop/CHLU/.claude/outputs/gen-dynamical-read/smoke/runs/shapes3d_recon/seed_0/decoded_s0_B_CORNER_B.png",
+            "n_rows": 16
+          },
+          "n_requests": 72,
+          "n_values_realised": {
+            "floor_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            },
+            "object_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            },
+            "orientation": {
+              "cardinality": 15,
+              "n_values_realised": 3
+            },
+            "scale": {
+              "cardinality": 8,
+              "n_values_realised": 3
+            },
+            "shape": {
+              "cardinality": 4,
+              "n_values_realised": 1
+            },
+            "wall_hue": {
+              "cardinality": 10,
+              "n_values_realised": 2
+            }
+          },
+          "protocol": "full (\u2b50 HEADLINE: the arm's job is RESOLUTION INSIDE the addressed wells, D1)",
+          "steering": {
+            "per_arm": {
+              "coupling_off": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 5.864771842956543,
+                "rms_delta_relative_to_spread": 1.015428198076171,
+                "rms_delta_vs_full": 0.6728036999702454
+              },
+              "request_off": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 12.500165939331055,
+                "rms_delta_relative_to_spread": 1.4968329751645988,
+                "rms_delta_vs_full": 0.9917734861373901
+              },
+              "request_off_launch": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 12.500165939331055,
+                "rms_delta_relative_to_spread": 1.4968329751645988,
+                "rms_delta_vs_full": 0.9917734861373901
+              },
+              "zero_step": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 6.765913009643555,
+                "rms_delta_relative_to_spread": 1.2956587322598976,
+                "rms_delta_vs_full": 0.8584792017936707
+              }
+            },
+            "reading": "request-off moves the trajectory; the request energy is doing work. \u26d4 Whether that work is a GAIN is a scored-run question and is not answered here.",
+            "reference": "full",
+            "settled_state_rms_spread": 0.6625812649726868
+          }
+        },
+        "SPREAD": {
+          "arms": {
+            "coupling_off": {
+              "arm": "coupling_off",
+              "coupling_strength": 0.0,
+              "displacement_from_launch": {
+                "max": 3.8086395263671875,
+                "rms": 0.5189980268478394
+              },
+              "dynamics": {
+                "accepted_fraction": 0.7955703125,
+                "displacement_final_step": 0.0002569943170556144,
+                "displacement_mean": 0.0007265333829500094,
+                "displacement_step_1": 0.09762083616806194,
+                "energy_absolute_change": -147.70391964912415,
+                "energy_final": -536.8969950675964,
+                "energy_first": -389.1930754184723,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.27510662381436485,
+                "frac_still_descending": 0.0,
+                "mean_accept_prob": 0.7955703125,
+                "n_chains": 128,
+                "n_steps": 1000,
+                "n_still_descending": 0,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -9.840260011158326e-06,
+                  "mean": -1.7222464380845178e-05,
+                  "min": -4.015494870928583e-05
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 0.7265333829500094,
+                "verdict": "settled (no chain descending in the final window)",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.012785418819024608,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0036909448818897637,
+                  "mean_pairwise_rms_distance": 0.6497298841103806,
+                  "median_pairwise_rms_distance": 0.6696440170307032,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.3937052183709606,
+                  "median_pairwise_rms_distance": 0.40618946628574265,
+                  "min_pairwise_rms_distance": 0.013583190075222882,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 12.257778916242774,
+                "dim": 2048,
+                "mean_coordinate_std": 0.18915356876477754,
+                "n": 128,
+                "n_distinct_states": 128,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.3937052183709606,
+                  "median_pairwise_rms_distance": 0.40618946628574265,
+                  "min_pairwise_rms_distance": 0.013583190075222882,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 4.7003718176504705,
+                "total_variance": 170.54624347542295
+              },
+              "stability": {
+                "atom_rms_radius": 0.600577764414973,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.011984502523501,
+                "settled_rms": 0.6077753901481628,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 61.75645112991333
+            },
+            "full": {
+              "arm": "full",
+              "coupling_strength": 0.0492573053355369,
+              "displacement_from_launch": {
+                "max": 8.098000526428223,
+                "rms": 0.7985435128211975
+              },
+              "dynamics": {
+                "accepted_fraction": 0.910875,
+                "displacement_final_step": 0.001597236094312393,
+                "displacement_mean": 0.001205695435621351,
+                "displacement_step_1": 0.09726158360717818,
+                "energy_absolute_change": -209.65252041816711,
+                "energy_final": -614.3159041404724,
+                "energy_first": -404.6633837223053,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.3412780281368509,
+                "frac_still_descending": 0.171875,
+                "mean_accept_prob": 0.910875,
+                "n_chains": 128,
+                "n_steps": 1000,
+                "n_still_descending": 22,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -5.4152730701772356e-05,
+                  "mean": -0.0009102804498264242,
+                  "min": -0.012757263393836317
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 1.205695435621351,
+                "verdict": "\u26d4 NOT CONVERGED \u2014 chains are still descending at the final step",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.012785418819024608,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0036909448818897637,
+                  "mean_pairwise_rms_distance": 0.6497298841103806,
+                  "median_pairwise_rms_distance": 0.6696440170307032,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.940769712077695,
+                  "median_pairwise_rms_distance": 0.9443492262516808,
+                  "min_pairwise_rms_distance": 0.02081586684129843,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 12.257778916242774,
+                "dim": 2048,
+                "mean_coordinate_std": 0.5371616989188593,
+                "n": 128,
+                "n_distinct_states": 128,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0,
+                  "mean_pairwise_rms_distance": 0.940769712077695,
+                  "median_pairwise_rms_distance": 0.9443492262516808,
+                  "min_pairwise_rms_distance": 0.02081586684129843,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 1.5150973619108132,
+                "total_variance": 1152.4665844199844
+              },
+              "stability": {
+                "atom_rms_radius": 0.600577764414973,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.5437297223058566,
+                "settled_rms": 0.9271297454833984,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 58.353403091430664
+            },
+            "request_off": {
+              "arm": "request_off",
+              "coupling_strength": 0.0492573053355369,
+              "displacement_from_launch": {
+                "max": 7.812845706939697,
+                "rms": 0.988009512424469
+              },
+              "dynamics": {
+                "accepted_fraction": 0.8804609375,
+                "displacement_final_step": 0.0009662180859777436,
+                "displacement_mean": 0.00149690890023237,
+                "displacement_step_1": 0.10267131426371634,
+                "energy_absolute_change": -277.21831345558167,
+                "energy_final": -621.169819355011,
+                "energy_first": -343.9515058994293,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.4462842604675,
+                "frac_still_descending": 0.0,
+                "mean_accept_prob": 0.8804609375,
+                "n_chains": 128,
+                "n_steps": 1000,
+                "n_still_descending": 0,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -0.00018187544349019513,
+                  "mean": -0.0001820653248652735,
+                  "min": -0.00018224468894281778
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 1.4969089002323699,
+                "verdict": "settled (no chain descending in the final window)",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.012785418819024608,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 0.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0036909448818897637,
+                  "mean_pairwise_rms_distance": 0.6497298841103806,
+                  "median_pairwise_rms_distance": 0.6696440170307032,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0062746062992125986,
+                  "mean_pairwise_rms_distance": 7.913802957467603e-08,
+                  "median_pairwise_rms_distance": 7.884953353001448e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 12.257778916242774,
+                "dim": 2048,
+                "mean_coordinate_std": 3.700992242090726e-08,
+                "n": 128,
+                "n_distinct_states": 106,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0062746062992125986,
+                  "mean_pairwise_rms_distance": 7.913802957467603e-08,
+                  "median_pairwise_rms_distance": 7.884953353001448e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 25.335464957789267,
+                "total_variance": 6.394103246696057e-12
+              },
+              "stability": {
+                "atom_rms_radius": 0.600577764414973,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.6884026768628375,
+                "settled_rms": 1.014017105102539,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 42.964592933654785
+            },
+            "request_off_launch": {
+              "arm": "request_off_launch",
+              "coupling_strength": 0.0492573053355369,
+              "displacement_from_launch": {
+                "max": 6.236673355102539,
+                "rms": 0.8939591646194458
+              },
+              "dynamics": {
+                "accepted_fraction": 0.869625,
+                "displacement_final_step": 0.0009662165030022152,
+                "displacement_mean": 0.0013227160687374635,
+                "displacement_step_1": 0.07510858029127121,
+                "energy_absolute_change": -160.39157104492188,
+                "energy_final": -621.1697998046875,
+                "energy_first": -460.7782287597656,
+                "energy_is_flat": false,
+                "energy_relative_drop": 0.2582089005218111,
+                "frac_still_descending": 0.0,
+                "mean_accept_prob": 0.869625,
+                "n_chains": 128,
+                "n_steps": 1000,
+                "n_still_descending": 0,
+                "note": "\u2b50 Per-step displacement is reported FROM STEP 1. \u26a0 dreaming's acceptance was 0.952 on a chain that barely moved: acceptance alone cannot distinguish settling from sitting still.",
+                "relative_tail_drop": {
+                  "max": -0.00018201242925609782,
+                  "mean": -0.00018209282869968647,
+                  "min": -0.0001821553616002555
+                },
+                "rule": "still descending iff OLS slope of energy_ref over the last `window` steps x window < -tol * mean|E_ref| over that window",
+                "tol": 0.001,
+                "total_displacement": 1.3227160687374635,
+                "verdict": "settled (no chain descending in the final window)",
+                "window": 10
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "prior_atom",
+                "mean_confidence": 0.012785418819024608,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 0.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": true,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 1.0,
+                  "mean_pairwise_rms_distance": 0.0,
+                  "median_pairwise_rms_distance": 0.0,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.3937007874015748,
+                  "mean_pairwise_rms_distance": 5.067702438801603e-08,
+                  "median_pairwise_rms_distance": 2.9802322387695312e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 1000,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 12.257778916242774,
+                "dim": 2048,
+                "mean_coordinate_std": 2.030287139399561e-08,
+                "n": 128,
+                "n_distinct_states": 2,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.3937007874015748,
+                  "mean_pairwise_rms_distance": 5.067702438801603e-08,
+                  "median_pairwise_rms_distance": 2.9802322387695312e-08,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 1.0,
+                "total_variance": 3.2721087904434446e-12
+              },
+              "stability": {
+                "atom_rms_radius": 0.600577764414973,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.6884026768628375,
+                "settled_rms": 1.014017105102539,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 46.94251012802124
+            },
+            "zero_step": {
+              "arm": "zero_step",
+              "coupling_strength": 0.0492573053355369,
+              "displacement_from_launch": {
+                "max": 0.0,
+                "rms": 0.0
+              },
+              "dynamics": {
+                "accepted_fraction": NaN,
+                "displacement_final_step": NaN,
+                "displacement_mean": NaN,
+                "displacement_step_1": NaN,
+                "energy_absolute_change": 0.0,
+                "energy_final": -404.6633837223053,
+                "energy_first": -404.6633837223053,
+                "energy_is_flat": true,
+                "energy_relative_drop": 0.0,
+                "frac_still_descending": NaN,
+                "mean_accept_prob": NaN,
+                "n_chains": 128,
+                "n_steps": 0,
+                "n_still_descending": 0,
+                "note": "\u2b50 dreaming's laundering control: it took ESSENTIALLY ALL of that spoke's apparent gain, so it is never optional.",
+                "relative_tail_drop": {
+                  "max": NaN,
+                  "mean": NaN,
+                  "min": NaN
+                },
+                "rule": "zero-step control: no step was taken, so nothing can descend",
+                "tol": 0.001,
+                "total_displacement": 0.0,
+                "verdict": "ZERO-STEP CONTROL (the launch, decoded; no chain was run)",
+                "window": 0,
+                "zero_step": true
+              },
+              "launch": {
+                "clamp_threshold": 0.5,
+                "launch_mode": "clamp_atom",
+                "mean_confidence": 0.012785418819024608,
+                "mean_n_clamped": 0.0,
+                "mean_n_relaxed": 5.0,
+                "n_wells": 5
+              },
+              "request_strength": 1.0,
+              "separation": {
+                "launch": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0036909448818897637,
+                  "mean_pairwise_rms_distance": 0.6497298841103806,
+                  "median_pairwise_rms_distance": 0.6696440170307032,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "settled": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0036909448818897637,
+                  "mean_pairwise_rms_distance": 0.6497298841103806,
+                  "median_pairwise_rms_distance": 0.6696440170307032,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                }
+              },
+              "settle_cfg": {
+                "metropolis": true,
+                "sigma_scale_end": 1.0,
+                "sigma_scale_start": 4.0,
+                "step_size": 0.2,
+                "steps": 0,
+                "temp_end": 0.0,
+                "temp_start": 0.0,
+                "trace_every": 1
+              },
+              "settled_spread": {
+                "atom_participation_ratio": 12.257778916242774,
+                "dim": 2048,
+                "mean_coordinate_std": 0.35826566693117257,
+                "n": 128,
+                "n_distinct_states": 104,
+                "note": "\u26d4 n_distinct_states is NOT falsifier 2: continuous states are trivially distinct and that number is worthless. Falsifier 2 is the distinct FACTOR TUPLES the EXTERNAL CLASSIFIER reads off the DECODED IMAGES (PREREG \u00a75.2).",
+                "pairwise": {
+                  "all_states_identical": false,
+                  "collapse_frac": 0.01,
+                  "frac_pairs_collapsed": 0.0036909448818897637,
+                  "mean_pairwise_rms_distance": 0.6497298841103806,
+                  "median_pairwise_rms_distance": 0.6696440170307032,
+                  "min_pairwise_rms_distance": 0.0,
+                  "n": 128,
+                  "n_total": 128,
+                  "note": "\u26d4 NOT falsifier 2 (that is distinct FACTOR TUPLES read by the EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG \u00a75.2). \u26a0 Also \u26d4 not the participation ratio: PR counts DIRECTIONS, not distinct states, and reading PR as distinctness misled this spoke once."
+                },
+                "participation_ratio": 7.44428293453073,
+                "total_variance": 452.43550607206913
+              },
+              "stability": {
+                "atom_rms_radius": 0.600577764414973,
+                "diverged": false,
+                "divergence_radius_mult": 50.0,
+                "radius_ratio": 1.2995338694681484,
+                "settled_rms": 0.78047114610672,
+                "verdict": "bounded"
+              },
+              "wall_clock_s": 0.3163602352142334
+            }
+          },
+          "bypass": {
+            "all_stages_caught": true,
+            "deliberately_bypassed_variants": {
+              "launch": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) launch, settle, read: two DIFFERENT feature tensors (max |\u0394| = 25.455909729003906) produced DIFFERENT outputs {'launch': 0.25455909967422485, 'settle': 0.02243185043334961, 'read': 0.02243185043334961}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it ",
+                "raised": true
+              },
+              "read": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) read: two DIFFERENT feature tensors (max |\u0394| = 25.455909729003906) produced DIFFERENT outputs {'launch': 0.0, 'settle': 0.0, 'read': 0.25455909967422485}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it is void.",
+                "raised": true
+              },
+              "settle": {
+                "message": "\u26d4 REQUEST-ONLY GUARANTEE VIOLATED at stage(s) settle, read: two DIFFERENT feature tensors (max |\u0394| = 25.455909729003906) produced DIFFERENT outputs {'launch': 0.0, 'settle': 0.25455909967422485, 'read': 0.25455909967422485}. A feature tensor reaches the launch/settle/read path, so the declared channel is not the store's float width and every cross-arm comparison through it is void.",
+                "raised": true
+              }
+            },
+            "real_path": {
+              "banned_names": [
+                "x_features",
+                "features",
+                "feats",
+                "feature",
+                "zf",
+                "z_features",
+                "encoded",
+                "embeddings",
+                "images",
+                "imgs",
+                "X_train",
+                "Z_train",
+                "X",
+                "Z"
+              ],
+              "bypass_alpha": 0.0,
+              "bypass_stage": "none",
+              "declared_channel": {
+                "declared_channel_bits": 65536,
+                "declared_channel_floats": 2048,
+                "dtype": "float32",
+                "note": "\u26d4 NOT K*log2(M): the settled state is continuous. The width is declared at the store's full float width and the empirical spread of the settled states is reported beside it (settled_state_spread).",
+                "parity_with": "knn_proto (also D floats to the decoder)",
+                "read_mode": "state"
+              },
+              "feature_tensor_max_abs_difference": 25.455909729003906,
+              "max_abs_delta_per_stage": {
+                "launch": 0.0,
+                "read": 0.0,
+                "settle": 0.0
+              },
+              "n_requests": 32,
+              "note": "\u2b50 The guarantee is over the WHOLE path \u2014 launch, settle and read \u2014 not over the read alone. \u26d4 soft_read(store, X, tau) takes FEATURES and is not on this path.",
+              "request_only_over_launch_settle_read": true,
+              "signature_ok": true,
+              "stages_checked": [
+                "launch_state",
+                "settle_chain",
+                "read_settled"
+              ],
+              "steps": 25
+            }
+          },
+          "decoded": {
+            "arms": {
+              "coupling_off": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9994854927062988,
+                "mean": 0.5229882597923279,
+                "min": 4.6503435441991314e-05,
+                "std": 0.3952510356903076
+              },
+              "full": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999492168426514,
+                "mean": 0.5902767181396484,
+                "min": 3.6447730963118374e-05,
+                "std": 0.3840365707874298
+              },
+              "request_off": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999690055847168,
+                "mean": 0.5908978581428528,
+                "min": 3.1261984986485913e-05,
+                "std": 0.3835453391075134
+              },
+              "request_off_launch": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9999690055847168,
+                "mean": 0.5908978581428528,
+                "min": 3.126201409031637e-05,
+                "std": 0.3835453391075134
+              },
+              "zero_step": {
+                "image_shape": [
+                  3,
+                  64,
+                  64
+                ],
+                "max": 0.9998557567596436,
+                "mean": 0.5261374115943909,
+                "min": 2.2997164705884643e-05,
+                "std": 0.3861671984195709
+              }
+            },
+            "grid_png": "/Users/user/Desktop/CHLU/.claude/outputs/gen-dynamical-read/smoke/runs/shapes3d_recon/seed_0/decoded_s0_B_SPREAD.png",
+            "n_rows": 16
+          },
+          "n_requests": 128,
+          "n_values_realised": {
+            "floor_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            },
+            "object_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            },
+            "orientation": {
+              "cardinality": 15,
+              "n_values_realised": 15
+            },
+            "scale": {
+              "cardinality": 8,
+              "n_values_realised": 8
+            },
+            "shape": {
+              "cardinality": 4,
+              "n_values_realised": 4
+            },
+            "wall_hue": {
+              "cardinality": 10,
+              "n_values_realised": 10
+            }
+          },
+          "protocol": "full (\u2b50 HEADLINE: the arm's job is RESOLUTION INSIDE the addressed wells, D1)",
+          "steering": {
+            "per_arm": {
+              "coupling_off": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 6.739015579223633,
+                "rms_delta_relative_to_spread": 0.8344109989940334,
+                "rms_delta_vs_full": 0.6234850883483887
+              },
+              "request_off": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 12.768987655639648,
+                "rms_delta_relative_to_spread": 1.4953713648975475,
+                "rms_delta_vs_full": 1.1173651218414307
+              },
+              "request_off_launch": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 12.768986701965332,
+                "rms_delta_relative_to_spread": 1.4953713648975475,
+                "rms_delta_vs_full": 1.1173651218414307
+              },
+              "zero_step": {
+                "identical_to_full": false,
+                "max_abs_delta_vs_full": 8.098000526428223,
+                "rms_delta_relative_to_spread": 1.0686919426387627,
+                "rms_delta_vs_full": 0.7985435128211975
+              }
+            },
+            "reading": "request-off moves the trajectory; the request energy is doing work. \u26d4 Whether that work is a GAIN is a scored-run question and is not answered here.",
+            "reference": "full",
+            "settled_state_rms_spread": 0.7472158074378967
+          }
+        }
+      },
+      "sigma": [
+        3.273493528366089,
+        3.649414300918579,
+        7.123139381408691,
+        4.99182653427124,
+        3.6860783100128174
+      ],
+      "spec": {
+        "budget_bytes": 4194304,
+        "label": "B",
+        "n_atoms": 512,
+        "rank": 128,
+        "role": "DECLARED LARGER"
+      }
+    }
+  },
+  "build_only": "\u26d4 BUILD ONLY. The scored run is gated: no falsifier verdict, no 3-seed cell and no external-classifier number is emitted here.",
+  "cache": {
+    "D": 2048,
+    "n_rows": 480000,
+    "reencode_check": {
+      "max_abs_delta": 0.0,
+      "n_checked": 64
+    },
+    "scope": "full"
+  },
+  "cardinalities": [
+    10,
+    10,
+    10,
+    8,
+    4,
+    15
+  ],
+  "codebook_reference": {
+    "CORNER_B": {
+      "n_distinct_codes": 8,
+      "n_rows": 72,
+      "relative_read_error": 1.7150300741195679
+    },
+    "SPREAD": {
+      "n_distinct_codes": 125,
+      "n_rows": 128,
+      "relative_read_error": 0.27597689628601074
+    }
+  },
+  "complete": true,
+  "dataset": "shapes3d",
+  "dial": "the read \u2014 continuous settling over stored atoms, \u26d4 not codebook copy-back",
+  "encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+  "factor_names": [
+    "floor_hue",
+    "wall_hue",
+    "object_hue",
+    "scale",
+    "shape",
+    "orientation"
+  ],
+  "n_values_realised": {
+    "CORNER_B": {
+      "floor_hue": {
+        "cardinality": 10,
+        "n_values_realised": 2
+      },
+      "object_hue": {
+        "cardinality": 10,
+        "n_values_realised": 2
+      },
+      "orientation": {
+        "cardinality": 15,
+        "n_values_realised": 3
+      },
+      "scale": {
+        "cardinality": 8,
+        "n_values_realised": 3
+      },
+      "shape": {
+        "cardinality": 4,
+        "n_values_realised": 1
+      },
+      "wall_hue": {
+        "cardinality": 10,
+        "n_values_realised": 2
+      }
+    },
+    "SPREAD": {
+      "floor_hue": {
+        "cardinality": 10,
+        "n_values_realised": 10
+      },
+      "object_hue": {
+        "cardinality": 10,
+        "n_values_realised": 10
+      },
+      "orientation": {
+        "cardinality": 15,
+        "n_values_realised": 15
+      },
+      "scale": {
+        "cardinality": 8,
+        "n_values_realised": 8
+      },
+      "shape": {
+        "cardinality": 4,
+        "n_values_realised": 4
+      },
+      "wall_hue": {
+        "cardinality": 10,
+        "n_values_realised": 10
+      }
+    },
+    "store_train": {
+      "floor_hue": {
+        "cardinality": 10,
+        "n_values_realised": 10
+      },
+      "object_hue": {
+        "cardinality": 10,
+        "n_values_realised": 10
+      },
+      "orientation": {
+        "cardinality": 15,
+        "n_values_realised": 15
+      },
+      "scale": {
+        "cardinality": 8,
+        "n_values_realised": 8
+      },
+      "shape": {
+        "cardinality": 4,
+        "n_values_realised": 4
+      },
+      "wall_hue": {
+        "cardinality": 10,
+        "n_values_realised": 10
+      }
+    }
+  },
+  "pretext": "recon",
+  "rows": {
+    "CORNER_B": 72,
+    "SPREAD": 128,
+    "store_train": 2048
+  },
+  "schema": "chlu-gen-dynamical-read/1",
+  "seed": 0,
+  "shipped_codebook_store": {
+    "K": 5,
+    "bits_per_read": 30.0,
+    "dim": 2048,
+    "n_modes": 64,
+    "store_bytes": {
+      "bits_per_read": 30.0,
+      "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+      "dim": 2048,
+      "dtype": "float32",
+      "n_modes": 64,
+      "n_wells": 5,
+      "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+      "store_bytes": 524288,
+      "store_bytes_per_well": [
+        77568,
+        78080,
+        146688,
+        128256,
+        93696
+      ]
+    },
+    "store_param_hash": "3e3424a1ea40017ea30caf683c58a4719e91b17a7fc600987cf324c968ad3441",
+    "store_param_hash_expected": "3e3424a1ea40017ea30caf683c58a4719e91b17a7fc600987cf324c968ad3441",
+    "store_path": "/Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_0/store_s0.pkl",
+    "well_sizes": [
+      303,
+      305,
+      573,
+      501,
+      366
+    ]
+  },
+  "wall_clock_s": 534.5056390762329,
+  "well_sizes": [
+    303,
+    305,
+    573,
+    501,
+    366
+  ]
+}

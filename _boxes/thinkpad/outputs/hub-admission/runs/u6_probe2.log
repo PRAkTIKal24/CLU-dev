@@ -1,0 +1,21 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+[   41.8s] t=0 min_k d/sig on 256 val rows:
+[   45.3s]   min_k d/sig: mean=0.7996 min=0.0000 max=1.2528  E_max mean=-34.497
+[   45.3s]   t=   0.0 min_k d/sig mean= 0.7996  E_max mean=   -34.497 refuse=0.000
+[   45.4s]   t=   1.0 min_k d/sig mean= 0.8037  E_max mean=   -34.412 refuse=0.000
+[   45.4s]   t=   2.0 min_k d/sig mean= 0.8152  E_max mean=   -34.160 refuse=0.000
+[   45.4s]   t=   3.0 min_k d/sig mean= 0.8335  E_max mean=   -33.742 refuse=0.000
+[   45.4s]   t=   4.0 min_k d/sig mean= 0.8578  E_max mean=   -33.157 refuse=0.000
+[   45.5s]   t=   6.0 min_k d/sig mean= 0.9215  E_max mean=   -31.485 refuse=0.000
+[   45.5s]   t=   8.0 min_k d/sig mean= 0.9994  E_max mean=   -29.138 refuse=0.000
+[   45.5s]   t=  12.0 min_k d/sig mean= 1.1653  E_max mean=   -22.404 refuse=0.004
+[   45.5s]   t=  16.0 min_k d/sig mean= 1.3328  E_max mean=   -12.913 refuse=0.051
+[   49.0s] n=  256  warm(5 steps)=2.9s  20 steps=0.5s -> 0.0258s/step => 1000 steps ~ 0.4 min
+[   55.4s] n= 1024  warm(5 steps)=4.1s  20 steps=2.3s -> 0.1167s/step => 1000 steps ~ 1.9 min
+[   60.8s] 200-step CLU path: |x_settled - x_launch| mean=42.969 (launch offset was 30.0); min_k d/sig after = 0.7983 before = 1.9990
+[   60.8s] PROBE2 DONE

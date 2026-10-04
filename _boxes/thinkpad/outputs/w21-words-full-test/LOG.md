@@ -1,0 +1,26 @@
+# w21 spoke/words-full-test — LOG
+
+* 2026-09-23T22:42:59Z START (START_UTC.txt). Read w15 COMMON.md + brief w21/words-full-test.md.
+* Worktree /c/chlu/worktrees/CHLU-w21-words-full-test, branch w21/words-full-test at 0455961 (w19/maze-t-symmetric tip). Clean.
+* env: `source /c/chlu/env_w3.sh`; assert OK: chlu.__file__ = C:\chlu\worktrees\CHLU-w21-words-full-test\chlu\__init__.py (jax 0.9.0 / numpy 2.4.1 / equinox 0.13.4). PYTHONPATH ':'-joined imported equinox fine; no ';' fix needed.
+* Box shared (peers w20-shapes-data-matched, w21-maze-t-clu-improve): 13.8 GB free, 16 foreign python.exe at start. Never killed; only my PIDs go to PIDS.txt.
+* Ledger: maze-t-symmetric rows 1–3/9 (w19 BOTH) + OUTCOME row present. My runs are 4–6/9. 7–9 are the peer's; untouched.
+
+## Step 1 — instrument check (before any TEST number)
+* scripts/w21_val_repro.py (NEW, check only): imports w19_symmetric and calls ITS objects (Inputs, W16.banks/cap_split, A.train_codec, A.TransitionClu, W16.make_control, W16.sc) for the CLU + 4 controls on WORDS-FULL VAL; the rival/floor/rollout blocks are skipped (the runner's rng feeds only the rival trajectory sampler, so the CLU path is unchanged). Target: n-way 0.8019 / 0.5689 / 0.8034.
+* 2026-09-23T22:48Z ⭐ INSTRUMENT CHECK PASSES. repro/REPRO_WORDS-FULL_val_seed{0,1,2}.json: CLU n-way 0.8019 / 0.5689 / 0.8034 (0.8018617021276596 / 0.5688888888888889 / 0.8033946251768034), bit-identical to w19 val/WORDS-FULL_val_seed*.json; max |Δ| = 0 over CLU + 4 controls × 4 rows × 3 seeds (repro/REPRO_COMPARE.txt). across-wells derangement [1, 0] on every seed (asserted no fixed point). Read floats 4,584. Run under XLA_FLAGS single-threaded eigen, OMP/MKL/OPENBLAS 1 (w19's "single-threaded XLA each").
+* Extension (the TEST leg genuinely needs it; the brief's deletion measurement (d)): scripts/w19_symmetric.py `deletion_rows` now also reads the CLU BEFORE the downdate on the SAME surviving-colour rows and prints it as "CLU BEFORE deletion (as fitted, same rows)" beside the post-deletion number. `read` is pure (sets last_out_of_range only); the read is outside the timed adaptation block. No other line changed; the non-deletion path (all VAL numbers) is untouched.
+* 2026-09-23T22:52:54Z PREREG-w21-words-full-test.md + .sha256 written BEFORE any TEST number (label rule: R* over all matched kinds × both budgets; σ = sd(ddof 1) of per-seed paired diff; WIN/COMPARABLE/LOSS; store gate = w19 SB2). Dry run of the rule on w19 VAL (no TEST data touched): nway LOSS (Δ̄ −0.0173 vs σ 0.0157; R* transformer-8k). Code committed 75ac652. Smoke of the edited deletion path (VAL, 60 steps, deletion=1) running; scored launch waits on it.
+* 2026-09-23T23:34:52Z smoke (VAL, 60 steps, deletion=1; smoke/, not reported) OK in 2627 s: deletion rows incl. PRE-deletion read print; rel ΔS 8.4e-16 / 6.8e-16. Ledger rows maze-t-symmetric 4/9, 5/9, 6/9 appended (>>) at 2026-09-23T23:34:52Z, BEFORE launch. Free mem 9.9 GB, 28 python.exe on box.
+* 2026-09-23T23:48:44Z scored runs launched 23:35Z (win PIDs 17336/28528/36628, PIDS.txt); codec + derangement [1,0] logged on all 3 seeds. Free mem now 4.7 GB (3 heavy of mine = my cap); nothing further launched until they finish.
+* 2026-09-24T00:47:42Z scored runs in rival training (mlp 8k done ~180 s each; box saturated, ~2x w19 wall time).
+* 2026-09-24T01:37:38Z scored runs: lstm 8k/80k/diag done (80k ~1,885 s); transformer next.
+* 2026-09-24T02:37:35Z scored runs: transformer 8k/80k/diag done on all seeds (80k ~2,835 s); cont_mlp next, then rows, rollout, deletion.
+* 2026-09-24T03:21Z scored runs done: test/WORDS-FULL_test_seed{0,1,2}.json (13,195 / 13,550 / 13,036 s). All 3 of my processes exited on their own (seed 1 lingered ~5 min in teardown after writing its JSON); **no kill issued**.
+* test/BARS-WORDS-FULL-test.json via UNCHANGED scripts/w19_bars.py (w19 fields: SB1 FAIL margin −0.0175, SB2–SB4 PASS; superseded), then scripts/w21_report.py adds HEAD_LABEL and writes TABLES.md + WORDS-FULL-TEST.json.
+* ⭐ LABEL (Head's rule, PREREG-w21): **LOSS** on nway. CLU 0.8003/0.5660/0.8076 (0.7246) vs R* matched transformer-8k 0.8252/0.5674/0.8338 (0.7421); Δ̄ −0.0175 > σ(paired) 0.0140; CLU ahead 0/3; store gate holds (ctl max 0.244; removed 0.000; across-wells DERANGED [1,0]). Mechanism: the shared pair block carries composition; the store is load-bearing for the CLU's own read but not better than a matched network given the same design. VAL same rule: LOSS (−0.0173 vs 0.0157).
+* Consistency: WORDS-FULL TEST CLU + controls == w19 BOTH TEST CLU + controls, bit-for-bit (the CLU reads true words in both).
+* Deletion (both modes, all seeds): rel ΔS ≤ 1.1e-15 PASS; downdate == fitted-without on 100 % surviving n-way; PRE→POST on same rows 0.437→0.437, 0.430→0.425 (value)/0.430, 0.683→0.683; CLU adapt 0.44–0.83 s data-free; rival retrain-without 158–187 s / 8,000 steps.
+* Correction during report: rival rollout validity is not exactly 0 (max matched 0.111, diag 0.289); TABLES/FINDINGS print the maxima; "no arm validates rollouts" kept as the limitation statement with those numbers.
+* 2026-09-24T03:33:13Z FINDINGS.md written. Ledger OUTCOME row appended (>>).
+* 2026-09-24T03:33:27Z branch committed whole (6a3db43), bundled to w21-words-full-test.bundle (branch only); git bundle verify OK. END.

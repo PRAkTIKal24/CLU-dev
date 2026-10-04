@@ -1,0 +1,23 @@
+leg: C:\chlu\outputs\w6-compose-physics\scored\test_seed2   condition = test
+49 row-4 n-way corners  (the SCORED held-out set)
+
+leg                        displ   valid distinct   novel    SEEN  seen%
+------------------------------------------------------------------------
+pca_tensor                   nan  0.9396   67.653  67.653   0.000   0.0%
+pca_settle_zerostep       0.0000  0.9396   67.653  67.653   0.000   0.0%
+pca_settle_f05_conv       0.0097  0.9342   67.265  67.265   0.000   0.0%
+pca_settle_onestep        0.0477  0.8985   64.694  64.694   0.000   0.0%
+pca_settle                0.3948  0.3971   28.592  28.592   0.000   0.0%
+pca_settle_lookup         0.3948  0.0000    0.000   0.000   0.000   0.0%
+
+columns: displ = median relative displacement launch->settled; valid = judge validity rate;
+distinct = distinct VALID tuples per corner; novel = of those, never fitted on;
+SEEN = of those, already in the fit pool.  novel is the metric rows 3 and 4 are decided in.
+
+MEASURED, on BOTH conditions: SEEN is identically 0 for every leg, including the incumbent.
+Under val the corners' rows are removed from the fit pool; under test the row-4 corners are
+Montero-shaped combinations the condition never emitted.  Either way the scored corners hold
+NO seen combinations, so distinct == novel by construction and the whole metric is carried by
+VALIDITY.  Consequence: the settled read is NOT regressing to seen combinations (charter E.4's
+banked mechanism) -- it cannot, there are none to regress to.  It is walking the state OFF the
+request, and the external classifier charges it one tuple for one.

@@ -1,0 +1,22 @@
+=== ⚠ FINDING: `git bundle create f main..branch` is UNFETCHABLE here ===
+   its prerequisite is the BUNDLE's own synthetic base commit, which this repo has never seen:
+   error: Repository lacks these prerequisite commits: cba9732…
+
+=== the fix: bundle the branch WHOLE (self-contained; no prerequisites) ===
+   bundle size: 3140878 bytes
+6378ad76155ad93260b0bfb01babd3bcecbe80bf refs/heads/agent/autonomous-hub/hub-smoke-bundle
+The bundle records a complete history.
+The bundle uses this hash algorithm: sha1
+
+=== fetch into a NAMESPACED ref on the primary machine ===
+   fetched: 6378ad7 [autonomous-hub] a CLU change that must come home
+
+=== the hub's code delta against the pin, reviewable here ===
+ chlu/core/gen_store.py          |   2 +
+ scripts/bundle_hub_workspace.sh | 914 ++++++++++++++++++++++++++++++++++++++++
+ scripts/verify_hub_workspace.sh | 484 +++++++++++++++++++++
+ tests/test_hub_workspace.py     | 708 +++++++++++++++++++++++++++++++
+ 4 files changed, 2108 insertions(+)
+
+=== ⛔ it cannot fast-forward anything: not an ancestor-descendant of main ===
+   not an ancestor of main — the Hub must review and cherry-pick/merge deliberately

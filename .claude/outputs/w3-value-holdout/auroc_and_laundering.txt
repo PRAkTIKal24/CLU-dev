@@ -1,0 +1,44 @@
+=== STRUCTURAL view (ASSERTED, tolerance 0.05 -> ceiling 0.5500) ===
+feature                                  row5[hue]           row5[shape]  cinvalid[outofrange]cinvalid[duplicatefactor]
+first_duplicate_position                    0.5000                0.5000                0.5000                0.5000
+first_factor_index                          0.5000                0.5000                0.5000                0.5000
+is_factor_order_sorted                      0.5000                0.5000                0.5000                0.5010
+last_factor_index                           0.5000                0.5000                0.5000                0.5013
+masked_request_json_len                     0.5000                0.5000                0.5000                0.5003
+max_factor_multiplicity                     0.5000                0.5000                0.5000                0.5000
+n_distinct_factors                          0.5000                0.5000                0.5000                0.5000
+n_order_inversions                          0.5000                0.5000                0.5000                0.5013
+n_redundant_terms                           0.5000                0.5000                0.5000                0.5000
+n_terms                                     0.5000                0.5000                0.5000                0.5000
+sum_factor_indices                          0.5000                0.5000                0.5000                0.5013
+
+controls: {'row5_held_out[held_out_hue]': 'row2_unseen', 'row5_held_out[held_out_shape]': 'row2_unseen', 'c_invalid[out_of_range]': 'row2_unseen', 'c_invalid[duplicate_factor]': 'a7_redundant'}
+n: {'row5_held_out[held_out_hue]': (256, 512), 'row5_held_out[held_out_shape]': (256, 512), 'c_invalid[out_of_range]': (256, 512), 'c_invalid[duplicate_factor]': (256, 512)}
+max: {'row5_held_out[held_out_hue]': 0.5, 'row5_held_out[held_out_shape]': 0.5, 'c_invalid[out_of_range]': 0.5, 'c_invalid[duplicate_factor]': 0.5013}
+pooled: {'c_invalid': 0.5006, 'row5_held_out': 0.5}
+VIOLATIONS: []
+
+=== DIAGNOSTIC view (set labels; reported, never asserted) ===
+  row5_held_out[held_out_hue] {'id_numeric_suffix': 0.9375, 'id_token_count': 1.0, 'record_key_count': 1.0}
+  row5_held_out[held_out_shape] {'id_numeric_suffix': 0.9375, 'id_token_count': 1.0, 'record_key_count': 1.0}
+  c_invalid[out_of_range] {'id_numeric_suffix': 0.9375, 'id_token_count': 0.5, 'record_key_count': 1.0}
+  c_invalid[duplicate_factor] {'id_numeric_suffix': 0.9375, 'id_token_count': 0.5, 'record_key_count': 1.0}
+
+=== DEFINITIONAL view (reported, never asserted) ===
+  row5_held_out[held_out_hue] {'has_conflicting_repeat': 0.5, 'n_distinct_values': 0.5114}
+  row5_held_out[held_out_shape] {'has_conflicting_repeat': 0.5, 'n_distinct_values': 0.5687}
+  c_invalid[out_of_range] {'has_conflicting_repeat': 0.5, 'n_distinct_values': 0.5643}
+  c_invalid[duplicate_factor] {'has_conflicting_repeat': 1.0, 'n_distinct_values': 0.8136}
+
+=== GRID-REACH diagnostic (declared extra; reported, never asserted) ===
+ row5 vs row2: {'max_distance_outside_range': 0.5, 'n_offgrid_terms': 1.0}
+ row6[oor] vs row2: {'max_distance_outside_range': 1.0, 'n_offgrid_terms': 0.5}
+ row6[dup] vs a7: {'max_distance_outside_range': 0.5, 'n_offgrid_terms': 0.5}
+
+=== THE LAUNDERING CONTROL on the SHIPPED sets ===
+ row2 accept rate : 1.0000  (n=512)
+ row5 accept rate : 0.0000  (n=512)
+ row6 accept rate : 0.0000  (n=512)
+ r5 pair = (1.0000, 1.0000)  gmean=1.0000  SCORE=1.0000  deployed_bytes=0
+ r6 pair = (1.0000, 1.0000)  gmean=1.0000  SCORE=1.0000  deployed_bytes=0
+ rows 1-4 judge_accuracy for the same rule: 0.0000  distinct_valid_novel_tuples=0

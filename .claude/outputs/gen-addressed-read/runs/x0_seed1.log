@@ -1,0 +1,84 @@
+=== gen-cell-harness: shapes3d/recon stage=cell quick=False ===
+  ⭐ PRECONDITION 1/2: classifier_gate.json gate=PASS (floor 0.95, 3 seeds)
+  ⭐ PRECONDITION 2/2: refusal_scores.json status=complete (not_run=[])
+[     0.0s] seed 1 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (hash + recipe asserted)
+[     0.0s]   ⭐ external classifier aa69b436989b2de5… (978873 params) — THE instrument, identical across every arm in this seed
+[     0.6s]   ⭐ row split: mode=stratified — val realises floor_hue 10/10 · wall_hue 10/10 · object_hue 10/10 · scale 8/8 · shape 4/4 · orientation 15/15 · max per-value count ratio 1.061
+[     0.6s] rows: store_train=32768 B=72 MS=199 fit=32256 val=512
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[     1.6s]   ⭐ cache re-encode check: 64 rows, 0/131072 elements differ (0.000%), max |delta| = 0 = 0.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+[     1.6s]   ⭐ ENFORCED (enforced=true): no caller opinion — the strict default applies
+[     1.6s] cache 9288 rows (scope=used), D=2048; re-encode check within 1 ULP of the cache dtype on 64 rows
+[     1.6s]     extending cache coverage: 32199 row(s) encoded through the frozen encoder
+[    72.8s]     extending cache coverage: 196 row(s) encoded through the frozen encoder
+[    74.9s]     extending cache coverage: 31698 row(s) encoded through the frozen encoder
+[   147.2s]     extending cache coverage: 501 row(s) encoded through the frozen encoder
+[   201.1s]   ⚠ this seed's encoder differs from the plan's (fc05e2c5f396… vs 98d326028316…), so the grouping is re-derived on its own channels — ⛔ the plan's label vector would be a size-matched RANDOM partition here
+[   201.1s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_1/store_s1.pkl (⛔ not re-trained)
+[   202.1s] ⭐ byte ledger: store 524288 B + addressing head 74240 B (⛔ coupling 163840 B EXCLUDED; ⛔ not 688128)
+[   203.4s] ⭐ no-bypass: pure codebook gather, 30 bits/read (R20's declared design constant) · ⭐ request-only path asserted on all four legs (⛔ no feature argument on ANY CLU call; gen_store.soft_read NOT imported)
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[   207.3s] ⭐ DECODER ceiling on IMAGES: external in-corner balacc=0.9472 · probe=0.9365
+[   207.3s]   ⭐ [x0] artefacts -> /Users/user/Desktop/CHLU/.claude/outputs/gen-addressed-read/runs/artefacts/shapes3d_recon/seed_1
+[   207.3s]   ⭐ [x0] byte point A: the ADDRESSED READ — ⛔ ZERO settling steps, ⛔ no coupling, ⛔ no energy trace
+[   210.4s]     [A] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.05236 (lambda* = 0.05817)
+[   210.4s]     [A] N=64 r=16 store=524,288 B coupling=524,288 B total=1,048,576 B = 2.00x budget (PREREG §3 match: True)
+[   210.4s]     [A] sigma per well = 7.9954 5.7250 5.7540 5.2841 8.6193
+[   210.4s]     ⭐⭐ [x0/A] MEASURED LEDGER: store 524,288 B + addressing head 74,240 B = 1.00x the 524,288 B budget · coupling 524,288 B ⛔ NOT DEPLOYED (bit-identical x0 without it) · byte-matched to clu field-for-field: True
+[   214.1s]   ⭐ [x0] IMAGE-space in-corner shape balacc=0.6293 (AUROC 0.7749, TPR 0.444 / TNR 0.814) · distinct on B: 22 vectors / 17 factor-tuples of 72 · probe companion 0.6415
+[   218.0s]   ⭐ [x0/A_atom_mean_lookup] IMAGE-space in-corner shape balacc=0.5273 (AUROC 0.6680, TPR 0.125 / TNR 0.930) · distinct on B: 72 vectors / 13 factor-tuples of 72 · probe companion 0.5000
+[   222.3s]   ⭐ [x0/A_row_lookup] IMAGE-space in-corner shape balacc=0.5000 (AUROC 0.5794, TPR 0.000 / TNR 1.000) · distinct on B: 3 vectors / 3 factor-tuples of 72 · probe companion 0.5000
+[   226.1s]   ⭐ [x0/A_atoms_shuffled] IMAGE-space in-corner shape balacc=0.4923 (AUROC 0.4809, TPR 0.181 / TNR 0.804) · distinct on B: 22 vectors / 22 factor-tuples of 72 · probe companion 0.5060
+[   226.1s]   ⭐ [x0] byte point B: the ADDRESSED READ — ⛔ ZERO settling steps, ⛔ no coupling, ⛔ no energy trace
+[   244.9s]     [B] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.05276 (lambda* = 0.05863)
+[   244.9s]     [B] N=512 r=128 store=4,194,304 B coupling=4,194,304 B total=8,388,608 B = 2.00x budget (PREREG §3 match: True)
+[   244.9s]     [B] sigma per well = 5.6470 4.2138 3.8620 3.6130 6.6299
+[   244.9s]     ⭐⭐ [x0/B] MEASURED LEDGER: store 4,194,304 B + addressing head 593,920 B = 8.00x the 524,288 B budget · coupling 4,194,304 B ⛔ NOT DEPLOYED (bit-identical x0 without it) · byte-matched to clu field-for-field: False
+[   248.8s]   ⭐ [x0/B] IMAGE-space in-corner shape balacc=0.7012 (AUROC 0.7595, TPR 0.583 / TNR 0.819) · distinct on B: 34 vectors / 24 factor-tuples of 72 · probe companion 0.7145
+[   252.4s]   ⭐ [x0/B_atom_mean_lookup] IMAGE-space in-corner shape balacc=0.4824 (AUROC 0.7376, TPR 0.000 / TNR 0.965) · distinct on B: 72 vectors / 17 factor-tuples of 72 · probe companion 0.4799
+[   256.2s]   ⭐ [x0/B_row_lookup] IMAGE-space in-corner shape balacc=0.5973 (AUROC 0.6453, TPR 0.722 / TNR 0.472) · distinct on B: 5 vectors / 5 factor-tuples of 72 · probe companion 0.5973
+[   260.1s]   ⭐ [x0/B_atoms_shuffled] IMAGE-space in-corner shape balacc=0.4784 (AUROC 0.4778, TPR 0.153 / TNR 0.804) · distinct on B: 34 vectors / 33 factor-tuples of 72 · probe companion 0.4330
+[   260.1s] seed 1 done in 260s
+=== done in 260s ===

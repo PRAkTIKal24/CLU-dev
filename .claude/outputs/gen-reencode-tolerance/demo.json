@@ -1,0 +1,84 @@
+{
+ "A2_cluster_one_float16_ulp": {
+  "verdict": "PASS",
+  "stats": {
+   "n_checked": 8,
+   "n_elements": 512,
+   "max_abs_delta": 0.00390625,
+   "max_ulp_delta": 1.0,
+   "n_differing": 1,
+   "frac_differing": 0.001953125,
+   "n_nonfinite": 0,
+   "cache_dtype": "float16",
+   "ulp_bound": 1.0,
+   "frac_bound": 0.01
+  },
+  "log": [
+   "  \u2b50 cache re-encode check: 8 rows, 1/512 elements differ (0.195%), max |delta| = 0.00390625 = 1.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)"
+  ]
+ },
+ "A2b_same_abs_delta_near_1.0": {
+  "verdict": "RAISED",
+  "message": "re-encoding 4 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00390625 = 4.000 ULP of the cache dtype (bound 1); 1/256 elements (0.391%) differ.  \u2b50 That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values \u2014 {'n_checked': 4, 'n_elements': 256, 'max_abs_delta': 0.00390625, 'max_ulp_delta': 4.0, 'n_differing': 1, 'frac_differing': 0.00390625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01}",
+  "log": [
+   "  \u2b50 cache re-encode check: 4 rows, 1/256 elements differ (0.391%), max |delta| = 0.00390625 = 4.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)"
+  ]
+ },
+ "A3_half_the_tensor_1ulp": {
+  "verdict": "RAISED",
+  "message": "re-encoding 8 cached rows stayed within one float16 ULP (max 1.000 ULP) but 256/512 elements (50.000%) moved, over the 1.000% bound: a rounding-boundary crossing touches a handful of elements, a population this size is a different computation \u2014 {'n_checked': 8, 'n_elements': 512, 'max_abs_delta': 0.00390625, 'max_ulp_delta': 1.0, 'n_differing': 256, 'frac_differing': 0.5, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01}",
+  "log": [
+   "  \u2b50 cache re-encode check: 8 rows, 256/512 elements differ (50.000%), max |delta| = 0.00390625 = 1.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)"
+  ]
+ },
+ "A1_true_encoder": {
+  "verdict": "PASS",
+  "stats": {
+   "n_checked": 8,
+   "n_elements": 256,
+   "max_abs_delta": 0.0,
+   "max_ulp_delta": 0.0,
+   "n_differing": 0,
+   "frac_differing": 0.0,
+   "n_nonfinite": 0,
+   "cache_dtype": "float16",
+   "ulp_bound": 1.0,
+   "frac_bound": 0.01
+  },
+  "log": [
+   "  \u2b50 cache re-encode check: 8 rows, 0/256 elements differ (0.000%), max |delta| = 0 = 0.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)"
+  ]
+ },
+ "A1_POSITIVE_CONTROL_perturbed_x1.01": {
+  "verdict": "RAISED",
+  "message": "re-encoding 8 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 1.1875 = 19.000 ULP of the cache dtype (bound 1); 256/256 elements (100.000%) differ.  \u2b50 That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values \u2014 {'n_checked': 8, 'n_elements': 256, 'max_abs_delta': 1.1875, 'max_ulp_delta': 19.0, 'n_differing': 256, 'frac_differing': 1.0, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01}",
+  "log": [
+   "  \u2b50 cache re-encode check: 8 rows, 256/256 elements differ (100.000%), max |delta| = 1.1875 = 19.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)"
+  ]
+ },
+ "A1_POSITIVE_CONTROL_perturbed_x1.0001": {
+  "verdict": "RAISED",
+  "message": "re-encoding 8 cached rows stayed within one float16 ULP (max 1.000 ULP) but 40/256 elements (15.625%) moved, over the 1.000% bound: a rounding-boundary crossing touches a handful of elements, a population this size is a different computation \u2014 {'n_checked': 8, 'n_elements': 256, 'max_abs_delta': 0.0625, 'max_ulp_delta': 1.0, 'n_differing': 40, 'frac_differing': 0.15625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01}",
+  "log": [
+   "  \u2b50 cache re-encode check: 8 rows, 40/256 elements differ (15.625%), max |delta| = 0.0625 = 1.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)"
+  ]
+ },
+ "A1_POSITIVE_CONTROL_perturbed_x1.000001": {
+  "verdict": "PASS",
+  "stats": {
+   "n_checked": 8,
+   "n_elements": 256,
+   "max_abs_delta": 0.0625,
+   "max_ulp_delta": 1.0,
+   "n_differing": 1,
+   "frac_differing": 0.00390625,
+   "n_nonfinite": 0,
+   "cache_dtype": "float16",
+   "ulp_bound": 1.0,
+   "frac_bound": 0.01
+  },
+  "log": [
+   "  \u2b50 cache re-encode check: 8 rows, 1/256 elements differ (0.391%), max |delta| = 0.0625 = 1.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)"
+  ]
+ }
+}

@@ -1,0 +1,51 @@
+  ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+  ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+  ⭐ cache coverage: shortfall 0 — nothing will be encoded
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+  ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+D=2048 n_dead=71
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+K=   5 M=  64 bits=   30.0 store= 524288 head=   74240 total=  598528 OK  | val VALID=   4/512 exact=0.0078 relerr=0.3480 | MS VALID=  0 exact=0.0000 (915s)
+K=  24 M=  43 bits=  130.2 store= 352256 head=  239424 total=  591680 OK  | val VALID=  21/512 exact=0.0410 relerr=0.3173 | MS VALID=  6 exact=0.0303 (2593s)
+K=  32 M=  38 bits=  167.9 store= 311296 head=  282112 total=  593408 OK  | val VALID=  31/512 exact=0.0605 relerr=0.3114 | MS VALID=  9 exact=0.0455 (3175s)

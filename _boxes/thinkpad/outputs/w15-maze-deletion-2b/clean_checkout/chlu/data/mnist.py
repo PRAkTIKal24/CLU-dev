@@ -1,0 +1,69 @@
+"""MNIST data loader with PCA dimensionality reduction."""
+
+import jax.numpy as jnp
+import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.datasets import fetch_openml
+
+
+def load_mnist_pca(dim: int = 32, n_samples: int = None, seed: int = None) -> tuple:
+    """
+    Load MNIST dataset and apply PCA for dimensionality reduction.
+
+    This reduces 28×28 = 784 dimensional images to a lower dimensional
+    representation suitable for CHLU training.
+
+    If dim=784 (original dimension), PCA is automatically skipped.
+
+    Args:
+        dim: Target dimensionality after PCA (default: 32).
+             Set to 784 to skip PCA and use raw pixel data.
+        n_samples: Number of samples to use (None = all)
+        seed: Seed for the subsample selection (None = non-deterministic).
+              Callers should thread config.project.seed so the training set
+              is reproducible at fixed seed (handover §7.11).
+
+    Returns:
+        (train_data, test_data, pca_model):
+            - train_data: Training data (n_train, dim)
+            - test_data: Test data (n_test, dim)
+            - pca_model: Fitted PCA object for inverse transform, or None if PCA skipped
+    """
+    # Load MNIST
+    print("Loading MNIST dataset...")
+    mnist = fetch_openml('mnist_784', version=1, as_frame=False, parser='liac-arff')
+    X = mnist.data.astype(np.float32)
+    X = (X / 127.5) - 1.0  # Normalize to [-1, 1]
+    
+    # Optionally subsample (seeded — an unseeded selection made every Exp-C
+    # training set a different 10k subset even at fixed project seed)
+    if n_samples is not None and n_samples < len(X):
+        rng = np.random.default_rng(seed)
+        indices = rng.choice(len(X), n_samples, replace=False)
+        X = X[indices]
+    
+    # Split into train/test (80/20)
+    split_idx = int(0.8 * len(X))
+    X_train = X[:split_idx]
+    X_test = X[split_idx:]
+    
+    # Skip PCA if dim matches original dimension
+    if dim == 784:
+        print("PCA skipped (dim=784, using raw pixel data)")
+        train_data = jnp.array(X_train)
+        test_data = jnp.array(X_test)
+        pca = None
+    else:
+        # Fit PCA on training data
+        print(f"Applying PCA: {X_train.shape[1]} → {dim} dimensions...")
+        pca = PCA(n_components=dim)
+        X_train_pca = pca.fit_transform(X_train)
+        X_test_pca = pca.transform(X_test)
+        
+        print(f"PCA explained variance ratio: {pca.explained_variance_ratio_.sum():.2%}")
+        
+        # Convert to JAX arrays
+        train_data = jnp.array(X_train_pca)
+        test_data = jnp.array(X_test_pca)
+    
+    return train_data, test_data, pca

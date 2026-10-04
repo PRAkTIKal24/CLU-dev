@@ -1,0 +1,60 @@
+  arm factor_aligned_balanced: already fitted, loading
+  arm knn_proto: already fitted, loading
+  cont_mlp: hidden=248 params=573,440 target=572,672 (100.1% of matched)
+    step 1/4000 mse=0.50772 (0s)
+    step 501/4000 mse=0.04715 (12s)
+    step 1001/4000 mse=0.02602 (25s)
+    step 1501/4000 mse=0.01971 (38s)
+    step 2001/4000 mse=0.01572 (49s)
+    step 2501/4000 mse=0.01387 (63s)
+    step 3001/4000 mse=0.01279 (79s)
+    step 3501/4000 mse=0.01167 (94s)
+    step 4000/4000 mse=0.01102 (112s)
+[mlp] fitted in 119s: {'hidden': 248, 'n_params': 573440, 'target_params': 572672, 'pct_of_matched': 100.13410818059901, 'steps': 4000, 'final_mse': 0.011024350300431252}
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+[mlp] clu_linear_span            e=0.1746 p=+0.554 interior=0.826
+[mlp] table_interp_knn_proto     e=0.2471 p=+0.506 interior=0.623
+[mlp] cont_input_mlp_RIVAL       e=0.1759 p=+0.565 interior=0.842
+[mlp] PAIRED clu - mlp: +0.0051 ci95=[-0.0099,+0.0203] (negative = CLU better) corners 36/34

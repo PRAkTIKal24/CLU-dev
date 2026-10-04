@@ -1,0 +1,24 @@
+[OBS-X10_val seed 2] config {'latent': 128, 'K': 2, 'n_atoms': 6, 'ridge': 1.0} rival_steps 8000 / 80000
+  CODEC latent 128  loss 0.00008  [12.3s]
+  extractor floats 21275  train tuple-acc 0.9218
+  across-wells derangement [1, 0] (no fixed point: asserted)
+  MATCHED PARAMETERS (target 25859 = CLU read floats, obs 663, out 21)
+    mlp          width  34  params   25579  (-1.08%)
+    lstm         width  27  params   25457  (-1.55%)
+    transformer  width  28  params   26961  (+4.26%)  n_layers=1 heads=2
+  MATCHED PARAMETERS (target 258590 = CLU read floats, obs 663, out 21)
+    mlp          width 267  params  258113  (-0.18%)
+    lstm         width 141  params  258473  (-0.05%)
+    transformer  width 140  params  257345  (-0.48%)  n_layers=1 heads=2
+    TRAIN rival: mlp +extractor params   25579  loss 0.0177  [90.8s]
+    TRAIN rival@10x-steps: mlp +extractor params   25579  loss 0.0000  [969.4s]
+    TRAIN rival: lstm +extractor params   25457  loss 0.0145  [125.9s]
+    TRAIN rival@10x-steps: lstm +extractor params   25457  loss 0.0001  [1196.2s]
+    TRAIN rival: transformer +extractor params   26961  loss 0.0004  [156.3s]
+    TRAIN rival@10x-steps: transformer +extractor params   26961  loss 0.0000  [1162.1s]
+  row seen  n=4000  CLU 0.8528 best-rival8k 0.8832 best-rival80k 0.8890 worst-ctl 0.3425 bseq 0.8277 bcol 0.4970  ext-tuple-acc 0.6723
+  row pair  n=2129  CLU 0.4594 best-rival8k 0.4744 best-rival80k 0.4927 worst-ctl 0.2677 bseq 0.4735 bcol 0.1334  ext-tuple-acc 0.0390
+  row nway  n=707   CLU 0.5743 best-rival8k 0.5219 best-rival80k 0.4979 worst-ctl 0.1867 bseq 0.4625 bcol 0.0580  ext-tuple-acc 0.3281
+  row value n=4000  CLU 0.4333 best-rival8k 0.6600 best-rival80k 0.7017 worst-ctl 0.1797 bseq 0.4195 bcol 0.2290  ext-tuple-acc 0.0000
+  rollout CLU validity 0.0000 per-step 0.8797
+[OBS-X10_val seed 2] wrote C:/chlu/outputs/w19-maze-t-symmetric/val\OBS-X10_val_seed2.json [4545.9s]

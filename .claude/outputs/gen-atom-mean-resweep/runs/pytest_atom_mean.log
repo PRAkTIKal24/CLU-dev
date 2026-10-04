@@ -1,0 +1,299 @@
+.................................F..<unknown>:126: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:145: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:178: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:214: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:245: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:307: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:423: DeprecationWarning: invalid escape sequence '\i'
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:126: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:145: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:178: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:214: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:245: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:307: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:423: DeprecationWarning: invalid escape sequence '\i'
+  """
+<unknown>:126: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:145: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:178: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:214: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:245: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:307: DeprecationWarning: invalid escape sequence '\i'
+<unknown>:423: DeprecationWarning: invalid escape sequence '\i'
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:126: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:145: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:178: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:214: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:245: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:307: DeprecationWarning: invalid escape sequence '\i'
+  """
+/Users/user/Desktop/CHLU-resweep/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:423: DeprecationWarning: invalid escape sequence '\i'
+  """
+                                     [100%]
+=================================== FAILURES ===================================
+_______________ test_raising_n_val_COSTS_fit_rows_arithmetically _______________
+
+    def test_raising_n_val_COSTS_fit_rows_arithmetically():
+        """⭐ ``n_fit`` is deliberately NOT a flag — and this is why it does not need to be.
+    
+        ``stratified_fit_val`` cuts ``val`` FIRST and gives ``fit`` the remainder, so a
+        larger ``n_val`` lowers the realised ``n_fit`` by exactly the rows it took.  ⛔ The
+        trade-off is arithmetic and unavoidable; a sweep report that does not price it is
+        reporting identification bought by hobbling the comparators.
+        """
+        from chlu.data.gen_rowsplit import stratified_fit_val
+    
+        rng = np.random.default_rng(3)
+        n_pool = 2048
+        pool = np.arange(n_pool, dtype=np.int64)
+        labels = np.stack([rng.integers(0, c, n_pool) for c in (10, 10, 10, 8, 4, 15)], 1)
+        n_fit_asked = 1_984  # the 32,256-analogue: pool - the small val cut
+    
+        small_fit, small_val, _ = stratified_fit_val(pool, labels, n_fit_asked, 64, 0)
+        big_fit, big_val, _ = stratified_fit_val(pool, labels, n_fit_asked, 512, 0)
+    
+>       assert small_val.size == 64 and big_val.size == 512
+E       assert (64 == 64 and 64 == 512)
+E        +  where 64 = array([   3,   13,   25,   38,   52,   81,  134,  204,  211,  281,  309,\n        350,  359,  361,  372,  400,  404,  4...28, 1346, 1348, 1393, 1425, 1435, 1487, 1519, 1531, 1582,\n       1601, 1648, 1672, 1738, 1758, 1797, 1877, 1885, 1901]).size
+E        +  and   64 = array([   3,   13,   25,   38,   52,   81,  134,  204,  211,  281,  309,\n        350,  359,  361,  372,  400,  404,  4...28, 1346, 1348, 1393, 1425, 1435, 1487, 1519, 1531, 1582,\n       1601, 1648, 1672, 1738, 1758, 1797, 1877, 1885, 1901]).size
+
+tests/test_gen_atom_mean.py:620: AssertionError
+
+--------- coverage: platform darwin, python 3.11.13-final-0 ----------
+Name                                                              Stmts   Miss  Cover
+-------------------------------------------------------------------------------------
+chlu/__init__.py                                                     15      0   100%
+chlu/__main__.py                                                      3      3     0%
+chlu/chlu.py                                                         40     40     0%
+chlu/cli/__init__.py                                                  7      7     0%
+chlu/cli/data_cmd.py                                                186    186     0%
+chlu/cli/eval_cmd.py                                                132    132     0%
+chlu/cli/experiment_cmd.py                                         1507   1507     0%
+chlu/cli/project_cmd.py                                              59     59     0%
+chlu/cli/train_cmd.py                                               182    182     0%
+chlu/cli/utils_cmd.py                                                58     58     0%
+chlu/config.py                                                     2444     88    96%
+chlu/core/__init__.py                                                 4      0   100%
+chlu/core/admission.py                                               70     70     0%
+chlu/core/baselines.py                                               62     43    31%
+chlu/core/blocks.py                                                 752    752     0%
+chlu/core/chlu_unit.py                                              155    120    23%
+chlu/core/clu_controller.py                                         218    218     0%
+chlu/core/clu_system.py                                             846    846     0%
+chlu/core/controller.py                                             316    316     0%
+chlu/core/emission_head.py                                          148    148     0%
+chlu/core/factored_store.py                                         654    496    24%
+chlu/core/feature_launch.py                                         134    134     0%
+chlu/core/friction_field.py                                         132    101    23%
+chlu/core/gen_alloc.py                                              194    194     0%
+chlu/core/gen_atoms.py                                              217     19    91%
+chlu/core/gen_bridge.py                                             547    444    19%
+chlu/core/gen_certificate.py                                        277    277     0%
+chlu/core/gen_compose.py                                            239    202    15%
+chlu/core/gen_dream.py                                              382    311    19%
+chlu/core/gen_encoders.py                                           222    222     0%
+chlu/core/gen_landscape.py                                          582    582     0%
+chlu/core/gen_navigate.py                                           170    170     0%
+chlu/core/gen_request.py                                            199    149    25%
+chlu/core/gen_store.py                                              623    537    14%
+chlu/core/gen_whiten.py                                             236    236     0%
+chlu/core/implicit_grad.py                                          147    147     0%
+chlu/core/integrators.py                                             86     80     7%
+chlu/core/lattice.py                                                226    170    25%
+chlu/core/memory_potentials.py                                      477    334    30%
+chlu/core/monitors.py                                               582    582     0%
+chlu/core/multiplicity_read.py                                      426    426     0%
+chlu/core/multiwell_read.py                                         447    345    23%
+chlu/core/novelty_read.py                                           105    105     0%
+chlu/core/null_arms.py                                              620    620     0%
+chlu/core/placement.py                                              151    151     0%
+chlu/core/potentials.py                                             131     80    39%
+chlu/core/psi_readout.py                                            417    417     0%
+chlu/core/regularization.py                                          29     25    14%
+chlu/core/shard_store.py                                            226    226     0%
+chlu/core/shell_atoms.py                                            161    161     0%
+chlu/core/soft_certificate.py                                       158    158     0%
+chlu/core/store_lifecycle.py                                        289    289     0%
+chlu/core/transforms.py                                              32     26    19%
+chlu/core/twins.py                                                  127     78    39%
+chlu/core/well_lifecycle.py                                         349    349     0%
+chlu/data/__init__.py                                                 7      0   100%
+chlu/data/band_selection.py                                          66     66     0%
+chlu/data/circle_vacuum.py                                           12      9    25%
+chlu/data/corpora.py                                                 71     32    55%
+chlu/data/dsprites.py                                               102    102     0%
+chlu/data/enwik8.py                                                  82     54    34%
+chlu/data/figure8.py                                                 17     14    18%
+chlu/data/gen_rowsplit.py                                            77     40    48%
+chlu/data/gen_splits.py                                             502    404    20%
+chlu/data/industrial/__init__.py                                     10      5    50%
+chlu/data/industrial/base.py                                        112     66    41%
+chlu/data/industrial/mimii.py                                        35     35     0%
+chlu/data/industrial/skab.py                                         56     56     0%
+chlu/data/industrial/smd_tsb.py                                      42     42     0%
+chlu/data/industrial/tep_rieth.py                                    73     73     0%
+chlu/data/industrial/voraus_ad.py                                    98     98     0%
+chlu/data/mnist.py                                                   29     24    17%
+chlu/data/mqar.py                                                    40     34    15%
+chlu/data/seq_tasks.py                                               22     22     0%
+chlu/data/shapes3d.py                                               156    156     0%
+chlu/data/sine_waves.py                                              15     11    27%
+chlu/data/two_timescale_orbits.py                                    18     14    22%
+chlu/data/wikitext.py                                                54     54     0%
+chlu/eval/__init__.py                                                 6      0   100%
+chlu/eval/_tsb_vendor/__init__.py                                     0      0   100%
+chlu/eval/_tsb_vendor/affiliation/__init__.py                         0      0   100%
+chlu/eval/_tsb_vendor/affiliation/_affiliation_zone.py               29     29     0%
+chlu/eval/_tsb_vendor/affiliation/_integral_interval.py             208    208     0%
+chlu/eval/_tsb_vendor/affiliation/_single_ground_truth_event.py      25     25     0%
+chlu/eval/_tsb_vendor/affiliation/generics.py                        57     57     0%
+chlu/eval/_tsb_vendor/affiliation/metrics.py                         50     50     0%
+chlu/eval/_tsb_vendor/basic_metrics.py                              476    476     0%
+chlu/eval/_tsb_vendor/metrics.py                                     38     38     0%
+chlu/eval/attribution.py                                            331    331     0%
+chlu/eval/baselines.py                                               95     62    35%
+chlu/eval/byte_ledger.py                                            166     91    45%
+chlu/eval/cafe_model.py                                             162    162     0%
+chlu/eval/clu_scorer.py                                             294    294     0%
+chlu/eval/config.py                                                 150     62    59%
+chlu/eval/dividend.py                                               161    117    27%
+chlu/eval/fb4_gate.py                                               102    102     0%
+chlu/eval/gen_attribution.py                                        112    112     0%
+chlu/eval/gen_cert_eval.py                                          122    122     0%
+chlu/eval/gen_classifier.py                                         137    137     0%
+chlu/eval/gen_probe.py                                              120     81    32%
+chlu/eval/harness.py                                                233    193    17%
+chlu/eval/metrics.py                                                 47     35    26%
+chlu/eval/race.py                                                   332    332     0%
+chlu/eval/rivals/__init__.py                                          7      0   100%
+chlu/eval/rivals/c3_mamba2.py                                       161    161     0%
+chlu/eval/rivals/c3_registry.py                                      48     48     0%
+chlu/eval/rivals/deltanet.py                                        109     66    39%
+chlu/eval/rivals/fit.py                                             136     98    28%
+chlu/eval/rivals/gdn2_lm.py                                         314    200    36%
+chlu/eval/rivals/gen_knn.py                                         201    146    27%
+chlu/eval/rivals/gen_lace.py                                        274    212    23%
+chlu/eval/rivals/ledger.py                                           88     56    36%
+chlu/eval/rivals/mamba2.py                                          147     97    34%
+chlu/eval/rivals/ttt.py                                             129     85    34%
+chlu/eval/rollout_diag.py                                            48     48     0%
+chlu/eval/splits.py                                                  45     40    11%
+chlu/eval/text_slices.py                                            290    290     0%
+chlu/experiments/__init__.py                                         11      0   100%
+chlu/experiments/cl_baselines.py                                    352    352     0%
+chlu/experiments/exp_a_stability.py                                 159    145     9%
+chlu/experiments/exp_anti_erosion.py                                469    469     0%
+chlu/experiments/exp_b_noise.py                                     234    219     6%
+chlu/experiments/exp_bprime_rivals.py                               488    488     0%
+chlu/experiments/exp_c2w11_nulls.py                                 592    592     0%
+chlu/experiments/exp_c2w11_organizer.py                             690    690     0%
+chlu/experiments/exp_c2w11_substrate.py                             608    608     0%
+chlu/experiments/exp_c3_rival_gdn2.py                               130    130     0%
+chlu/experiments/exp_c_dreaming.py                                  211    198     6%
+chlu/experiments/exp_capture_armA.py                                136    136     0%
+chlu/experiments/exp_capture_armB.py                                161    161     0%
+chlu/experiments/exp_capture_strong_phi.py                          220    220     0%
+chlu/experiments/exp_cat_test.py                                    393    393     0%
+chlu/experiments/exp_cl_entry.py                                    780    780     0%
+chlu/experiments/exp_clu_system.py                                  344    344     0%
+chlu/experiments/exp_cluformer_pilot.py                             552    552     0%
+chlu/experiments/exp_controller_mvp.py                              271    271     0%
+chlu/experiments/exp_d_goldstone.py                                 152    136    11%
+chlu/experiments/exp_designed_mechanism.py                          584    584     0%
+chlu/experiments/exp_dim_scaling.py                                 382    382     0%
+chlu/experiments/exp_fb4_gate.py                                    247    247     0%
+chlu/experiments/exp_gated_write.py                                 250    250     0%
+chlu/experiments/exp_gen_atom_mean.py                               469    311    34%
+chlu/experiments/exp_gen_attribution.py                             242    242     0%
+chlu/experiments/exp_gen_baselines.py                               799    799     0%
+chlu/experiments/exp_gen_bridge.py                                  523    477     9%
+chlu/experiments/exp_gen_cell.py                                    633    564    11%
+chlu/experiments/exp_gen_certificate.py                             381    381     0%
+chlu/experiments/exp_gen_classifier.py                              310    310     0%
+chlu/experiments/exp_gen_codebook_alloc.py                          426    426     0%
+chlu/experiments/exp_gen_codebook_exponent.py                       309    309     0%
+chlu/experiments/exp_gen_compose.py                                 612    550    10%
+chlu/experiments/exp_gen_dream.py                                   458    409    11%
+chlu/experiments/exp_gen_dynamical_read.py                          367    367     0%
+chlu/experiments/exp_gen_encoder.py                                 281    281     0%
+chlu/experiments/exp_gen_navigate.py                                360    360     0%
+chlu/experiments/exp_gen_pretrain.py                                261    261     0%
+chlu/experiments/exp_gen_store.py                                   431    386    10%
+chlu/experiments/exp_gen_variance_eq.py                             434    434     0%
+chlu/experiments/exp_hopfield_capacity.py                           434    434     0%
+chlu/experiments/exp_lattice.py                                     234    206    12%
+chlu/experiments/exp_learned_memory.py                              294    294     0%
+chlu/experiments/exp_memory_gym.py                                  474    474     0%
+chlu/experiments/exp_minus_physics.py                               203    176    13%
+chlu/experiments/exp_null_arms.py                                   443    443     0%
+chlu/experiments/exp_paid_access.py                                 402    402     0%
+chlu/experiments/exp_persistent_store.py                            306    306     0%
+chlu/experiments/exp_phi_geometry.py                                335    335     0%
+chlu/experiments/exp_phi_particle.py                                496    496     0%
+chlu/experiments/exp_phi_read_in.py                                 357    357     0%
+chlu/experiments/exp_phi_stream.py                                  315    315     0%
+chlu/experiments/exp_placement_probe.py                             224    224     0%
+chlu/experiments/exp_potential_class.py                             377    377     0%
+chlu/experiments/exp_primitive_harness.py                           518    518     0%
+chlu/experiments/exp_psi_residual.py                                292    292     0%
+chlu/experiments/exp_retrieval.py                                   456    456     0%
+chlu/experiments/exp_retry_compute.py                               521    521     0%
+chlu/experiments/exp_route3_attribution.py                          468    468     0%
+chlu/experiments/exp_s1_gamma_field.py                              196    196     0%
+chlu/experiments/exp_sequential_write.py                            547    547     0%
+chlu/experiments/exp_sharded_store.py                               467    467     0%
+chlu/experiments/exp_ssb_shell.py                                   538    538     0%
+chlu/experiments/exp_tierii_cardinality.py                          305    305     0%
+chlu/experiments/exp_tierii_read.py                                 223    223     0%
+chlu/experiments/exp_traj_write.py                                  173    173     0%
+chlu/experiments/exp_trajectory_read.py                             726    726     0%
+chlu/experiments/exp_v1_calibration.py                              548    512     7%
+chlu/experiments/exp_v1_gate.py                                     358    333     7%
+chlu/experiments/exp_v1_hopfield_gate.py                            212    188    11%
+chlu/experiments/exp_v1_wormhole.py                                 464    424     9%
+chlu/experiments/exp_well_lifecycle.py                              347    347     0%
+chlu/experiments/exp_write_ceiling.py                               323    323     0%
+chlu/experiments/goldstone_harness.py                               145    104    28%
+chlu/experiments/kt/__init__.py                                       2      2     0%
+chlu/experiments/kt/clu_path.py                                     175    175     0%
+chlu/experiments/kt/postproc.py                                     230    230     0%
+chlu/experiments/kt/reduced_xy.py                                   210    210     0%
+chlu/experiments/kt/runner.py                                       135    135     0%
+chlu/experiments/memory_gym.py                                      283    283     0%
+chlu/experiments/phi_encoders.py                                    312    312     0%
+chlu/experiments/plot_primitive_harness.py                          103    103     0%
+chlu/experiments/stream_sources.py                                  141    141     0%
+chlu/experiments/usage_telemetry.py                                 115    115     0%
+chlu/project.py                                                      81     81     0%
+chlu/training/__init__.py                                             5      0   100%
+chlu/training/calibration.py                                         80     57    29%
+chlu/training/losses.py                                              95     62    35%
+chlu/training/replay_buffer.py                                       23     16    30%
+chlu/training/train.py                                              209    196     6%
+chlu/training/train_baselines.py                                     90     79    12%
+chlu/training/train_cluformer.py                                    820    820     0%
+chlu/training/train_generative.py                                   124    114     8%
+chlu/training/train_memory.py                                       167    167     0%
+chlu/utils/__init__.py                                                3      0   100%
+chlu/utils/checkpoints.py                                            45     34    24%
+chlu/utils/metrics.py                                                58     48    17%
+chlu/utils/plotting.py                                             1048   1013     3%
+-------------------------------------------------------------------------------------
+TOTAL                                                             57331  51799    10%
+Coverage XML written to file coverage.xml
+
+=========================== short test summary info ============================
+FAILED tests/test_gen_atom_mean.py::test_raising_n_val_COSTS_fit_rows_arithmetically
+1 failed, 35 passed in 16.92s
+rc=1

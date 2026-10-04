@@ -1,0 +1,56 @@
+[02:56:10] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[02:56:10]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[02:56:10]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[03:05:17] [c0] argmax=0.4468(10) linear=0.7130(35) linear+p16=0.7847(34) | sr_lin=0.1111 medoid=0.6875 knn=0.7685 | store=524288 head=74240 identical=True [545.7s]
+[03:16:31] [c1] argmax=0.5069(9) linear=0.6042(38) linear+p16=0.7500(42) | sr_lin=0.0556 medoid=0.6088 knn=0.7060 | store=524288 head=74240 identical=True [674.6s]
+[03:29:06] [c2] argmax=0.5602(11) linear=0.5903(28) linear+p16=0.6088(35) | sr_lin=0.0833 medoid=0.6644 knn=0.7940 | store=524288 head=74240 identical=True [754.8s]
+[03:44:45] [c3] argmax=0.4421(5) linear=0.6852(39) linear+p16=0.7222(48) | sr_lin=0.0000 medoid=0.6111 knn=0.8519 | store=524288 head=74240 identical=True [939.4s]
+[04:02:44] [c4] argmax=0.6597(7) linear=0.7361(30) linear+p16=0.8264(34) | sr_lin=0.1204 medoid=0.8009 knn=0.8194 | store=524288 head=74240 identical=True [1078.6s]
+[04:23:43] [c5] argmax=0.6782(15) linear=0.6806(40) linear+p16=0.7477(55) | sr_lin=0.0556 medoid=0.6806 knn=0.8056 | store=524288 head=74240 identical=True [1258.3s]
+E0917 02:28:21.020578   10340 contiguous_section_memory_manager.cc:101] allocateMappedMemory failed with error: The paging file is too small for this operation to complete.
+E0917 02:28:21.031827   10340 contiguous_section_memory_manager.cc:139] Failed to satisfy suballocation request for 16
+LLVM ERROR: Unable to allocate section memory!
+exit=127
+exit=127

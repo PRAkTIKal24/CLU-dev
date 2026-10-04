@@ -1,0 +1,2119 @@
+"""Interchangeable sequence-mixing primitives ("the drop-in slot").
+
+The primitive-harness (w20) evaluates the CLU as a *general* AI primitive rather
+than a special case of one. That framing dictates the evaluation: every primitive
+— MLP, GRU, S4D/Mamba-style SSM, causal self-attention, and the CLU — implements
+ONE interface,
+
+    block(x: (T, d_model)) -> (T, d_model),   causal in T,
+
+and is dropped into the identical model (embedding + learned positional
+embedding -> n_layers x [block + residual + LayerNorm] -> linear head). Nothing
+else varies: same optimizer, schedule, data, LR grid, parameter budget.
+
+**What the CLU had to concede to fit** (reported, not engineered around; see
+`.claude/outputs/primitive-harness.md` Item 1):
+
+1. *Driven, not autonomous.* Input enters as a momentum impulse ``p += W_in x_t``
+   ("write current"). A driven Hamiltonian does not conserve H — the slot
+   requires the unit to absorb an exogenous token stream, which the autonomous
+   formulation has no channel for.
+2. *Dissipative, not symplectic.* ``gamma > 0`` was assumed to be required for
+   the state to be readable (w19 clu-retrieval-demo §6: retrieval accuracy 1.000
+   at gamma=0.02 vs 0.813 at gamma=0), so the block is conformal-symplectic, not
+   symplectic. ⚠ **That justification was superseded**: w20
+   ``learned-landscape-write-read`` §5 showed the 0.813-at-gamma=0 figure is a
+   SINGLE-PHASE artifact (with a relaxation phase, fidelity is exactly invariant
+   to gamma_read), and ``address-space-dimension-scaling`` §4 showed identity
+   retrieval at gamma=0 is fine (0.969-1.000) while only *value* retrieval needs
+   dissipation. ``gamma`` is therefore a swept knob, not a fixed concession —
+   see ``chlu/experiments/exp_primitive_harness.py:run_gamma_read_sweep``.
+3. *Carry width 2*d_clu.* The state is (q, p), so parameter matching solves for
+   ``d_clu`` separately from ``d_model``.
+
+Everything else about the slot is shared. Blocks are ``eqx.Module`` PyTrees;
+randomness is explicit PRNGKey threading; the recurrent blocks use ``lax.scan``.
+"""
+
+from dataclasses import dataclass, fields
+from typing import Any, Dict, NamedTuple, Optional, Tuple
+
+import equinox as eqx
+import jax
+import jax.numpy as jnp
+import numpy as np
+
+from chlu.core.chlu_unit import CHLU
+
+#: Primitives registered for the harness (order is the canonical report order).
+PRIMITIVES = ("mlp", "gru", "ssm", "attention", "clu")
+
+#: ⭐ C2W4 tier-iii memory cells (``StreamBlock``'s swappable slot). ⛔ These are
+#: NOT ``CLUBlock``: ``"clu_store"`` holds the **full C2W1 store**, the others are
+#: the system-level swap controls. See :class:`StreamBlock`.
+MEMORY_CELLS = ("clu_store", "gru_matched", "ttt_matched", "none", "echo")
+
+#: CLU-internal read modes (w21). See ``CLUBlock`` for the semantics.
+CLU_READ_MODES = ("endpoint", "trajectory")
+
+#: CLU-internal write-current modes (w21, EXPLORATORY). See ``CLUBlock``.
+CLU_WRITE_MODES = ("linear", "gated")
+
+
+class MLPBlock(eqx.Module):
+    """Token-wise 2-layer MLP. **Control primitive: it cannot mix across time.**
+
+    Included deliberately as the floor of the harness — any primitive that fails
+    to beat it on a recall task has not learned to move information in time.
+    """
+
+    l1: eqx.nn.Linear
+    l2: eqx.nn.Linear
+
+    def __init__(self, d_model: int, width: int, *, key):
+        k1, k2 = jax.random.split(key)
+        self.l1 = eqx.nn.Linear(d_model, width, key=k1)
+        self.l2 = eqx.nn.Linear(width, d_model, key=k2)
+
+    def __call__(self, x, *, key=None):
+        return jax.vmap(lambda t: self.l2(jax.nn.gelu(self.l1(t))))(x)
+
+
+class GRUBlock(eqx.Module):
+    """Single-direction GRU over the sequence + linear read-out."""
+
+    cell: eqx.nn.GRUCell
+    out: eqx.nn.Linear
+    hidden: int = eqx.field(static=True)
+
+    def __init__(self, d_model: int, width: int, *, key):
+        k1, k2 = jax.random.split(key)
+        self.hidden = width
+        self.cell = eqx.nn.GRUCell(d_model, width, key=k1)
+        self.out = eqx.nn.Linear(width, d_model, key=k2)
+
+    def __call__(self, x, *, key=None):
+        def step(h, x_t):
+            h = self.cell(x_t, h)
+            return h, h
+
+        _, hs = jax.lax.scan(step, jnp.zeros(self.hidden), x)
+        return jax.vmap(self.out)(hs)
+
+
+class SSMBlock(eqx.Module):
+    """Diagonal state-space block (S4D-style), optionally *selective* (Mamba-like).
+
+    Real diagonal recurrence ``h_t = a * h_{t-1} + b * u_t`` with
+    ``a = exp(-dt * softplus(log_decay))``, per-channel. With
+    ``selective=True`` the timescale is input-dependent,
+    ``dt_t = softplus(w_dt . x_t + b_dt)``, which is the one ingredient that
+    distinguishes Mamba (S6) from S4D: a content-dependent gate on how much of
+    the past is retained. Followed by a gated output projection (the standard
+    Mamba-block output gate).
+    """
+
+    in_proj: eqx.nn.Linear
+    out_proj: eqx.nn.Linear
+    gate_proj: eqx.nn.Linear
+    dt_proj: Optional[eqx.nn.Linear]
+    log_decay: jnp.ndarray
+    b: jnp.ndarray
+    d_skip: jnp.ndarray
+    selective: bool = eqx.field(static=True)
+
+    def __init__(self, d_model: int, width: int, *, selective: bool = True, key):
+        k1, k2, k3, k4, k5 = jax.random.split(key, 5)
+        self.in_proj = eqx.nn.Linear(d_model, width, key=k1)
+        self.gate_proj = eqx.nn.Linear(d_model, width, key=k2)
+        self.out_proj = eqx.nn.Linear(width, d_model, key=k3)
+        self.selective = selective
+        self.dt_proj = eqx.nn.Linear(d_model, 1, key=k4) if selective else None
+        # Log-spaced decay rates: covers fast and slow timescales at init
+        # (the HiPPO-lite trick that makes a diagonal SSM usable out of the box).
+        self.log_decay = jnp.linspace(jnp.log(0.01), jnp.log(1.0), width)
+        self.b = jax.random.normal(k5, (width,)) * 0.5
+        self.d_skip = jnp.ones(width)
+
+    def __call__(self, x, *, key=None):
+        u = jax.vmap(self.in_proj)(x)  # (T, width)
+        gate = jax.nn.silu(jax.vmap(self.gate_proj)(x))
+        decay = jax.nn.softplus(self.log_decay)  # (width,) > 0
+
+        if self.selective:
+            dt = jax.nn.softplus(jax.vmap(self.dt_proj)(x))  # (T, 1)
+        else:
+            dt = jnp.ones((x.shape[0], 1))
+
+        def step(h, inp):
+            u_t, dt_t = inp
+            a = jnp.exp(-dt_t * decay)
+            h = a * h + (1.0 - a) * self.b * u_t
+            return h, h
+
+        _, hs = jax.lax.scan(step, jnp.zeros(u.shape[-1]), (u, dt))
+        y = hs + self.d_skip * u  # local skip (the "D" term)
+        return jax.vmap(self.out_proj)(y * gate)
+
+
+class AttentionBlock(eqx.Module):
+    """Causal multi-head self-attention (exact softmax attention)."""
+
+    attn: eqx.nn.MultiheadAttention
+    n_heads: int = eqx.field(static=True)
+
+    def __init__(self, d_model: int, width: int, *, n_heads: int = 4, key):
+        # width is the total qkv size; round to a multiple of n_heads.
+        width = max(n_heads, (width // n_heads) * n_heads)
+        self.n_heads = n_heads
+        self.attn = eqx.nn.MultiheadAttention(
+            num_heads=n_heads,
+            query_size=d_model,
+            qk_size=width // n_heads,
+            vo_size=width // n_heads,
+            output_size=d_model,
+            key=key,
+        )
+
+    def __call__(self, x, *, key=None):
+        T = x.shape[0]
+        causal = jnp.tril(jnp.ones((T, T), dtype=bool))
+        return self.attn(x, x, x, mask=causal)
+
+
+class CLUBlock(eqx.Module):
+    """The CLU in the drop-in slot: an input-driven CHLU recurrence.
+
+    Per token, ``clu_steps`` Verlet steps of the learned Hamiltonian are taken,
+    with the token injected as a momentum impulse before the first one::
+
+        p <- p + W_in x_t                  (write current)
+        (q, p) <- CHLU.step((q, p), dt, gamma)   x clu_steps
+        y_t = W_out [q ; p]                (linear read of the full state)
+
+    The read is linear on the *whole* state, matching every other block's
+    linear read-out. The CHLU unit itself (``potential_net``, ``log_mass``) is
+    used unmodified — this file adds no physics, only the input/output shell.
+
+    **Read modes** (w21 ``gamma-read-sweep`` Item 2). The two read types want
+    opposite dissipation, so the read is a knob, not a constant:
+
+    - ``"endpoint"`` (default, the shipped behaviour): read the *settled* state
+      after all ``clu_steps`` sub-steps, ``y_t = W_out [q_K ; p_K]``. Wants
+      ``gamma > 0`` — the value is only readable once it is a fixed point.
+    - ``"trajectory"``: read the whole intra-token rollout — the Prop-11 fiber,
+      ``y_t = W_out [q_1 ; p_1 ; ... ; q_K ; p_K]``. Wants ``gamma -> 0``,
+      because the oscillation *is* the signal and dissipation erases it.
+
+    ⚠ **At ``clu_steps == 1`` the two modes are the SAME MAP, exactly** (the
+    fiber has one element), including bit-identical initialisation, since
+    ``w_out`` has the same shape and consumes the same key. The read-mode axis
+    is only non-degenerate for ``clu_steps > 1``; this is asserted by
+    ``test_trajectory_read_is_identity_at_one_step``.
+
+    **Write modes** (w21, EXPLORATORY — ``"linear"`` is the shipped default and
+    the only mode any published number uses):
+
+    - ``"linear"``: ``p += W_in x_t``. The write current is *unconditionally*
+      linear in the token, so the state accumulates ``sum_t a v_t`` and
+      ``sum_t b m_t`` but never their product. Measured consequence
+      (`gamma-read-sweep` memory probe): at the readout the state decodes
+      ``sum_t v_t`` at R^2 = 1.000 and the marker positions at R^2 = 0.99 at
+      EVERY gamma, but the adding target -- a value x marker *conjunction* --
+      at R^2 ~ 0.07.
+    - ``"gated"``: ``p += (W_in x_t) * sigmoid(W_gate x_t)``. Supplies the one
+      ingredient the GRU (gates), the selective SSM (input-dependent Delta) and
+      attention (softmax QK) all have and the CLU did not: a multiplicative,
+      input-conditioned write. Costs ``d_clu`` under the matched-parameter
+      search, exactly like the fiber read.
+    """
+
+    clu: CHLU
+    w_in: eqx.nn.Linear
+    w_gate: Optional[eqx.nn.Linear]
+    w_out: eqx.nn.Linear
+    dt: float = eqx.field(static=True)
+    gamma: float = eqx.field(static=True)
+    clu_steps: int = eqx.field(static=True)
+    d_clu: int = eqx.field(static=True)
+    read_mode: str = eqx.field(static=True)
+    write_mode: str = eqx.field(static=True)
+
+    def __init__(
+        self,
+        d_model: int,
+        width: int,
+        *,
+        hidden: int = 32,
+        dt: float = 0.1,
+        gamma: float = 0.05,
+        clu_steps: int = 1,
+        kinetic_mode: str = "newtonian_learned",
+        potential_type: str = "mlp",
+        read_mode: str = "endpoint",
+        write_mode: str = "linear",
+        key,
+    ):
+        if read_mode not in CLU_READ_MODES:
+            raise ValueError(
+                f"Unknown CLU read_mode {read_mode!r}. Must be one of {CLU_READ_MODES}."
+            )
+        if write_mode not in CLU_WRITE_MODES:
+            raise ValueError(
+                f"Unknown CLU write_mode {write_mode!r}. Must be one of {CLU_WRITE_MODES}."
+            )
+        # NOTE: still a 3-way split, and the gate key is folded in separately, so
+        # the default ("linear") block is initialised BIT-IDENTICALLY to the w20
+        # shipped harness. A 4-way split here would silently re-randomise every
+        # published CLU cell.
+        k1, k2, k3 = jax.random.split(key, 3)
+        self.d_clu = width
+        self.dt = dt
+        self.gamma = gamma
+        self.clu_steps = clu_steps
+        self.read_mode = read_mode
+        self.write_mode = write_mode
+        self.clu = CHLU(
+            dim=width,
+            hidden=hidden,
+            kinetic_mode=kinetic_mode,
+            potential_type=potential_type,
+            key=k1,
+        )
+        self.w_in = eqx.nn.Linear(d_model, width, key=k2)
+        self.w_gate = (
+            eqx.nn.Linear(d_model, width, key=jax.random.fold_in(k2, 1))
+            if write_mode == "gated"
+            else None
+        )
+        # The trajectory read consumes the whole fiber, so its read-in width is
+        # clu_steps x larger. Parameter matching then solves for a SMALLER
+        # d_clu at the same budget -- the fiber is paid for out of state width,
+        # which is exactly the trade-off the sweep is meant to expose.
+        n_read = clu_steps if read_mode == "trajectory" else 1
+        self.w_out = eqx.nn.Linear(2 * width * n_read, d_model, key=k3)
+
+    def __call__(self, x, *, key=None):
+        kicks = jax.vmap(self.w_in)(x)  # (T, d_clu)
+        if self.w_gate is not None:  # EXPLORATORY: input-conditioned write current
+            kicks = kicks * jax.nn.sigmoid(jax.vmap(self.w_gate)(x))
+        trajectory = self.read_mode == "trajectory"
+
+        def step(state, kick):
+            q, p = state
+            p = p + kick  # driven Hamiltonian: the write current
+            fiber = []
+            for _ in range(self.clu_steps):
+                q, p = self.clu.step((q, p), self.dt, self.gamma)
+                if trajectory:
+                    fiber += [q, p]
+            return (q, p), jnp.concatenate(fiber if trajectory else [q, p])
+
+        z0 = jnp.zeros(self.d_clu)
+        _, states = jax.lax.scan(step, (z0, z0), kicks)
+        return jax.vmap(self.w_out)(states)
+
+
+def make_block(name: str, d_model: int, width: int, *, key, **kwargs):
+    """Construct a primitive by name. `width` is the primitive's capacity knob.
+
+    ``width`` is what the harness solves for when matching parameter budgets; its
+    meaning is primitive-specific by necessity (GRU hidden units, SSM state
+    channels, attention qkv width, CLU latent dimension) — matching is on the
+    resulting *parameter count*, which is the comparable quantity.
+    """
+    if name == "mlp":
+        return MLPBlock(d_model, width, key=key)
+    if name == "gru":
+        return GRUBlock(d_model, width, key=key)
+    if name == "ssm":
+        return SSMBlock(d_model, width, selective=kwargs.get("ssm_selective", True), key=key)
+    if name == "attention":
+        return AttentionBlock(d_model, width, n_heads=kwargs.get("n_heads", 4), key=key)
+    if name == "clu":
+        return CLUBlock(
+            d_model,
+            width,
+            hidden=kwargs.get("clu_hidden", 32),
+            dt=kwargs.get("clu_dt", 0.1),
+            gamma=kwargs.get("clu_gamma", 0.05),
+            clu_steps=kwargs.get("clu_steps", 1),
+            kinetic_mode=kwargs.get("clu_kinetic_mode", "newtonian_learned"),
+            potential_type=kwargs.get("clu_potential_type", "mlp"),
+            read_mode=kwargs.get("clu_read_mode", "endpoint"),
+            write_mode=kwargs.get("clu_write_mode", "linear"),
+            key=key,
+        )
+    raise ValueError(f"Unknown primitive: {name}. Must be one of {PRIMITIVES}.")
+
+
+class SequenceModel(eqx.Module):
+    """Embedding -> n_layers x [block + residual + LayerNorm] -> linear head.
+
+    Held FIXED across primitives; only ``blocks`` changes. Supports both a
+    discrete-token input (``vocab_size`` set, embedding lookup) and a continuous
+    vector input (``in_dim`` set, linear encoder), so one model class serves the
+    recall and the regression/state-tracking families.
+    """
+
+    embed: eqx.Module
+    pos: jnp.ndarray
+    blocks: list
+    norms: list
+    head: eqx.nn.Linear
+    discrete: bool = eqx.field(static=True)
+
+    def __init__(
+        self,
+        primitive: str,
+        *,
+        d_model: int,
+        width: int,
+        out_dim: int,
+        max_len: int,
+        vocab_size: Optional[int] = None,
+        in_dim: Optional[int] = None,
+        n_layers: int = 2,
+        key,
+        **block_kwargs,
+    ):
+        if (vocab_size is None) == (in_dim is None):
+            raise ValueError("Specify exactly one of vocab_size (discrete) or in_dim (continuous).")
+        keys = jax.random.split(key, n_layers + 3)
+        self.discrete = vocab_size is not None
+        if self.discrete:
+            self.embed = eqx.nn.Embedding(vocab_size, d_model, key=keys[0])
+        else:
+            self.embed = eqx.nn.Linear(in_dim, d_model, key=keys[0])
+        # Learned positional embedding, identical for every primitive. Attention
+        # requires one; the recurrent primitives do not but receive it anyway so
+        # the slot is genuinely identical (this is a concession to fairness that
+        # slightly *helps* the recurrent baselines).
+        self.pos = jax.random.normal(keys[1], (max_len, d_model)) * 0.02
+        self.blocks = [
+            make_block(primitive, d_model, width, key=keys[2 + i], **block_kwargs)
+            for i in range(n_layers)
+        ]
+        self.norms = [eqx.nn.LayerNorm(d_model) for _ in range(n_layers)]
+        self.head = eqx.nn.Linear(d_model, out_dim, key=keys[-1])
+
+    def __call__(self, x, *, key=None):
+        """x: (T,) int tokens or (T, in_dim) floats -> (T, out_dim)."""
+        h = jax.vmap(self.embed)(x)
+        h = h + self.pos[: h.shape[0]]
+        for block, norm in zip(self.blocks, self.norms, strict=True):
+            h = jax.vmap(norm)(h + block(h))
+        return jax.vmap(self.head)(h)
+
+
+# ==========================================================================
+# ⭐ TIER III (C2W4) — the FULL C2W1 CLU store as a streaming block's memory
+# ==========================================================================
+"""
+⛔ **Read this before using anything below.** ``CLUBlock`` (above) is *not* the
+memory. It is a driven-Hamiltonian recurrence with **no store, no admission, no
+placement** — the w20/w21 object — and the Head's C2W4 ruling rules it out as a
+tier-iii arm. The memory slot below holds the **C2W1 full store**
+(:class:`chlu.core.clu_system.LearnedVStore` + the controller + the 13 monitors),
+used through its public API and never edited.
+
+**Why the design is shaped the way it is** (each rule is a measured lesson):
+
+1. ``d q*/d q0 = 0`` **exactly**, so a settled-point read sends *no* gradient to
+   its read-in (measured ``||dL/dphi||``: 0.0 implicit · 2.654e-9 unroll ·
+   6.421e-3 trajectory). ⇒ the block trains end-to-end **only** through the
+   trajectory read. ``read_mode="settled_point"`` is retained solely as the
+   pre-registered *control* that must measure ~0.
+   ⚠ **This is a statement about the READ, and it is the whole story only when
+   ``atom_place_radius == 0``.** At the shipped run-1/2/3 value (0.3), H1b's
+   localized placement assigns ``phi``'s output into the atom centers inside the
+   write (:class:`StreamMemoryConfig.atom_place_radius`), which is a second,
+   *write-side* path to ``phi`` that neither this theorem nor the sign-SGD inner
+   write closes — measured at **27 % of layer-0's ``phi`` gradient** (charter
+   §A22), so the settled-point control's floor is non-zero there.
+   ``erosion_partition = True`` closes the write boundary and restores the rule.
+2. ``orgdiv-prereg`` **Theorem O1**: under a settled-point read the image of
+   ``x -> q*`` is exactly the set of minima of ``V_theta`` (measured: 2 distinct
+   settled points from 4000 queries), so a settled-point-read block is
+   reproducible by an ``N_min``-row table **for every reader**. The trajectory
+   read is mandatory twice over.
+3. ``gamma`` / ``M`` are trainable selectors **only** through that same channel;
+   friction is the ~14x stronger channel, so ``gamma`` is the selector this
+   block trains by default.
+4. **Chunk granularity is mandatory, not a concession** (charter §2.2: memory
+   operations at chunk granularity, "as Titans-class memories do — fair"). A
+   settle per token does not run at sequence scale. ⭐ **Every swap-control cell
+   gets the identical chunk convention** or the comparison is not matched.
+5. **Read before write, always** (:class:`StreamBlock`): the query for chunk
+   ``c`` is ``phi(pool(chunk c-1))`` run against a store holding chunks
+   ``0..c-2``. Reading a store that was just handed the answer is an echo, not a
+   retrieval, and it is the cheapest way to launder a win. It is also what makes
+   the block causal: no token ever sees its own chunk's pooled summary.
+"""
+
+
+@dataclass(frozen=True)
+class StreamMemoryConfig:
+    """Static knobs of the streaming memory slot (⚠ **not** ``chlu/config.py``).
+
+    ``chlu/config.py`` is standing read-only to C2 engineers, so — exactly as
+    :class:`~chlu.core.clu_system.CluSystemConfig` and
+    :class:`~chlu.core.psi_readout.PsiSpec` do — the config lives next to the
+    code that reads it, with a ``from_mapping`` override path for a
+    ``cluformer:`` block in a project YAML.
+    """
+
+    #: Tokens per memory operation (§0.3 mitigation 1). One read + one write per
+    #: chunk, in EVERY arm.
+    chunk: int = 64
+    #: Verlet steps of phase 1 (address acquisition, ``gamma_address``).
+    address_steps: int = 64
+    #: Verlet steps of phase 2 (the read rollout, ``gamma_read``).
+    read_steps: int = 64
+    #: Strided trajectory buffer handed to psi.
+    traj_stride: int = 8
+    #: ⭐ ``"trajectory"`` is the only READ mode that trains ``phi`` (design
+    #: rule 1). ``"settled_point"`` is the pre-registered zero-gradient control
+    #: — ⚠ zero-gradient only at ``atom_place_radius == 0``; the placement path
+    #: gives it a non-zero floor otherwise (see ``atom_place_radius``).
+    read_mode: str = "trajectory"
+    #: Inner masked-write steps per chunk. ⚠ The shipped store uses 300; at chunk
+    #: granularity that is unaffordable, so this is the §0.3 re-budget — the same
+    #: objective, fewer steps, differentiably unrolled (the Titans/TTT
+    #: convention). **Monitor #13 (maturity, floor 40) trips as a result and that
+    #: is a reported artifact, not a bug.**
+    write_inner_steps: int = 4
+    #: Inner-write step size. ⭐ The inner optimiser is **sign-SGD**, not plain
+    #: SGD, and that is load-bearing, not a detail. The shipped store digs its
+    #: wells with **300 Adam steps at 3e-3** — and Adam moves a parameter by
+    #: ~``lr`` per step *regardless of gradient magnitude*. At
+    #: ``atom_depth_init = 1e-4`` the landscape starts essentially flat, so the
+    #: write objective's gradients are ~1e-4 and plain SGD moves the atoms by
+    #: ~1e-6 per step: MEASURED, the read output then moved by **7.5e-9**, i.e.
+    #: below float32 resolution — the memory was arithmetically inert and would
+    #: have been reported as a null. Sign-SGD reproduces Adam's step-size
+    #: behaviour **statelessly**; a real Adam would add two moment tensors per
+    #: sequence (2x the store's state bytes) and break the D2 byte ledger.
+    write_lr: float = 0.05
+    #: Monte-Carlo perturbations in the masked write objective.
+    write_n_perturb: int = 8
+    #: ⭐ ``True`` = sign-SGD inner write (the default and the shipped
+    #: configuration; see ``write_lr``). ``False`` = plain SGD, which is kept
+    #: **only** as a diagnostic: ``jnp.sign`` has zero derivative, so sign-SGD
+    #: severs the INNER LOOP's ``d(store state)/d(phi)``. Running the gradient
+    #: probe with ``write_sign=False`` separates that cause from the theorem's
+    #: (``d q*/d q0 = 0``).
+    #:
+    #: ⛔ **That severance is conditional on ``atom_place_radius == 0`` and is
+    #: FALSE in the shipped run-1/2/3 config** (``atom_place_radius = 0.3``), so
+    #: the sign write alone does NOT make the trajectory read the only channel
+    #: to ``phi``. H1b's localized placement assigns ``phi``'s output straight
+    #: into the slot's atom centers (``centers[:, :addr] = z[:addr] + jig``,
+    #: :meth:`CluStoreCell._write_stages` step 1b) OUTSIDE the sign-gated loop —
+    #: a plain differentiable assignment, hence a live write-side gradient path.
+    #: MEASURED (charter §A22, Advisor-verified): ``phi``'s layer-0 gradient
+    #: 0.0908 -> 0.0659 under P1, i.e. **27 % of it was flowing through the
+    #: write**. ``erosion_partition = True`` is what closes it (P1 leg 1
+    #: ``stop_gradient``s the state the write returns); only with the partition
+    #: on is the read the sole channel. Pinned by
+    #: ``test_the_placement_path_is_a_live_gradient_channel_to_phi``.
+    write_sign: bool = True
+    #: psi hidden width. ⭐ Chosen so a **two-sided-matched** TTT-class swap
+    #: exists (see :func:`solve_matched_ttt`); declared in PREREG §0.
+    psi_hidden: int = 128
+    #: ⭐ Output gain of the shared ``phi``. **The anti-collapse initialisation**
+    #: (§A13 design rule: allocation collapse is a gradient ATTRACTOR — once the
+    #: policy reaches a degenerate corner its own gradient dies and it cannot
+    #: leave, so it must be *initialised away from it*). At gain 1.0 a tanh MLP
+    #: on LayerNormed pooled summaries emits tightly-clustered addresses and the
+    #: admission gate refuses most chunks on the first step; the gain spreads the
+    #: chunk latents across the address ball so admission starts LIVE. Identical
+    #: in every arm (it is part of the shared shell) and reported as a flag.
+    phi_gain: float = 1.0
+    #: ⭐ Confidence-gated retry rounds (0 = off). Live per ruling 0.1; the round
+    #: is always computed and gated by the plan's verdict (a data-dependent step
+    #: count is not a static shape), so it is charged to the Verlet budget.
+    retry_rounds: int = 1
+    #: Trainable friction selector (the 14x channel). ``False`` pins gamma.
+    trainable_gamma: bool = True
+    #: Trainable mass selector (the weaker channel; kept live per ruling 0.1).
+    trainable_mass: bool = True
+    #: Intra-chunk causal depthwise conv width. Identical in every arm, so the
+    #: memory carries only CROSS-chunk information and the swap is meaningful.
+    conv_kernel: int = 4
+    #: Token-wise MLP expansion (the "assimilation/decoder" of §A13). Identical
+    #: in every arm.
+    mlp_mult: int = 4
+
+    # -- `pilot-placement-probe` H1: the N98 LOCALIZED ATOM INIT --------------
+    #: ⭐ **H1.** Radius of the ball each atom group is initialised in, around
+    #: its own ``atom_group_centers`` row, **on the leading ``L`` (address)
+    #: coordinates only** (N46: localizing the payload axis would hand the write
+    #: the value it is supposed to learn). ``0.0`` (default) = the historical
+    #: scatter and the construction is **bit-identical** — the localized draw
+    #: uses a folded key, so even the default RNG stream is untouched.
+    #: N98's designed band is ``~2 * atom_width``.
+    #: ⚠ ``CluSystemConfig.atom_local_radius`` exists but is **not read** by
+    #: :class:`~chlu.core.clu_system.LearnedVStore` (it never forwards it to
+    #: ``DesignFreedomPotential``); this knob is the streaming block's own path
+    #: to the same shipped mechanism and reproduces it bit-for-bit.
+    atom_local_radius: float = 0.0
+    #: ``(capacity, L)`` localization targets as a **tuple of tuples of floats**
+    #: (the config is a static field, so it must stay hashable). ``None`` =>
+    #: no localization regardless of ``atom_local_radius``.
+    atom_group_centers: Optional[tuple] = None
+    #: ⭐ **H1b — localized placement AT WRITE** (the streaming form of H1).
+    #: ``atom_local_radius`` is N98 as it ships: a *static* init localization
+    #: around targets fixed before the stream starts. In a streaming block the
+    #: site an item will occupy is **not known at init** — the controller decides
+    #: it when the chunk arrives — so the static lever localizes a group's atoms
+    #: around a point the item it later holds has no reason to be near. This
+    #: knob re-draws the written slot's atom ADDRESS coordinates into a ball of
+    #: this radius around the **incoming chunk's own address** at write time,
+    #: which is what "atoms seeded near the phi-image of the chunk" means once
+    #: the stream is live. Payload coordinates are untouched (N46). The offsets
+    #: are a fixed per-atom pattern (a parameter-free geometric jig), so no byte
+    #: of the STATE column changes and C3 locality is preserved: only the
+    #: slot's own rows move, and a refused offer still leaves ``V_theta``
+    #: bit-identical. ``0.0`` (default) = off, bit-identical.
+    #: ⚠ **It is also a gradient channel**: the assignment is differentiable in
+    #: ``z``, so at ``> 0`` the outer objective reaches ``phi`` (and the atom
+    #: leaves) THROUGH THE WRITE, which the sign write does not close — see
+    #: ``write_sign`` for the 27 % measurement and ``erosion_partition``.
+    atom_place_radius: float = 0.0
+
+    # -- `pilot-placement-probe` H2: the C2W2 TRAJECTORY WRITE TERM ----------
+    #: ⭐ **H2.** Coefficient of :func:`~chlu.training.train_memory.
+    #: trajectory_margin_penalty` inside the inner write objective. ``0.0``
+    #: (default) leaves the shipped objective **bit-identical** (the term is
+    #: added only when the coefficient is a Python float > 0, so not one extra
+    #: op is traced). C2W2's measured band is ``{0.03, 0.3, 3, 30}``.
+    write_lambda_traj: float = 0.0
+    #: Verlet steps of the trajectory term's own rollout (defaults to the read's
+    #: phase-2 budget when 0, so the path the write shapes is the path the read
+    #: traverses).
+    write_traj_steps: int = 0
+    #: Launches per item in the trajectory term (kept small: the term costs
+    #: ``n_launch * steps`` differentiated force evaluations per inner step).
+    write_traj_n_launch: int = 2
+
+    # -- `psi-payload-residual` (charter §A20.3(a)): THE PAYLOAD RESIDUAL -----
+    #: ⭐ **The read-out fix.** ``True`` routes the read's own PAYLOAD
+    #: coordinates around ``psi``'s pooling and into the decode as a gated
+    #: additive residual. ``False`` (default) is the shipped read-out and is
+    #: **bit-identical** — the gate leaf does not exist at all, so the parameter
+    #: count and the byte ledger are unchanged.
+    #:
+    #: *Why it exists.* `pilot-placement-probe` §6 measured the two-phase
+    #: relaxation DELIVERING the payload (``q*[payload]`` moves 30-50 % of the
+    #: way to the true value when the store is live and **0.000** when it is
+    #: blank) and ``psi`` then compressing the between-item spread a further
+    #: **7-25x** (``q*`` spread 0.053-0.114 -> decoded 0.0065-0.0117), leaving
+    #: the decode near-constant and acquisition exactly at chance.
+    #:
+    #: ⛔ **Payload coordinates ONLY, and that is a leak guard, not a
+    #: preference.** The read launches on the payload-zero manifold
+    #: (``q0[addr:addr+m] = 0`` by construction), so a payload-restricted
+    #: residual carries **zero** information about ``phi(x)`` at launch — it
+    #: cannot become N68's query bypass. A residual on the ADDRESS block would
+    #: be exactly that bypass and is deliberately not offered.
+    psi_payload_residual: bool = False
+    #: Where the residual's payload comes from: ``"q_star"`` (the settled point,
+    #: the channel §6 measured), ``"traj_mean"`` (the mean over the strided
+    #: trajectory's payload slots) or ``"both"`` (one gate row each).
+    psi_residual_source: str = "q_star"
+    #: Gate initialisation. ``1.0`` = **pass-through** (measure first, then let
+    #: it train); with ``"both"`` the gain is split evenly across the two rows.
+    psi_residual_gain: float = 1.0
+    #: ``False`` freezes the gate at its init (``stop_gradient``) — the
+    #: designed-mechanism control against a gate that trains itself to zero.
+    psi_residual_trainable: bool = True
+
+    # -- `c2w6-anti-erosion` P1: THE STOP-GRADIENT PARTITION (§A20.6) ---------
+    #: ⭐ **P1.** ``True`` puts a ``stop_gradient`` at the **write boundary**: the
+    #: outer LM objective loses its gradient path into (i) the written content
+    #: (the :class:`StoreState` a write returns) and (ii) the store's
+    #: depth-determining **initial-atom leaves** (``centers``/``log_width``/
+    #: ``amp``, reached through the chunk-0 read and through the state chain).
+    #: Written content and the write machinery are then owned by the
+    #: **write/decay/evict** channels only, and forgetting happens through
+    #: designed channels — never as an optimiser side effect.
+    #:
+    #: *The mechanism it kills* (N223, measured): the write is differentiably
+    #: unrolled inside the outer step, so ``dL_outer/d(amp)`` is non-zero
+    #: (9.3e-03 at the run-2 toy config) and under a **net-cost** store the
+    #: optimiser uses it to teach the writer to stop writing — fresh-write depth
+    #: ``0.0288 -> 4.95e-63`` after 200 outer steps (`pilot-placement-probe` §7).
+    #:
+    #: ⛔ **The READ channel is deliberately untouched.** ``psi``, the friction
+    #: and mass selectors, and ``phi``'s QUERY gradient (the read launches at
+    #: ``q0 = z``) all keep their gradients; only the write channel is severed.
+    #: A gradient probe separating the two is the acceptance evidence (K1).
+    #: ``False`` (default) is the shipped block and is **bit-identical** — not
+    #: one extra op is traced, and the parameter count and byte ledger are
+    #: unchanged (no leaf is added: this is a gradient-plumbing flag).
+    erosion_partition: bool = False
+
+    # -- `c2w6-anti-erosion` I1: REFRESH-ON-REWRITE MONOTONICITY --------------
+    #: ⭐ **I1 (the Head's invariant).** ``True`` guarantees that an admitted
+    #: **rewrite** — a write into a slot that already holds an item — never
+    #: leaves the slot's well SHALLOWER at the incoming item's own site than the
+    #: state the inner write started from. The slot's ``amp`` rows are rescaled
+    #: by ``f = sqrt(D_before / D_after) in [1, refresh_max_gain]`` when, and
+    #: only when, the write reduced the fitted depth.
+    #:
+    #: This guards the **interference** channel (collapse modes #9/#12) — a
+    #: channel adjacent to, and measured separately from, P1's optimiser
+    #: erosion. ``False`` (default) is the shipped write, bit-identically.
+    #:
+    #: ⛔ **Designed channels are excluded from the accounting by construction:**
+    #: the reference depth is taken AFTER lifetimes/decay, eviction re-draw and
+    #: localized placement have been applied (the state the inner write starts
+    #: from), so designed decay is never scored as erosion and the guard never
+    #: fights a designed verb. Eviction rewrites (``reset``) are excluded from
+    #: the event set for the same reason.
+    #:
+    #: ⛔ **K5 (not a hidden capacity increase):** the guard only ever RESTORES
+    #: the pre-write depth — it can never deepen a well beyond what the write
+    #: objective's own hinge (``write_margin``) already reached — the factor is
+    #: capped at ``refresh_max_gain``, an optional absolute ``amp`` ceiling caps
+    #: it further, and **no leaf and no state byte is added** (the byte ledger is
+    #: identical on every arm). A violation-free write multiplies ``amp`` by
+    #: exactly ``1.0`` and is therefore **bit-identical** to the unguarded write.
+    refresh_monotonic: bool = False
+    #: Ceiling on the per-event ``amp`` refresh factor (depth factor is its
+    #: square). ``4.0`` = at most 16x of a single event's depth restoration.
+    refresh_max_gain: float = 4.0
+    #: Optional absolute ceiling on ``|amp|`` after a refresh (``0.0`` = off).
+    #: The factor is clipped so the refreshed rows never exceed it; it can only
+    #: ever REDUCE the factor, never shrink an amplitude, so I1-b's bit-identity
+    #: on violation-free writes holds at any value.
+    refresh_amp_ceiling: float = 0.0
+
+    # -- `csf3-memory-fit`: BACKWARD-MEMORY levers (compute traded for memory) --
+    #: ⭐ **Rung 1 — checkpoint the chunk scan.** The backward through
+    #: ``lax.scan(step, ...)`` in :meth:`StreamBlock.__call__` otherwise stacks
+    #: every within-chunk intermediate — the ``address_steps + read_steps``
+    #: (+ retry) Verlet unroll over ``n_atoms`` atoms AND the
+    #: ``write_inner_steps`` differentiated inner writes — for **all**
+    #: ``n_chunks`` iterations, of all ``n_layers`` layers, of all ``batch``
+    #: lanes, simultaneously. With this on, the scan stores only the
+    #: chunk-boundary :class:`StoreState` carries and recomputes one chunk
+    #: interior at a time inside the backward: activations divided by
+    #: ``n_chunks * n_layers``, at ~2x the chunk-interior FLOPs.
+    #: ``False`` (default) = the historical full-backprop scan, bit-identical.
+    #: ⚠ Bit-identity is asserted in ``tests/test_csf3_memory_fit.py``
+    #: (``jax.checkpoint`` replays the SAME primitives, so the recomputed
+    #: residuals are bit-equal; only the schedule changes).
+    remat_chunks: bool = False
+    #: ⭐ **Rung 2 — checkpoint the read's Verlet rollout in segments.** ``0``
+    #: (default) = one call per phase, exactly as shipped. ``n > 0`` splits each
+    #: phase's ``steps`` into ``n`` equal segments, chains ``(q, p)`` between
+    #: them **unchanged**, and wraps each segment in ``eqx.filter_checkpoint`` —
+    #: so within one chunk interior the peak is one segment's force-evaluation
+    #: residuals instead of the whole 2-phase (+ retry) unroll. Requires each
+    #: phase's step count to be divisible by ``n`` (else the value is ignored
+    #: and the shipped single call is used — reported through
+    #: :meth:`remat_read_plan`). The strided trajectory handed to ``psi`` is
+    #: re-assembled with the global stride phase, so the read output is
+    #: bit-identical (asserted).
+    #: ⛔ **MEASURED: do NOT enable this alongside ``remat_chunks``.** At the
+    #: pilot store geometry the two rungs reach the SAME floor independently
+    #: (rung 1 alone 648.2 MB, rung 2 alone at ``n=4`` 658.4 MB, both against
+    #: 1935.1 MB with neither, at ``n_chunks=2, batch=1, n_layers=1``) — they are
+    #: alternative routes, not composable ones — and stacking them costs +0.65 %
+    #: (``n=4``) to +1.05 % (``n=16``) of peak for nothing. It is kept because it
+    #: is the only lever that acts *inside* one read, which is where the
+    #: remaining ~645 MB/lane floor lives if the read budget ever grows.
+    remat_read_segments: int = 0
+
+    @classmethod
+    def from_mapping(cls, overrides: Optional[dict] = None) -> "StreamMemoryConfig":
+        known = {f.name for f in fields(cls)}
+        kw = {k: v for k, v in dict(overrides or {}).items() if k in known}
+        return cls(**kw)
+
+    def as_flag_table(self) -> Dict[str, Any]:
+        base = StreamMemoryConfig()
+        return {f.name: getattr(self, f.name) for f in fields(self)
+                if getattr(self, f.name) != getattr(base, f.name)}
+
+
+class WritePlan(NamedTuple):
+    """⭐ The controller's decisions for one sequence, as traceable arrays.
+
+    **Why this exists — the decision-replay design.** The C2W1 controller
+    (:class:`~chlu.core.clu_controller.CluControllerV0`) is a mutable Python
+    object whose verbs branch on ``numpy`` values: admission, placement,
+    eviction, decay and retry are *discrete* decisions. It cannot run inside a
+    traced/differentiated forward pass — ``np.asarray(tracer)`` raises.
+
+    Rather than delete the controller (forbidden: ruling 0.1) or fake it, the
+    forward is split in two:
+
+    * **pass 1 (concrete, no gradient)** — the real controller runs on detached
+      latents and emits this plan;
+    * **pass 2 (differentiable)** — the block replays the plan with the slot
+      assignments held fixed.
+
+    Nothing about the controller is weakened: every guard fires, every verb is
+    exercised, the monitors see the real trip states. What is given up is
+    ``d(decision)/d(theta)`` — which is zero anyway (the verbs are discrete), and
+    which is exactly the quantity T3's corollary says is a gradient attractor.
+
+    Fields are all ``(n_chunks, ...)`` and are ``stop_gradient`` by construction
+    (they come from a detached pass).
+
+    Attributes:
+        slot: ``(n_chunks,)`` int32 — the atom group this chunk writes into.
+        admitted: ``(n_chunks,)`` float32 in {0, 1} — the admission gate's verdict.
+        group_scale: ``(n_chunks, K)`` float32 — per-item amplitude multiplier
+            applied BEFORE the write. Carries per-item **lifetimes** (leak) and
+            the ``decay`` verb.
+        reset: ``(n_chunks, K)`` float32 in {0, 1} — 1 = re-draw this group from
+            the initialisation distribution (eviction/deletion). ⚠ Re-draw, never
+            zero: zeroing starves the next item in the slot AND leaves a
+            membership trace (``LearnedVStore.reinit_group``).
+        sites: ``(n_chunks, K, dim)`` float32 — the live codebook, used as the
+            write objective's crowding/barrier targets. Dead slots are pushed to
+            ``+1e3`` so they are never anyone's nearest neighbour.
+        live: ``(n_chunks, K)`` float32 in {0, 1}.
+        retry: ``(n_chunks,)`` int32 — extra phase-2 rounds the confidence gate
+            asked for (0 = none).
+    """
+
+    slot: jnp.ndarray
+    admitted: jnp.ndarray
+    group_scale: jnp.ndarray
+    reset: jnp.ndarray
+    sites: jnp.ndarray
+    live: jnp.ndarray
+    retry: jnp.ndarray
+
+
+def blank_plan(n_chunks: int, capacity: int, dim: int) -> WritePlan:
+    """A plan that admits nothing — the **blank-store control** (collapse #4).
+
+    The store is read exactly as in the live arm but never written, so any bpc
+    the model still achieves through the memory path is a leak, not a retrieval.
+    """
+    return WritePlan(
+        slot=jnp.zeros((n_chunks,), dtype=jnp.int32),
+        admitted=jnp.zeros((n_chunks,), dtype=jnp.float32),
+        group_scale=jnp.ones((n_chunks, capacity), dtype=jnp.float32),
+        reset=jnp.zeros((n_chunks, capacity), dtype=jnp.float32),
+        sites=jnp.full((n_chunks, capacity, dim), 1e3, dtype=jnp.float32),
+        live=jnp.zeros((n_chunks, capacity), dtype=jnp.float32),
+        retry=jnp.zeros((n_chunks,), dtype=jnp.int32),
+    )
+
+
+def round_robin_plan(n_chunks: int, capacity: int, dim: int) -> WritePlan:
+    """A controller-free plan (every chunk admitted, slots cycled).
+
+    ⚠ **Not a substitute for the controller** — it is the *instrument* used by
+    unit tests and by the gradient measurements, where the point is the gradient
+    path and running B x L Python controllers per step would dominate the clock.
+    Any reported performance number uses the real controller's plan.
+    """
+    return WritePlan(
+        slot=jnp.arange(n_chunks, dtype=jnp.int32) % int(capacity),
+        admitted=jnp.ones((n_chunks,), dtype=jnp.float32),
+        group_scale=jnp.ones((n_chunks, capacity), dtype=jnp.float32),
+        reset=jnp.zeros((n_chunks, capacity), dtype=jnp.float32),
+        sites=jnp.full((n_chunks, capacity, dim), 1e3, dtype=jnp.float32),
+        live=jnp.zeros((n_chunks, capacity), dtype=jnp.float32),
+        retry=jnp.zeros((n_chunks,), dtype=jnp.int32),
+    )
+
+
+# --------------------------------------------------------------------------
+# the memory cells — one interface, three real implementations + 2 controls
+# --------------------------------------------------------------------------
+class NullMemoryCell(eqx.Module):
+    """⭐ **The +0 B trivial substitute** (D3): no state, no read, no parameters.
+
+    The block still has its embedding, conv, MLP, norms and residual, so this arm
+    measures *"what does the memory buy at all?"*. If a real cell does not beat
+    it, that cell's memory is inert and no swap comparison between two inert
+    cells means anything.
+    """
+
+    latent_dim: int = eqx.field(static=True)
+
+    def init_state(self):
+        return jnp.zeros((0,))
+
+    def read(self, state, z, plan_c=None, read_mode=None, verlet=None):
+        return jnp.zeros((self.latent_dim,))
+
+    def write(self, state, z, plan_c):
+        return state
+
+    def cell_ledger(self) -> Dict[str, int]:
+        return {"params": 0, "state_floats": 0, "state_bytes": 0}
+
+
+class EchoMemoryCell(eqx.Module):
+    """⭐ **The other +0 B substitute**: the read returns the query unchanged.
+
+    Costs zero bytes of storage and zero parameters, and it is the laundering
+    control for "the memory output is just a re-encoding of the current chunk".
+    ⚠ Note this cell is **one chunk behind** by the block's read-before-write
+    convention, so it is a genuine (if trivial) recurrence, not the identity.
+    """
+
+    latent_dim: int = eqx.field(static=True)
+
+    def init_state(self):
+        return jnp.zeros((self.latent_dim,))
+
+    def read(self, state, z, plan_c=None, read_mode=None, verlet=None):
+        return state
+
+    def write(self, state, z, plan_c):
+        return z
+
+    def cell_ledger(self) -> Dict[str, int]:
+        return {"params": 0, "state_floats": 0, "state_bytes": 0}
+
+
+class MatchedGRUCell(eqx.Module):
+    """The **mandatory system-level swap control**: a matched-state GRU cell.
+
+    Same chunk convention, same latent width in and out, same block around it.
+    ``read`` is query-dependent (``[h ; z] -> r``) so the control is not
+    artificially handicapped relative to an associative memory.
+
+    ⛔ **Arithmetic finding, not a choice** (task §5, D2): for a GRU
+    ``params = Theta(h^2)`` while ``state = Theta(h)``, whereas the CLU store's
+    parameters *are* its state (``params/state ~ 1.02``). Matched parameters and
+    matched state-bytes therefore **cannot both be hit**; see
+    :func:`solve_matched_gru` and :func:`swap_ledger`, which publish both columns.
+    """
+
+    cell: eqx.nn.GRUCell
+    out: eqx.nn.Linear
+    h0: jnp.ndarray
+    hidden: int = eqx.field(static=True)
+    latent_dim: int = eqx.field(static=True)
+
+    def __init__(self, latent_dim: int, hidden: int, *, key):
+        k1, k2 = jax.random.split(key, 2)
+        self.latent_dim = int(latent_dim)
+        self.hidden = int(hidden)
+        self.cell = eqx.nn.GRUCell(int(latent_dim), int(hidden), key=k1)
+        self.out = eqx.nn.Linear(int(hidden) + int(latent_dim), int(latent_dim), key=k2)
+        # A LEARNED initial state: parameters, per PREREG-Bprime §4's
+        # learned-initial-state rule. Only the per-sequence deviation is STATE.
+        self.h0 = jnp.zeros((int(hidden),))
+
+    def init_state(self):
+        return self.h0
+
+    def read(self, state, z, plan_c=None, read_mode=None, verlet=None):
+        return self.out(jnp.concatenate([state, z]))
+
+    def write(self, state, z, plan_c):
+        return self.cell(z, state)
+
+    def cell_ledger(self) -> Dict[str, int]:
+        p = int(sum(x.size for x in jax.tree_util.tree_leaves(
+            eqx.filter(self, eqx.is_inexact_array))))
+        return {"params": p, "state_floats": self.hidden,
+                "state_bytes": 4 * self.hidden}
+
+
+class MatchedTTTCell(eqx.Module):
+    """A minimal faithful **TTT-class** test-time-memory cell (the second swap).
+
+    The hidden state is a linear map ``W in R^{k x n}`` updated at test time by
+    one gradient step on a self-supervised reconstruction loss (Sun et al. 2024,
+    TTT-Linear), at **chunk granularity**::
+
+        k_c = theta_K z ;  v_c = theta_V z
+        W <- W - eta * grad_W || W k_c - v_c ||^2      (one closed-form step)
+        r  = theta_O (W q_c),   q_c = theta_Q z
+
+    ⭐ **This is the arm that can match BOTH axes.** Its state ``W`` is ``k*n``
+    floats and its parameters are ``W0`` (the learned initial state — parameters,
+    per the learned-initial-state rule) plus four thin projections, so
+    ``params/state -> 1`` exactly as the CLU store's does. ``k`` and ``n`` are
+    solved for by :func:`solve_matched_ttt`.
+
+    ⛔⭐ **``normalized_write`` — the inner loop's stability region**
+    (`pilot-ttt-nan-and-d5-wiring`, DEFECT 1). The shipped update is a raw
+    gradient step with a **global** ``eta``::
+
+        W <- W (I - eta k k^T) + eta v k^T
+
+    whose factor along ``k`` is ``1 - eta ||k||^2``, so the recursion is
+    non-expansive **only while** ``eta ||k||^2 < 2``. But ``||k||^2 = ||theta_K
+    z||^2 ~ n ||z||^2 / d`` grows with the solved ``n``, and ``n`` is set by
+    :func:`solve_matched_ttt` from the CLU cell's byte ledger — i.e. **the
+    two-sided byte match chooses the inner loop's stability, and nothing checks
+    it.** At the tier-iii pilot geometry (``d=12, k=2197, n=52``) the measured
+    ``eta ||theta_K z||^2`` at init is ``3.47`` on **100 %** of chunks and
+    ``||W||`` grows ``x8e4`` across the 16 chunks of ONE forward pass; at toy
+    (``d=3, k=571, n=9``) it is ``2.31`` on 44 % of chunks and ``||W||`` stays
+    bounded. That is why the toy scale never showed it.
+
+    ``normalized_write=True`` divides by ``||k||^2``, giving the **normalized
+    delta rule / Kaczmarz step** ``W <- W - eta (W k - v) k^T / ||k||^2`` — which
+    is what this cell's own docstring already claims ("one **closed-form** step":
+    the exact least-squares solve along ``k`` is ``eta = 1``) and what the
+    ``1/d`` factor in TTT-Linear's token-wise learning rate does. It is
+    non-expansive for every ``eta in (0, 2)`` and **scale-free in ``n``, ``d``
+    and ``||z||``**, so a future ledger solve cannot re-break it. ⛔ Default
+    ``False`` = the shipped arithmetic, bit-for-bit: this moves a PUBLISHED
+    rival column and the flip is a Hub ruling, not an engineer's.
+    """
+
+    W0: jnp.ndarray
+    theta_K: jnp.ndarray
+    theta_V: jnp.ndarray
+    theta_Q: jnp.ndarray
+    theta_O: jnp.ndarray
+    log_eta: jnp.ndarray
+    k: int = eqx.field(static=True)
+    n: int = eqx.field(static=True)
+    latent_dim: int = eqx.field(static=True)
+    normalized_write: bool = eqx.field(static=True, default=False)
+
+    def __init__(self, latent_dim: int, k: int, n: int, *, key,
+                 normalized_write: bool = False):
+        ks = jax.random.split(key, 5)
+        d = int(latent_dim)
+        self.latent_dim, self.k, self.n = d, int(k), int(n)
+        self.normalized_write = bool(normalized_write)
+        self.W0 = jnp.zeros((int(k), int(n)))
+        s = 1.0 / max(d, 1) ** 0.5
+        self.theta_K = jax.random.normal(ks[0], (int(n), d)) * s
+        self.theta_V = jax.random.normal(ks[1], (int(k), d)) * s
+        self.theta_Q = jax.random.normal(ks[2], (int(n), d)) * s
+        self.theta_O = jax.random.normal(ks[3], (d, int(k))) / max(int(k), 1) ** 0.5
+        self.log_eta = jnp.asarray(0.0)
+
+    def init_state(self):
+        return self.W0
+
+    def read(self, state, z, plan_c=None, read_mode=None, verlet=None):
+        return self.theta_O @ (state @ (self.theta_Q @ z))
+
+    def write(self, state, z, plan_c):
+        kk = self.theta_K @ z            # (n,)
+        vv = self.theta_V @ z            # (k,)
+        err = state @ kk - vv            # (k,)
+        eta = jax.nn.softplus(self.log_eta)
+        if self.normalized_write:        # static bool, never a traced value
+            eta = eta / (jnp.sum(kk * kk) + 1e-6)
+        return state - eta * jnp.outer(err, kk)
+
+    def cell_ledger(self) -> Dict[str, int]:
+        p = int(sum(x.size for x in jax.tree_util.tree_leaves(
+            eqx.filter(self, eqx.is_inexact_array))))
+        return {"params": p, "state_floats": self.k * self.n,
+                "state_bytes": 4 * self.k * self.n}
+
+
+class StoreState(NamedTuple):
+    """The CLU store's **per-sequence writable state** — the honest STATE column.
+
+    ``centers``/``log_width``/``amp`` are the three learned atom leaves. Their
+    *initialisation* lives in the cell's ``V0`` and is **PARAMETERS**; what is
+    carried here and mutated by the stream is the **STATE** (PREREG-Bprime §4's
+    learned-initial-state rule, applied to ``V_theta`` exactly as to a GRU's
+    ``h0``). ``codebook`` is the retained derived address per live item
+    (`controller-doctrine` I-1) — without it monitor #2 has no runtime form and
+    the same-keys launder cannot be built, so retaining it is *conservative*: it
+    strengthens the control we are scored against, and it is counted as state.
+    """
+
+    centers: jnp.ndarray
+    log_width: jnp.ndarray
+    amp: jnp.ndarray
+    codebook: jnp.ndarray
+
+
+#: The registered sources of the payload residual (charter §A20.3(a)).
+PSI_RESIDUAL_SOURCES: Tuple[str, ...] = ("q_star", "traj_mean")
+
+
+def psi_residual_sources(source: str) -> Tuple[str, ...]:
+    """``"q_star" | "traj_mean" | "both"`` -> the ordered gate rows.
+
+    Raises on an unknown name: a mistyped source that silently fell back to
+    ``q_star`` would be a provenance hole in the run-2 flag block.
+    """
+    s = str(source)
+    if s == "both":
+        return PSI_RESIDUAL_SOURCES
+    if s in PSI_RESIDUAL_SOURCES:
+        return (s,)
+    raise ValueError(
+        f"psi_residual_source must be one of {PSI_RESIDUAL_SOURCES + ('both',)}, "
+        f"got {source!r}")
+
+
+def fitted_well_depth(centers, log_width, amp, row_mask, z, addr_dim: int):
+    """⭐ **The erosion curve's y-axis, in traceable form** (`c2w6-anti-erosion`).
+
+    The fitted depth ``D_i`` of one atom group's well **at the item's own site on
+    the launch manifold** — i.e. the address coordinates of ``z`` with the
+    payload block zeroed, which is exactly where the read is launched.
+
+    Arithmetically identical to
+    :func:`~chlu.training.train_cluformer.cell_group_depth` (the harness's numpy
+    form, and the pilot's published convention): ``A_j = amp_j**2``,
+    ``w_j = A_j exp(-|c_j - z|^2 / (2 s_j^2 + 1e-12))``, ``D = sum_j w_j`` over
+    the group's own rows. Kept here as a jnp function because I1's guard has to
+    evaluate it INSIDE the traced write, where the numpy form cannot go.
+    """
+    zq = jnp.zeros_like(z).at[: int(addr_dim)].set(z[: int(addr_dim)])
+    A = amp ** 2
+    sw = jnp.exp(log_width)
+    d2 = jnp.sum((centers - zq[None, :]) ** 2, axis=-1)
+    w = A * jnp.exp(-d2 / (2.0 * sw ** 2 + 1e-12))
+    return jnp.sum(w * jnp.asarray(row_mask, dtype=w.dtype))
+
+
+def localize_atom_init(store, centers, radius: float, *, key):
+    """⭐ **H1 — the N98 localized atom init, applied to a built ``LearnedVStore``.**
+
+    Reproduces :class:`~chlu.core.memory_potentials.AtomDictionaryPotential`'s own
+    localization **bit-for-bit** (same ``_uniform_ball``, same owner map, same
+    ``fold_in(key, 1)`` sub-stream, same "leading ``L`` coordinates only" rule),
+    but from the outside — because
+    :class:`~chlu.core.clu_system.LearnedVStore` never forwards
+    ``CluSystemConfig.atom_local_radius`` to ``DesignFreedomPotential``, so the
+    shipped lever is unreachable through the store's own config. Bit-identity
+    with the direct construction is asserted in ``tests/test_placement_probe.py``.
+
+    Args:
+        store: a built ``LearnedVStore`` (or anything with ``.V.learned``).
+        centers: ``(n_groups, L)`` localization targets, ``L <= dim``. ⭐ **Address
+            axes only** (N46): the payload axis keeps its ``N(0, init_scale)``
+            scatter, or the write is handed the value it is supposed to learn.
+        radius: ball radius; ``<= 0`` returns ``store`` unchanged.
+        key: the SAME key the store's atoms were drawn with (``LearnedVStore``'s
+            ``key``), or the reproduction is not bit-identical.
+    """
+    from chlu.core.memory_potentials import _atom_group_owner, _uniform_ball
+
+    if radius is None or float(radius) <= 0.0 or centers is None:
+        return store
+    atoms = store.V.learned
+    gc = jnp.asarray(np.asarray(centers, dtype=np.float32), dtype=atoms.centers.dtype)
+    if gc.ndim != 2:
+        raise ValueError(f"centers must be 2-D, got shape {gc.shape}")
+    n_atoms = int(atoms.centers.shape[0])
+    n_g = int(atoms.n_groups)
+    if int(gc.shape[0]) != n_g:
+        raise ValueError(f"centers has {gc.shape[0]} rows for {n_g} groups")
+    local_dims = int(gc.shape[1])
+    if local_dims > int(atoms.centers.shape[1]):
+        raise ValueError(f"centers width {local_dims} exceeds dim "
+                         f"{atoms.centers.shape[1]}")
+    owner = jnp.asarray(_atom_group_owner(n_atoms, n_g))
+    k_ball = jax.random.fold_in(key, 1)     # default path's stream untouched
+    offs = _uniform_ball(k_ball, n_atoms, local_dims) * float(radius)
+    new = atoms.centers.at[:, :local_dims].set(gc[owner] + offs)
+    return eqx.tree_at(lambda s: s.V.learned.centers, store, new)
+
+
+class CluStoreCell(eqx.Module):
+    """⭐⭐ **The full C2W1 CLU store as a block's memory.**
+
+    Every full-CLU lever of intervention §4 is live (ruling 0.1 — none turned
+    off): items held in a learned ``V_theta`` (never arrays), derived addressing,
+    admission, per-item lifetimes, masked/local write, permitted basin
+    interaction, learned ``phi`` in (owned by :class:`StreamBlock`, shared with
+    every arm), **learned trajectory ``psi`` out**, two-phase relaxation, mass and
+    friction as trainable selectors, trajectory *and* settled point available to
+    ``psi``, confidence-gated retry, and the controller's verb set (replayed
+    through :class:`WritePlan`).
+
+    **The write** is the shipped masked objective
+    (:func:`chlu.training.train_memory.write_loss`) applied for
+    ``write_inner_steps`` differentiably-unrolled SGD steps, with the update
+    masked to the slot's own atom rows by
+    :func:`chlu.core.memory_potentials.atom_write_mask_fn` — i.e. C3-local in
+    parameter space, exactly as :meth:`CluSystem._write_item` is.
+
+    **The read** is the shipped two-phase relaxation: phase 1 at
+    ``gamma_address`` (the address of an item is *derived* — wherever the query
+    relaxes to), phase 2 at ``gamma_read`` (where the value is read), both
+    recorded into a strided buffer that ``psi`` pools.
+    """
+
+    clu: CHLU                       # potential_net = V_theta init (PARAMETERS)
+    psi: eqx.Module                 # learned trajectory read-out
+    log_gamma_addr: jnp.ndarray
+    log_gamma_read: jnp.ndarray
+    #: (K, n_atoms) BOOL buffer, one row per atom group. Held as a non-static
+    #: **integer** leaf on purpose: static numpy arrays are unhashable (equinox
+    #: warns) and a float leaf would be counted as a parameter by the ledger.
+    group_matrix: jnp.ndarray
+    #: ⭐ ``(n_src, payload_dim)`` gate of the PAYLOAD RESIDUAL, or ``None`` when
+    #: ``mcfg.psi_payload_residual`` is off. ``None`` is not a stylistic choice:
+    #: an absent leaf keeps the parameter count, the byte ledger and the matched
+    #: swap arms **bit-identical** to the shipped cell.
+    psi_res_gate: Optional[jnp.ndarray]
+    cfg: Any = eqx.field(static=True)        # CluSystemConfig
+    mcfg: StreamMemoryConfig = eqx.field(static=True)
+    latent_dim: int = eqx.field(static=True)
+
+    def __init__(self, cfg, mcfg: StreamMemoryConfig, *, key):
+        from chlu.core.clu_system import LearnedVStore
+        from chlu.experiments.goldstone_harness import clu_with_potential
+        from chlu.core.psi_readout import DeepSetsPsi, PsiSpec
+
+        k_store, k_psi = jax.random.split(key, 2)
+        self.cfg = cfg
+        self.mcfg = mcfg
+        self.latent_dim = int(cfg.dim)
+        store = LearnedVStore(cfg, k_store)
+        # ⭐ H1 (`pilot-placement-probe`): the N98 localized atom init. A no-op
+        # (bit-identical) at the default `atom_local_radius = 0.0`.
+        store = localize_atom_init(store, mcfg.atom_group_centers,
+                                   float(mcfg.atom_local_radius), key=k_store)
+        self.clu = clu_with_potential(
+            store.V, dim=int(cfg.dim), kinetic_mode=str(cfg.kinetic_mode),
+            inertia=jnp.ones(int(cfg.dim)),
+        )
+        # ⚠ psi's ``input_mode`` is fixed to "trajectory" at CONSTRUCTION so the
+        # settled-point control has **bit-identical parameters** (matched_pair's
+        # rule): the two read modes must differ only in what the dynamics hand
+        # psi, never in psi itself. The mode is a runtime argument of ``read``.
+        spec = PsiSpec(dim=int(cfg.dim), addr_dim=int(cfg.addr_dim),
+                       payload_dim=int(cfg.dim),   # psi emits the whole latent
+                       hidden=int(mcfg.psi_hidden), depth=2,
+                       input_mode="trajectory", representation="raw",
+                       include_momentum=True, include_time=True, stride=1)
+        self.psi = DeepSetsPsi(spec, k_psi)
+        # ⭐ the payload residual's gate (charter §A20.3(a)). Absent -> the
+        # shipped read-out, bit-identically and at the same parameter count.
+        if bool(mcfg.psi_payload_residual):
+            n_src = len(psi_residual_sources(mcfg.psi_residual_source))
+            self.psi_res_gate = jnp.full(
+                (n_src, int(cfg.payload_dim)),
+                float(mcfg.psi_residual_gain) / float(n_src), dtype=jnp.float32)
+        else:
+            self.psi_res_gate = None
+        self.log_gamma_addr = jnp.log(jnp.asarray(float(cfg.gamma_address)))
+        self.log_gamma_read = jnp.log(jnp.asarray(float(cfg.gamma_read)))
+        n_atoms = int(store.V.learned.centers.shape[0])
+        K = int(cfg.capacity)
+        gm = np.zeros((K, n_atoms), dtype=bool)
+        for s in range(K):
+            gm[s] = np.asarray(store.V.learned.group_rows(s), dtype=bool)
+        self.group_matrix = jnp.asarray(gm)
+
+    # -- state -------------------------------------------------------------
+    @property
+    def _atoms(self):
+        return self.clu.potential_net.learned
+
+    def init_state(self) -> StoreState:
+        a = self._atoms
+        c, lw, am = a.centers, a.log_width, a.amp
+        if bool(self.mcfg.erosion_partition):
+            # ⭐ P1, leg 2 of 3. The chunk-0 read sees the INIT leaves directly,
+            # so without this the outer loss reaches ``amp``/``log_width``/
+            # ``centers`` through the read of an as-yet-unwritten store — the
+            # same parameters, the same erosion, one chunk earlier.
+            c = jax.lax.stop_gradient(c)
+            lw = jax.lax.stop_gradient(lw)
+            am = jax.lax.stop_gradient(am)
+        return StoreState(centers=c, log_width=lw, amp=am,
+                          codebook=jnp.zeros((int(self.cfg.capacity),
+                                              int(self.cfg.dim))))
+
+    def _model(self, state: StoreState):
+        return eqx.tree_at(
+            lambda m: [m.potential_net.learned.centers,
+                       m.potential_net.learned.log_width,
+                       m.potential_net.learned.amp],
+            self.clu, replace=[state.centers, state.log_width, state.amp])
+
+    @property
+    def gammas(self) -> Tuple[jnp.ndarray, jnp.ndarray]:
+        """``(gamma_address, gamma_read)`` — the **trainable friction selectors**.
+
+        Friction is the ~14x stronger of the two selector channels (§A13 design
+        rule) and, like the mass, is trainable ONLY through the trajectory read.
+        """
+        ga = jnp.exp(self.log_gamma_addr)
+        gr = jnp.exp(self.log_gamma_read)
+        if not self.mcfg.trainable_gamma:
+            ga, gr = jax.lax.stop_gradient(ga), jax.lax.stop_gradient(gr)
+        return ga, gr
+
+    # -- the read ----------------------------------------------------------
+    def _rollout(self, m, q, p, n_steps: int, gamma, stride: int):
+        """``truncated_rollout(retain=None)``, optionally SEGMENTED + rematted.
+
+        ⭐ `csf3-memory-fit` rung 2. At ``remat_read_segments = 0/1`` (default)
+        this is one call and the historical path bit-for-bit. Otherwise the
+        phase's ``n_steps`` are cut into ``n`` equal segments whose ``(q, p)``
+        are chained **unchanged** — the Verlet step is a pure function of
+        ``(q, p)``, so the arithmetic is identical — and each segment is wrapped
+        in ``eqx.filter_checkpoint``, so the backward holds one segment's
+        force-evaluation residuals at a time instead of the whole unroll's.
+
+        The strided buffer ``psi`` consumes is re-assembled with the **global**
+        stride phase (``off = (-j*L) mod stride``), which is the same seam rule
+        :func:`~chlu.core.implicit_grad.truncated_rollout` uses across its own
+        free/retained boundary. Divisibility is required; otherwise the shipped
+        single call is used (never a silently different trajectory).
+        """
+        from chlu.core.implicit_grad import truncated_rollout
+
+        dt = float(self.cfg.dt)
+        n_steps, stride = int(n_steps), int(stride)
+        n_seg = int(self.mcfg.remat_read_segments)
+        if n_seg <= 1 or n_steps <= 0 or n_steps % n_seg != 0:
+            return truncated_rollout(m, q, p, n_steps, dt, gamma,
+                                     retain=None, stride=stride,
+                                     return_endpoint=True)
+        L = n_steps // n_seg
+
+        def _seg(mm, qq, pp, gg, off: int = 0):
+            tr, qe, pe = truncated_rollout(mm, qq, pp, L, dt, gg, retain=None,
+                                           stride=1, return_endpoint=True)
+            return tr[off::stride], qe, pe
+
+        parts = []
+        for j in range(n_seg):
+            off = (-j * L) % stride
+            fn = eqx.filter_checkpoint(
+                lambda mm, qq, pp, gg, o=off: _seg(mm, qq, pp, gg, o))
+            tr, q, p = fn(m, q, p, gamma)
+            parts.append(tr)
+        return jnp.concatenate(parts, axis=0), q, p
+
+    def read(self, state: StoreState, z: jnp.ndarray, plan_c=None,
+             read_mode: Optional[str] = None,
+             verlet: Optional[Tuple[int, int]] = None) -> jnp.ndarray:
+        """Two-phase relaxation read; ``psi`` pools the strided trajectory.
+
+        ⭐ **The confidence-gated retry is live** (ruling 0.1: no lever off). The
+        gate's verdict is a *discrete* decision, so — like every other verb — it
+        is taken concretely in the plan pass and replayed here as
+        ``plan_c.retry``. The extra phase-2 round is **always computed and then
+        gated**, because a data-dependent number of Verlet steps is not a static
+        shape. ⚠ The compute is therefore paid on every chunk and the benefit
+        only where the gate fires: that price is declared in the report's Verlet
+        budget, not hidden.
+        """
+        from chlu.core.clu_system import ReadState
+        from chlu.core.implicit_grad import SettleSpec, implicit_settle
+
+        m = self._model(state)
+        d = int(self.cfg.dim)
+        # launch on the payload-zero manifold: the read must RECOVER the payload
+        # from V_theta, never be handed it (the anti-decoration guard).
+        q0 = z.at[int(self.cfg.addr_dim):].set(0.0)
+        p0 = jnp.zeros_like(q0)
+        ga, gr = self.gammas
+        st = int(self.mcfg.traj_stride)
+        mode = self.mcfg.read_mode if read_mode is None else str(read_mode)
+        # ⭐ D5's compute dial: the per-read Verlet budget as a RUNTIME override.
+        # Step counts must be static (lax.scan), so an override is a Python pair
+        # and re-triggers compilation — fine for an evaluation sweep, which is
+        # the only place it is used. ⚠ SHAPE claim only (§A3): the anytime figure
+        # is occupied (DEQs, EBTs, Titans-Revisited); no uniqueness is claimed.
+        n_addr = int(self.mcfg.address_steps if verlet is None else verlet[0])
+        n_read = int(self.mcfg.read_steps if verlet is None else verlet[1])
+        tr1, q_addr, p_addr = self._rollout(m, q0, p0, n_addr, ga, st)
+        tr2, q_star, p_star = self._rollout(m, q_addr, p_addr, n_read, gr, st)
+        if mode == "settled_point":
+            # ⭐ the pre-registered ZERO-GRADIENT control: an implicit settle, so
+            # d q*/d q0 = 0 EXACTLY rather than as a 1e-9 numerical accident.
+            # ⚠ Zero on the READ's path only: at atom_place_radius > 0 the write
+            # still reaches phi (design rule 1's caveat), so this arm is a
+            # zero-gradient control end-to-end only under erosion_partition.
+            # ⚠ SettleSpec needs a CONCRETE gamma. Using the configured constant
+            # rather than the (traced, trainable) selector is exact, not a
+            # shortcut: the fixed point of the damped map is gamma-INDEPENDENT
+            # (trainability-spike measured the (gamma, dt) spread of the implicit
+            # answer at 2.50e-11 over gamma in {0.02..0.3}), so gamma changes only
+            # how fast the settle arrives, never where.
+            spec = SettleSpec(steps=n_read, dt=float(self.cfg.dt),
+                              gamma=float(self.cfg.gamma_read), ridge=0.0)
+            q_star = implicit_settle(m, jax.lax.stop_gradient(q_addr),
+                                     jax.lax.stop_gradient(p_addr), spec)
+            p_star = jax.lax.stop_gradient(p_star)
+        if plan_c is not None and self.mcfg.retry_rounds > 0:
+            w = jnp.asarray(plan_c.retry, dtype=jnp.float32)
+            tr3, q3, p3 = self._rollout(m, q_star, p_star, n_read, gr, st)
+            tr2 = jnp.concatenate([tr2, w * tr3 + (1.0 - w) * tr2[-1:][
+                jnp.zeros((tr3.shape[0],), dtype=jnp.int32)]], axis=0)
+            q_star = w * q3 + (1.0 - w) * q_star
+            p_star = w * p3 + (1.0 - w) * p_star
+        if mode == "settled_point":
+            traj = jnp.concatenate([q_star, p_star])[None, None, :]
+        else:
+            traj = jnp.concatenate([tr1, tr2], axis=0)[None, ...]
+        rs = ReadState(q0=q0[None], p0=p0[None], q_addr=q_addr[None],
+                       p_addr=p_addr[None], q_star=q_star[None], p_star=p_star[None])
+        _ = d
+        out = self.psi(traj, rs)[0]
+        # ⭐ THE PAYLOAD RESIDUAL (§A20.3(a)). Absent by default: when the gate
+        # is ``None`` this branch is not traced and the read is the shipped one.
+        if self.psi_res_gate is not None:
+            out = out + self.payload_residual(traj, q_star)
+        return out
+
+    def payload_residual(self, traj: jnp.ndarray, q_star: jnp.ndarray) -> jnp.ndarray:
+        """⭐ The gated payload-carrying residual: ``(dim,)``, zero off-payload.
+
+        The read's own payload coordinates reach the decode **without passing
+        through psi's spread-collapsing pooling**. It is additive and linear in
+        the gate by design, so ``decode(g) = decode(0) + g . source`` exactly —
+        which is what makes the per-stage spread ledger and the gate sweep
+        arithmetic rather than 6 more forward passes.
+
+        ⛔ **Never the address block.** ``q0``'s payload block is zeroed at
+        launch, so on a blank store this residual carries ~0 (measured: blank
+        ``q*[payload]`` = 9e-4 against a live 0.18-1.14) and cannot become a
+        query bypass; an address-block residual would be exactly N68's leak.
+        """
+        a, m = int(self.cfg.addr_dim), int(self.cfg.payload_dim)
+        g = self.psi_res_gate
+        if not self.mcfg.psi_residual_trainable:
+            g = jax.lax.stop_gradient(g)
+        rows = []
+        for name in psi_residual_sources(self.mcfg.psi_residual_source):
+            if name == "q_star":
+                rows.append(q_star[a: a + m])
+            else:  # "traj_mean" — the strided trajectory's payload slots
+                rows.append(jnp.mean(traj[0, :, a: a + m], axis=0))
+        pay = jnp.sum(g * jnp.stack(rows, axis=0), axis=0)        # (m,)
+        return jnp.zeros((int(self.cfg.dim),), dtype=pay.dtype).at[a: a + m].set(pay)
+
+    def read_diag(self, state: StoreState, z: jnp.ndarray) -> Dict[str, jnp.ndarray]:
+        """Residual / rho_conv at this read — the monitors' runtime inputs."""
+        m = self._model(state)
+        q0 = z.at[int(self.cfg.addr_dim):].set(0.0)
+        p0 = jnp.zeros_like(q0)
+        ga, gr = self.gammas
+        _, q_addr, p_addr = truncated_rollout_endpoint(
+            m, q0, p0, int(self.mcfg.address_steps), float(self.cfg.dt), ga)
+        _, q_star, _ = truncated_rollout_endpoint(
+            m, q_addr, p_addr, int(self.mcfg.read_steps), float(self.cfg.dt), gr)
+        g0 = jnp.linalg.norm(jax.grad(lambda q: m.potential_net(q))(q0))
+        gs = jnp.linalg.norm(jax.grad(lambda q: m.potential_net(q))(q_star))
+        return {"residual": gs, "grad0": g0, "rho_conv": gs / jnp.maximum(g0, 1e-12),
+                "q_star": q_star}
+
+    # -- the write ---------------------------------------------------------
+    def write(self, state: StoreState, z: jnp.ndarray, plan_c) -> StoreState:
+        """Masked, local, differentiably-unrolled write into ``V_theta``."""
+        return self._write_stages(state, z, plan_c)[0]
+
+    def write_diag(self, state: StoreState, z: jnp.ndarray, plan_c
+                   ) -> Dict[str, jnp.ndarray]:
+        """⭐ **I1's instrument**: the per-stage well depth of ONE write event.
+
+        Runs the *same* code path as :meth:`write` (one implementation, so the
+        audit can never drift from the mechanism it audits) and returns the
+        slot's fitted depth at the incoming item's own site after each stage:
+
+        =====================  =================================================
+        ``depth_in``           the state as it arrived (pre-decay)
+        ``depth_decayed``      after lifetimes/decay + eviction re-draw
+        ``depth_before``       after localized placement — **the I1 reference**,
+                               i.e. the state the inner write starts from
+        ``depth_after``        after the ``write_inner_steps`` inner steps
+        ``depth_guarded``      after I1's refresh (== ``depth_after`` when the
+                               guard is OFF or no violation occurred)
+        =====================  =================================================
+
+        plus ``rewrite`` (admitted write into an occupied, non-evicted slot),
+        ``violation`` (a rewrite that reduced the depth), ``refresh_factor``,
+        and the same before/after pair evaluated at the **outgoing occupant's**
+        recorded site (``depth_old_site_*``) — the interference reading, which
+        placement is *designed* to move and which is therefore reported
+        separately rather than guarded.
+        """
+        return self.write_and_diag(state, z, plan_c)[1]
+
+    def write_and_diag(self, state: StoreState, z: jnp.ndarray, plan_c):
+        """``(new_state, diag)`` from ONE pass of the write.
+
+        ⚠ The telemetry replays a whole sequence's writes at every monitor
+        window; calling :meth:`write` and :meth:`write_diag` separately would
+        pay the inner unroll twice, which at ``write_inner_steps = 40`` is the
+        entire instrument budget.
+        """
+        return self._write_stages(state, z, plan_c, diag=True)
+
+    def _write_stages(self, state: StoreState, z: jnp.ndarray, plan_c,
+                      *, diag: bool = False):
+        from chlu.core.memory_potentials import atom_write_mask_fn
+        from chlu.training.train_memory import write_loss
+
+        K = int(self.cfg.capacity)
+        gm = self.group_matrix.astype(jnp.float32)              # (K, n_atoms)
+        slot_oh = jax.nn.one_hot(plan_c.slot, K)                # (K,)
+        row_mask = slot_oh @ gm                                  # (n_atoms,)
+
+        # 1. lifetimes + eviction, applied BEFORE the write (physical: the item's
+        #    own wells shallow; an evicted group is RE-DRAWN from the init
+        #    distribution, never zeroed).
+        amp_scale = plan_c.group_scale @ gm                      # (n_atoms,)
+        reset_rows = plan_c.reset @ gm                           # (n_atoms,) in {0,1}
+        a0 = self._atoms
+        a0_centers, a0_log_width, a0_amp = a0.centers, a0.log_width, a0.amp
+        if bool(self.mcfg.erosion_partition):
+            # ⭐ P1, leg 3 of 3: the eviction re-draw reads the INIT leaves.
+            a0_centers = jax.lax.stop_gradient(a0_centers)
+            a0_log_width = jax.lax.stop_gradient(a0_log_width)
+            a0_amp = jax.lax.stop_gradient(a0_amp)
+        centers = jnp.where(reset_rows[:, None] > 0.5, a0_centers, state.centers)
+        log_width = jnp.where(reset_rows > 0.5, a0_log_width, state.log_width)
+        amp = jnp.where(reset_rows > 0.5, a0_amp, state.amp * amp_scale)
+
+        st = StoreState(centers, log_width, amp, state.codebook)
+
+        # 1b. ⭐ H1b — LOCALIZED PLACEMENT AT WRITE. The slot's own atoms have
+        #     their ADDRESS coordinates re-drawn into a ball of
+        #     `atom_place_radius` around the INCOMING chunk's address (payload
+        #     coordinates untouched — N46). Off by default, bit-identical.
+        #     The offsets are a fixed, key-free geometric jig, so this adds no
+        #     parameter and no state byte; the update is restricted to
+        #     `row_mask`, so C3 locality holds.
+        #     ⚠ This assignment is DIFFERENTIABLE in `z` and sits outside the
+        #     sign-gated inner loop below, so it is a live gradient path from the
+        #     outer loss back into `phi` through the write (27 % of layer-0's
+        #     phi gradient, §A22). Only `erosion_partition` closes it.
+        #     ⚠ It is applied to `st_w` — the state the write STARTS FROM — and
+        #     NOT to `st`, because `st` is what the admission blend at step 3
+        #     falls back to: a refused offer must leave `V_theta` bit-identical,
+        #     and placing atoms for an offer that is then refused would break
+        #     exactly that contract (caught by
+        #     `test_a_refused_offer_leaves_the_landscape_bit_identical_under_placement`).
+        st_w = st
+        if float(self.mcfg.atom_place_radius) > 0.0:
+            from chlu.core.memory_potentials import _uniform_ball
+
+            d_addr = int(self.cfg.addr_dim)
+            n_atoms = int(centers.shape[0])
+            jig = _uniform_ball(jax.random.PRNGKey(0xB0CA), n_atoms, d_addr)
+            jig = jig * float(self.mcfg.atom_place_radius)
+            placed = z[:d_addr][None, :] + jig                   # (n_atoms, d)
+            sel = (row_mask > 0.5)[:, None]
+            st_w = StoreState(
+                centers.at[:, :d_addr].set(
+                    jnp.where(sel, placed, centers[:, :d_addr])),
+                log_width, amp, state.codebook)
+
+        # 2. the masked local write, unrolled `write_inner_steps` times.
+        target = z[None, :]                                      # (1, dim)
+        crowd = plan_c.sites                                     # (K, dim)
+        lr = float(self.mcfg.write_lr)
+        mask_apply = atom_write_mask_fn(row_mask)
+        key = jax.random.PRNGKey(0)
+
+        # ⭐ H2 (`pilot-placement-probe`): the C2W2 trajectory-information term.
+        # Added ONLY when the coefficient is a Python float > 0, so at the
+        # default 0.0 not one extra op is traced and the written V is
+        # bit-identical to the shipped objective (`write_loss`'s own
+        # coefficient-zero regression gate). The rollout is the READ's phase-2
+        # budget and friction, so the path the write is asked to shape is the
+        # path the read actually traverses.
+        lam_traj = float(self.mcfg.write_lambda_traj)
+        traj_kw = dict(
+            rollout_steps=int(self.mcfg.write_traj_steps
+                              or self.mcfg.read_steps),
+            stride=int(self.mcfg.traj_stride),
+            gamma=float(self.cfg.gamma_read), dt=float(self.cfg.dt),
+            n_launch=int(self.mcfg.write_traj_n_launch),
+        )
+
+        def loss_of(V):
+            return write_loss(
+                V, target, key,
+                n_perturb=int(self.mcfg.write_n_perturb),
+                sigma_addr=float(self.cfg.write_sigma_addr),
+                sigma_pay=float(self.cfg.write_sigma_pay),
+                margin=float(self.cfg.write_margin),
+                barrier=float(self.cfg.write_barrier),
+                payload_index=int(self.cfg.addr_dim),
+                barrier_pairs="nn", crowd_targets=crowd,
+                payload_dim=int(self.cfg.payload_dim),
+                lambda_traj=lam_traj,
+                traj_kwargs=(traj_kw if lam_traj > 0.0 else None),
+            )
+
+        V = self._model(st_w).potential_net
+        for _ in range(int(self.mcfg.write_inner_steps)):
+            g = eqx.filter_grad(loss_of)(V)
+            g = mask_apply(g)
+            V = eqx.apply_updates(V, jax.tree_util.tree_map(
+                lambda x: (-lr * (jnp.sign(x) if self.mcfg.write_sign else x))
+                if eqx.is_inexact_array(x) else None, g))
+        new = V.learned
+
+        # 2b. ⭐ I1 — REFRESH-ON-REWRITE MONOTONICITY (`c2w6-anti-erosion`).
+        #     The reference is `st_w` (post-decay, post-eviction, post-placement):
+        #     the designed channels are excluded from the erosion accounting by
+        #     construction, so the guard measures the INNER WRITE and nothing
+        #     else. Off by default, and a violation-free write multiplies `amp`
+        #     by exactly 1.0 => bit-identical (I1-b).
+        addr = int(self.cfg.addr_dim)
+        guard_on = bool(self.mcfg.refresh_monotonic)
+        amp_new = new.amp
+        dg: Dict[str, jnp.ndarray] = {}
+        if guard_on or diag:
+            d_before = fitted_well_depth(st_w.centers, st_w.log_width, st_w.amp,
+                                         row_mask, z, addr)
+            d_after = fitted_well_depth(new.centers, new.log_width, new.amp,
+                                        row_mask, z, addr)
+            # A REWRITE is an admitted write into a slot that already holds an
+            # item and is not being evicted. Occupancy is read off the retained
+            # codebook (zero until the slot's first admitted write), so it needs
+            # no extra state and stays traceable.
+            cb_row = slot_oh @ state.codebook                    # (dim,)
+            occupied = (jnp.max(jnp.abs(cb_row)) > 0).astype(jnp.float32)
+            evicting = jnp.clip(slot_oh @ plan_c.reset, 0.0, 1.0)
+            event = (occupied * (1.0 - evicting)
+                     * jnp.asarray(plan_c.admitted, dtype=jnp.float32))
+            viol = event * (d_after < d_before).astype(jnp.float32)
+            f = jnp.asarray(1.0, dtype=amp_new.dtype)
+            if guard_on:
+                f = jnp.sqrt(d_before / jnp.maximum(d_after, 1e-30))
+                f = jnp.minimum(f, float(self.mcfg.refresh_max_gain))
+                ceil = float(self.mcfg.refresh_amp_ceiling)
+                if ceil > 0.0:                      # K5's absolute amp ceiling
+                    amax = jnp.max(jnp.abs(new.amp) * row_mask)
+                    f = jnp.minimum(f, ceil / jnp.maximum(amax, 1e-30))
+                # ⛔ never shrink, and never touch a non-event: `x * 1.0` is
+                # bit-identical, which is exactly what I1-b asserts.
+                f = jnp.where(viol > 0.5, jnp.maximum(f, 1.0), 1.0)
+                amp_new = new.amp * jnp.where(row_mask > 0.5, f, 1.0)
+            if diag:
+                old_site = slot_oh @ plan_c.sites                # (dim,)
+                dg = {
+                    "depth_in": fitted_well_depth(
+                        state.centers, state.log_width, state.amp, row_mask, z,
+                        addr),
+                    "depth_decayed": fitted_well_depth(
+                        st.centers, st.log_width, st.amp, row_mask, z, addr),
+                    "depth_before": d_before,
+                    "depth_after": d_after,
+                    "depth_guarded": fitted_well_depth(
+                        new.centers, new.log_width, amp_new, row_mask, z, addr),
+                    "depth_old_site_before": fitted_well_depth(
+                        state.centers, state.log_width, state.amp, row_mask,
+                        old_site, addr),
+                    "depth_old_site_after": fitted_well_depth(
+                        new.centers, new.log_width, amp_new, row_mask, old_site,
+                        addr),
+                    "rewrite": event,
+                    "occupied": occupied,
+                    "evicting": evicting,
+                    "violation": viol,
+                    "refresh_factor": f,
+                    "admitted": jnp.asarray(plan_c.admitted, dtype=jnp.float32),
+                    "slot": jnp.asarray(plan_c.slot),
+                }
+
+        # 3. admission: a refused offer leaves the landscape bit-identical.
+        adm = plan_c.admitted
+        blend = lambda a, b: adm * a + (1.0 - adm) * b  # noqa: E731
+        cb = st.codebook * (1.0 - slot_oh[:, None]) + \
+            adm * slot_oh[:, None] * z[None, :]
+        out = StoreState(
+            centers=blend(new.centers, st.centers),
+            log_width=blend(new.log_width, st.log_width),
+            amp=blend(amp_new, st.amp),
+            codebook=cb,
+        )
+        if bool(self.mcfg.erosion_partition):
+            # ⭐ P1, leg 1 of 3 — THE WRITE BOUNDARY. Everything the write
+            # produced leaves the write as data: the outer objective can read it
+            # but can no longer reach back through it into phi, into the atom
+            # leaves, or into the write's own unrolled inner loop.
+            out = jax.tree_util.tree_map(jax.lax.stop_gradient, out)
+        return out, dg
+
+    # -- ledger ------------------------------------------------------------
+    def cell_ledger(self) -> Dict[str, int]:
+        """Two-sided byte ledger for this cell (learned-initial-state rule).
+
+        ``params`` = ``V_theta`` **initialisation** + ``psi`` + the selectors.
+        ``state`` = the per-sequence ``V_theta`` **deviation** + the retained
+        codebook. Both declared, exactly as the GRU's ``h0``/``h`` are.
+        """
+        p = int(sum(x.size for x in jax.tree_util.tree_leaves(
+            eqx.filter(self, eqx.is_inexact_array))))
+        a = self._atoms
+        v_floats = int(a.centers.size + a.log_width.size + a.amp.size)
+        s = v_floats + int(self.cfg.capacity) * int(self.cfg.dim)
+        return {"params": p, "state_floats": s, "state_bytes": 4 * s,
+                "v_theta_floats": v_floats, "n_atoms": int(a.centers.shape[0])}
+
+
+def truncated_rollout_endpoint(model, q0, p0, steps, dt, gamma):
+    """Forward-only rollout returning ``(None, q_end, p_end)`` (diagnostics)."""
+    from chlu.core.implicit_grad import truncated_rollout
+
+    tr, q, p = truncated_rollout(model, jax.lax.stop_gradient(q0),
+                                 jax.lax.stop_gradient(p0), int(steps), float(dt),
+                                 jax.lax.stop_gradient(gamma), retain=0,
+                                 stride=max(int(steps), 1), return_endpoint=True)
+    return tr, q, p
+
+
+# --------------------------------------------------------------------------
+# the shared shell: identical in EVERY arm, so the swap is genuinely a swap
+# --------------------------------------------------------------------------
+class StreamPhi(eqx.Module):
+    """The shared read-in ``d_model -> latent``. ⭐ **Bit-identical in every arm.**
+
+    One MLP with two *uses*, never two parameter sets:
+
+    * :meth:`query` — the read launch, with the **payload channels forced to
+      zero**. This is ``LearnedPhi``'s anti-decoration rule: the read must
+      recover the payload from ``V_theta``, and a phi that could write the
+      payload into its own launch point would be reading the answer off its
+      input.
+    * :meth:`__call__` — the full latent, which is what gets *written* (address
+      block + payload block) and what the swap cells consume.
+
+    Its byte count is ledgered on **every** arm (task dial declaration:
+    "identical embedding + identical phi, with phi-bytes ledgered on every arm").
+    """
+
+    dim: int = eqx.field(static=True)
+    addr_dim: int = eqx.field(static=True)
+    payload_dim: int = eqx.field(static=True)
+    net: eqx.nn.MLP
+    gain: float = eqx.field(static=True)
+
+    def __init__(self, d_model: int, dim: int, addr_dim: int, payload_dim: int,
+                 hidden: int = 64, gain: float = 1.0, *, key):
+        self.dim, self.addr_dim, self.payload_dim = int(dim), int(addr_dim), int(payload_dim)
+        self.gain = float(gain)
+        self.net = eqx.nn.MLP(int(d_model), int(dim), int(hidden), 1,
+                              activation=jax.nn.tanh, key=key)
+
+    def __call__(self, u: jnp.ndarray) -> jnp.ndarray:
+        return self.gain * self.net(u)
+
+    def query(self, u: jnp.ndarray) -> jnp.ndarray:
+        z = self(u)
+        return z.at[self.addr_dim: self.addr_dim + self.payload_dim].set(0.0)
+
+
+class StreamBlock(eqx.Module):
+    """⭐ The tier-iii block: ``norm -> causal conv -> [MEMORY CELL] -> MLP``, residual.
+
+    Everything except ``cell`` is **bit-identical across arms** — the same
+    embedding upstream, the same LayerNorms, the same intra-chunk causal
+    depthwise convolution, the same ``phi``, the same assimilation projection,
+    the same token-wise MLP, the same residual structure. That is what makes the
+    system-level swap a *swap* and not a redesign.
+
+    **The chunk contract** (§0.3, identical in every arm):
+
+    1. an intra-chunk causal depthwise conv does the *local* mixing, so the
+       memory carries only **cross-chunk** information;
+    2. chunk ``c-1`` is pooled to ``u_{c-1}``, and ``z_{c-1} = phi(u_{c-1})``;
+    3. **read first**: ``r_{c-1} = cell.read(state, z_{c-1})`` against a store
+       holding chunks ``0..c-2``;
+    4. **then write**: ``state <- cell.write(state, z_{c-1}, plan[c-1])``;
+    5. ``r_{c-1}`` is assimilated and added to **every token of chunk ``c``**.
+
+    Step 3-before-4 is not a stylistic choice: reading a store that was just
+    handed the current chunk is an echo, and it would let a memory that stores
+    nothing score like a memory that stores everything. Step 5's one-chunk shift
+    is what makes the whole block causal.
+    """
+
+    norm1: eqx.nn.LayerNorm
+    norm2: eqx.nn.LayerNorm
+    norm3: eqx.nn.LayerNorm
+    conv_w: jnp.ndarray
+    phi: StreamPhi
+    cell: eqx.Module
+    assim: eqx.nn.Linear
+    mlp_in: eqx.nn.Linear
+    mlp_out: eqx.nn.Linear
+    mcfg: StreamMemoryConfig = eqx.field(static=True)
+    latent_dim: int = eqx.field(static=True)
+
+    def __init__(self, d_model: int, cell: eqx.Module, mcfg: StreamMemoryConfig,
+                 *, latent_dim: int, addr_dim: int, payload_dim: int, key):
+        ks = jax.random.split(key, 4)
+        self.mcfg = mcfg
+        self.latent_dim = int(latent_dim)
+        self.cell = cell
+        self.norm1 = eqx.nn.LayerNorm(d_model)
+        self.norm2 = eqx.nn.LayerNorm(d_model)
+        self.norm3 = eqx.nn.LayerNorm(d_model)
+        # depthwise causal conv, zero-initialised beyond the identity tap so the
+        # block starts as a clean residual stream.
+        self.conv_w = jnp.zeros((int(mcfg.conv_kernel), d_model)).at[-1].set(1.0)
+        # ⭐ addr/payload are declared by the MODEL, not read off the cell, so
+        # every arm's phi is constructed with identical arguments and identical
+        # key -> bit-identical parameters (the dial declaration's requirement).
+        self.phi = StreamPhi(d_model, latent_dim, addr_dim, payload_dim,
+                             gain=float(mcfg.phi_gain), key=ks[0])
+        self.assim = eqx.nn.Linear(int(latent_dim), d_model, key=ks[1])
+        h = int(mcfg.mlp_mult) * d_model
+        self.mlp_in = eqx.nn.Linear(d_model, h, key=ks[2])
+        self.mlp_out = eqx.nn.Linear(h, d_model, key=ks[3])
+
+    def _causal_conv(self, x):
+        k = int(self.mcfg.conv_kernel)
+        pad = jnp.zeros((k - 1, x.shape[-1]), dtype=x.dtype)
+        xp = jnp.concatenate([pad, x], axis=0)
+        wins = jnp.stack([xp[i: i + x.shape[0]] for i in range(k)], axis=0)  # (k,T,D)
+        return jnp.einsum("ktd,kd->td", wins, self.conv_w)
+
+    def chunk_latents(self, x: jnp.ndarray) -> jnp.ndarray:
+        """``(n_chunks, latent)`` — steps 1-2 only, for the **concrete plan pass**.
+
+        Shared verbatim with :meth:`__call__`, so the controller sees exactly the
+        latents the differentiable pass will write.
+        """
+        T, D = x.shape
+        C = int(self.mcfg.chunk)
+        x = x + self._causal_conv(jax.vmap(self.norm1)(x))
+        u = jnp.mean(jax.vmap(self.norm2)(x).reshape(T // C, C, D), axis=1)
+        return jax.vmap(self.phi)(u)
+
+    def __call__(self, x: jnp.ndarray, plan, read_mode: Optional[str] = None,
+                 verlet: Optional[Tuple[int, int]] = None) -> jnp.ndarray:
+        """``x`` is ``(T, d_model)`` for ONE sequence; ``plan`` is a :class:`WritePlan`.
+
+        ``read_mode`` overrides the cell's configured read at call time — that is
+        how the S2 gradient probe compares the trajectory read against the
+        settled-point read **on the same model with the same parameters**.
+        """
+        T, D = x.shape
+        C = int(self.mcfg.chunk)
+        n_chunks = T // C
+        # 1. local mixing (identical in every arm)
+        x = x + self._causal_conv(jax.vmap(self.norm1)(x))
+        # 2. per-chunk pooled summary -> latent
+        u = jnp.mean(jax.vmap(self.norm2)(x).reshape(n_chunks, C, D), axis=1)
+        z = jax.vmap(self.phi)(u)                                   # (n_chunks, dim)
+
+        # 3-4. read-before-write, scanned over chunk boundaries
+        def step(state, inp):
+            z_c, plan_c = inp
+            r = self.cell.read(state, z_c, plan_c, read_mode, verlet)
+            state = self.cell.write(state, z_c, plan_c)
+            return state, r
+
+        # ⭐ `csf3-memory-fit` rung 1: with ``remat_chunks`` the scan stores only
+        # the chunk-boundary carries and recomputes each chunk interior (the
+        # Verlet unroll + the inner writes) inside the backward. Same primitives,
+        # same order, same numbers — only the residual schedule changes.
+        body = (eqx.filter_checkpoint(step) if bool(self.mcfg.remat_chunks)
+                else step)
+        _, r = jax.lax.scan(body, self.cell.init_state(), (z, plan))  # (n_chunks, dim)
+        # 5. shift by one chunk: chunk c is told what the store knew BEFORE it.
+        r = jnp.concatenate([jnp.zeros((1, r.shape[-1]), dtype=r.dtype), r[:-1]], axis=0)
+        m = jax.vmap(self.assim)(r)                                  # (n_chunks, D)
+        x = x + jnp.repeat(m, C, axis=0)
+        # 6. token-wise MLP (identical in every arm)
+        hh = jax.vmap(self.norm3)(x)
+        return x + jax.vmap(lambda t: self.mlp_out(jax.nn.gelu(self.mlp_in(t))))(hh)
+
+
+def parse_store_layers(value: Any) -> Optional[Tuple[int, ...]]:
+    """``None`` | ``"2,6,10"`` | ``[2, 6, 10]`` | ``6`` -> ``None`` | ``(2, 6, 10)``.
+
+    The **syntax** half of the G-B store-layer selection, split out from
+    :func:`resolve_store_layers` (the *semantics* half) because a config loader
+    parses the value before it knows ``n_layers``. ⛔ ``None`` means *every
+    layer* and is the shipped behaviour; it is NOT a placement decision.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):                    # ⛔ True is not layer 1
+        raise ValueError(f"store_layers must be indices, got {value!r}")
+    if isinstance(value, int):
+        # ⚠ A bare integer is ONE INDEX, not a COUNT: `store_layers=10` selects
+        # layer 10, it does not select ten layers. (`--set store_layers=2` is
+        # `_parse_kv`'s int, and a single store layer is a legitimate config.)
+        return (int(value),)
+    if isinstance(value, str):
+        parts = [t for t in value.replace(",", " ").split() if t]
+        if not parts:
+            raise ValueError(
+                "store_layers is an empty string. Use None for 'every layer' "
+                "(the shipped behaviour) or e.g. '2,6,10'.")
+        value = parts
+    try:
+        idx = tuple(int(i) for i in value)
+    except TypeError as exc:                       # not iterable
+        raise ValueError(
+            f"store_layers must be None or a sequence of layer indices, got "
+            f"{value!r}") from exc
+    return idx
+
+
+def resolve_store_layers(n_layers: int, store_layers: Any = None
+                         ) -> Tuple[int, ...]:
+    """⭐ **Which layers carry the arm's memory cell** — the G-B geometry.
+
+    ``None`` (the default) => **every layer**, i.e. the shipped pilot behaviour,
+    bit-for-bit. A sequence selects the *store-bearing* layers; every other layer
+    keeps the identical shell (conv, φ, assimilation, MLP, norms, residual) with a
+    :class:`NullMemoryCell` in the slot.
+
+    ⭐ **Why this is a lever at all** (`c3-rival-ladder-prereg` §2.2, RATIFIED
+    Head+Advisor 2026-08-13 as geometry **G-B**): the store's bytes *and* its
+    compute are both **per store-bearing layer**, and at ``addr_dim = 8`` the w23
+    atom floor ``512·√2^8 = 8192`` cannot be lowered by any other config knob
+    (``capacity``/``atoms_per_item`` are byte-INERT — handover 7.38). Putting the
+    full-size cell in **3 of 12** layers gives ``3 × 460,288 = 1,380,864 B``
+    (0.658× of the 2 MiB ceiling) **while breaking no design rule**, where the
+    alternative (G-A) bought the same bytes by starving every cell 4× below that
+    floor.
+
+    ⛔ **WHICH layers is a DESIGN DECISION, argued in `PREREG-C3-LADDER.md` §2.5,
+    and it is deliberately NOT a default here.** A byte-fitting default would let
+    a reader discover the placement as a side-effect of the ceiling.
+
+    Raises ``ValueError`` on an empty selection, a duplicate index, or an index
+    outside ``[0, n_layers)`` — a silently-dropped store layer moves the byte
+    ledger, which is the one quantity the tier-iii control rests on.
+    """
+    n = int(n_layers)
+    idx = parse_store_layers(store_layers)
+    if idx is None:
+        return tuple(range(n))
+    if not idx:
+        raise ValueError(
+            "store_layers is empty: a model with no store-bearing layer is the "
+            "`none` arm, which is an ARM, not a geometry. Use None for every "
+            "layer.")
+    if len(set(idx)) != len(idx):
+        raise ValueError(f"store_layers has duplicate indices: {idx}")
+    bad = [i for i in idx if not 0 <= i < n]
+    if bad:
+        raise ValueError(
+            f"store_layers {bad} outside [0, {n}) — with n_layers={n}. ⛔ A "
+            "dropped store layer would move the total state bytes silently.")
+    return tuple(sorted(idx))
+
+
+def first_store_layer(model) -> int:
+    """The lowest **store-bearing** layer index — ``0`` under the default.
+
+    ⛔ Every store-side instrument (the gradient probe, the §7.27 store watch, the
+    monitor pass, the selector readout) used to hard-code layer ``0``. Under a
+    ``store_layers`` selection layer 0 may hold a null cell, and the failure modes
+    split: the gradient probe **raises**, while the watch would go **silently
+    inapplicable** — which is worse. This is the one place that answers "where is
+    the store?".
+    """
+    sel = getattr(model, "store_layers", None)
+    return int(sel[0]) if sel else 0
+
+
+class StreamModel(eqx.Module):
+    """Embedding -> ``n_layers`` x :class:`StreamBlock` -> norm -> head.
+
+    The tier-iii shell. Held FIXED across arms; only ``blocks[i].cell`` changes.
+    Discrete tokens only (enwik8/WT-103 are byte/token streams).
+
+    ⭐ ``store_layers`` selects which layers carry the arm's memory cell
+    (:func:`resolve_store_layers`). ``None`` = every layer = the shipped
+    behaviour. It applies to **every arm identically**, so the swap stays a swap:
+    the trivial substitutes and the matched rivals occupy exactly the layers the
+    CLU store occupies, and the byte ledger counts the same denominator for all.
+    """
+
+    embed: eqx.nn.Embedding
+    pos: jnp.ndarray
+    blocks: list
+    norm_f: eqx.nn.LayerNorm
+    head: eqx.nn.Linear
+    n_layers: int = eqx.field(static=True)
+    chunk: int = eqx.field(static=True)
+    #: ⭐ The resolved store-bearing layer indices (always a concrete tuple, never
+    #: ``None``, so the model can always state its own geometry).
+    store_layers: Tuple[int, ...] = eqx.field(static=True, default=())
+
+    def __init__(self, *, vocab_size: int, d_model: int, n_layers: int,
+                 max_len: int, cells: list, mcfg: StreamMemoryConfig,
+                 latent_dim: int, addr_dim: int, payload_dim: int, key,
+                 store_layers: Any = None):
+        ks = jax.random.split(key, n_layers + 3)
+        self.n_layers = int(n_layers)
+        self.chunk = int(mcfg.chunk)
+        self.store_layers = resolve_store_layers(n_layers, store_layers)
+        self.embed = eqx.nn.Embedding(vocab_size, d_model, key=ks[0])
+        self.pos = jax.random.normal(ks[1], (max_len, d_model)) * 0.02
+        # ⛔ The shell's per-layer key is ks[2 + i] whether or not layer i carries
+        # a store, so `assert_shared_shell_identical` holds across arms AND across
+        # store-layer selections: only the cell in the slot changes.
+        self.blocks = [
+            StreamBlock(d_model,
+                        cells[i] if i in self.store_layers
+                        else NullMemoryCell(latent_dim=int(latent_dim)),
+                        mcfg, latent_dim=latent_dim,
+                        addr_dim=addr_dim, payload_dim=payload_dim, key=ks[2 + i])
+            for i in range(n_layers)
+        ]
+        self.norm_f = eqx.nn.LayerNorm(d_model)
+        self.head = eqx.nn.Linear(d_model, vocab_size, key=ks[-1])
+
+    def __call__(self, tokens: jnp.ndarray, plans, read_mode: Optional[str] = None,
+                 verlet: Optional[Tuple[int, int]] = None) -> jnp.ndarray:
+        """``tokens`` ``(T,)`` int -> logits ``(T, vocab)``. ``plans``: one per layer."""
+        h = jax.vmap(self.embed)(tokens)
+        h = h + self.pos[: h.shape[0]]
+        for blk, plan in zip(self.blocks, plans, strict=True):
+            h = blk(h, plan, read_mode, verlet)
+        return jax.vmap(self.head)(jax.vmap(self.norm_f)(h))
+
+
+# --------------------------------------------------------------------------
+# ⭐ the matched-swap solvers and the two-sided byte ledger (D2)
+# --------------------------------------------------------------------------
+def _count(mod) -> int:
+    return int(sum(x.size for x in jax.tree_util.tree_leaves(
+        eqx.filter(mod, eqx.is_inexact_array))))
+
+
+def solve_matched_gru(target_params: int, latent_dim: int) -> int:
+    """``hidden`` whose GRU-cell parameter count is closest to ``target_params``.
+
+    Closed form (``params(h) = 3h^2 + (4*dim + 5)h + dim^2 + dim``) followed by a
+    **verification sweep over the integer neighbourhood, by construction** — so
+    the number in the ledger is the number in the model, not the number in a
+    formula that might drift from ``eqx.nn.GRUCell``.
+    """
+    d = int(latent_dim)
+    a, b, c = 3.0, 4.0 * d + 5.0, float(d * d + d - int(target_params))
+    h0 = max(1, int(round((-b + (b * b - 4 * a * c) ** 0.5) / (2 * a))))
+    best, best_err = h0, float("inf")
+    for h in range(max(1, h0 - 4), h0 + 5):
+        p = _count(MatchedGRUCell(d, h, key=jax.random.PRNGKey(0)))
+        e = abs(p - int(target_params))
+        if e < best_err:
+            best, best_err = h, e
+    return best
+
+
+def gru_hidden_for_state(target_state_floats: int) -> int:
+    """``hidden`` that matches the CLU cell's STATE bytes — the other column.
+
+    ⛔ Published alongside :func:`solve_matched_gru` precisely because the two
+    answers are hundreds of times apart. See :func:`swap_ledger`.
+    """
+    return int(target_state_floats)
+
+
+def solve_matched_ttt(target_params: int, target_state: int, latent_dim: int
+                      ) -> Tuple[int, int]:
+    """``(k, n)`` matching BOTH the CLU cell's parameters and its state bytes.
+
+    ⭐ A TTT-class cell can do what a GRU provably cannot. Its state
+    ``W in R^{k x n}`` is ``k*n`` floats and its parameters are ``W0`` (the
+    learned initial state — PARAMETERS, per the learned-initial-state rule) plus
+    four thin ``O(dim)`` projections::
+
+        params = k*n + 2*dim*(k+n) + 1 ,   state = k*n
+
+    so the two constraints decouple: ``k*n = S`` fixes the state and
+    ``k + n = (P - S - 1) / (2*dim)`` fixes the parameters. Both are hit whenever
+    the discriminant ``(k+n)^2 - 4*k*n >= 0``, i.e. whenever the CLU cell's
+    parameter surplus over its state is large enough to pay for the projections.
+    ⚠ **If it is not, the two-sided match is impossible for this cell too** and
+    the caller must report that (task §5): we return the best available ``(k, n)``
+    and :func:`swap_ledger` publishes the residual on both axes.
+    """
+    P, S, d = int(target_params), int(target_state), int(latent_dim)
+    ssum = (P - S - 1) / (2.0 * d)
+    disc = ssum * ssum - 4.0 * S
+    if disc >= 0:
+        k = max(2, int(round((ssum + disc ** 0.5) / 2.0)))
+        n = max(1, int(round((ssum - disc ** 0.5) / 2.0)))
+        cands = [(kk, nn) for kk in range(max(2, k - 3), k + 4)
+                 for nn in range(max(1, n - 3), n + 4)]
+    else:  # unreachable two-sided match: fall back to the state-matched square
+        k = max(2, int(round(S ** 0.5)))
+        cands = [(kk, max(1, int(round(S / kk)))) for kk in range(max(2, k - 40), k + 41)]
+    best, best_err = cands[0], float("inf")
+    for kk, nn in cands:
+        cell = MatchedTTTCell(d, kk, nn, key=jax.random.PRNGKey(0))
+        e = abs(_count(cell) - P) / max(P, 1) + abs(kk * nn - S) / max(S, 1)
+        if e < best_err:
+            best, best_err = (kk, nn), e
+    return best
+
+
+def swap_ledger(cells: Dict[str, eqx.Module], shared: Optional[Dict[str, int]] = None
+                ) -> Dict[str, Dict[str, Any]]:
+    """⭐ **The two-sided byte ledger**, per arm, with the matching verdicts.
+
+    Conventions (``PREREG-Bprime.md`` §4, applied to ``V_theta`` exactly as to a
+    GRU's ``h0``): **an initialisation is PARAMETERS; only the per-sequence
+    deviation is STATE. Both declared.** ``shared`` is the arm-identical shell
+    (embedding, positional, norms, conv, phi, assimilation, MLP, head), reported
+    on every row so no arm can hide budget in it.
+    """
+    ref = cells.get("clu_store")
+    out: Dict[str, Dict[str, Any]] = {}
+    rp = ref.cell_ledger()["params"] if ref is not None else None
+    rs = ref.cell_ledger()["state_floats"] if ref is not None else None
+    for name, cell in cells.items():
+        led = dict(cell.cell_ledger())
+        if rp:
+            led["params_vs_clu"] = led["params"] / rp
+            led["params_matched_pct"] = 100.0 * (led["params"] - rp) / rp
+        if rs:
+            led["state_vs_clu"] = (led["state_floats"] / rs) if led["state_floats"] else 0.0
+            led["clu_state_over_arm"] = (rs / led["state_floats"]) if led["state_floats"] else float("inf")
+        if shared:
+            led.update({f"shared_{k}": v for k, v in shared.items()})
+        out[name] = led
+    return out
+
+
+def store_byte_law(atoms_per_item: int, dim: int, addr_dim: int, payload_dim: int
+                   ) -> float:
+    """The corrected per-item byte law ``[A(D+2)+d]/(d+m)`` (errata 24/28).
+
+    Cost of one stored item **relative to one table row**. ⚠ The floor is
+    **2.40x at ``n_spec = 1``** (``A = 1``); anything above that is the price of
+    holding the item in a learned landscape instead of an array.
+    """
+    return (int(atoms_per_item) * (int(dim) + 2) + int(addr_dim)) / \
+        float(int(addr_dim) + int(payload_dim))
+
+
+def make_memory_cell(name: str, *, latent_dim: int, clu_cfg=None,
+                     mcfg: Optional[StreamMemoryConfig] = None,
+                     hidden: Optional[int] = None,
+                     ttt_shape: Optional[Tuple[int, int]] = None,
+                     ttt_normalized_write: bool = False, key):
+    """Construct one memory cell by name (``MEMORY_CELLS``).
+
+    ``ttt_normalized_write`` (default ``False`` = the shipped arithmetic) is
+    :class:`MatchedTTTCell`'s inner-loop stability lever — see its docstring.
+    """
+    mcfg = mcfg or StreamMemoryConfig()
+    if name == "clu_store":
+        return CluStoreCell(clu_cfg, mcfg, key=key)
+    if name == "gru_matched":
+        return MatchedGRUCell(latent_dim, int(hidden), key=key)
+    if name == "ttt_matched":
+        k, n = ttt_shape
+        return MatchedTTTCell(latent_dim, int(k), int(n), key=key,
+                              normalized_write=bool(ttt_normalized_write))
+    if name == "none":
+        return NullMemoryCell(latent_dim=int(latent_dim))
+    if name == "echo":
+        return EchoMemoryCell(latent_dim=int(latent_dim))
+    raise ValueError(f"Unknown memory cell: {name}. Must be one of {MEMORY_CELLS}.")

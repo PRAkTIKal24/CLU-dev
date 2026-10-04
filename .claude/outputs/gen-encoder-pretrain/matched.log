@@ -1,0 +1,88 @@
+⭐ gen-encoder-pretrain · dataset=shapes3d · variants=['random_init', 'recon_control'] · seeds=[0, 1, 2] · REDUCED SCALE (n_enc_train=8192, enc_steps=1500)
+  split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  corner (matched-seen, SEEN): 216 rows
+  seed 0: rows enc_train=8192 probe_train=12288 probe_eval=4096 corner_eval=209 (corner rows dropped for landing in enc_train: 7)
+    streamed 24785 images in 63.8s
+  [random_init] fitting encoder (random, x0 steps) …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    [random_init/linear] grid scale=0.9329 orientation=0.9873  -> PASS
+  [random_init] done in 5.8s train / 6.5s encode
+  [recon_control] fitting encoder (recon, x1 steps) …
+    step 1/1500  loss=0.18910
+    step 300/1500  loss=0.00890
+    step 600/1500  loss=0.00514
+    step 900/1500  loss=0.00424
+    step 1200/1500  loss=0.00313
+    step 1500/1500  loss=0.00276
+    [recon_control/linear] grid scale=0.9380 orientation=0.9900  -> PASS
+  [recon_control] done in 1870.3s train / 10.0s encode
+  seed 1: rows enc_train=8192 probe_train=12288 probe_eval=4096 corner_eval=214 (corner rows dropped for landing in enc_train: 2)
+    streamed 24790 images in 89.6s
+  [random_init] fitting encoder (random, x0 steps) …
+    [random_init/linear] grid scale=0.9402 orientation=0.9888  -> PASS
+  [random_init] done in 0.1s train / 10.5s encode
+  [recon_control] fitting encoder (recon, x1 steps) …
+    step 1/1500  loss=0.16151
+    step 300/1500  loss=0.00779
+    step 600/1500  loss=0.00450
+    step 900/1500  loss=0.00382
+    step 1200/1500  loss=0.00308
+    step 1500/1500  loss=0.00299
+    [recon_control/linear] grid scale=0.9338 orientation=0.9922  -> PASS
+  [recon_control] done in 4245.7s train / 7.5s encode
+  seed 2: rows enc_train=8192 probe_train=12288 probe_eval=4096 corner_eval=213 (corner rows dropped for landing in enc_train: 3)
+    streamed 24789 images in 59.3s
+  [random_init] fitting encoder (random, x0 steps) …
+    [random_init/linear] grid scale=0.9353 orientation=0.9834  -> PASS
+  [random_init] done in 0.1s train / 6.5s encode
+  [recon_control] fitting encoder (recon, x1 steps) …
+    step 1/1500  loss=0.15525
+    step 300/1500  loss=0.00797
+    step 600/1500  loss=0.00455
+    step 900/1500  loss=0.00426
+    step 1200/1500  loss=0.00295
+    step 1500/1500  loss=0.00261
+    [recon_control/linear] grid scale=0.9507 orientation=0.9915  -> PASS
+  [recon_control] done in 1362.0s train / 4.5s encode
+⭐ VERDICT: PASS — at least one variant reaches the bar on BOTH bar factors on the SPREAD grid with the headline LINEAR probe

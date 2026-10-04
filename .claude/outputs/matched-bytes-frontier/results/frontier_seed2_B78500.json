@@ -1,0 +1,488 @@
+{
+  "budgets_floats": [
+    78500
+  ],
+  "bytes_per_float": 4,
+  "seeds": [
+    2
+  ],
+  "byte_accounting": {
+    "floats_per_stored_item": {
+      "clu_entry": 41,
+      "knn_phi_same_keys": 41,
+      "knn_phi_ringbuffer": 34,
+      "er": 785,
+      "derpp": 795,
+      "gdumb": 785,
+      "icarl": 785,
+      "finetune": 0,
+      "ewc": 0,
+      "si": 0,
+      "lwf": 0,
+      "joint": 0
+    },
+    "fixed_state_floats": {
+      "finetune": 478410,
+      "ewc": 1435230,
+      "si": 1435230,
+      "lwf": 956820,
+      "er": 478410,
+      "derpp": 478410,
+      "icarl": 478410,
+      "gdumb": 478410,
+      "joint": 478410,
+      "clu_entry": 25872,
+      "knn_phi_same_keys": 25872,
+      "knn_phi_ringbuffer": 25872
+    },
+    "note": "per-item floats are the frontier's x-axis (the field's 'buffer size'); fixed state is reported and carried into the secondary all-fixed-charged frontier. The CLU entry runs ZERO gradient steps: it has no backbone, so charging its \u03c6 while not charging the baselines' backbone would be a double standard."
+  },
+  "phi_provenance": {
+    "arm": "pca",
+    "k": 32,
+    "frozen": true,
+    "regime": "task1_only",
+    "role": "PRIMARY \u2014 every headline number",
+    "may_see": "task-1 classes only [0, 1]",
+    "n_fit_pool": 2087,
+    "frozen_from": "end of task 1 (never refit, never re-keyed)",
+    "phi_dim": 32
+  },
+  "rows": [
+    {
+      "method": "constant_predictor",
+      "class": "degenerate-control",
+      "seed": 2,
+      "budget_floats": null,
+      "metrics": {
+        "ACC": 0.11040000000000001,
+        "BWT": 0.0,
+        "forgetting": 0.0,
+        "LA": 0.11040000000000001,
+        "final_per_task": [
+          0.552,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "memory_items": 1,
+      "memory_floats": 1,
+      "floats_per_item": 1,
+      "fixed_state_floats": 0,
+      "budget_independent": true
+    },
+    {
+      "method": "clu_entry",
+      "class": "clu",
+      "seed": 2,
+      "budget_floats": 78500,
+      "metrics": {
+        "ACC": 0.8388000000000002,
+        "BWT": -0.10549999999999998,
+        "forgetting": 0.10549999999999998,
+        "LA": 0.9231999999999999,
+        "final_per_task": [
+          0.928,
+          0.792,
+          0.842,
+          0.841,
+          0.791
+        ]
+      },
+      "memory_items": 1914,
+      "memory_floats": 78474,
+      "floats_per_item": 41,
+      "fixed_state_floats": 25872,
+      "budget_independent": false
+    },
+    {
+      "method": "knn_phi_same_keys",
+      "class": "launder",
+      "seed": 2,
+      "budget_floats": 78500,
+      "metrics": {
+        "ACC": 0.8488000000000001,
+        "BWT": -0.097,
+        "forgetting": 0.097,
+        "LA": 0.9264000000000001,
+        "final_per_task": [
+          0.951,
+          0.806,
+          0.845,
+          0.859,
+          0.783
+        ]
+      },
+      "memory_items": 1914,
+      "memory_floats": 78474,
+      "floats_per_item": 41,
+      "fixed_state_floats": 25872,
+      "budget_independent": false
+    },
+    {
+      "method": "knn_phi_ringbuffer",
+      "class": "launder",
+      "seed": 2,
+      "budget_floats": 78500,
+      "metrics": {
+        "ACC": 0.8858,
+        "BWT": -0.066,
+        "forgetting": 0.066,
+        "LA": 0.9385999999999999,
+        "final_per_task": [
+          0.947,
+          0.866,
+          0.896,
+          0.88,
+          0.84
+        ]
+      },
+      "memory_items": 2308,
+      "memory_floats": 78472,
+      "floats_per_item": 34,
+      "fixed_state_floats": 25872,
+      "budget_independent": false
+    },
+    {
+      "method": "er",
+      "class": "replay",
+      "seed": 2,
+      "budget_floats": 78500,
+      "metrics": {
+        "ACC": 0.6956,
+        "BWT": -0.36575,
+        "forgetting": 0.36575,
+        "LA": 0.9882,
+        "final_per_task": [
+          0.832,
+          0.639,
+          0.339,
+          0.689,
+          0.979
+        ]
+      },
+      "memory_items": 100,
+      "memory_floats": 78500,
+      "floats_per_item": 785,
+      "fixed_state_floats": 478410,
+      "budget_independent": false
+    },
+    {
+      "method": "derpp",
+      "class": "replay",
+      "seed": 2,
+      "budget_floats": 78500,
+      "metrics": {
+        "ACC": 0.7527999999999999,
+        "BWT": -0.29175,
+        "forgetting": 0.29175,
+        "LA": 0.9862,
+        "final_per_task": [
+          0.866,
+          0.689,
+          0.472,
+          0.76,
+          0.977
+        ]
+      },
+      "memory_items": 98,
+      "memory_floats": 77910,
+      "floats_per_item": 795,
+      "fixed_state_floats": 478410,
+      "budget_independent": false
+    },
+    {
+      "method": "icarl",
+      "class": "replay",
+      "seed": 2,
+      "budget_floats": 78500,
+      "metrics": {
+        "ACC": 0.8278000000000001,
+        "BWT": -0.1455,
+        "forgetting": 0.1455,
+        "LA": 0.9442,
+        "final_per_task": [
+          0.959,
+          0.794,
+          0.705,
+          0.796,
+          0.885
+        ]
+      },
+      "memory_items": 100,
+      "memory_floats": 78500,
+      "floats_per_item": 785,
+      "fixed_state_floats": 478410,
+      "budget_independent": false
+    },
+    {
+      "method": "gdumb",
+      "class": "replay",
+      "seed": 2,
+      "budget_floats": 78500,
+      "metrics": {
+        "ACC": 0.7302,
+        "BWT": -0.16624999999999998,
+        "forgetting": 0.16624999999999998,
+        "LA": 0.8632000000000002,
+        "final_per_task": [
+          0.878,
+          0.668,
+          0.676,
+          0.702,
+          0.727
+        ]
+      },
+      "memory_items": 100,
+      "memory_floats": 78500,
+      "floats_per_item": 785,
+      "fixed_state_floats": 478410,
+      "budget_independent": false
+    }
+  ],
+  "table": [
+    {
+      "budget_floats": null,
+      "method": "constant_predictor",
+      "class": "degenerate-control",
+      "n_seeds": 1,
+      "memory_items": 1.0,
+      "memory_floats": 1.0,
+      "fixed_state_floats": 0,
+      "budget_independent": true,
+      "ACC": 0.11040000000000001,
+      "ACC_sd": 0.0,
+      "BWT": 0.0,
+      "BWT_sd": 0.0,
+      "forgetting": 0.0,
+      "forgetting_sd": 0.0,
+      "LA": 0.11040000000000001,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 78500,
+      "method": "clu_entry",
+      "class": "clu",
+      "n_seeds": 1,
+      "memory_items": 1914.0,
+      "memory_floats": 78474.0,
+      "fixed_state_floats": 25872,
+      "budget_independent": false,
+      "ACC": 0.8388000000000002,
+      "ACC_sd": 0.0,
+      "BWT": -0.10549999999999998,
+      "BWT_sd": 0.0,
+      "forgetting": 0.10549999999999998,
+      "forgetting_sd": 0.0,
+      "LA": 0.9231999999999999,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 78500,
+      "method": "derpp",
+      "class": "replay",
+      "n_seeds": 1,
+      "memory_items": 98.0,
+      "memory_floats": 77910.0,
+      "fixed_state_floats": 478410,
+      "budget_independent": false,
+      "ACC": 0.7527999999999999,
+      "ACC_sd": 0.0,
+      "BWT": -0.29175,
+      "BWT_sd": 0.0,
+      "forgetting": 0.29175,
+      "forgetting_sd": 0.0,
+      "LA": 0.9862,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 78500,
+      "method": "er",
+      "class": "replay",
+      "n_seeds": 1,
+      "memory_items": 100.0,
+      "memory_floats": 78500.0,
+      "fixed_state_floats": 478410,
+      "budget_independent": false,
+      "ACC": 0.6956,
+      "ACC_sd": 0.0,
+      "BWT": -0.36575,
+      "BWT_sd": 0.0,
+      "forgetting": 0.36575,
+      "forgetting_sd": 0.0,
+      "LA": 0.9882,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 78500,
+      "method": "gdumb",
+      "class": "replay",
+      "n_seeds": 1,
+      "memory_items": 100.0,
+      "memory_floats": 78500.0,
+      "fixed_state_floats": 478410,
+      "budget_independent": false,
+      "ACC": 0.7302,
+      "ACC_sd": 0.0,
+      "BWT": -0.16624999999999998,
+      "BWT_sd": 0.0,
+      "forgetting": 0.16624999999999998,
+      "forgetting_sd": 0.0,
+      "LA": 0.8632000000000002,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 78500,
+      "method": "icarl",
+      "class": "replay",
+      "n_seeds": 1,
+      "memory_items": 100.0,
+      "memory_floats": 78500.0,
+      "fixed_state_floats": 478410,
+      "budget_independent": false,
+      "ACC": 0.8278000000000001,
+      "ACC_sd": 0.0,
+      "BWT": -0.1455,
+      "BWT_sd": 0.0,
+      "forgetting": 0.1455,
+      "forgetting_sd": 0.0,
+      "LA": 0.9442,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 78500,
+      "method": "knn_phi_ringbuffer",
+      "class": "launder",
+      "n_seeds": 1,
+      "memory_items": 2308.0,
+      "memory_floats": 78472.0,
+      "fixed_state_floats": 25872,
+      "budget_independent": false,
+      "ACC": 0.8858,
+      "ACC_sd": 0.0,
+      "BWT": -0.066,
+      "BWT_sd": 0.0,
+      "forgetting": 0.066,
+      "forgetting_sd": 0.0,
+      "LA": 0.9385999999999999,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 78500,
+      "method": "knn_phi_same_keys",
+      "class": "launder",
+      "n_seeds": 1,
+      "memory_items": 1914.0,
+      "memory_floats": 78474.0,
+      "fixed_state_floats": 25872,
+      "budget_independent": false,
+      "ACC": 0.8488000000000001,
+      "ACC_sd": 0.0,
+      "BWT": -0.097,
+      "BWT_sd": 0.0,
+      "forgetting": 0.097,
+      "forgetting_sd": 0.0,
+      "LA": 0.9264000000000001,
+      "LA_sd": 0.0
+    }
+  ],
+  "store_saturation": [
+    {
+      "seed": 2,
+      "budget_floats": 78500,
+      "budget_items": 1914,
+      "n_live_end": 1914,
+      "ring_items": 2308,
+      "ring_budget_items": 2308,
+      "admitted_fraction_per_task": [
+        0.57,
+        0.794,
+        0.6035,
+        0.448,
+        0.5935
+      ],
+      "refused_spacing_per_task": [
+        860,
+        412,
+        793,
+        1104,
+        813
+      ],
+      "refused_full": 0,
+      "fill_fraction": 1.0,
+      "saturated": false,
+      "geometry": {
+        "n_stored": 1914,
+        "median_nn_addresses": 3.406914641292486,
+        "well_width_s": 0.6760197502429937,
+        "sigma_q_norm": 3.2279240288770943,
+        "packing_slack_corrected": 0.3404679642909005,
+        "packing_slack_note": "slack = median_NN / (3.1\u00b7max(s, \u03c3_q)), \u03c3_q = RMS\u2016\u03c6(test query) \u2212 nearest address\u2016 (a NORM, per the w24 unit correction). slack < 1 \u21d2 the store runs past the packing bound \u2014 intrinsic to classification, and the source of the geometric ambiguity Item 3 measures."
+      }
+    }
+  ],
+  "baseline_tuning": [],
+  "verdict": {
+    "per_budget": {
+      "78500": {
+        "clu_forgetting": 0.10549999999999998,
+        "clu_forgetting_sd": 0.0,
+        "clu_ACC": 0.8388000000000002,
+        "clu_LA": 0.9231999999999999,
+        "best_LA_here": 0.9882,
+        "vs_replay": {
+          "best_method": "icarl",
+          "best_forgetting": 0.1455,
+          "best_forgetting_sd": 0.0,
+          "clu_minus_best": -0.04000000000000001,
+          "clu_lower": true,
+          "separated_by_sd": true
+        },
+        "vs_launder": {
+          "best_method": "knn_phi_ringbuffer",
+          "best_forgetting": 0.066,
+          "best_forgetting_sd": 0.0,
+          "clu_minus_best": 0.03949999999999998,
+          "clu_lower": false,
+          "separated_by_sd": false
+        },
+        "vs_all_memory_methods": {
+          "best_method": "knn_phi_ringbuffer",
+          "best_forgetting": 0.066,
+          "best_forgetting_sd": 0.0,
+          "clu_minus_best": 0.03949999999999998,
+          "clu_lower": false,
+          "separated_by_sd": false
+        },
+        "la_within_band": true,
+        "dominates": false,
+        "dominates_with_sd_separation": false
+      }
+    },
+    "dominates_at_budgets": [],
+    "beats_replay_only_at_budgets": [
+      "78500"
+    ],
+    "launder_never_beaten": true,
+    "reading": "THE PRE-REGISTERED FALSIFIER FIRED \u2014 CLU beats the raw-exemplar replay methods on forgetting at budgets ['78500'], but the matched-BYTES kNN-in-\u03c6 launder is never beaten. The frontier region is real and it is \u03c6's and the buffer's: SUPPLEMENTARY, not primary.",
+    "rules": "PREREG \u00a75. Dominance = strictly lowest forgetting among ALL byte-matched methods, separated by \u22651 sd, with LA within 0.1 of the best LA at that budget (the anti-degeneracy clause: a method that never learned never forgets)."
+  },
+  "wall_clock_s": 257.04309701919556,
+  "tuned_hypers": {
+    "ewc": {
+      "ewc_lambda": 100.0
+    },
+    "si": {
+      "si_c": 0.1
+    },
+    "lwf": {
+      "lwf_alpha": 0.5
+    },
+    "derpp": {
+      "derpp_alpha": 0.2,
+      "derpp_beta": 0.5
+    }
+  }
+}

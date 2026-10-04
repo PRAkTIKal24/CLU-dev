@@ -1,0 +1,444 @@
+{
+  "eligibility": {
+    "*_dropout (every learner)": {
+      "capabilities": {
+        "callable": {
+          "note": "exposed through w4_api.load_rival",
+          "supported": true
+        },
+        "deletable": {
+          "note": "retrain from scratch on the reduced pool",
+          "supported": true
+        },
+        "full": {
+          "note": "a fully specified on-grid request is what every rival in this set is built for",
+          "supported": true
+        },
+        "offgrid": {
+          "note": "same as the primary variant of that family: only cont_mlp_dropout accepts an off-grid value",
+          "supported": false
+        },
+        "partial": {
+          "note": "trained with half its requests partially specified, so an absent factor is in distribution",
+          "supported": true
+        }
+      },
+      "rows": {
+        "row 2 (an off-grid value)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": false,
+          "footnote": "same as the primary variant of that family: only cont_mlp_dropout accepts an off-grid value",
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination"
+        },
+        "rows 1/2/5/6 via the query sets (partially specified requests)": {
+          "can_enter": true,
+          "reason": "trained with half its requests partially specified, so an absent factor is in distribution"
+        },
+        "rows 3-4 (pair and n-way corners; FULL six-factor requests)": {
+          "can_enter": true,
+          "reason": "a fully specified on-grid request is what every rival in this set is built for"
+        },
+        "rows 5-7 (a whole value the arm never fitted)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "retrain from scratch on the reduced pool"
+        }
+      }
+    },
+    "cont_mlp": {
+      "capabilities": {
+        "callable": {
+          "note": "exposed through w4_api.load_rival",
+          "supported": true
+        },
+        "deletable": {
+          "note": "retrain from scratch on the reduced pool",
+          "supported": true
+        },
+        "full": {
+          "note": "a fully specified on-grid request is what every rival in this set is built for",
+          "supported": true
+        },
+        "offgrid": {
+          "note": "its input is the min-max normalised VALUE, so an off-grid hue is simply a number no training row carried",
+          "supported": true
+        },
+        "partial": {
+          "note": "PRIMARY variant, full requests only; load cont_mlp_dropout for a partial request",
+          "supported": false
+        }
+      },
+      "rows": {
+        "row 2 (an off-grid value)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "its input is the min-max normalised VALUE, so an off-grid hue is simply a number no training row carried"
+        },
+        "rows 1/2/5/6 via the query sets (partially specified requests)": {
+          "can_enter": false,
+          "footnote": "PRIMARY variant, full requests only; load cont_mlp_dropout for a partial request"
+        },
+        "rows 3-4 (pair and n-way corners; FULL six-factor requests)": {
+          "can_enter": true,
+          "reason": "a fully specified on-grid request is what every rival in this set is built for"
+        },
+        "rows 5-7 (a whole value the arm never fitted)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "retrain from scratch on the reduced pool"
+        }
+      }
+    },
+    "lace_repaired": {
+      "capabilities": {
+        "callable": {
+          "note": "this arm's output is a stochastic draw, not a function of the request: two calls on the same request return different features by construction. Ask this spoke to score your corners.",
+          "supported": false
+        },
+        "deletable": {
+          "note": "refit the whitening and classifier on the reduced pool",
+          "supported": true
+        },
+        "full": {
+          "note": "a fully specified on-grid request is what every rival in this set is built for",
+          "supported": true
+        },
+        "offgrid": {
+          "note": "LACE's categorical head has a closed vocabulary over the realised grid and cannot express an off-grid value (chlu.core.gen_request.DenseRequests). THE METHOD'S limit, not this spoke's.",
+          "supported": false
+        },
+        "partial": {
+          "note": "on-grid partial requests only; the dense request form carries a target per factor",
+          "supported": true
+        }
+      },
+      "rows": {
+        "row 2 (an off-grid value)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": false,
+          "footnote": "LACE's categorical head has a closed vocabulary over the realised grid and cannot express an off-grid value (chlu.core.gen_request.DenseRequests). THE METHOD'S limit, not this spoke's.",
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination"
+        },
+        "rows 1/2/5/6 via the query sets (partially specified requests)": {
+          "can_enter": true,
+          "reason": "on-grid partial requests only; the dense request form carries a target per factor"
+        },
+        "rows 3-4 (pair and n-way corners; FULL six-factor requests)": {
+          "can_enter": true,
+          "reason": "a fully specified on-grid request is what every rival in this set is built for"
+        },
+        "rows 5-7 (a whole value the arm never fitted)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "refit the whitening and classifier on the reduced pool"
+        }
+      }
+    },
+    "lstm": {
+      "capabilities": {
+        "callable": {
+          "note": "exposed through w4_api.load_rival",
+          "supported": true
+        },
+        "deletable": {
+          "note": "retrain from scratch on the reduced pool",
+          "supported": true
+        },
+        "full": {
+          "note": "a fully specified on-grid request is what every rival in this set is built for",
+          "supported": true
+        },
+        "offgrid": {
+          "note": "closed vocabulary: this rival's input is a class index over the realised grid, so a value between or outside the grid points cannot be expressed at all. Snapping it to the nearest grid value would score the rival on a request it never received, so it is refused instead. (token over the grid values)",
+          "supported": false
+        },
+        "partial": {
+          "note": "PRIMARY variant, full requests only; load lstm_dropout for a partial request",
+          "supported": false
+        }
+      },
+      "rows": {
+        "row 2 (an off-grid value)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": false,
+          "footnote": "closed vocabulary: this rival's input is a class index over the realised grid, so a value between or outside the grid points cannot be expressed at all. Snapping it to the nearest grid value would score the rival on a request it never received, so it is refused instead. (token over the grid values)",
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination"
+        },
+        "rows 1/2/5/6 via the query sets (partially specified requests)": {
+          "can_enter": false,
+          "footnote": "PRIMARY variant, full requests only; load lstm_dropout for a partial request"
+        },
+        "rows 3-4 (pair and n-way corners; FULL six-factor requests)": {
+          "can_enter": true,
+          "reason": "a fully specified on-grid request is what every rival in this set is built for"
+        },
+        "rows 5-7 (a whole value the arm never fitted)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "retrain from scratch on the reduced pool"
+        }
+      }
+    },
+    "mlp": {
+      "capabilities": {
+        "callable": {
+          "note": "exposed through w4_api.load_rival",
+          "supported": true
+        },
+        "deletable": {
+          "note": "retrain from scratch on the reduced pool",
+          "supported": true
+        },
+        "full": {
+          "note": "a fully specified on-grid request is what every rival in this set is built for",
+          "supported": true
+        },
+        "offgrid": {
+          "note": "closed vocabulary: this rival's input is a class index over the realised grid, so a value between or outside the grid points cannot be expressed at all. Snapping it to the nearest grid value would score the rival on a request it never received, so it is refused instead. (one-hot over the grid values)",
+          "supported": false
+        },
+        "partial": {
+          "note": "the PRIMARY variant is trained on fully specified requests only, which is what rows 3 and 4 ask. For a partial request load mlp_dropout, which is the same architecture at the same matched count.",
+          "supported": false
+        }
+      },
+      "rows": {
+        "row 2 (an off-grid value)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": false,
+          "footnote": "closed vocabulary: this rival's input is a class index over the realised grid, so a value between or outside the grid points cannot be expressed at all. Snapping it to the nearest grid value would score the rival on a request it never received, so it is refused instead. (one-hot over the grid values)",
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination"
+        },
+        "rows 1/2/5/6 via the query sets (partially specified requests)": {
+          "can_enter": false,
+          "footnote": "the PRIMARY variant is trained on fully specified requests only, which is what rows 3 and 4 ask. For a partial request load mlp_dropout, which is the same architecture at the same matched count."
+        },
+        "rows 3-4 (pair and n-way corners; FULL six-factor requests)": {
+          "can_enter": true,
+          "reason": "a fully specified on-grid request is what every rival in this set is built for"
+        },
+        "rows 5-7 (a whole value the arm never fitted)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "retrain from scratch on the reduced pool"
+        }
+      }
+    },
+    "mlp_180k": {
+      "capabilities": {
+        "callable": {
+          "note": "exposed through w4_api.load_rival",
+          "supported": true
+        },
+        "deletable": {
+          "note": "retrain from scratch on the reduced pool",
+          "supported": true
+        },
+        "full": {
+          "note": "a fully specified on-grid request is what every rival in this set is built for",
+          "supported": true
+        },
+        "offgrid": {
+          "note": "closed vocabulary: this rival's input is a class index over the realised grid, so a value between or outside the grid points cannot be expressed at all. Snapping it to the nearest grid value would score the rival on a request it never received, so it is refused instead. (one-hot over the grid values)",
+          "supported": false
+        },
+        "partial": {
+          "note": "PRIMARY variant, full requests only; load mlp_180k_dropout for a partial request",
+          "supported": false
+        }
+      },
+      "rows": {
+        "row 2 (an off-grid value)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": false,
+          "footnote": "closed vocabulary: this rival's input is a class index over the realised grid, so a value between or outside the grid points cannot be expressed at all. Snapping it to the nearest grid value would score the rival on a request it never received, so it is refused instead. (one-hot over the grid values)",
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination"
+        },
+        "rows 1/2/5/6 via the query sets (partially specified requests)": {
+          "can_enter": false,
+          "footnote": "PRIMARY variant, full requests only; load mlp_180k_dropout for a partial request"
+        },
+        "rows 3-4 (pair and n-way corners; FULL six-factor requests)": {
+          "can_enter": true,
+          "reason": "a fully specified on-grid request is what every rival in this set is built for"
+        },
+        "rows 5-7 (a whole value the arm never fitted)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "retrain from scratch on the reduced pool"
+        }
+      }
+    },
+    "poe_ebm": {
+      "capabilities": {
+        "callable": {
+          "note": "this arm's output is a stochastic draw, not a function of the request: two calls on the same request return different features by construction. Ask this spoke to score your corners.",
+          "supported": false
+        },
+        "deletable": {
+          "note": "retrain the experts on the reduced pool",
+          "supported": true
+        },
+        "full": {
+          "note": "a fully specified on-grid request is what every rival in this set is built for",
+          "supported": true
+        },
+        "offgrid": {
+          "note": "the per-factor experts are categorical over the realised grid. THE METHOD'S limit, not this spoke's.",
+          "supported": false
+        },
+        "partial": {
+          "note": "the experts are composed by summing one energy per factor over a FULL assignment; an absent factor has no expert term and the product of experts is undefined for it",
+          "supported": false
+        }
+      },
+      "rows": {
+        "row 2 (an off-grid value)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": false,
+          "footnote": "the per-factor experts are categorical over the realised grid. THE METHOD'S limit, not this spoke's.",
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination"
+        },
+        "rows 1/2/5/6 via the query sets (partially specified requests)": {
+          "can_enter": false,
+          "footnote": "the experts are composed by summing one energy per factor over a FULL assignment; an absent factor has no expert term and the product of experts is undefined for it"
+        },
+        "rows 3-4 (pair and n-way corners; FULL six-factor requests)": {
+          "can_enter": true,
+          "reason": "a fully specified on-grid request is what every rival in this set is built for"
+        },
+        "rows 5-7 (a whole value the arm never fitted)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "retrain the experts on the reduced pool"
+        }
+      }
+    },
+    "table": {
+      "capabilities": {
+        "callable": {
+          "note": "exposed through w4_api.load_rival",
+          "supported": true
+        },
+        "deletable": {
+          "note": "closed-form refit from the reduced pool",
+          "supported": true
+        },
+        "full": {
+          "note": "a fully specified on-grid request is what every rival in this set is built for",
+          "supported": true
+        },
+        "offgrid": {
+          "note": "FactorPrototypes.prototype interpolates between grid points and extrapolates outside them",
+          "supported": true
+        },
+        "partial": {
+          "note": "the composition rule sums one term per REQUESTED factor; an unrequested factor contributes nothing",
+          "supported": true
+        }
+      },
+      "rows": {
+        "row 2 (an off-grid value)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "FactorPrototypes.prototype interpolates between grid points and extrapolates outside them"
+        },
+        "rows 1/2/5/6 via the query sets (partially specified requests)": {
+          "can_enter": true,
+          "reason": "the composition rule sums one term per REQUESTED factor; an unrequested factor contributes nothing"
+        },
+        "rows 3-4 (pair and n-way corners; FULL six-factor requests)": {
+          "can_enter": true,
+          "reason": "a fully specified on-grid request is what every rival in this set is built for"
+        },
+        "rows 5-7 (a whole value the arm never fitted)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "closed-form refit from the reduced pool"
+        }
+      }
+    },
+    "transformer": {
+      "capabilities": {
+        "callable": {
+          "note": "exposed through w4_api.load_rival",
+          "supported": true
+        },
+        "deletable": {
+          "note": "retrain from scratch on the reduced pool",
+          "supported": true
+        },
+        "full": {
+          "note": "a fully specified on-grid request is what every rival in this set is built for",
+          "supported": true
+        },
+        "offgrid": {
+          "note": "closed vocabulary: this rival's input is a class index over the realised grid, so a value between or outside the grid points cannot be expressed at all. Snapping it to the nearest grid value would score the rival on a request it never received, so it is refused instead. (token over the grid values)",
+          "supported": false
+        },
+        "partial": {
+          "note": "PRIMARY variant, full requests only; load transformer_dropout for a partial request",
+          "supported": false
+        }
+      },
+      "rows": {
+        "row 2 (an off-grid value)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": false,
+          "footnote": "closed vocabulary: this rival's input is a class index over the realised grid, so a value between or outside the grid points cannot be expressed at all. Snapping it to the nearest grid value would score the rival on a request it never received, so it is refused instead. (token over the grid values)",
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination"
+        },
+        "rows 1/2/5/6 via the query sets (partially specified requests)": {
+          "can_enter": false,
+          "footnote": "PRIMARY variant, full requests only; load transformer_dropout for a partial request"
+        },
+        "rows 3-4 (pair and n-way corners; FULL six-factor requests)": {
+          "can_enter": true,
+          "reason": "a fully specified on-grid request is what every rival in this set is built for"
+        },
+        "rows 5-7 (a whole value the arm never fitted)": {
+          "POPULATION_CAVEAT": "ELIGIBLE BUT WRONG POPULATION. This rival is fitted on the Montero combination pool, which contains every factor value, so on a value-holdout row it saw the value the arm under test never did. The mechanism can enter the row; the fit cannot. Either report it with a population footnote and do NOT count it as beating a value-holdout arm, or refit it on your own pool. Check mechanically with load_rival(seed, name).like_for_like({factor: [values]}) rather than relying on this note.",
+          "can_enter": true,
+          "like_for_like_with_a_value_holdout_arm": false,
+          "population": "montero_combination",
+          "reason": "retrain from scratch on the reduced pool"
+        }
+      }
+    }
+  },
+  "generation": 2,
+  "rows": [
+    "row 2 (an off-grid value)",
+    "rows 3-4 (pair and n-way corners; FULL six-factor requests)",
+    "rows 1/2/5/6 via the query sets (partially specified requests)",
+    "rows 5-7 (a whole value the arm never fitted)"
+  ],
+  "rule": "A rival that cannot enter a row gets a DASH and a FOOTNOTE. A dash is never a win for us, and every dash here names whose limit it is."
+}

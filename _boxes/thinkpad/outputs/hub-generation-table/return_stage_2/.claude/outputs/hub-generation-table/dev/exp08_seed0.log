@@ -1,0 +1,58 @@
+[23:04:52] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[23:04:52]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[23:04:52]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[23:14:14] shipped store built in 559.9s wells=[301, 301, 580, 366, 500] bytes=524288 bits=30.0
+[23:14:16] byte ledger: {"store_bytes": 524288, "addressing_head_bytes": 74240, "total_bytes": 598528, "bits_per_read_argmax": 30.0}
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[23:14:18]   [argmax] agg=0.4722 (9/72)  {'channel': 'K*log2(M) = 30 bits', 'head_bytes': 74240}
+[23:14:20]   [wide] agg=0.5093 (13/72)  {'channel': 'K*M = 320 reals (WIDE)', 'head_bytes': 74240}
+[23:14:21]   [store_removed_argmax] agg=0.2222 (1/72)
+[23:14:22]   [store_removed_wide] agg=0.2222 (1/72)
+[23:14:48]   [argmax_disc] agg=0.5301 (17/72)  {'head_bytes': 74240}
+[23:14:49]   [wide_disc] agg=0.5255 (21/72)  {'head_bytes': 74240}
+[23:14:51]   [ref_argmax] agg=0.4884 (11/72)
+[23:14:52]   [ref_span_projection] agg=0.8264 (42/72)  {'what': "⛔ DIAGNOSTIC: least-squares onto each well's mode span"}
+[23:14:54]   [ref_simplex_projection] agg=0.5509 (12/72)  {'what': "⛔ DIAGNOSTIC: best convex combination of each well's modes"}
+[23:14:54] done in 604.3s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table\dev\exp08_seed0.json
+exit=0

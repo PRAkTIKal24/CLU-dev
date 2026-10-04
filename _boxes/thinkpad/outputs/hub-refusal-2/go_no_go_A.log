@@ -1,0 +1,55 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+[ctx] built in 6.6s  cache={'n_rows': 480000, 'scope': 'full', 'D': 2048, 'dtype': 'float16'}  q=0.95
+
+=== budget A ===
+    [A] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04854 (lambda* = 0.05393)
+    [A] N=64 r=16 store=524,288 B coupling=524,288 B total=1,048,576 B = 2.00x budget (PREREG §3 match: True)
+    [A] sigma per well = 4.6343 5.0714 9.1827 6.3054 5.1006
+  [proof] shipped linear read: {"shipped_entry_point": "gen_landscape.launch_state(launch_mode='posterior_mean')", "bit_identical_float32_path": false, "max_abs_delta_float32_path": 2.384185791015625e-07, "max_abs_delta_float64_path": 2.384185791015625e-07, "rel_delta_float64_path": 7.339911434200985e-08, "max_abs_delta_posterior_vs_atom_posterior": 1.7715533980749987e-08, "n_checked": 512, "state_scale_max_abs": 3.24824857711792}
+  [proof] term_experts vs request_experts: {"max_abs_delta_vs_request_experts": 0.0, "bit_identical": true, "shape_ref": [6, 512, 5, 64], "shape_got": [6, 512, 5, 64]}
+    [A/full/val] n=512 mean_S=-609.2166 d_near=5.5355 C1=11.4878
+    [A/full/syn_valid] n=256 mean_S=-609.6249 d_near=5.5584 C1=11.5351
+    [A/full/syn_a7] n=256 mean_S=-607.5828 d_near=5.4632 C1=11.3377
+    [A/full/syn_dup] n=256 mean_S=-609.2756 d_near=5.6032 C1=11.6282
+    [A/full/syn_oor_1] n=256 mean_S=-609.4357 d_near=5.4868 C1=11.3865
+    [A/full/syn_oor_2] n=256 mean_S=-608.5944 d_near=5.4588 C1=11.3285
+    [A/full/syn_oor_3] n=256 mean_S=-607.4555 d_near=5.4490 C1=11.3081
+    [A/store_removed/val] n=512 mean_S=-592.0147 d_near=8.4221 C1=17.4781
+    [A/store_removed/syn_valid] n=256 mean_S=-592.0708 d_near=8.4238 C1=17.4816
+    [A/store_removed/syn_a7] n=256 mean_S=-591.0122 d_near=8.3876 C1=17.4066
+    [A/store_removed/syn_dup] n=256 mean_S=-592.1773 d_near=8.4257 C1=17.4857
+    [A/store_removed/syn_oor_1] n=256 mean_S=-591.8168 d_near=8.4148 C1=17.4631
+    [A/store_removed/syn_oor_2] n=256 mean_S=-591.4579 d_near=8.4036 C1=17.4398
+    [A/store_removed/syn_oor_3] n=256 mean_S=-590.9069 d_near=8.3736 C1=17.3776
+wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-refusal-2\GO_NO_GO_seed0_A.json
+
+========================================================================================
+THE CRITERION  S = E_store(x_read)   [linear read, 0 steps]   -- FULL ARM
+========================================================================================
+
+--- rung A ---
+rung   stat      oorWORST    dupA7      MIN  a7-vs-v      thr  acc_synv
+  arm = full
+  A    S           0.5068   0.4478   0.4478   0.5662 -594.532    0.9531
+  A    M_conf      0.2144   0.7602   0.2144   0.2755   -0.054    0.9531
+  A    M_margin    0.2856   0.6615   0.2856   0.3728   -0.003    0.9609
+  A    C1_d_over_spread   0.4070   0.6413   0.4070   0.3821   12.116    0.9219
+  A    C3_S_max    0.5068   0.6230   0.5068   0.5093    1.452    0.9258
+  arm = store_removed
+  A    S           0.5946   0.2790   0.2790   0.7071 -590.528    0.9648
+  A    M_conf      0.2144   0.7602   0.2144   0.2755   -0.054    0.9531
+  A    M_margin    0.2856   0.6615   0.2856   0.3728   -0.003    0.9609
+  A    C1_d_over_spread   0.3271   0.6241   0.3271   0.3883   17.695    0.9570
+  A    C3_S_max    0.4740   0.6824   0.4740   0.4714    3.225    0.9297
+
+========================================================================================
+GATE  min(AUROC_oor_WORST, AUROC_dup) best across rungs = 0.4478   threshold = 0.6
+VERDICT: NO-GO   ->  DO NOT SPEND. Report the number and stop the refusal line for this iteration.
+========================================================================================
+wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-refusal-2\GO_NO_GO_seed0.json   total 31.9s
+FIT-DERIVED SYNTHETIC. MECHANISM AND GATE ONLY. NOT the refusal result.

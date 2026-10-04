@@ -1,0 +1,167 @@
+[18:19:20] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[18:19:20]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[18:19:20]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[18:19:21] C10 FRESH corners, tag=fresh, 64 candidates; bytes 469,504
+[18:20:00]   store K=32 M=26 built and cached -> store_s0_c1000_K32_M26_n32759.npz
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[18:20:10] [f0] hue=0.1 sc=1 sh=0 o=1  clu= 17 knn=  6 ctrl=  0 ceil= 70  (49s)
+[18:21:11]   store K=32 M=26 built and cached -> store_s0_c1001_K32_M26_n32764.npz
+[18:21:20] [f1] hue=0.1 sc=1 sh=0 o=0  clu=  0 knn=  0 ctrl=  0 ceil= 21  (70s)
+[18:22:00]   store K=32 M=26 built and cached -> store_s0_c1002_K32_M26_n32766.npz
+[18:22:06] [f2] hue=0.1 sc=0 sh=0 o=1  clu=  0 knn=  4 ctrl=  0 ceil= 26  (46s)
+[18:22:48]   store K=32 M=26 built and cached -> store_s0_c1003_K32_M26_n32765.npz
+[18:22:54] [f3] hue=0.1 sc=0 sh=0 o=0  clu=  0 knn=  7 ctrl=  0 ceil= 44  (48s)
+[18:23:34]   store K=32 M=26 built and cached -> store_s0_c1004_K32_M26_n32762.npz
+[18:23:40] [f4] hue=0.1 sc=1 sh=1 o=1  clu= 26 knn=  8 ctrl=  0 ceil= 62  (46s)
+[18:24:26]   store K=32 M=26 built and cached -> store_s0_c1005_K32_M26_n32765.npz
+[18:24:33] [f5] hue=0.1 sc=1 sh=1 o=0  clu= 19 knn=  6 ctrl=  0 ceil= 68  (52s)
+[18:25:18]   store K=32 M=26 built and cached -> store_s0_c1006_K32_M26_n32761.npz
+[18:25:25] [f6] hue=0.1 sc=0 sh=1 o=1  clu=  4 knn= 21 ctrl=  0 ceil= 50  (52s)
+[18:25:25] [f7] ⛔ REFUSED {'hue_lo': 0.1, 'scale_hi': False, 'shape_value': 1.0, 'orient_hi': False}: ⛔ DEV corner {'hue_lo': 0.1, 'scale_hi': False, 'shape_value': 1.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[18:26:09]   store K=32 M=26 built and cached -> store_s0_c1008_K32_M26_n32764.npz
+[18:26:15] [f8] hue=0.1 sc=1 sh=2 o=1  clu= 44 knn= 31 ctrl=  0 ceil= 70  (50s)
+[18:26:58]   store K=32 M=26 built and cached -> store_s0_c1009_K32_M26_n32764.npz
+[18:27:05] [f9] hue=0.1 sc=1 sh=2 o=0  clu= 52 knn= 12 ctrl=  0 ceil= 63  (49s)
+[18:27:47]   store K=32 M=26 built and cached -> store_s0_c1010_K32_M26_n32763.npz
+[18:27:54] [f10] hue=0.1 sc=0 sh=2 o=1  clu=  0 knn=  0 ctrl=  0 ceil= 56  (49s)
+[18:27:54] [f11] ⛔ REFUSED {'hue_lo': 0.1, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False}: ⛔ DEV corner {'hue_lo': 0.1, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[18:28:37]   store K=32 M=26 built and cached -> store_s0_c1012_K32_M26_n32762.npz
+[18:28:43] [f12] hue=0.1 sc=1 sh=3 o=1  clu= 36 knn=  4 ctrl=  0 ceil= 70  (49s)
+[18:29:26]   store K=32 M=26 built and cached -> store_s0_c1013_K32_M26_n32763.npz
+[18:29:33] [f13] hue=0.1 sc=1 sh=3 o=0  clu= 23 knn=  5 ctrl=  0 ceil= 72  (50s)
+[18:30:15]   store K=32 M=26 built and cached -> store_s0_c1014_K32_M26_n32761.npz
+[18:30:22] [f14] hue=0.1 sc=0 sh=3 o=1  clu=  0 knn=  0 ctrl=  0 ceil= 46  (49s)
+[18:30:22] [f15] ⛔ REFUSED {'hue_lo': 0.1, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': False}: ⛔ DEV corner {'hue_lo': 0.1, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[18:30:56]   store K=32 M=26 built and cached -> store_s0_c1016_K32_M26_n32760.npz
+[18:31:01] [f16] hue=0.3 sc=1 sh=0 o=1  clu= 21 knn=  3 ctrl=  0 ceil= 18  (39s)
+[18:31:01] [f17] ⛔ REFUSED {'hue_lo': 0.3, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': False}: ⛔ DEV corner {'hue_lo': 0.3, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[18:31:01] [f18] ⛔ REFUSED {'hue_lo': 0.3, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': True}: ⛔ DEV corner {'hue_lo': 0.3, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[18:31:32]   store K=32 M=26 built and cached -> store_s0_c1019_K32_M26_n32765.npz
+[18:31:37] [f19] hue=0.3 sc=0 sh=0 o=0  clu=  4 knn= 19 ctrl=  0 ceil= 38  (36s)
+[18:32:19]   store K=32 M=26 built and cached -> store_s0_c1020_K32_M26_n32764.npz
+[18:32:26] [f20] hue=0.3 sc=1 sh=1 o=1  clu= 34 knn= 20 ctrl=  0 ceil= 69  (48s)
+[18:33:06]   store K=32 M=26 built and cached -> store_s0_c1021_K32_M26_n32757.npz
+[18:33:12] [f21] hue=0.3 sc=1 sh=1 o=0  clu=  9 knn= 10 ctrl=  0 ceil= 68  (46s)
+[18:33:49]   store K=32 M=26 built and cached -> store_s0_c1022_K32_M26_n32764.npz
+[18:33:56] [f22] hue=0.3 sc=0 sh=1 o=1  clu=  2 knn= 10 ctrl=  0 ceil= 20  (44s)
+[18:34:40]   store K=32 M=26 built and cached -> store_s0_c1023_K32_M26_n32764.npz
+[18:34:47] [f23] hue=0.3 sc=0 sh=1 o=0  clu= 52 knn= 53 ctrl=  0 ceil= 37  (51s)
+[18:35:33]   store K=32 M=26 built and cached -> store_s0_c1024_K32_M26_n32766.npz
+[18:35:39] [f24] hue=0.3 sc=1 sh=2 o=1  clu= 38 knn= 56 ctrl=  0 ceil= 72  (53s)
+[18:36:23]   store K=32 M=26 built and cached -> store_s0_c1025_K32_M26_n32763.npz
+[18:36:30] [f25] hue=0.3 sc=1 sh=2 o=0  clu= 24 knn= 31 ctrl=  0 ceil= 65  (51s)
+[18:37:15]   store K=32 M=26 built and cached -> store_s0_c1026_K32_M26_n32765.npz
+[18:37:21] [f26] hue=0.3 sc=0 sh=2 o=1  clu=  0 knn=  0 ctrl=  0 ceil= 68  (51s)
+[18:38:04]   store K=32 M=26 built and cached -> store_s0_c1027_K32_M26_n32764.npz
+[18:38:10] [f27] hue=0.3 sc=0 sh=2 o=0  clu=  9 knn= 14 ctrl=  0 ceil= 67  (49s)
+[18:38:55]   store K=32 M=26 built and cached -> store_s0_c1028_K32_M26_n32763.npz
+[18:39:01] [f28] hue=0.3 sc=1 sh=3 o=1  clu=  4 knn= 55 ctrl=  0 ceil= 72  (51s)
+[18:39:45]   store K=32 M=26 built and cached -> store_s0_c1029_K32_M26_n32764.npz
+[18:39:51] [f29] hue=0.3 sc=1 sh=3 o=0  clu= 23 knn= 25 ctrl=  0 ceil= 72  (50s)
+[18:40:35]   store K=32 M=26 built and cached -> store_s0_c1030_K32_M26_n32765.npz
+[18:40:42] [f30] hue=0.3 sc=0 sh=3 o=1  clu=  0 knn=  0 ctrl=  0 ceil= 31  (51s)
+[18:41:25]   store K=32 M=26 built and cached -> store_s0_c1031_K32_M26_n32765.npz
+[18:41:31] [f31] hue=0.3 sc=0 sh=3 o=0  clu=  1 knn=  3 ctrl=  0 ceil= 55  (50s)
+[18:41:31] [f32] ⛔ REFUSED {'hue_lo': 0.5, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': True}: ⛔ DEV corner {'hue_lo': 0.5, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[18:42:07]   store K=32 M=26 built and cached -> store_s0_c1033_K32_M26_n32764.npz
+[18:42:12] [f33] hue=0.5 sc=1 sh=0 o=0  clu=  1 knn=  0 ctrl=  0 ceil= 25  (41s)
+[18:42:48]   store K=32 M=26 built and cached -> store_s0_c1034_K32_M26_n32764.npz
+[18:42:54] [f34] hue=0.5 sc=0 sh=0 o=1  clu=  0 knn=  2 ctrl=  0 ceil= 34  (42s)
+[18:43:32]   store K=32 M=26 built and cached -> store_s0_c1035_K32_M26_n32762.npz
+[18:43:41] [f35] hue=0.5 sc=0 sh=0 o=0  clu=  4 knn= 11 ctrl=  0 ceil= 38  (47s)
+[18:44:41]   store K=32 M=26 built and cached -> store_s0_c1036_K32_M26_n32767.npz
+[18:44:50] [f36] hue=0.5 sc=1 sh=1 o=1  clu= 19 knn= 11 ctrl=  0 ceil= 71  (69s)
+[18:45:31]   store K=32 M=26 built and cached -> store_s0_c1037_K32_M26_n32762.npz
+[18:45:38] [f37] hue=0.5 sc=1 sh=1 o=0  clu=  4 knn=  0 ctrl=  0 ceil= 60  (48s)
+[18:46:25]   store K=32 M=26 built and cached -> store_s0_c1038_K32_M26_n32766.npz
+[18:46:33] [f38] hue=0.5 sc=0 sh=1 o=1  clu=  0 knn=  2 ctrl=  0 ceil= 48  (54s)
+[18:47:19]   store K=32 M=26 built and cached -> store_s0_c1039_K32_M26_n32765.npz
+[18:47:26] [f39] hue=0.5 sc=0 sh=1 o=0  clu= 35 knn= 24 ctrl=  0 ceil= 46  (54s)
+[18:48:10]   store K=32 M=26 built and cached -> store_s0_c1040_K32_M26_n32761.npz
+[18:48:17] [f40] hue=0.5 sc=1 sh=2 o=1  clu= 18 knn= 27 ctrl=  0 ceil= 70  (51s)
+[18:49:00]   store K=32 M=26 built and cached -> store_s0_c1041_K32_M26_n32763.npz
+[18:49:07] [f41] hue=0.5 sc=1 sh=2 o=0  clu=  8 knn=  4 ctrl=  0 ceil= 60  (50s)
+[18:49:52]   store K=32 M=26 built and cached -> store_s0_c1042_K32_M26_n32765.npz
+[18:49:58] [f42] hue=0.5 sc=0 sh=2 o=1  clu=  0 knn=  0 ctrl=  0 ceil= 71  (51s)
+[18:50:41]   store K=32 M=26 built and cached -> store_s0_c1043_K32_M26_n32762.npz
+[18:50:48] [f43] hue=0.5 sc=0 sh=2 o=0  clu=  8 knn= 13 ctrl=  0 ceil= 55  (49s)
+[18:51:30]   store K=32 M=26 built and cached -> store_s0_c1044_K32_M26_n32756.npz
+[18:51:37] [f44] hue=0.5 sc=1 sh=3 o=1  clu= 37 knn= 23 ctrl=  0 ceil= 67  (49s)
+[18:52:20]   store K=32 M=26 built and cached -> store_s0_c1045_K32_M26_n32760.npz
+[18:52:26] [f45] hue=0.5 sc=1 sh=3 o=0  clu=  3 knn=  3 ctrl=  0 ceil= 69  (49s)
+[18:53:08]   store K=32 M=26 built and cached -> store_s0_c1046_K32_M26_n32762.npz
+[18:53:15] [f46] hue=0.5 sc=0 sh=3 o=1  clu=  0 knn=  0 ctrl=  0 ceil= 43  (49s)
+[18:53:54]   store K=32 M=26 built and cached -> store_s0_c1047_K32_M26_n32766.npz
+[18:54:00] [f47] hue=0.5 sc=0 sh=3 o=0  clu=  0 knn=  2 ctrl=  0 ceil= 39  (45s)
+[18:54:34]   store K=32 M=26 built and cached -> store_s0_c1048_K32_M26_n32760.npz
+[18:54:40] [f48] hue=0.7 sc=1 sh=0 o=1  clu= 30 knn=  0 ctrl=  0 ceil= 66  (40s)
+[18:55:15]   store K=32 M=26 built and cached -> store_s0_c1049_K32_M26_n32762.npz
+[18:55:21] [f49] hue=0.7 sc=1 sh=0 o=0  clu=  3 knn=  0 ctrl=  0 ceil= 16  (41s)
+[18:55:59]   store K=32 M=26 built and cached -> store_s0_c1050_K32_M26_n32762.npz
+[18:56:06] [f50] hue=0.7 sc=0 sh=0 o=1  clu=  0 knn=  4 ctrl=  0 ceil= 25  (45s)
+[18:57:00]   store K=32 M=26 built and cached -> store_s0_c1051_K32_M26_n32759.npz
+[18:57:08] [f51] hue=0.7 sc=0 sh=0 o=0  clu=  2 knn= 15 ctrl=  0 ceil= 39  (61s)
+[18:57:08] [f52] ⛔ REFUSED {'hue_lo': 0.7, 'scale_hi': True, 'shape_value': 1.0, 'orient_hi': True}: ⛔ DEV corner {'hue_lo': 0.7, 'scale_hi': True, 'shape_value': 1.0, 'orient_hi': True} intersects the held-out sets: eval_b 9 rows, eval_a 0 rows — REFUSED
+[18:57:52]   store K=32 M=26 built and cached -> store_s0_c1053_K32_M26_n32756.npz
+[18:57:59] [f53] hue=0.7 sc=1 sh=1 o=0  clu=  7 knn= 16 ctrl=  0 ceil= 59  (50s)
+[18:58:58]   store K=32 M=26 built and cached -> store_s0_c1054_K32_M26_n32768.npz
+[18:59:05] [f54] hue=0.7 sc=0 sh=1 o=1  clu=  1 knn=  4 ctrl=  0 ceil= 40  (66s)
+[18:59:50]   store K=32 M=26 built and cached -> store_s0_c1055_K32_M26_n32765.npz
+[18:59:58] [f55] hue=0.7 sc=0 sh=1 o=0  clu= 29 knn= 34 ctrl=  0 ceil= 42  (53s)
+[19:00:42]   store K=32 M=26 built and cached -> store_s0_c1056_K32_M26_n32761.npz
+[19:00:49] [f56] hue=0.7 sc=1 sh=2 o=1  clu= 47 knn= 28 ctrl=  0 ceil= 64  (52s)
+[19:01:33]   store K=32 M=26 built and cached -> store_s0_c1057_K32_M26_n32764.npz
+[19:01:40] [f57] hue=0.7 sc=1 sh=2 o=0  clu= 11 knn= 15 ctrl=  0 ceil= 65  (51s)
+[19:02:24]   store K=32 M=26 built and cached -> store_s0_c1058_K32_M26_n32762.npz
+[19:02:31] [f58] hue=0.7 sc=0 sh=2 o=1  clu=  0 knn=  0 ctrl=  0 ceil= 66  (51s)
+[19:02:31] [f59] ⛔ REFUSED {'hue_lo': 0.7, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False}: ⛔ DEV corner {'hue_lo': 0.7, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[19:03:16]   store K=32 M=26 built and cached -> store_s0_c1060_K32_M26_n32765.npz
+[19:03:24] [f60] hue=0.7 sc=1 sh=3 o=1  clu= 13 knn= 25 ctrl=  0 ceil= 67  (52s)
+[19:04:08]   store K=32 M=26 built and cached -> store_s0_c1061_K32_M26_n32757.npz
+[19:04:15] [f61] hue=0.7 sc=1 sh=3 o=0  clu= 27 knn= 19 ctrl=  0 ceil= 72  (52s)
+[19:05:00]   store K=32 M=26 built and cached -> store_s0_c1062_K32_M26_n32765.npz
+[19:05:08] [f62] hue=0.7 sc=0 sh=3 o=1  clu=  0 knn=  0 ctrl=  0 ceil= 40  (52s)
+[19:05:53]   store K=32 M=26 built and cached -> store_s0_c1063_K32_M26_n32766.npz
+[19:06:00] [f63] hue=0.7 sc=0 sh=3 o=0  clu=  4 knn=  1 ctrl=  0 ceil= 43  (52s)
+[19:06:00] C10 done: 56 fresh corners, 8 refused [7, 11, 15, 17, 18, 32, 52, 59], 2803.3s

@@ -1,0 +1,101 @@
+{
+ "address_book_reused_from_incumbent": true,
+ "address_bytes": {
+  "address_bytes": 189344,
+  "bytes_formula": "4 * ( sum_f card_f * R  +  sum_k R * r_k  +  2 * sum_k r_k )",
+  "dtype": "float32",
+  "normalisation_bytes": 2464,
+  "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it -- the same rule gen_request_head.head_bytes states for the incumbent head, so the two reads are compared on the same ledger.",
+  "per_factor_tables_bytes": 29184,
+  "per_well_maps_bytes": 157696,
+  "rank": 128
+ },
+ "arm": "pca_settle_f05_conv",
+ "atom_nn_spacing": [
+  1.414213556264065,
+  1.4142135581934276,
+  1.4142135539381315,
+  1.0,
+  1.0
+ ],
+ "beta": 1.0,
+ "byte_ledger": {
+  "budget_bytes": 524288,
+  "deployed_bytes": 524288,
+  "matches_budget": true,
+  "param_count": 131072,
+  "variance_explained_per_well": [
+   0.973331,
+   0.957267,
+   0.960491,
+   1.0,
+   1.0
+  ],
+  "what": "64 atoms x 2048 float32 -- the per-well leading principal subspace, the SAME block a field or wave-3 store's atoms occupy"
+ },
+ "content": "per-well principal subspace of the fit pool (unsupervised) -- the INCUMBENT's content, unchanged",
+ "content_sha256": "cd5a94325ff15f428292344bbe7c686cf1a3d623e190e109164bcbaa39d0d595",
+ "coupling_bytes": {
+  "bytes_formula": "4 * sum_{k<l} r * (r_k + r_l)",
+  "coupling_bytes": 78848,
+  "dtype": "float32",
+  "n_pairs": 10,
+  "note": "EXTRA to the store's 524,288 B and reported BESIDE it, never netted into it -- the same rule w5 stated for address_bytes. \u26d4 The standardisation is NOT declared free: it is counted and printed, so a reader can add it without recomputing anything.",
+  "rank": 16,
+  "standardisation_bytes": 2464,
+  "total_read_side_bytes_added": 81312
+ },
+ "coupling_certificate": {
+  "certificate": {
+   "bounded_below": false,
+   "certificate_min_eigenvalue": -1.4999999973351663,
+   "coupling_strength_declared": 1.0,
+   "max_safe_coupling_strength": 0.2500000003331044,
+   "pair_spectral_norms": [
+    1.0000000063770524,
+    0.9999999992335523,
+    0.9999999854624447,
+    1.0000000122676045,
+    0.9999999961611225,
+    0.9999999892639218,
+    0.9999999968731275,
+    1.0000000201228378,
+    0.9999999986891843,
+    0.9999999822249794
+   ],
+   "request_strength_beta": 1.0,
+   "rule": "E >= u^T C u - const with C_kk = beta/2 and C_kl = -lambda ||W_kl||_2 / 2; coercive iff C >= 0"
+  },
+  "certificate_bound_the_strength": true,
+  "coupling_strength_used": 0.22500000029979395,
+  "safety_frac": 0.9
+ },
+ "fit_seconds": 0.04768228530883789,
+ "head_bytes": {
+  "head_bytes": 0,
+  "note": "this read's address book IS the tensor book; the coupling is declared beside it and never netted in"
+ },
+ "kind": "span",
+ "label_use": "labels align the wells ONCE at fit time and ground the address book; the CONTENT is unsupervised (charter B.6)",
+ "lam": 0.011250000014989698,
+ "lam_fraction_of_certified_safe": 0.05,
+ "partition": "factor (K=5, inherited label-MI wells)",
+ "read": "settle",
+ "request_only": {
+  "bitwise_stable_under_feature_perturbation": true,
+  "feature_argument_present": false,
+  "n_checked": 64,
+  "read_signature": [
+   "self",
+   "store",
+   "values",
+   "grid_values",
+   "basis"
+  ],
+  "statement": "the read's only inputs are the address book, the store and the request; no feature tensor enters launch, settle or read (charter B.3)"
+ },
+ "row7_delete_path_checked_at_fit": true,
+ "settle_steps": "converge",
+ "step_size": 0.25,
+ "tol": 1e-06
+}

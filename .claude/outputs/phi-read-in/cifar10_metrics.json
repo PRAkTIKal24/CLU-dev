@@ -1,0 +1,1010 @@
+{
+  "seed": 0,
+  "doctrine": "learn around a designed core (\u03c6 learned, store designed)",
+  "protocol": {
+    "uhop_commit": "cdac75431df968b7142b4fb605a0fcd56feb59cb",
+    "ramsauer_commit": "f56f929c95b77a070ae675ea4f56b6d54d36e730",
+    "mask": "torch.dropout(x, p=0.5) (zero + \u00d72 survivors)",
+    "primary_metric": "mean sqdiff in PIXEL space on the payload (w22-comparable)",
+    "store": "key = \u03c6(pattern) as a Gaussian well; payload = raw pattern; read-out \u03c8 = settle \u2192 payload of nearest well",
+    "phi_fit": "\u03c6 fit on a DISJOINT pool (never sees the store/wells/loss)"
+  },
+  "config": {
+    "datasets": [
+      "cifar10"
+    ],
+    "phi_arms": [
+      "pca",
+      "ae"
+    ],
+    "load_grid": [
+      16,
+      32,
+      64,
+      128,
+      256
+    ],
+    "noise_levels": [
+      0.0,
+      0.2,
+      0.4,
+      0.6,
+      0.8,
+      1.0
+    ],
+    "noise_fixed_load": 128,
+    "n_data_pool": 1500,
+    "n_fit_pool": 3000,
+    "mask_p": 0.5,
+    "phi_dim": 32,
+    "ae_hidden": 256,
+    "ae_epochs": 400,
+    "activations": [
+      "softmax",
+      "sparsemax"
+    ],
+    "clu_s_frac": 0.3,
+    "clu_b": 1.0,
+    "clu_alpha": 0.001,
+    "clu_gamma": 0.1,
+    "clu_steps": 200,
+    "clu_tail_frac": 0.1,
+    "clu_kinetic_mode": "newtonian_identity",
+    "success_cosine": 0.9
+  },
+  "phi_provenance": [
+    {
+      "arm": "pca",
+      "k": 32,
+      "frozen": true,
+      "dataset": "cifar10"
+    },
+    {
+      "arm": "ae",
+      "k": 32,
+      "hidden": 256,
+      "epochs": 400,
+      "recon_mse": 0.02335069142282009,
+      "frozen": true,
+      "dataset": "cifar10"
+    }
+  ],
+  "capacity": [
+    {
+      "dataset": "cifar10",
+      "arm": "pca",
+      "rows": [
+        {
+          "M": 16,
+          "s_phi": 3.0502060890197753,
+          "phi_dim": 32,
+          "clu_dt": 1.5251030445098877,
+          "clu_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0625,
+            "mean_sqdiff": 935.1201171875,
+            "median_cosine": 0.7908097505569458,
+            "success_at_cosine": 0.0625
+          }
+        },
+        {
+          "M": 32,
+          "s_phi": 3.039890098571777,
+          "phi_dim": 32,
+          "clu_dt": 1.5199450492858886,
+          "clu_in_phi": {
+            "identity_acc": 0.875,
+            "mean_sqdiff": 9.069314002990723,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.875,
+            "mean_sqdiff": 26.155872344970703,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.90625
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.875,
+            "mean_sqdiff": 26.155872344970703,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.90625
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.03125,
+            "mean_sqdiff": 869.369384765625,
+            "median_cosine": 0.773108959197998,
+            "success_at_cosine": 0.0
+          }
+        },
+        {
+          "M": 64,
+          "s_phi": 2.913424587249756,
+          "phi_dim": 32,
+          "clu_dt": 1.456712293624878,
+          "clu_in_phi": {
+            "identity_acc": 0.90625,
+            "mean_sqdiff": 7.157061576843262,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.5625,
+            "mean_sqdiff": 161.2884521484375,
+            "median_cosine": 0.9999999403953552,
+            "success_at_cosine": 0.8125
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.5625,
+            "mean_sqdiff": 161.2884521484375,
+            "median_cosine": 0.9999999403953552,
+            "success_at_cosine": 0.8125
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 898.512451171875,
+            "median_cosine": 0.6242351531982422,
+            "success_at_cosine": 0.015625
+          }
+        },
+        {
+          "M": 128,
+          "s_phi": 2.4496301651000976,
+          "phi_dim": 32,
+          "clu_dt": 1.2248150825500488,
+          "clu_in_phi": {
+            "identity_acc": 0.953125,
+            "mean_sqdiff": 3.540395736694336,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9921875
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.4140625,
+            "mean_sqdiff": 209.85934448242188,
+            "median_cosine": 0.9520039558410645,
+            "success_at_cosine": 0.65625
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.4140625,
+            "mean_sqdiff": 209.85934448242188,
+            "median_cosine": 0.9520039558410645,
+            "success_at_cosine": 0.65625
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0234375,
+            "mean_sqdiff": 324.6905212402344,
+            "median_cosine": 0.8994721174240112,
+            "success_at_cosine": 0.4921875
+          }
+        },
+        {
+          "M": 256,
+          "s_phi": 2.3406433582305906,
+          "phi_dim": 32,
+          "clu_dt": 1.1703216791152953,
+          "clu_in_phi": {
+            "identity_acc": 0.80859375,
+            "mean_sqdiff": 16.59109115600586,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9375
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.37890625,
+            "mean_sqdiff": 213.9593048095703,
+            "median_cosine": 0.9462960958480835,
+            "success_at_cosine": 0.625
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.37890625,
+            "mean_sqdiff": 213.9593048095703,
+            "median_cosine": 0.9462960958480835,
+            "success_at_cosine": 0.625
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.01171875,
+            "mean_sqdiff": 184.13735961914062,
+            "median_cosine": 0.9187387824058533,
+            "success_at_cosine": 0.61328125
+          }
+        }
+      ],
+      "packing": {
+        "d": 32,
+        "well_width_s": 3.0502060890197753,
+        "median_nn_spacing": 10.167353630065918,
+        "delta_req_3p1_w": 9.455638875961304,
+        "spacing_over_delta_req": 1.0752688172041873,
+        "note": "occupancy adequate iff median_nn_spacing >= \u0394_req (\u22483.1\u00b7w); \u03c3_query adds to the max() at query time"
+      }
+    },
+    {
+      "dataset": "cifar10",
+      "arm": "ae",
+      "rows": [
+        {
+          "M": 16,
+          "s_phi": 0.41011948585510255,
+          "phi_dim": 32,
+          "clu_dt": 0.20505974292755128,
+          "clu_in_phi": {
+            "identity_acc": 0.875,
+            "mean_sqdiff": 17.054847717285156,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.6875,
+            "mean_sqdiff": 54.17420959472656,
+            "median_cosine": 0.9999999403953552,
+            "success_at_cosine": 0.9375
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.8125,
+            "mean_sqdiff": 29.554855346679688,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0625,
+            "mean_sqdiff": 935.1201171875,
+            "median_cosine": 0.7908097505569458,
+            "success_at_cosine": 0.0625
+          }
+        },
+        {
+          "M": 32,
+          "s_phi": 0.3462597370147705,
+          "phi_dim": 32,
+          "clu_dt": 0.17312986850738524,
+          "clu_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.4375,
+            "mean_sqdiff": 128.97061157226562,
+            "median_cosine": 0.945868730545044,
+            "success_at_cosine": 0.625
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.6875,
+            "mean_sqdiff": 64.54653930664062,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9375
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.03125,
+            "mean_sqdiff": 869.369384765625,
+            "median_cosine": 0.773108959197998,
+            "success_at_cosine": 0.0
+          }
+        },
+        {
+          "M": 64,
+          "s_phi": 0.3156113505363464,
+          "phi_dim": 32,
+          "clu_dt": 0.1578056752681732,
+          "clu_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.15625,
+            "mean_sqdiff": 180.4202423095703,
+            "median_cosine": 0.9090887904167175,
+            "success_at_cosine": 0.546875
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.328125,
+            "mean_sqdiff": 330.451416015625,
+            "median_cosine": 0.9479594230651855,
+            "success_at_cosine": 0.796875
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 898.512451171875,
+            "median_cosine": 0.6242351531982422,
+            "success_at_cosine": 0.015625
+          }
+        },
+        {
+          "M": 128,
+          "s_phi": 0.27347245216369626,
+          "phi_dim": 32,
+          "clu_dt": 0.13673622608184813,
+          "clu_in_phi": {
+            "identity_acc": 0.984375,
+            "mean_sqdiff": 1.6604381799697876,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.0390625,
+            "mean_sqdiff": 180.31680297851562,
+            "median_cosine": 0.9007352590560913,
+            "success_at_cosine": 0.5078125
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.234375,
+            "mean_sqdiff": 327.7503662109375,
+            "median_cosine": 0.9304642677307129,
+            "success_at_cosine": 0.7109375
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0234375,
+            "mean_sqdiff": 324.6905212402344,
+            "median_cosine": 0.8994721174240112,
+            "success_at_cosine": 0.4921875
+          }
+        },
+        {
+          "M": 256,
+          "s_phi": 0.24986470341682432,
+          "phi_dim": 32,
+          "clu_dt": 0.12493235170841216,
+          "clu_in_phi": {
+            "identity_acc": 0.97265625,
+            "mean_sqdiff": 4.526721000671387,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "knn_in_phi": {
+            "identity_acc": 0.984375,
+            "mean_sqdiff": 3.5416781902313232,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 180.9643096923828,
+            "median_cosine": 0.9086537957191467,
+            "success_at_cosine": 0.57421875
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.1796875,
+            "mean_sqdiff": 313.135009765625,
+            "median_cosine": 0.934068500995636,
+            "success_at_cosine": 0.71484375
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.01171875,
+            "mean_sqdiff": 184.13735961914062,
+            "median_cosine": 0.9187387824058533,
+            "success_at_cosine": 0.61328125
+          }
+        }
+      ],
+      "packing": {
+        "d": 32,
+        "well_width_s": 0.41011948585510255,
+        "median_nn_spacing": 1.3670649528503418,
+        "delta_req_3p1_w": 1.271370406150818,
+        "spacing_over_delta_req": 1.0752688172034552,
+        "note": "occupancy adequate iff median_nn_spacing >= \u0394_req (\u22483.1\u00b7w); \u03c3_query adds to the max() at query time"
+      }
+    }
+  ],
+  "noise": [
+    {
+      "dataset": "cifar10",
+      "arm": "pca",
+      "fixed_load": 128,
+      "rows": [
+        {
+          "sigma": 0.0,
+          "s_phi": 2.4496301651000976,
+          "phi_dim": 32,
+          "clu_dt": 1.2248150825500488,
+          "clu_in_phi": {
+            "identity_acc": 0.953125,
+            "mean_sqdiff": 3.619741439819336,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9921875
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.421875,
+            "mean_sqdiff": 200.263916015625,
+            "median_cosine": 0.9563776254653931,
+            "success_at_cosine": 0.6484375
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.421875,
+            "mean_sqdiff": 200.14981079101562,
+            "median_cosine": 0.9539307355880737,
+            "success_at_cosine": 0.6484375
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.8359375,
+            "mean_sqdiff": 10.903623580932617,
+            "median_cosine": 0.9999865293502808,
+            "success_at_cosine": 0.984375
+          }
+        },
+        {
+          "sigma": 0.2,
+          "s_phi": 2.4496301651000976,
+          "phi_dim": 32,
+          "clu_dt": 1.2248150825500488,
+          "clu_in_phi": {
+            "identity_acc": 0.9453125,
+            "mean_sqdiff": 5.542057037353516,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9765625
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.390625,
+            "mean_sqdiff": 222.5603790283203,
+            "median_cosine": 0.9470473527908325,
+            "success_at_cosine": 0.6484375
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.390625,
+            "mean_sqdiff": 222.5603790283203,
+            "median_cosine": 0.9470473527908325,
+            "success_at_cosine": 0.6484375
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.5390625,
+            "mean_sqdiff": 81.76566314697266,
+            "median_cosine": 0.9995962381362915,
+            "success_at_cosine": 0.96875
+          }
+        },
+        {
+          "sigma": 0.4,
+          "s_phi": 2.4496301651000976,
+          "phi_dim": 32,
+          "clu_dt": 1.2248150825500488,
+          "clu_in_phi": {
+            "identity_acc": 0.546875,
+            "mean_sqdiff": 77.87644958496094,
+            "median_cosine": 0.9999998807907104,
+            "success_at_cosine": 0.71875
+          },
+          "knn_in_phi": {
+            "identity_acc": 0.7109375,
+            "mean_sqdiff": 49.83435821533203,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.7734375
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.3203125,
+            "mean_sqdiff": 314.6161193847656,
+            "median_cosine": 0.9370678663253784,
+            "success_at_cosine": 0.7265625
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.3203125,
+            "mean_sqdiff": 314.6161193847656,
+            "median_cosine": 0.9370678663253784,
+            "success_at_cosine": 0.7265625
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 329.2459716796875,
+            "median_cosine": 0.8963245749473572,
+            "success_at_cosine": 0.4765625
+          }
+        },
+        {
+          "sigma": 0.6,
+          "s_phi": 2.4496301651000976,
+          "phi_dim": 32,
+          "clu_dt": 1.2248150825500488,
+          "clu_in_phi": {
+            "identity_acc": 0.140625,
+            "mean_sqdiff": 171.96795654296875,
+            "median_cosine": 0.9026153087615967,
+            "success_at_cosine": 0.515625
+          },
+          "knn_in_phi": {
+            "identity_acc": 0.1484375,
+            "mean_sqdiff": 186.2776641845703,
+            "median_cosine": 0.9056614637374878,
+            "success_at_cosine": 0.5625
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 955.904052734375,
+            "median_cosine": 0.9069800972938538,
+            "success_at_cosine": 0.5546875
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 955.904052734375,
+            "median_cosine": 0.9069800972938538,
+            "success_at_cosine": 0.5546875
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 333.3258056640625,
+            "median_cosine": 0.8963253498077393,
+            "success_at_cosine": 0.4765625
+          }
+        },
+        {
+          "sigma": 0.8,
+          "s_phi": 2.4496301651000976,
+          "phi_dim": 32,
+          "clu_dt": 1.2248150825500488,
+          "clu_in_phi": {
+            "identity_acc": 0.0625,
+            "mean_sqdiff": 248.31637573242188,
+            "median_cosine": 0.9056191444396973,
+            "success_at_cosine": 0.546875
+          },
+          "knn_in_phi": {
+            "identity_acc": 0.0703125,
+            "mean_sqdiff": 265.49310302734375,
+            "median_cosine": 0.9064987897872925,
+            "success_at_cosine": 0.5703125
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 997.6173706054688,
+            "median_cosine": 0.9069800972938538,
+            "success_at_cosine": 0.5546875
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 997.6173706054688,
+            "median_cosine": 0.9069800972938538,
+            "success_at_cosine": 0.5546875
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 338.5208435058594,
+            "median_cosine": 0.8963251709938049,
+            "success_at_cosine": 0.4765625
+          }
+        },
+        {
+          "sigma": 1.0,
+          "s_phi": 2.4496301651000976,
+          "phi_dim": 32,
+          "clu_dt": 1.2248150825500488,
+          "clu_in_phi": {
+            "identity_acc": 0.03125,
+            "mean_sqdiff": 288.7992858886719,
+            "median_cosine": 0.9058376550674438,
+            "success_at_cosine": 0.5234375
+          },
+          "knn_in_phi": {
+            "identity_acc": 0.0234375,
+            "mean_sqdiff": 306.35308837890625,
+            "median_cosine": 0.904822051525116,
+            "success_at_cosine": 0.5390625
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 997.6173706054688,
+            "median_cosine": 0.9069800972938538,
+            "success_at_cosine": 0.5546875
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 997.6173706054688,
+            "median_cosine": 0.9069800972938538,
+            "success_at_cosine": 0.5546875
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 338.520751953125,
+            "median_cosine": 0.8963245153427124,
+            "success_at_cosine": 0.4765625
+          }
+        }
+      ]
+    },
+    {
+      "dataset": "cifar10",
+      "arm": "ae",
+      "fixed_load": 128,
+      "rows": [
+        {
+          "sigma": 0.0,
+          "s_phi": 0.27347245216369626,
+          "phi_dim": 32,
+          "clu_dt": 0.13673622608184813,
+          "clu_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.0234375,
+            "mean_sqdiff": 184.07241821289062,
+            "median_cosine": 0.900033712387085,
+            "success_at_cosine": 0.5
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.1953125,
+            "mean_sqdiff": 376.8302001953125,
+            "median_cosine": 0.9279270768165588,
+            "success_at_cosine": 0.734375
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.8359375,
+            "mean_sqdiff": 10.903623580932617,
+            "median_cosine": 0.9999865293502808,
+            "success_at_cosine": 0.984375
+          }
+        },
+        {
+          "sigma": 0.2,
+          "s_phi": 0.27347245216369626,
+          "phi_dim": 32,
+          "clu_dt": 0.13673622608184813,
+          "clu_in_phi": {
+            "identity_acc": 0.9921875,
+            "mean_sqdiff": 1.0401842594146729,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.9921875
+          },
+          "knn_in_phi": {
+            "identity_acc": 1.0,
+            "mean_sqdiff": 0.0,
+            "median_cosine": 1.0,
+            "success_at_cosine": 1.0
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 192.40350341796875,
+            "median_cosine": 0.900033712387085,
+            "success_at_cosine": 0.5
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.1328125,
+            "mean_sqdiff": 460.74566650390625,
+            "median_cosine": 0.9232254028320312,
+            "success_at_cosine": 0.6875
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.5390625,
+            "mean_sqdiff": 81.76566314697266,
+            "median_cosine": 0.9995962381362915,
+            "success_at_cosine": 0.96875
+          }
+        },
+        {
+          "sigma": 0.4,
+          "s_phi": 0.27347245216369626,
+          "phi_dim": 32,
+          "clu_dt": 0.13673622608184813,
+          "clu_in_phi": {
+            "identity_acc": 0.6640625,
+            "mean_sqdiff": 55.72894287109375,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.7578125
+          },
+          "knn_in_phi": {
+            "identity_acc": 0.71875,
+            "mean_sqdiff": 46.986480712890625,
+            "median_cosine": 1.0,
+            "success_at_cosine": 0.8046875
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 211.10650634765625,
+            "median_cosine": 0.9002200365066528,
+            "success_at_cosine": 0.5
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.0390625,
+            "mean_sqdiff": 886.1617431640625,
+            "median_cosine": 0.9102938175201416,
+            "success_at_cosine": 0.5703125
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 329.2459716796875,
+            "median_cosine": 0.8963245749473572,
+            "success_at_cosine": 0.4765625
+          }
+        },
+        {
+          "sigma": 0.6,
+          "s_phi": 0.27347245216369626,
+          "phi_dim": 32,
+          "clu_dt": 0.13673622608184813,
+          "clu_in_phi": {
+            "identity_acc": 0.1171875,
+            "mean_sqdiff": 203.73721313476562,
+            "median_cosine": 0.9073648452758789,
+            "success_at_cosine": 0.5703125
+          },
+          "knn_in_phi": {
+            "identity_acc": 0.125,
+            "mean_sqdiff": 212.56268310546875,
+            "median_cosine": 0.9087541103363037,
+            "success_at_cosine": 0.5625
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 284.4786376953125,
+            "median_cosine": 0.8998256921768188,
+            "success_at_cosine": 0.4921875
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.015625,
+            "mean_sqdiff": 994.7619018554688,
+            "median_cosine": 0.9069800972938538,
+            "success_at_cosine": 0.5546875
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 333.3258056640625,
+            "median_cosine": 0.8963253498077393,
+            "success_at_cosine": 0.4765625
+          }
+        },
+        {
+          "sigma": 0.8,
+          "s_phi": 0.27347245216369626,
+          "phi_dim": 32,
+          "clu_dt": 0.13673622608184813,
+          "clu_in_phi": {
+            "identity_acc": 0.03125,
+            "mean_sqdiff": 304.8086242675781,
+            "median_cosine": 0.9047489762306213,
+            "success_at_cosine": 0.5546875
+          },
+          "knn_in_phi": {
+            "identity_acc": 0.0390625,
+            "mean_sqdiff": 310.68865966796875,
+            "median_cosine": 0.9058298468589783,
+            "success_at_cosine": 0.5703125
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 295.79949951171875,
+            "median_cosine": 0.8998256921768188,
+            "success_at_cosine": 0.4921875
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 997.6173706054688,
+            "median_cosine": 0.9069800972938538,
+            "success_at_cosine": 0.5546875
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 338.5208435058594,
+            "median_cosine": 0.8963251709938049,
+            "success_at_cosine": 0.4765625
+          }
+        },
+        {
+          "sigma": 1.0,
+          "s_phi": 0.27347245216369626,
+          "phi_dim": 32,
+          "clu_dt": 0.13673622608184813,
+          "clu_in_phi": {
+            "identity_acc": 0.0234375,
+            "mean_sqdiff": 619.79931640625,
+            "median_cosine": 0.900631844997406,
+            "success_at_cosine": 0.5078125
+          },
+          "knn_in_phi": {
+            "identity_acc": 0.0234375,
+            "mean_sqdiff": 605.0429077148438,
+            "median_cosine": 0.9027711153030396,
+            "success_at_cosine": 0.515625
+          },
+          "hopfield_softmax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 295.79949951171875,
+            "median_cosine": 0.8998256921768188,
+            "success_at_cosine": 0.4921875
+          },
+          "hopfield_sparsemax_in_phi": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 997.6173706054688,
+            "median_cosine": 0.9069800972938538,
+            "success_at_cosine": 0.5546875
+          },
+          "raw_space_clu": {
+            "identity_acc": 0.0078125,
+            "mean_sqdiff": 338.520751953125,
+            "median_cosine": 0.8963245153427124,
+            "success_at_cosine": 0.4765625
+          }
+        }
+      ]
+    }
+  ],
+  "laundering_control": [
+    {
+      "dataset": "cifar10",
+      "arm": "pca",
+      "tie_band": 0.03,
+      "per_M": [
+        {
+          "M": 16,
+          "clu_minus_knn_acc": 0.0
+        },
+        {
+          "M": 32,
+          "clu_minus_knn_acc": -0.125
+        },
+        {
+          "M": 64,
+          "clu_minus_knn_acc": -0.09375
+        },
+        {
+          "M": 128,
+          "clu_minus_knn_acc": -0.046875
+        },
+        {
+          "M": 256,
+          "clu_minus_knn_acc": -0.19140625
+        }
+      ],
+      "n_points": 5,
+      "n_tie": 1,
+      "n_clu_wins": 0,
+      "n_knn_wins": 4,
+      "max_clu_margin": 0.0,
+      "laundered": true,
+      "verdict": "LAUNDERED \u2014 CLU-in-\u03c6 never beats kNN-in-\u03c6 with the designed store: the win is \u03c6's, not ours."
+    },
+    {
+      "dataset": "cifar10",
+      "arm": "ae",
+      "tie_band": 0.03,
+      "per_M": [
+        {
+          "M": 16,
+          "clu_minus_knn_acc": -0.125
+        },
+        {
+          "M": 32,
+          "clu_minus_knn_acc": 0.0
+        },
+        {
+          "M": 64,
+          "clu_minus_knn_acc": 0.0
+        },
+        {
+          "M": 128,
+          "clu_minus_knn_acc": -0.015625
+        },
+        {
+          "M": 256,
+          "clu_minus_knn_acc": -0.01171875
+        }
+      ],
+      "n_points": 5,
+      "n_tie": 4,
+      "n_clu_wins": 0,
+      "n_knn_wins": 1,
+      "max_clu_margin": 0.0,
+      "laundered": true,
+      "verdict": "LAUNDERED \u2014 CLU-in-\u03c6 never beats kNN-in-\u03c6 with the designed store: the win is \u03c6's, not ours."
+    }
+  ],
+  "retry_confidence_probe": [
+    {
+      "dataset": "cifar10",
+      "arm": "pca",
+      "load": 128,
+      "n_correct": 122,
+      "n_total": 128,
+      "confidence_auroc": 0.9877049180327869,
+      "mean_dist_correct": 0.25669562816619873,
+      "mean_dist_incorrect": 1.7340203523635864,
+      "note": "confidence = distance-to-nearest-well at settle; AUROC>0.5 means the retry trigger still separates correct/incorrect reads in \u03c6-space."
+    },
+    {
+      "dataset": "cifar10",
+      "arm": "ae",
+      "load": 128,
+      "n_correct": 126,
+      "n_total": 128,
+      "confidence_auroc": 0.8452380952380952,
+      "mean_dist_correct": 0.013007072731852531,
+      "mean_dist_incorrect": 0.04013969376683235,
+      "note": "confidence = distance-to-nearest-well at settle; AUROC>0.5 means the retry trigger still separates correct/incorrect reads in \u03c6-space."
+    }
+  ],
+  "figures": [
+    "results/phi_capacity_cifar10_pca.png",
+    "results/phi_capacity_cifar10_ae.png",
+    "results/phi_noise_cifar10_pca.png",
+    "results/phi_noise_cifar10_ae.png"
+  ]
+}

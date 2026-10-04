@@ -1,0 +1,1770 @@
+{
+ "artefact": "HARNESS-READY.json",
+ "spoke": "w15/cmaze-t-harness",
+ "stamp_utc": "2026-09-22T23:11:12Z",
+ "status": "ready",
+ "tolerance_used": null,
+ "scored_runs_spent": 0,
+ "one_line": "CMAZE-T -- the compositional TRANSITION instrument over CMAZE-1.  Given (grid state, action) an arm generates the next state and the ENGINE judges it exactly: legality under RULES A+B, displacement, keystate and pocket, all by integer comparison.  Engine, solver and exact judge are w8_envscout.maze_colour, imported unmodified.",
+ "provenance": {
+  "branch": "w15/cmaze-t-harness",
+  "head": "148f3b77945045e613883cff6c5c43298ab43183",
+  "base": "148f3b7 [hub] base/iter8: fold w13/referee-2",
+  "worktree": "C:/chlu/worktrees/CHLU-w15-cmaze-t-harness",
+  "python": "3.11.9",
+  "engine": {
+   "module": "w8_envscout.maze_colour",
+   "generator": "generate() at ITS OWN DEFAULTS (h=w=7, n_colours=4, braid=0.40, p_tint=0.22, adversarial=2, no acceptance filter)",
+   "sha256": "9eacdda17d87cac0ad5ced6ccbb6fa43ebc1508c0460d0cc183e545d066beaac",
+   "modified": false
+  },
+  "stepper": {
+   "module": "w9_harness.dynamics",
+   "sha256": "9907083481b7a072b19a8a9fe4ada68222f78eb59bfa6764c786c2d3bb5002fe",
+   "modified": false
+  },
+  "second_replay": {
+   "module": "w9_harness.judge_maze (judge_ref)",
+   "sha256": "0408641f6ec898127e77f978548967ca9f54110bdbebf577cae17955585e8dd3",
+   "modified": false
+  },
+  "cmaze_t_layer": {
+   "modules": [
+    "chlu/exp_w15_cmaze_t.py",
+    "chlu/exp_w15_cmaze_t_arms.py",
+    "scripts/w15_cmaze_t_run.py",
+    "scripts/w15_cmaze_t_ready.py"
+   ],
+   "sha256": {
+    "chlu/exp_w15_cmaze_t.py": "051ba3e44b30816aa994c0cb3fc073b1a48182e12cff33a97a44ff643f6c2f59",
+    "chlu/exp_w15_cmaze_t_arms.py": "5f72d54b05112d791e415dbc3f5d905383e98df539b24074017de38526a6f60d",
+    "scripts/w15_cmaze_t_run.py": "6e0303c757d84ee366f2e4596cf08eb268738ffadf0fc167750331e8ba99ebb7"
+   }
+  },
+  "THE_ONE_DISTRIBUTIONAL_CHANGE": {
+   "what": "the request layer tints a fraction of DOOR cells, then hands the instance to the unchanged engine, solver and judge",
+   "why": "maze_colour.generate zeroes the tint on start, goal, door and key cells, so a door cell is never tinted (measured: 160 door cells over 40 generator seeds, 0 tinted).  RULES A and B can then never interact WITHIN one transition, BLIND-SEQUENTIAL is vacuous at the transition level, and a transition instrument with no within-step interaction is not a composition instrument.",
+   "legitimacy": "the RULES already specify the case -- judge, step, judge_ref and solve all resolve the door first and then test the tint against the UPDATED pocket.  Only the generator declines to emit it.  Same class of move as w9_maze.task._poison_pairs and _seal.",
+   "safety": "every tinted instance is re-solved with the UNMODIFIED solver; a tint that kills the oracle is reverted",
+   "receipts_per_seed": [
+    {
+     "p_door_tint": 1.0,
+     "self_tint_prob": 0.6,
+     "door_cells": 360,
+     "tinted": 356,
+     "self_tinted": 222,
+     "reverted_to_preserve_the_oracle": 4,
+     "opt_len_mean_before": 45.333333333333336,
+     "opt_len_mean_after": 45.333333333333336
+    },
+    {
+     "p_door_tint": 1.0,
+     "self_tint_prob": 0.6,
+     "door_cells": 360,
+     "tinted": 354,
+     "self_tinted": 202,
+     "reverted_to_preserve_the_oracle": 6,
+     "opt_len_mean_before": 42.96666666666667,
+     "opt_len_mean_after": 42.96666666666667
+    },
+    {
+     "p_door_tint": 1.0,
+     "self_tint_prob": 0.6,
+     "door_cells": 360,
+     "tinted": 354,
+     "self_tinted": 215,
+     "reverted_to_preserve_the_oracle": 6,
+     "opt_len_mean_before": 40.044444444444444,
+     "opt_len_mean_after": 40.1
+    }
+   ]
+  }
+ },
+ "ACCEPTANCE": {
+  "1__independent_replay_zero_disagreements": {
+   "pass": true,
+   "transitions_replayed": 164767,
+   "disagreements": 0,
+   "bar": "0 disagreements over >= 50000 transitions",
+   "per_seed": [
+    {
+     "seed": 0,
+     "replayed": 55285,
+     "disagreements": 0
+    },
+    {
+     "seed": 1,
+     "replayed": 54710,
+     "disagreements": 0
+    },
+    {
+     "seed": 2,
+     "replayed": 54772,
+     "disagreements": 0
+    }
+   ],
+   "drivers": [
+    "step_ref (rules-written, set-based state, no array of trits)",
+    "judge_ref (the w9 second replay, driven from inst.start over prefix+action; it never sees s_t)"
+   ]
+  },
+  "2__no_impossible_example_shown_to_a_non_refuser_arm": {
+   "pass": true,
+   "rows_checked": 164767,
+   "rows_with_no_accepting_emission": 0,
+   "bar": "0 impossible rows over >= 50000 rows checked",
+   "definition": "an example is IMPOSSIBLE iff no emission exists that the exact transition judge accepts; this audit constructs the accepting emission for every row and checks the judge takes it",
+   "refusal_display": "RETIRED.  The value hold-out is SCORED, not displayed; no arm in this harness has a refuse token."
+  },
+  "3__holdouts_disjoint_from_train_by_construction": {
+   "per_seed": [
+    {
+     "value_holdout_colour": 4,
+     "n_train_rows": 20218,
+     "train_rows_mentioning_the_held_out_colour": 0,
+     "n_nway_combos_held_out": 20,
+     "nway_combos_present_in_train": 0,
+     "n_pair_combos_held_out": 8,
+     "pair_combos_present_in_train": 0,
+     "pair_leak_detail": [],
+     "rows_misclassified_into_their_own_split": {
+      "value": 0,
+      "pair": 0,
+      "nway": 0
+     },
+     "distinct_word_tuples_in_train": 381,
+     "pass": true
+    },
+    {
+     "value_holdout_colour": 4,
+     "n_train_rows": 19447,
+     "train_rows_mentioning_the_held_out_colour": 0,
+     "n_nway_combos_held_out": 20,
+     "nway_combos_present_in_train": 0,
+     "n_pair_combos_held_out": 8,
+     "pair_combos_present_in_train": 0,
+     "pair_leak_detail": [],
+     "rows_misclassified_into_their_own_split": {
+      "value": 0,
+      "nway": 0,
+      "pair": 0
+     },
+     "distinct_word_tuples_in_train": 363,
+     "pass": true
+    },
+    {
+     "value_holdout_colour": 4,
+     "n_train_rows": 17618,
+     "train_rows_mentioning_the_held_out_colour": 0,
+     "n_nway_combos_held_out": 20,
+     "nway_combos_present_in_train": 0,
+     "n_pair_combos_held_out": 8,
+     "pair_combos_present_in_train": 0,
+     "pair_leak_detail": [],
+     "rows_misclassified_into_their_own_split": {
+      "value": 0,
+      "pair": 0,
+      "nway": 0
+     },
+     "distinct_word_tuples_in_train": 342,
+     "pass": true
+    }
+   ],
+   "words_determine_transition": [
+    {
+     "distinct_word_tuples": 1081,
+     "rows": 55285,
+     "word_tuples_with_two_outcomes": 0,
+     "pass": true
+    },
+    {
+     "distinct_word_tuples": 1143,
+     "rows": 54710,
+     "word_tuples_with_two_outcomes": 0,
+     "pass": true
+    },
+    {
+     "distinct_word_tuples": 1117,
+     "rows": 54772,
+     "word_tuples_with_two_outcomes": 0,
+     "pass": true
+    }
+   ],
+   "pass": true,
+   "bar": "the value hold-out colour never appears in a train rule; no held-out n-way or 2-way combination occurs in train; the five words determine the transition"
+  },
+  "4__rule_B_bites_REPORTED_COLUMN": {
+   "REPORTED_COLUMN_NEVER_AN_ABORT_CONDITION": true,
+   "rule_b_renders_the_action_ILLEGAL": {
+    "stratified_bank_train_fraction": [
+     0.07189825463401434,
+     0.07324552996905889,
+     0.0716017103793883
+    ],
+    "stratified_bank_val_fraction": [
+     0.07272231314784507,
+     0.07284622574083237,
+     0.07039601218499031
+    ],
+    "natural_distribution_train_fraction": [
+     0.012814814814814815,
+     0.011956925362049758,
+     0.012148148148148148
+    ],
+    "natural_distribution_val_fraction": [
+     0.01437037037037037,
+     0.016148148148148148,
+     0.01037037037037037
+    ]
+   },
+   "definition": "fraction of transitions the engine makes ILLEGAL under RULES A+B that would be LEGAL under RULE A alone.  REPORTED COLUMN, never an abort condition.",
+   "which_is_which": "the stratified bank caps rows per WORD TUPLE, which is what gives the rare configurations enough rows to score; the natural distribution is a uniform sample of (reachable state, action) pairs.  Both are printed; neither is a gate.",
+   "three_way_configuration_count_per_seed_val_bank": [
+    265,
+    234,
+    226
+   ]
+  },
+  "5__seeded_VAL_smoke_3_seeds_all_rows_every_rival": {
+   "pass": true,
+   "n_seeds": 3,
+   "seed_indices": [
+    0,
+    1,
+    2
+   ],
+   "rows_present": [
+    "nway",
+    "pair",
+    "seen",
+    "value",
+    "rollout"
+   ],
+   "arms_present": [
+    "CLU (single design)",
+    "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+    "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+    "rival: mlp",
+    "rival: lstm",
+    "rival: transformer",
+    "floor: lookup cross-maze WORDS",
+    "floor: lookup cross-maze raw r1",
+    "floor: fragment cross-maze r1",
+    "floor: lookup WITHIN-maze raw r1",
+    "control: landscape_removed",
+    "control: landscape_shuffled",
+    "control: landscape_shuffled_across_wells",
+    "control: random_atoms",
+    "column: BLIND-COLOUR (planner)",
+    "column: BLIND-SEQUENTIAL (planner)",
+    "column: ORACLE (planner)",
+    "column: BLIND-A (planner)",
+    "column: BLIND-B (planner)",
+    "column: BLIND-FACTOR (planner)",
+    "column: CODEC CEILING"
+   ],
+   "artefact": "VAL-SMOKE.json",
+   "bar": "3 seeds, all or none; all rows; every rival"
+  },
+  "6__PREREG_before_any_number": {
+   "pass": true,
+   "artefact": "PREREG.md",
+   "sha256": "7fd87e24e0fdc94753e6d0030ce3c9a2449b5b718ea3994339f23bd303e95f7a"
+  }
+ },
+ "instrument_warnings": [
+  {
+   "warning": "composition_blind_PLANNER_scores_near_the_clu_on_unseen_nway",
+   "arm": "column: BLIND-COLOUR (planner)",
+   "blind_mean": 0.5597317994210769,
+   "clu_mean": 0.5377997456111704,
+   "margin_used": 0.05,
+   "reading": "\u26a0 READ THIS ONE CAREFULLY.  The BLIND-* PLANNER columns are rule-KNOWING relaxed oracles: they read the grid, they are never trained, and so they never have to generalise to a held-out combination at all.  They are an UPPER BOUND on what a composition-blind policy could do, not a policy.  The falsifier the task file names is the LEARNED BLIND-COLOUR / BLIND-SEQUENTIAL arm, reported separately.",
+   "SHIPPED_ANYWAY": true
+  },
+  {
+   "warning": "composition_blind_PLANNER_scores_near_the_clu_on_unseen_nway",
+   "arm": "column: BLIND-SEQUENTIAL (planner)",
+   "blind_mean": 0.9135401798369638,
+   "clu_mean": 0.5377997456111704,
+   "margin_used": 0.05,
+   "reading": "\u26a0 READ THIS ONE CAREFULLY.  The BLIND-* PLANNER columns are rule-KNOWING relaxed oracles: they read the grid, they are never trained, and so they never have to generalise to a held-out combination at all.  They are an UPPER BOUND on what a composition-blind policy could do, not a policy.  The falsifier the task file names is the LEARNED BLIND-COLOUR / BLIND-SEQUENTIAL arm, reported separately.",
+   "SHIPPED_ANYWAY": true
+  },
+  {
+   "warning": "charter_C_control_did_not_collapse",
+   "row": "pair",
+   "control": "control: landscape_shuffled",
+   "control_mean": 0.21546525505978234,
+   "clu_mean": 0.3390805892899904,
+   "margin_used": 0.15,
+   "reading": "on this row no STORE claim is available; it is an INTERFACE claim or nothing."
+  },
+  {
+   "warning": "charter_C_control_did_not_collapse",
+   "row": "pair",
+   "control": "control: landscape_shuffled_across_wells",
+   "control_mean": 0.19241572928282238,
+   "clu_mean": 0.3390805892899904,
+   "margin_used": 0.15,
+   "reading": "on this row no STORE claim is available; it is an INTERFACE claim or nothing."
+  },
+  {
+   "warning": "charter_C_control_did_not_collapse",
+   "row": "pair",
+   "control": "control: random_atoms",
+   "control_mean": 0.21085768972480215,
+   "clu_mean": 0.3390805892899904,
+   "margin_used": 0.15,
+   "reading": "on this row no STORE claim is available; it is an INTERFACE claim or nothing."
+  },
+  {
+   "warning": "charter_C_control_did_not_collapse",
+   "row": "value",
+   "control": "control: landscape_shuffled",
+   "control_mean": 0.31125,
+   "clu_mean": 0.42566666666666664,
+   "margin_used": 0.15,
+   "reading": "on this row no STORE claim is available; it is an INTERFACE claim or nothing."
+  },
+  {
+   "warning": "cross_maze_lookup_floor_scores_near_the_clu",
+   "row": "seen",
+   "floor_mean": 0.9966666666666666,
+   "clu_mean": 0.97225,
+   "reading": "on this row the result is retrieval, not composition."
+  }
+ ],
+ "VAL_SMOKE_SUMMARY": {
+  "seen": {
+   "title": "seen",
+   "n_rows_scored_per_seed": [
+    4000,
+    4000,
+    4000
+   ],
+   "arms": {
+    "CLU (single design)": {
+     "mean": 0.97225,
+     "sd": 0.019434183800715717,
+     "per_seed": [
+      0.99075,
+      0.974,
+      0.952
+     ]
+    },
+    "arm: BLIND-COLOUR (learned: colour identity removed from the request)": {
+     "mean": 0.5523333333333333,
+     "sd": 0.024501700621249366,
+     "per_seed": [
+      0.552,
+      0.528,
+      0.577
+     ]
+    },
+    "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+     "mean": 0.92625,
+     "sd": 0.0251346374551136,
+     "per_seed": [
+      0.89725,
+      0.93975,
+      0.94175
+     ]
+    },
+    "rival: mlp": {
+     "mean": 0.6836666666666668,
+     "sd": 0.11377948335852707,
+     "per_seed": [
+      0.75575,
+      0.5525,
+      0.74275
+     ]
+    },
+    "rival: lstm": {
+     "mean": 0.6120833333333334,
+     "sd": 0.053887807835662896,
+     "per_seed": [
+      0.64675,
+      0.55,
+      0.6395
+     ]
+    },
+    "rival: transformer": {
+     "mean": 0.7935833333333333,
+     "sd": 0.05076929025831788,
+     "per_seed": [
+      0.798,
+      0.74075,
+      0.842
+     ]
+    },
+    "floor: lookup cross-maze WORDS": {
+     "mean": 0.9966666666666666,
+     "sd": 0.001773649721149371,
+     "per_seed": [
+      0.99825,
+      0.99475,
+      0.997
+     ]
+    },
+    "floor: lookup cross-maze raw r1": {
+     "mean": 0.3801666666666667,
+     "sd": 0.015502687938977994,
+     "per_seed": [
+      0.3645,
+      0.3805,
+      0.3955
+     ]
+    },
+    "floor: fragment cross-maze r1": {
+     "mean": 0.29175,
+     "sd": 0.01220399524745892,
+     "per_seed": [
+      0.27825,
+      0.295,
+      0.302
+     ]
+    },
+    "floor: lookup WITHIN-maze raw r1": {
+     "mean": 0.29033333333333333,
+     "sd": 0.02298686218981034,
+     "per_seed": [
+      0.271,
+      0.28425,
+      0.31575
+     ]
+    },
+    "control: landscape_removed": {
+     "mean": 0.018666666666666668,
+     "sd": 0.03233161507461904,
+     "per_seed": [
+      0.0,
+      0.0,
+      0.056
+     ]
+    },
+    "control: landscape_shuffled": {
+     "mean": 0.644,
+     "sd": 0.08019780233896688,
+     "per_seed": [
+      0.55625,
+      0.7135,
+      0.66225
+     ]
+    },
+    "control: landscape_shuffled_across_wells": {
+     "mean": 0.5196666666666666,
+     "sd": 0.32790588715869884,
+     "per_seed": [
+      0.83775,
+      0.18275,
+      0.5385
+     ]
+    },
+    "control: random_atoms": {
+     "mean": 0.527,
+     "sd": 0.030845380529343432,
+     "per_seed": [
+      0.55975,
+      0.4985,
+      0.52275
+     ]
+    },
+    "column: BLIND-COLOUR (planner)": {
+     "mean": 0.8325,
+     "sd": 0.04049614179153366,
+     "per_seed": [
+      0.818,
+      0.80125,
+      0.87825
+     ]
+    },
+    "column: BLIND-SEQUENTIAL (planner)": {
+     "mean": 0.9969166666666668,
+     "sd": 0.0037444403231101497,
+     "per_seed": [
+      0.998,
+      1.0,
+      0.99275
+     ]
+    },
+    "column: ORACLE (planner)": {
+     "mean": 1.0,
+     "sd": 0.0,
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    "column: BLIND-A (planner)": {
+     "mean": 0.9684166666666666,
+     "sd": 0.02510146078086558,
+     "per_seed": [
+      0.94125,
+      0.97325,
+      0.99075
+     ]
+    },
+    "column: BLIND-B (planner)": {
+     "mean": 0.9315833333333333,
+     "sd": 0.014134031036237796,
+     "per_seed": [
+      0.946,
+      0.931,
+      0.91775
+     ]
+    },
+    "column: BLIND-FACTOR (planner)": {
+     "mean": 0.9723333333333334,
+     "sd": 0.021178310445673757,
+     "per_seed": [
+      0.94975,
+      0.9755,
+      0.99175
+     ]
+    },
+    "column: CODEC CEILING": {
+     "mean": 1.0,
+     "sd": 0.0,
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    "column: CODEC CEILING (pipeline ceiling)": {
+     "mean": 1.0,
+     "sd": 0.0,
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ]
+    }
+   }
+  },
+  "pair": {
+   "title": "unseen 2-way",
+   "n_rows_scored_per_seed": [
+    812,
+    1121,
+    2129
+   ],
+   "arms": {
+    "CLU (single design)": {
+     "mean": 0.3390805892899904,
+     "sd": 0.16247264540990441,
+     "per_seed": [
+      0.15147783251231528,
+      0.431757359500446,
+      0.43400657585721
+     ]
+    },
+    "arm: BLIND-COLOUR (learned: colour identity removed from the request)": {
+     "mean": 0.21652235259411945,
+     "sd": 0.12325167077088686,
+     "per_seed": [
+      0.10344827586206896,
+      0.3479036574487065,
+      0.1982151244715829
+     ]
+    },
+    "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+     "mean": 0.4948149886187531,
+     "sd": 0.07759877749318078,
+     "per_seed": [
+      0.5086206896551724,
+      0.4112399643175736,
+      0.5645843118835134
+     ]
+    },
+    "rival: mlp": {
+     "mean": 0.3397016517133407,
+     "sd": 0.15810821013977558,
+     "per_seed": [
+      0.33374384236453203,
+      0.18465655664585193,
+      0.5007045561296384
+     ]
+    },
+    "rival: lstm": {
+     "mean": 0.2256554471294051,
+     "sd": 0.08627533621860103,
+     "per_seed": [
+      0.16995073891625614,
+      0.18198037466547726,
+      0.3250352278064819
+     ]
+    },
+    "rival: transformer": {
+     "mean": 0.36030969240449656,
+     "sd": 0.13169220628334513,
+     "per_seed": [
+      0.3054187192118227,
+      0.2649420160570919,
+      0.5105683419445749
+     ]
+    },
+    "floor: lookup cross-maze WORDS": {
+     "mean": 0.0,
+     "sd": 0.0,
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "floor: lookup cross-maze raw r1": {
+     "mean": 0.018283159270351443,
+     "sd": 0.008066948096816198,
+     "per_seed": [
+      0.01600985221674877,
+      0.01159678858162355,
+      0.02724283701268201
+     ]
+    },
+    "floor: fragment cross-maze r1": {
+     "mean": 0.04493038924535592,
+     "sd": 0.02365815519665981,
+     "per_seed": [
+      0.05541871921182266,
+      0.01784121320249777,
+      0.0615312353217473
+     ]
+    },
+    "floor: lookup WITHIN-maze raw r1": {
+     "mean": 0.0836493532292402,
+     "sd": 0.011653342917861983,
+     "per_seed": [
+      0.07019704433497537,
+      0.09009812667261374,
+      0.09065288868013152
+     ]
+    },
+    "control: landscape_removed": {
+     "mean": 0.0,
+     "sd": 0.0,
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "control: landscape_shuffled": {
+     "mean": 0.21546525505978234,
+     "sd": 0.07617494615518974,
+     "per_seed": [
+      0.22660098522167488,
+      0.2854594112399643,
+      0.13433536871770785
+     ]
+    },
+    "control: landscape_shuffled_across_wells": {
+     "mean": 0.19241572928282238,
+     "sd": 0.11503485969761866,
+     "per_seed": [
+      0.2647783251231527,
+      0.05976806422836753,
+      0.25270079849694693
+     ]
+    },
+    "control: random_atoms": {
+     "mean": 0.21085768972480215,
+     "sd": 0.07515867602458942,
+     "per_seed": [
+      0.13177339901477833,
+      0.21944692239072258,
+      0.28135274776890556
+     ]
+    },
+    "column: BLIND-COLOUR (planner)": {
+     "mean": 0.34767438989659216,
+     "sd": 0.18946852430235536,
+     "per_seed": [
+      0.17364532019704434,
+      0.5495093666369313,
+      0.31986848285580083
+     ]
+    },
+    "column: BLIND-SEQUENTIAL (planner)": {
+     "mean": 0.9127949517337081,
+     "sd": 0.05775145632198525,
+     "per_seed": [
+      0.8719211822660099,
+      0.8876003568242641,
+      0.9788633161108502
+     ]
+    },
+    "column: ORACLE (planner)": {
+     "mean": 1.0,
+     "sd": 0.0,
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    "column: BLIND-A (planner)": {
+     "mean": 0.7909397810868893,
+     "sd": 0.18943246846426826,
+     "per_seed": [
+      1.0,
+      0.6306868867082962,
+      0.742132456552372
+     ]
+    },
+    "column: BLIND-B (planner)": {
+     "mean": 0.6330759590738136,
+     "sd": 0.20092978110047763,
+     "per_seed": [
+      0.41379310344827586,
+      0.6770740410347904,
+      0.8083607327383748
+     ]
+    },
+    "column: BLIND-FACTOR (planner)": {
+     "mean": 0.8197565388102254,
+     "sd": 0.16282193514498394,
+     "per_seed": [
+      1.0,
+      0.6833184656556646,
+      0.7759511507750118
+     ]
+    },
+    "column: CODEC CEILING": {
+     "mean": 0.8722233445672716,
+     "sd": 0.07504998265017049,
+     "per_seed": [
+      0.8386699507389163,
+      0.8198037466547725,
+      0.9581963363081258
+     ]
+    },
+    "column: CODEC CEILING (pipeline ceiling)": {
+     "mean": 0.8722233445672716,
+     "sd": 0.07504998265017049,
+     "per_seed": [
+      0.8386699507389163,
+      0.8198037466547725,
+      0.9581963363081258
+     ]
+    }
+   }
+  },
+  "nway": {
+   "title": "unseen n-way",
+   "n_rows_scored_per_seed": [
+    752,
+    675,
+    707
+   ],
+   "arms": {
+    "CLU (single design)": {
+     "mean": 0.5377997456111704,
+     "sd": 0.2318795626965792,
+     "per_seed": [
+      0.8018617021276596,
+      0.3674074074074074,
+      0.44413012729844414
+     ]
+    },
+    "arm: BLIND-COLOUR (learned: colour identity removed from the request)": {
+     "mean": 0.0,
+     "sd": 0.0,
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+     "mean": 0.2960176955723266,
+     "sd": 0.11849469079792234,
+     "per_seed": [
+      0.2300531914893617,
+      0.22518518518518518,
+      0.4328147100424328
+     ]
+    },
+    "rival: mlp": {
+     "mean": 0.2564503209861682,
+     "sd": 0.1861689656320882,
+     "per_seed": [
+      0.36436170212765956,
+      0.04148148148148148,
+      0.3635077793493635
+     ]
+    },
+    "rival: lstm": {
+     "mean": 0.1307596582859907,
+     "sd": 0.08420723271995369,
+     "per_seed": [
+      0.19547872340425532,
+      0.035555555555555556,
+      0.16124469589816123
+     ]
+    },
+    "rival: transformer": {
+     "mean": 0.395832481593313,
+     "sd": 0.029803534269618723,
+     "per_seed": [
+      0.425531914893617,
+      0.36592592592592593,
+      0.39603960396039606
+     ]
+    },
+    "floor: lookup cross-maze WORDS": {
+     "mean": 0.0,
+     "sd": 0.0,
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "floor: lookup cross-maze raw r1": {
+     "mean": 0.0004714757190004715,
+     "sd": 0.0008166198998438837,
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0014144271570014145
+     ]
+    },
+    "floor: fragment cross-maze r1": {
+     "mean": 0.020615873981859517,
+     "sd": 0.017521941085802156,
+     "per_seed": [
+      0.0398936170212766,
+      0.016296296296296295,
+      0.005657708628005658
+     ]
+    },
+    "floor: lookup WITHIN-maze raw r1": {
+     "mean": 0.10457010256918971,
+     "sd": 0.0032387934545381426,
+     "per_seed": [
+      0.10372340425531915,
+      0.10814814814814815,
+      0.10183875530410184
+     ]
+    },
+    "control: landscape_removed": {
+     "mean": 0.0,
+     "sd": 0.0,
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    },
+    "control: landscape_shuffled": {
+     "mean": 0.2555425565352888,
+     "sd": 0.12826702594352224,
+     "per_seed": [
+      0.3257978723404255,
+      0.3333333333333333,
+      0.1074964639321075
+     ]
+    },
+    "control: landscape_shuffled_across_wells": {
+     "mean": 0.3827272687586219,
+     "sd": 0.2271715600226189,
+     "per_seed": [
+      0.5625,
+      0.1274074074074074,
+      0.4582743988684583
+     ]
+    },
+    "control: random_atoms": {
+     "mean": 0.3759732834141232,
+     "sd": 0.35805202244708934,
+     "per_seed": [
+      0.7845744680851063,
+      0.11703703703703704,
+      0.2263083451202263
+     ]
+    },
+    "column: BLIND-COLOUR (planner)": {
+     "mean": 0.5597317994210769,
+     "sd": 0.007960914095796683,
+     "per_seed": [
+      0.5558510638297872,
+      0.5688888888888889,
+      0.5544554455445545
+     ]
+    },
+    "column: BLIND-SEQUENTIAL (planner)": {
+     "mean": 0.9135401798369638,
+     "sd": 0.010358025594261654,
+     "per_seed": [
+      0.9029255319148937,
+      0.914074074074074,
+      0.9236209335219236
+     ]
+    },
+    "column: ORACLE (planner)": {
+     "mean": 1.0,
+     "sd": 0.0,
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    "column: BLIND-A (planner)": {
+     "mean": 0.5267280207419595,
+     "sd": 0.012788932048606805,
+     "per_seed": [
+      0.5412234042553191,
+      0.5170370370370371,
+      0.521923620933522
+     ]
+    },
+    "column: BLIND-B (planner)": {
+     "mean": 0.9135401798369638,
+     "sd": 0.010358025594261654,
+     "per_seed": [
+      0.9029255319148937,
+      0.914074074074074,
+      0.9236209335219236
+     ]
+    },
+    "column: BLIND-FACTOR (planner)": {
+     "mean": 0.5781053400848358,
+     "sd": 0.007046213518111595,
+     "per_seed": [
+      0.5797872340425532,
+      0.5703703703703704,
+      0.5841584158415841
+     ]
+    },
+    "column: CODEC CEILING": {
+     "mean": 0.9495253133047178,
+     "sd": 0.04094550616384596,
+     "per_seed": [
+      0.9401595744680851,
+      0.914074074074074,
+      0.9943422913719944
+     ]
+    },
+    "column: CODEC CEILING (pipeline ceiling)": {
+     "mean": 0.9495253133047178,
+     "sd": 0.04094550616384596,
+     "per_seed": [
+      0.9401595744680851,
+      0.914074074074074,
+      0.9943422913719944
+     ]
+    }
+   }
+  },
+  "value": {
+   "title": "value hold-out (never-seen colour)",
+   "n_rows_scored_per_seed": [
+    4000,
+    4000,
+    4000
+   ],
+   "arms": {
+    "CLU (single design)": {
+     "mean": 0.42566666666666664,
+     "sd": 0.01620249466388843,
+     "per_seed": [
+      0.4145,
+      0.41825,
+      0.44425
+     ]
+    },
+    "arm: BLIND-COLOUR (learned: colour identity removed from the request)": {
+     "mean": 0.25866666666666666,
+     "sd": 0.020350573292498016,
+     "per_seed": [
+      0.253,
+      0.24175,
+      0.28125
+     ]
+    },
+    "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+     "mean": 0.43958333333333327,
+     "sd": 0.03865660788705255,
+     "per_seed": [
+      0.46625,
+      0.39525,
+      0.45725
+     ]
+    },
+    "rival: mlp": {
+     "mean": 0.41933333333333334,
+     "sd": 0.1808767421017233,
+     "per_seed": [
+      0.458,
+      0.22225,
+      0.57775
+     ]
+    },
+    "rival: lstm": {
+     "mean": 0.26966666666666667,
+     "sd": 0.04140148950621623,
+     "per_seed": [
+      0.2865,
+      0.2225,
+      0.3
+     ]
+    },
+    "rival: transformer": {
+     "mean": 0.4704166666666667,
+     "sd": 0.13582855308562092,
+     "per_seed": [
+      0.49775,
+      0.323,
+      0.5905
+     ]
+    },
+    "floor: lookup cross-maze WORDS": {
+     "mean": 0.05433333333333334,
+     "sd": 0.004368447474027052,
+     "per_seed": [
+      0.0555,
+      0.0495,
+      0.058
+     ]
+    },
+    "floor: lookup cross-maze raw r1": {
+     "mean": 0.07108333333333333,
+     "sd": 0.005281650625830271,
+     "per_seed": [
+      0.0745,
+      0.065,
+      0.07375
+     ]
+    },
+    "floor: fragment cross-maze r1": {
+     "mean": 0.11425,
+     "sd": 0.0002500000000000002,
+     "per_seed": [
+      0.114,
+      0.1145,
+      0.11425
+     ]
+    },
+    "floor: lookup WITHIN-maze raw r1": {
+     "mean": 0.15108333333333335,
+     "sd": 0.012884907191490876,
+     "per_seed": [
+      0.1505,
+      0.1385,
+      0.16425
+     ]
+    },
+    "control: landscape_removed": {
+     "mean": 0.010333333333333333,
+     "sd": 0.0178978583448784,
+     "per_seed": [
+      0.0,
+      0.0,
+      0.031
+     ]
+    },
+    "control: landscape_shuffled": {
+     "mean": 0.31125,
+     "sd": 0.03527658571914238,
+     "per_seed": [
+      0.2725,
+      0.3415,
+      0.31975
+     ]
+    },
+    "control: landscape_shuffled_across_wells": {
+     "mean": 0.24466666666666667,
+     "sd": 0.1509545323378312,
+     "per_seed": [
+      0.38275,
+      0.0835,
+      0.26775
+     ]
+    },
+    "control: random_atoms": {
+     "mean": 0.23174999999999998,
+     "sd": 0.018296174463531985,
+     "per_seed": [
+      0.24025,
+      0.21075,
+      0.24425
+     ]
+    },
+    "column: BLIND-COLOUR (planner)": {
+     "mean": 0.5533333333333333,
+     "sd": 0.006866282351704851,
+     "per_seed": [
+      0.54975,
+      0.56125,
+      0.549
+     ]
+    },
+    "column: BLIND-SEQUENTIAL (planner)": {
+     "mean": 0.99125,
+     "sd": 0.002462214450448986,
+     "per_seed": [
+      0.9885,
+      0.992,
+      0.99325
+     ]
+    },
+    "column: ORACLE (planner)": {
+     "mean": 1.0,
+     "sd": 0.0,
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ]
+    },
+    "column: BLIND-A (planner)": {
+     "mean": 0.9499166666666667,
+     "sd": 0.005101061980934304,
+     "per_seed": [
+      0.9455,
+      0.94875,
+      0.9555
+     ]
+    },
+    "column: BLIND-B (planner)": {
+     "mean": 0.8754166666666666,
+     "sd": 0.0038756719847444564,
+     "per_seed": [
+      0.8715,
+      0.87925,
+      0.8755
+     ]
+    },
+    "column: BLIND-FACTOR (planner)": {
+     "mean": 0.9554999999999999,
+     "sd": 0.0032691742076555274,
+     "per_seed": [
+      0.95325,
+      0.954,
+      0.95925
+     ]
+    },
+    "column: CODEC CEILING": {
+     "mean": 0.49625,
+     "sd": 0.036813720268399935,
+     "per_seed": [
+      0.49375,
+      0.46075,
+      0.53425
+     ]
+    },
+    "column: CODEC CEILING (pipeline ceiling)": {
+     "mean": 0.49625,
+     "sd": 0.036813720268399935,
+     "per_seed": [
+      0.49375,
+      0.46075,
+      0.53425
+     ]
+    }
+   }
+  }
+ },
+ "ROLLOUT_SUMMARY": {
+  "definition": "the state fed to step t+1 is the ARM'S OWN generated state, never the engine's; the moment a step is wrong the rollout is dead and nothing re-synchronises it",
+  "route_length": "the FULL optimal route per maze (mean 43.4 steps)",
+  "n_rollouts_per_seed": [
+   45,
+   45,
+   45
+  ],
+  "arms": {
+   "CLU (single design)": {
+    "validity": {
+     "per_seed": [
+      0.022222222222222223,
+      0.0,
+      0.0
+     ],
+     "mean": 0.007407407407407408,
+     "sd": 0.012830005981991684
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.9513812154696133,
+      0.93202416918429,
+      0.9160447761194029
+     ],
+     "mean": 0.933150053591102,
+     "sd": 0.017695103793448082
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.022222222222222223,
+      0.0,
+      0.0
+     ],
+     "mean": 0.007407407407407408,
+     "sd": 0.012830005981991684
+    }
+   },
+   "control: landscape_removed": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.27419354838709675
+     ],
+     "mean": 0.09139784946236558,
+     "sd": 0.15830571897134899
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "control: landscape_shuffled": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.8494983277591973,
+      0.7398843930635838,
+      0.47674418604651164
+     ],
+     "mean": 0.6887089689564309,
+     "sd": 0.19157402111299032
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "control: landscape_shuffled_across_wells": {
+    "validity": {
+     "per_seed": [
+      0.022222222222222223,
+      0.0,
+      0.0
+     ],
+     "mean": 0.007407407407407408,
+     "sd": 0.012830005981991684
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.8562091503267973,
+      0.0,
+      0.8235294117647058
+     ],
+     "mean": 0.5599128540305011,
+     "sd": 0.48517398364870884
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.022222222222222223,
+      0.0,
+      0.0
+     ],
+     "mean": 0.007407407407407408,
+     "sd": 0.012830005981991684
+    }
+   },
+   "control: random_atoms": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.7077922077922078,
+      0.0,
+      0.27419354838709675
+     ],
+     "mean": 0.3273285853931015,
+     "sd": 0.35687526037967954
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "arm: BLIND-COLOUR (learned: colour identity removed from the request)": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.9175824175824175,
+      0.9103585657370518,
+      0.9160447761194029
+     ],
+     "mean": 0.9146619198129574,
+     "sd": 0.0038052894166089083
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.9175824175824175,
+      0.9103585657370518,
+      0.9160447761194029
+     ],
+     "mean": 0.9146619198129574,
+     "sd": 0.0038052894166089083
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "rival: mlp": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.7836538461538461,
+      0.4943820224719101,
+      0.7471910112359551
+     ],
+     "mean": 0.6750756266205705,
+     "sd": 0.1575437035166335
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "rival: lstm": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.82421875,
+      0.6484375,
+      0.7680412371134021
+     ],
+     "mean": 0.746899162371134,
+     "sd": 0.08977751642920605
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "rival: transformer": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.8866498740554156,
+      0.7457627118644068,
+      0.875
+     ],
+     "mean": 0.8358041953066074,
+     "sd": 0.07819546947701533
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "floor: lookup cross-maze WORDS": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.044444444444444446
+     ],
+     "mean": 0.014814814814814815,
+     "sd": 0.02566001196398337
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.8926014319809069,
+      0.8910411622276029,
+      0.9122448979591836
+     ],
+     "mean": 0.8986291640558979,
+     "sd": 0.011817350283358109
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.044444444444444446
+     ],
+     "mean": 0.014814814814814815,
+     "sd": 0.02566001196398337
+    }
+   },
+   "floor: lookup cross-maze raw r1": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.3835616438356164,
+      0.36619718309859156,
+      0.5544554455445545
+     ],
+     "mean": 0.43473809082625414,
+     "sd": 0.10404116920590825
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "floor: fragment cross-maze r1": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.4375,
+      0.3181818181818182,
+      0.4642857142857143
+     ],
+     "mean": 0.4066558441558441,
+     "sd": 0.07778244388349113
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "floor: lookup WITHIN-maze raw r1": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.45121951219512196,
+      0.3382352941176471,
+      0.6017699115044248
+     ],
+     "mean": 0.4637415726057313,
+     "sd": 0.13221280247386805
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "column: ORACLE (planner)": {
+    "validity": {
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "mean": 1.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "mean": 1.0,
+     "sd": 0.0
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "mean": 1.0,
+     "sd": 0.0
+    }
+   },
+   "column: BLIND-A (planner)": {
+    "validity": {
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "mean": 1.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "mean": 1.0,
+     "sd": 0.0
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "mean": 1.0,
+     "sd": 0.0
+    }
+   },
+   "column: BLIND-B (planner)": {
+    "validity": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.9628406275805119,
+      0.961864406779661,
+      0.9664179104477612
+     ],
+     "mean": 0.9637076482693113,
+     "sd": 0.002397372013258489
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "mean": 0.0,
+     "sd": 0.0
+    }
+   },
+   "column: BLIND-COLOUR (planner)": {
+    "validity": {
+     "per_seed": [
+      0.2,
+      0.13333333333333333,
+      0.15555555555555556
+     ],
+     "mean": 0.16296296296296298,
+     "sd": 0.03394500514782105
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.9548306148055207,
+      0.951310861423221,
+      0.9551886792452831
+     ],
+     "mean": 0.9537767184913415,
+     "sd": 0.0021429864316079615
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.2,
+      0.13333333333333333,
+      0.15555555555555556
+     ],
+     "mean": 0.16296296296296298,
+     "sd": 0.03394500514782105
+    }
+   },
+   "column: BLIND-SEQUENTIAL (planner)": {
+    "validity": {
+     "per_seed": [
+      0.2,
+      0.35555555555555557,
+      0.28888888888888886
+     ],
+     "mean": 0.2814814814814815,
+     "sd": 0.07804187965076102
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      0.9749478079331941,
+      0.9811443433029909,
+      0.9792880258899677
+     ],
+     "mean": 0.9784600590420509,
+     "sd": 0.0031801587182438886
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      0.2,
+      0.35555555555555557,
+      0.28888888888888886
+     ],
+     "mean": 0.2814814814814815,
+     "sd": 0.07804187965076102
+    }
+   },
+   "column: BLIND-FACTOR (planner)": {
+    "validity": {
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "mean": 1.0,
+     "sd": 0.0
+    },
+    "per_step_exactness": {
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "mean": 1.0,
+     "sd": 0.0
+    },
+    "all_steps_exact_rate": {
+     "per_seed": [
+      1.0,
+      1.0,
+      1.0
+     ],
+     "mean": 1.0,
+     "sd": 0.0
+    }
+   }
+  }
+ },
+ "DECLARED_NOT_RUN": [
+  "Any SCORED run.  The task file budgets ZERO for this spoke; the val smoke is free.  No row of /c/chlu/SCORED-LEDGER.md is claimed.",
+  "The TEST maze block.  Its generator seed range is recorded per seed in banks.test_RESERVED_NOT_EVALUATED and it is never built or evaluated -- it is wave 16's to spend.",
+  "A refusal display.  Refusal displays are retired; the value hold-out is SCORED and no arm carries a refuse token.",
+  "Any change to w8_envscout.maze_colour, w9_harness or w9_maze.  They are imported; their file sha256 values are in provenance so the claim is checkable rather than asserted.",
+  "GPU and cluster.  Local CPU only, three concurrent seed processes, OMP/MKL threads pinned to 4."
+ ]
+}

@@ -1,0 +1,102 @@
+=== gen-cell-harness: shapes3d/recon stage=cell quick=False ===
+  ⭐ PRECONDITION 1/2: classifier_gate.json gate=PASS (floor 0.95, 3 seeds)
+  ⭐ PRECONDITION 2/2: refusal_scores.json status=complete (not_run=[])
+[     0.0s] seed 2 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=2d7eea75add77044… (hash + recipe asserted)
+[     0.1s]   ⭐ external classifier ad16c4e532731958… (978873 params) — THE instrument, identical across every arm in this seed
+[     0.8s]   ⭐ row split: mode=stratified — val realises floor_hue 10/10 · wall_hue 10/10 · object_hue 10/10 · scale 8/8 · shape 4/4 · orientation 15/15 · max per-value count ratio 1.091
+[     0.8s] rows: store_train=32768 B=72 MS=199 fit=32256 val=512
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     1.8s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     1.8s] cache 9288 rows (scope=used), D=2048; re-encode check bit-identical on 64 rows
+[     1.8s]     extending cache coverage: 32241 row(s) encoded through the frozen encoder
+[    77.1s]     extending cache coverage: 196 row(s) encoded through the frozen encoder
+[    79.4s]     extending cache coverage: 31742 row(s) encoded through the frozen encoder
+[   156.6s]     extending cache coverage: 499 row(s) encoded through the frozen encoder
+[   211.7s]   ⚠ this seed's encoder differs from the plan's (154d49861064… vs 98d326028316…), so the grouping is re-derived on its own channels — ⛔ the plan's label vector would be a size-matched RANDOM partition here
+[   211.7s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_2/store_s2.pkl (⛔ not re-trained)
+[   212.6s] ⭐ byte ledger: store 524288 B + addressing head 74240 B (⛔ coupling 163840 B EXCLUDED; ⛔ not 688128)
+[   213.8s] ⭐ no-bypass: pure codebook gather, 30 bits/read (R20's declared design constant) · ⭐ request-only path asserted on all four legs (⛔ no feature argument on ANY CLU call; gen_store.soft_read NOT imported)
+[   217.4s] ⭐ DECODER ceiling on IMAGES: external in-corner balacc=0.9514 · probe=0.9653
+[   217.4s]   ⭐ [dynread] artefacts -> /Users/user/Desktop/CHLU/.claude/outputs/gen-read-cell-arm/runs/artefacts/shapes3d_recon/seed_2  (⛔ they are not results; refusal and dreaming are scored FROM them and must never have to re-run this cell)
+[   217.4s]   ⭐ [dynread] budget A: 1000 settling steps (⛔ declared before the run, not tuned)
+[   220.3s]     [A] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.05121 (lambda* = 0.05691)
+[   220.3s]     [A] N=64 r=16 store=524,288 B coupling=524,288 B total=1,048,576 B = 2.00x budget (PREREG §3 match: True)
+[   220.3s]     [A] sigma per well = 4.9218 4.9089 7.0533 8.1555 8.8488
+[   220.3s]     [dynread/A] λ used = 0.05121 (declared 1, λ* = 0.05691, capped=True) — ⛔ never 1.0 by fiat
+[   228.3s]       [full] beta=1 lambda=0.0512145 clamped=0.00/5 E -733.741->-846.091 acc=0.7004166666666667 disp[1]=0.0703643774613738 disp[T]=0.000573322532242552 still_descending=0.7222222222222222 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   228.3s]         separation launch -> settled: 0.3176 -> 0.1785 (min 0.0000 -> 0.0042, collapsed pairs 0.067 -> 0.000)
+[   228.4s]     ⭐ [dynread · B] E -733.741 -> -846.091 · still_descending=0.7222222222222222 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   240.4s]       [full] beta=1 lambda=0.0512145 clamped=0.00/5 E -735.136->-845.968 acc=0.6947989949748744 disp[1]=0.06970657528045789 disp[T]=0.0005740778002684384 still_descending=0.7336683417085427 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   240.4s]         separation launch -> settled: 0.2674 -> 0.1802 (min 0.0000 -> 0.0040, collapsed pairs 0.133 -> 0.000)
+[   240.6s]     ⭐ [dynread · MS] E -735.136 -> -845.968 · still_descending=0.7336683417085427 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   245.0s]   ⭐ [dynread] IMAGE-space in-corner shape balacc=0.6222 (AUROC 0.6895, TPR 0.375 / TNR 0.869) · distinct on B: 72 vectors / 13 factor-tuples of 72 · probe companion 0.6005
+[   249.4s]       [request_off] beta=0 lambda=0.0512145 clamped=0.00/5 E -648.980->-793.310 acc=0.5580972222222222 disp[1]=0.08814450943221648 disp[T]=0.0022980512520815763 still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   249.4s]         separation launch -> settled: 0.3176 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 0.067 -> 0.072)
+[   249.4s]     ⭐ [dynread/A_request_off · B] E -648.980 -> -793.310 · still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   257.9s]       [request_off] beta=0 lambda=0.0512145 clamped=0.00/5 E -649.422->-793.310 acc=0.5565577889447236 disp[1]=0.0878615101153527 disp[T]=0.002297855313427409 still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   257.9s]         separation launch -> settled: 0.2674 -> 0.0001 (min 0.0000 -> 0.0000, collapsed pairs 0.133 -> 0.127)
+[   258.0s]     ⭐ [dynread/A_request_off · MS] E -649.422 -> -793.310 · still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   262.2s]   ⭐ [dynread/A_request_off] IMAGE-space in-corner shape balacc=0.5000 (AUROC 0.4250, TPR 0.000 / TNR 1.000) · distinct on B: 29 vectors / 1 factor-tuples of 72 · probe companion 0.5000
+[   262.2s]   ⭐ [dynread] budget B: 2000 settling steps (⛔ declared before the run, not tuned)
+[   280.1s]     [B] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.05206 (lambda* = 0.05785)
+[   280.1s]     [B] N=512 r=128 store=4,194,304 B coupling=4,194,304 B total=8,388,608 B = 2.00x budget (PREREG §3 match: True)
+[   280.1s]     [B] sigma per well = 3.5800 3.7251 5.2592 6.0969 6.2058
+[   280.1s]     [dynread/B] λ used = 0.05206 (declared 1, λ* = 0.05785, capped=True) — ⛔ never 1.0 by fiat
+[   306.9s]       [full] beta=1 lambda=0.0520607 clamped=0.00/5 E -576.697->-685.222 acc=0.6650138888888889 disp[1]=0.06714742527239853 disp[T]=0.0004234321782455987 still_descending=0.1527777777777778 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   306.9s]         separation launch -> settled: 0.3538 -> 0.2535 (min 0.0000 -> 0.0082, collapsed pairs 0.025 -> 0.000)
+[   307.1s]     ⭐ [dynread/B · B] E -576.697 -> -685.222 · still_descending=0.1527777777777778 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   359.3s]       [full] beta=1 lambda=0.0520607 clamped=0.00/5 E -574.914->-685.216 acc=0.6618442211055277 disp[1]=0.06775179144051206 disp[T]=0.00042785084385181494 still_descending=0.11557788944723618 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   359.3s]         separation launch -> settled: 0.4020 -> 0.2550 (min 0.0000 -> 0.0081, collapsed pairs 0.009 -> 0.000)
+[   359.7s]     ⭐ [dynread/B · MS] E -574.914 -> -685.216 · still_descending=0.11557788944723618 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   364.0s]   ⭐ [dynread/B] IMAGE-space in-corner shape balacc=0.5149 (AUROC 0.7636, TPR 0.181 / TNR 0.849) · distinct on B: 72 vectors / 15 factor-tuples of 72 · probe companion 0.6935
+[   382.1s]       [request_off] beta=0 lambda=0.0520607 clamped=0.00/5 E -487.431->-649.489 acc=0.7348611111111111 disp[1]=0.08601605488608281 disp[T]=0.0006141184761266535 still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   382.1s]         separation launch -> settled: 0.3538 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 0.025 -> 0.091)
+[   382.2s]     ⭐ [dynread/B_request_off · B] E -487.431 -> -649.489 · still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   417.2s]       [request_off] beta=0 lambda=0.0520607 clamped=0.00/5 E -483.162->-649.489 acc=0.7342788944723618 disp[1]=0.08643835681916481 disp[T]=0.0006141163251975822 still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   417.2s]         separation launch -> settled: 0.4020 -> 0.0000 (min 0.0000 -> 0.0000, collapsed pairs 0.009 -> 0.097)
+[   417.4s]     ⭐ [dynread/B_request_off · MS] E -483.162 -> -649.489 · still_descending=1.0 · ⛔ NOT CONVERGED — chains are still descending at the final step
+[   421.7s]   ⭐ [dynread/B_request_off] IMAGE-space in-corner shape balacc=0.5000 (AUROC 0.4811, TPR 0.000 / TNR 1.000) · distinct on B: 37 vectors / 1 factor-tuples of 72 · probe companion 0.5000
+[   421.7s] seed 2 done in 422s
+=== done in 422s ===

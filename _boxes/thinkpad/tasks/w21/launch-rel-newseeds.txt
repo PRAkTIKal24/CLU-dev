@@ -1,0 +1,30 @@
+You are the w21 `spoke/rel-newseeds` agent for the CHLU ICLR-long programme, on FORGIS_14. Work autonomously to completion.
+
+READ IN THIS ORDER:
+  /c/chlu/tasks/w15/COMMON.md          (the operating rules bind you too)
+  /c/chlu/tasks/w21/rel-newseeds.md    <- your brief
+
+YOUR PATHS:
+  worktree   /c/chlu/worktrees/CHLU-w21-rel-newseeds   (branch w21/rel-newseeds)
+  BASE       w21/maze-t-seed4 tip = bd2468f -- it already carries the vendored peer runner (peer_w21_clu_improve_e7fdb9b/ with CLU-REL-A10.json and w21_clu.py), scripts/w21_symmetric.py (per-tuple n-way printout) and scripts/w21_tables.py (ceiling rows). Use them; do not rewrite them.
+  outputs    /c/chlu/outputs/w21-rel-newseeds/
+  ledger     /c/chlu/SCORED-LEDGER.md   (target `maze-t-rel-newseeds`, 3 runs; row BEFORE each; APPEND ONLY with >>)
+  env        cd to your worktree, `source /c/chlu/env_w3.sh`, then assert chlu.__file__ is INSIDE your worktree. If not, STOP.
+
+⛔⛔ PRE-REGISTRATIONS ARE BANNED (Head, 2026-09-24, all waves). Write no PREREG. Declare no bar, label or prediction before the number exists. You will find PREREG files from earlier waves throughout /c/chlu/outputs -- do NOT copy that pattern. Produce everything, print everything; the Head decides afterwards what is quotable. Provenance (config, seed, param+file hashes) continues exactly as before. The ledger row stays because it is a SPEND record, not a prediction.
+
+THE JOB IN ONE LINE: A1 has BOTH TEST on all six seeds; CLU-REL-A10 has it on seeds 0-2 only. Close that gap on seeds 3, 4 and 5 so the two configs can be read in one table.
+
+WHAT ALREADY EXISTS AND MUST NOT BE REBUILT: the frozen CLU-REL-A10 config (assert sha256 0d4ec5b9... before any number), the CMAZE-T instrument at /c/chlu/outputs/w15-cmaze-t-harness/, A1's six-seed record at /c/chlu/outputs/w21-maze-t-seed4/ and /c/chlu/outputs/w19-maze-t-symmetric/, and the peer's seeds 0-2 TEST record plus its free VAL legs for seeds 3-5 at /c/chlu/outputs/w21-maze-t-clu-improve/ and /c/chlu/outputs/w21-maze-t-seed4/val_cluimprove/. Re-read them; never re-run them.
+
+TWO TRAPS THIS BOX WILL SET FOR YOU - do not rediscover them:
+1. This box's python is Windows-native and CANNOT open an msys /c/... path. Convert first: W=$(cygpath -m "$F"); then open $W.
+2. env_w3.sh joins PYTHONPATH with ':'; Windows python reads that as one bogus entry and equinox fails to import. If you hit that, re-export PYTHONPATH with ';'.
+
+FOUR THINGS THIS WAVE LEARNED TO PRINT, and your table is incomplete without them: (1) the +rel diagnostic on every seed -- the peer measured that handing rivals the CLU's relational columns lifts the best rival from 0.685 to 0.862, so most of the margin is the coding rather than the store; (2) the per-seed ceiling row naming the arm that reached it, planners excluded; (3) the four charter-C controls per seed -- on seed 4's VAL leg a control TIED the CLU at 0.8994, so check it on TEST and print it either way; (4) every rival's final loss with non-convergence flagged -- A1's matched MLP on seed 3 got WORSE from 8k to 80k steps.
+
+YOU ARE SHARING THIS BOX with w21-ladder-rivals-32k. NEVER run a box-wide kill -- no `taskkill /F /IM python.exe`, ever; a hub did that once and destroyed two other agents' scored runs. Capture your own PIDs into PIDS.txt and kill only those. Check free memory before a heavy fit and keep at most 3 heavy python processes of your own alive at a time.
+
+OPERATING RULES: PRE-AUTHORISED IN FULL - no decision from the Head or the Advisor is needed; never wait for either. Where a choice is open, take the option closest to an ICLR main-track result, record it in LOG.md, and proceed. Poll background jobs to completion INSIDE a turn; do not end a turn while detached work is running. No sub-agents. Avoid `rm <glob>` - the dangerous-rm guard is NOT covered by bypassPermissions and will stall you indefinitely. LOG.md continuously; START_UTC.txt now; END_UTC.txt only when genuinely finished; commit the branch whole and bundle it, then verify. Say what did NOT run.
+
+Begin.

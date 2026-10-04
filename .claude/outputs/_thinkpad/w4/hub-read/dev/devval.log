@@ -1,0 +1,49 @@
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+val requests (1728, 6)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+span_head (incumbent)    novel/corner=25.458 distinct/corner=25.458 judge_acc=0.3536 | all6=0.0781 floo=1.000 wall=1.000 obje=0.732 scal=0.594 shap=0.357 orie=0.863  [53s]
+ORACLE (not an arm)      novel/corner=34.542 distinct/corner=34.542 judge_acc=0.4797 | all6=0.3867 floo=1.000 wall=1.000 obje=1.000 scal=0.633 shap=0.641 orie=0.881  [49s]
+  fit tensorx R=128 404s tr=0.00851 va=0.00856 bytes=195,584
+tensorx R=128            novel/corner=32.083 distinct/corner=32.083 judge_acc=0.4456 | all6=0.1074 floo=0.479 wall=0.719 obje=0.496 scal=0.314 shap=0.656 orie=0.330  [52s]
+  fit tensor+ R=128 377s tr=0.06512 va=0.06535 bytes=195,584

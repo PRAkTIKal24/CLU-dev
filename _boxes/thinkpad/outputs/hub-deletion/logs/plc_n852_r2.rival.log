@@ -1,0 +1,54 @@
+[19:22:08] live = 31916 rows (sha256 8dd5b1a9df3c3c4b…) — identical to the CLU arm's
+[19:22:09] knn_proto table: 57 prototypes, 475136 B; values with ZERO live rows: none
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:22:11]   [a] knn_proto aggregate=0.7233
+[19:22:16]   [dev] knn_proto aggregate=0.7291
+[19:22:18]   [tgt_conj_f2v5_f4v2] knn_proto aggregate=0.7806
+[19:22:19]   [tgt_f0v5] knn_proto aggregate=0.7380
+[19:22:21]   [tgt_f1v5] knn_proto aggregate=0.7018
+[19:22:22]   [tgt_f2v5] knn_proto aggregate=0.7122
+[19:22:24]   [tgt_f3v4] knn_proto aggregate=0.8283
+[19:22:25]   [tgt_f4v2] knn_proto aggregate=0.7974
+[19:22:27]   [tgt_f5v7] knn_proto aggregate=0.7770
+[19:22:27] WROTE C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-deletion\runs\plc_n852_r2\rival.json (19.1 s)

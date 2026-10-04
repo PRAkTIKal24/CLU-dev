@@ -1,0 +1,322 @@
+[15:08:12] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[15:08:12]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[15:08:12]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[15:08:12] table=confirm nvariants=10 corners[0:22] set=confirm
+[15:08:12]   ARM                K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=nmf          alloc=uniform   bytes_pred=454336
+[15:08:12]   ARM_KMEANS         K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=454336
+[15:08:12]   ADD_ONLY           K= 64 A= 1216 rank=   0 n_add=52 n_pair=0 method=kmeans       alloc=uniform   bytes_pred=408576
+[15:08:12]   CTRL_mean          K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=mean         alloc=uniform   bytes_pred=454336
+[15:08:12]   CTRL_atoms_medoid  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_medoid alloc=uniform   bytes_pred=454336
+[15:08:12]   CTRL_atoms_kpp     K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_kpp    alloc=uniform   bytes_pred=454336
+[15:08:12]   CTRL_atoms_random  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=atoms_random alloc=uniform   bytes_pred=454336
+[15:08:12]   CTRL_pca_affine    K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=pca_affine   alloc=uniform   bytes_pred=454336
+[15:08:12]   CTRL_random        K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=random       alloc=uniform   bytes_pred=454336
+[15:08:12]   ITER1              K= 32 A=  832 rank=  21 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474416
+[15:08:14] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[15:08:16] [c13 9025728d08] knn_proto        agg=0.8495 tup=56 B=475136
+[15:11:04] [c13 9025728d08] ARM                agg=0.7500 tup=46 B=454336 r=52 [161.4s]
+[15:11:38] [c13 9025728d08] ARM_KMEANS         agg=0.7292 tup=47 B=454336 r=52 [34.2s]
+[15:12:12] [c13 9025728d08] ADD_ONLY           agg=0.7245 tup=41 B=408576 r=0 [34.1s]
+[15:12:14] [c13 9025728d08] CTRL_mean          agg=0.2963 tup=20 B=454336 r=52 [2.0s]
+[15:12:44] [c13 9025728d08] CTRL_atoms_medoid  agg=0.7176 tup=44 B=454336 r=52 [29.9s]
+[15:12:55] [c13 9025728d08] CTRL_atoms_kpp     agg=0.7361 tup=53 B=454336 r=52 [10.5s]
+[15:12:57] [c13 9025728d08] CTRL_atoms_random  agg=0.7824 tup=41 B=454336 r=52 [2.0s]
+[15:13:01] [c13 9025728d08] CTRL_pca_affine    agg=0.7917 tup=50 B=454336 r=52 [4.0s]
+[15:13:03] [c13 9025728d08] CTRL_random        agg=0.6574 tup=33 B=454336 r=52 [2.1s]
+[15:13:33] [c13 9025728d08] ITER1              agg=0.7245 tup=47 B=474416 r=21 [29.3s]
+[15:13:33] [c13] corner done in 319.5s
+[15:13:36] [c14 88b0f9e7b7] knn_proto        agg=0.8287 tup=48 B=475136
+[15:16:23] [c14 88b0f9e7b7] ARM                agg=0.8287 tup=49 B=454336 r=52 [161.2s]
+[15:16:57] [c14 88b0f9e7b7] ARM_KMEANS         agg=0.8218 tup=49 B=454336 r=52 [34.5s]
+[15:17:32] [c14 88b0f9e7b7] ADD_ONLY           agg=0.8171 tup=45 B=408576 r=0 [34.8s]
+[15:17:35] [c14 88b0f9e7b7] CTRL_mean          agg=0.1944 tup=19 B=454336 r=52 [2.5s]
+[15:18:10] [c14 88b0f9e7b7] CTRL_atoms_medoid  agg=0.8264 tup=48 B=454336 r=52 [35.8s]
+[15:18:23] [c14 88b0f9e7b7] CTRL_atoms_kpp     agg=0.8241 tup=48 B=454336 r=52 [12.1s]
+[15:18:25] [c14 88b0f9e7b7] CTRL_atoms_random  agg=0.8333 tup=45 B=454336 r=52 [2.4s]
+[15:18:30] [c14 88b0f9e7b7] CTRL_pca_affine    agg=0.8287 tup=49 B=454336 r=52 [4.8s]
+[15:18:32] [c14 88b0f9e7b7] CTRL_random        agg=0.6921 tup=36 B=454336 r=52 [2.5s]
+[15:19:10] [c14 88b0f9e7b7] ITER1              agg=0.8125 tup=50 B=474416 r=21 [36.1s]
+[15:19:10] [c14] corner done in 336.7s
+[15:19:12] [c16 6e27d52e84] knn_proto        agg=0.6875 tup=56 B=475136
+[15:22:08] [c16 6e27d52e84] ARM                agg=0.7130 tup=52 B=454336 r=52 [169.4s]
+[15:22:42] [c16 6e27d52e84] ARM_KMEANS         agg=0.7222 tup=48 B=454336 r=52 [34.2s]
+[15:23:19] [c16 6e27d52e84] ADD_ONLY           agg=0.6968 tup=47 B=408576 r=0 [37.0s]
+[15:23:22] [c16 6e27d52e84] CTRL_mean          agg=0.4051 tup=12 B=454336 r=52 [2.3s]
+[15:23:54] [c16 6e27d52e84] CTRL_atoms_medoid  agg=0.6782 tup=50 B=454336 r=52 [32.6s]
+[15:24:06] [c16 6e27d52e84] CTRL_atoms_kpp     agg=0.7083 tup=50 B=454336 r=52 [11.4s]
+[15:24:08] [c16 6e27d52e84] CTRL_atoms_random  agg=0.6644 tup=49 B=454336 r=52 [2.0s]
+[15:24:12] [c16 6e27d52e84] CTRL_pca_affine    agg=0.7361 tup=51 B=454336 r=52 [4.3s]
+[15:24:14] [c16 6e27d52e84] CTRL_random        agg=0.8194 tup=41 B=454336 r=52 [2.3s]
+[15:24:48] [c16 6e27d52e84] ITER1              agg=0.7963 tup=60 B=474416 r=21 [32.6s]
+[15:24:48] [c16] corner done in 338.3s
+[15:24:51] [c19 e87c55b7c8] knn_proto        agg=0.7847 tup=54 B=475136
+[15:27:13] [c19 e87c55b7c8] ARM                agg=0.7940 tup=50 B=454336 r=52 [136.0s]
+[15:27:40] [c19 e87c55b7c8] ARM_KMEANS         agg=0.7847 tup=49 B=454336 r=52 [27.5s]
+[15:28:08] [c19 e87c55b7c8] ADD_ONLY           agg=0.7639 tup=45 B=408576 r=0 [27.6s]
+[15:28:10] [c19 e87c55b7c8] CTRL_mean          agg=0.3704 tup= 6 B=454336 r=52 [1.8s]
+[15:28:38] [c19 e87c55b7c8] CTRL_atoms_medoid  agg=0.7245 tup=47 B=454336 r=52 [28.1s]
+[15:28:48] [c19 e87c55b7c8] CTRL_atoms_kpp     agg=0.7338 tup=54 B=454336 r=52 [9.8s]
+[15:28:50] [c19 e87c55b7c8] CTRL_atoms_random  agg=0.7708 tup=54 B=454336 r=52 [1.9s]
+[15:28:53] [c19 e87c55b7c8] CTRL_pca_affine    agg=0.7986 tup=53 B=454336 r=52 [3.9s]
+[15:28:55] [c19 e87c55b7c8] CTRL_random        agg=0.6875 tup=49 B=454336 r=52 [2.1s]
+[15:29:41] [c19 e87c55b7c8] ITER1              agg=0.7801 tup=55 B=474416 r=21 [44.6s]
+[15:29:41] [c19] corner done in 292.8s
+[15:29:44] [c20 0516a0bb91] knn_proto        agg=0.8495 tup=50 B=475136
+[15:32:42] [c20 0516a0bb91] ARM                agg=0.8287 tup=54 B=454336 r=52 [169.4s]
+[15:33:15] [c20 0516a0bb91] ARM_KMEANS         agg=0.7894 tup=62 B=454336 r=52 [32.8s]
+[15:33:47] [c20 0516a0bb91] ADD_ONLY           agg=0.7940 tup=42 B=408576 r=0 [32.0s]
+[15:33:49] [c20 0516a0bb91] CTRL_mean          agg=0.4444 tup= 4 B=454336 r=52 [2.2s]
+[15:34:23] [c20 0516a0bb91] CTRL_atoms_medoid  agg=0.7731 tup=55 B=454336 r=52 [33.9s]
+[15:34:34] [c20 0516a0bb91] CTRL_atoms_kpp     agg=0.8588 tup=52 B=454336 r=52 [11.5s]
+[15:34:37] [c20 0516a0bb91] CTRL_atoms_random  agg=0.8171 tup=52 B=454336 r=52 [2.3s]
+[15:34:41] [c20 0516a0bb91] CTRL_pca_affine    agg=0.8403 tup=50 B=454336 r=52 [4.7s]
+[15:34:44] [c20 0516a0bb91] CTRL_random        agg=0.7870 tup=49 B=454336 r=52 [2.6s]
+[15:35:19] [c20 0516a0bb91] ITER1              agg=0.7639 tup=60 B=474416 r=21 [33.9s]
+[15:35:19] [c20] corner done in 338.1s
+[15:35:22] [c21 8604e2959b] knn_proto        agg=0.7940 tup=44 B=475136
+[15:38:19] [c21 8604e2959b] ARM                agg=0.7708 tup=45 B=454336 r=52 [170.6s]
+[15:38:55] [c21 8604e2959b] ARM_KMEANS         agg=0.7269 tup=43 B=454336 r=52 [36.2s]
+[15:39:31] [c21 8604e2959b] ADD_ONLY           agg=0.7199 tup=33 B=408576 r=0 [36.0s]
+[15:39:33] [c21 8604e2959b] CTRL_mean          agg=0.3819 tup= 7 B=454336 r=52 [2.1s]
+[15:40:10] [c21 8604e2959b] CTRL_atoms_medoid  agg=0.7407 tup=38 B=454336 r=52 [37.0s]
+[15:40:22] [c21 8604e2959b] CTRL_atoms_kpp     agg=0.7384 tup=46 B=454336 r=52 [11.8s]
+[15:40:24] [c21 8604e2959b] CTRL_atoms_random  agg=0.8356 tup=41 B=454336 r=52 [2.0s]
+[15:40:28] [c21 8604e2959b] CTRL_pca_affine    agg=0.7778 tup=47 B=454336 r=52 [4.1s]
+[15:40:30] [c21 8604e2959b] CTRL_random        agg=0.7199 tup=39 B=454336 r=52 [2.2s]
+[15:41:03] [c21 8604e2959b] ITER1              agg=0.7014 tup=34 B=474416 r=21 [31.6s]
+[15:41:03] [c21] corner done in 344.1s
+[15:41:06] [c22 09225c8ea1] knn_proto        agg=0.8148 tup=42 B=475136
+[15:43:34] [c22 09225c8ea1] ARM                agg=0.8241 tup=49 B=454336 r=52 [142.8s]
+[15:44:05] [c22 09225c8ea1] ARM_KMEANS         agg=0.8218 tup=49 B=454336 r=52 [30.9s]
+[15:44:41] [c22 09225c8ea1] ADD_ONLY           agg=0.8241 tup=41 B=408576 r=0 [35.6s]
+[15:44:45] [c22 09225c8ea1] CTRL_mean          agg=0.3519 tup=13 B=454336 r=52 [3.8s]
+[15:45:32] [c22 09225c8ea1] CTRL_atoms_medoid  agg=0.8287 tup=45 B=454336 r=52 [47.4s]
+[15:45:44] [c22 09225c8ea1] CTRL_atoms_kpp     agg=0.8264 tup=46 B=454336 r=52 [11.8s]
+[15:45:48] [c22 09225c8ea1] CTRL_atoms_random  agg=0.8241 tup=42 B=454336 r=52 [3.9s]
+[15:45:54] [c22 09225c8ea1] CTRL_pca_affine    agg=0.8148 tup=49 B=454336 r=52 [6.7s]
+[15:45:58] [c22 09225c8ea1] CTRL_random        agg=0.6829 tup=48 B=454336 r=52 [3.5s]
+[15:46:36] [c22 09225c8ea1] ITER1              agg=0.8426 tup=48 B=474416 r=21 [36.1s]
+[15:46:36] [c22] corner done in 332.5s
+[15:46:38] [c23 11b960f3fe] knn_proto        agg=0.8889 tup=50 B=475136
+[15:49:47] [c23 11b960f3fe] ARM                agg=0.8912 tup=56 B=454336 r=52 [181.5s]
+[15:50:23] [c23 11b960f3fe] ARM_KMEANS         agg=0.8843 tup=55 B=454336 r=52 [36.6s]
+[15:51:00] [c23 11b960f3fe] ADD_ONLY           agg=0.8796 tup=45 B=408576 r=0 [37.2s]
+[15:51:03] [c23 11b960f3fe] CTRL_mean          agg=0.3333 tup= 7 B=454336 r=52 [2.5s]
+[15:51:39] [c23 11b960f3fe] CTRL_atoms_medoid  agg=0.8704 tup=52 B=454336 r=52 [35.8s]
+[15:51:51] [c23 11b960f3fe] CTRL_atoms_kpp     agg=0.8773 tup=54 B=454336 r=52 [12.3s]
+[15:51:53] [c23 11b960f3fe] CTRL_atoms_random  agg=0.8681 tup=55 B=454336 r=52 [2.2s]
+[15:51:58] [c23 11b960f3fe] CTRL_pca_affine    agg=0.8843 tup=57 B=454336 r=52 [4.6s]
+[15:52:00] [c23 11b960f3fe] CTRL_random        agg=0.7940 tup=50 B=454336 r=52 [2.5s]
+[15:52:38] [c23 11b960f3fe] ITER1              agg=0.9375 tup=62 B=474416 r=21 [36.2s]
+[15:52:38] [c23] corner done in 362.1s
+[15:52:40] [c24 015098345d] knn_proto        agg=0.9190 tup=50 B=475136
+[15:55:53] [c24 015098345d] ARM                agg=0.9468 tup=59 B=454336 r=52 [186.1s]
+[15:56:29] [c24 015098345d] ARM_KMEANS         agg=0.8843 tup=43 B=454336 r=52 [36.2s]
+[15:57:03] [c24 015098345d] ADD_ONLY           agg=0.8588 tup=40 B=408576 r=0 [33.9s]
+[15:57:06] [c24 015098345d] CTRL_mean          agg=0.4444 tup= 5 B=454336 r=52 [2.2s]
+[15:57:40] [c24 015098345d] CTRL_atoms_medoid  agg=0.8981 tup=47 B=454336 r=52 [34.3s]
+[15:57:52] [c24 015098345d] CTRL_atoms_kpp     agg=0.9236 tup=59 B=454336 r=52 [11.9s]
+[15:57:54] [c24 015098345d] CTRL_atoms_random  agg=0.8750 tup=50 B=454336 r=52 [2.1s]
+[15:57:58] [c24 015098345d] CTRL_pca_affine    agg=0.9259 tup=54 B=454336 r=52 [4.5s]
+[15:58:01] [c24 015098345d] CTRL_random        agg=0.8495 tup=50 B=454336 r=52 [2.5s]
+[15:58:37] [c24 015098345d] ITER1              agg=0.8819 tup=50 B=474416 r=21 [34.7s]
+[15:58:37] [c24] corner done in 359.1s
+[15:58:40] [c25 37c75c3819] knn_proto        agg=0.8449 tup=46 B=475136
+[16:02:00] [c25 37c75c3819] ARM                agg=0.8519 tup=39 B=454336 r=52 [192.8s]
+[16:02:50] [c25 37c75c3819] ARM_KMEANS         agg=0.8102 tup=37 B=454336 r=52 [50.3s]
+[16:03:35] [c25 37c75c3819] ADD_ONLY           agg=0.7616 tup=34 B=408576 r=0 [45.1s]
+[16:03:38] [c25 37c75c3819] CTRL_mean          agg=0.4907 tup= 5 B=454336 r=52 [2.8s]
+[16:04:21] [c25 37c75c3819] CTRL_atoms_medoid  agg=0.7801 tup=39 B=454336 r=52 [43.4s]
+[16:04:36] [c25 37c75c3819] CTRL_atoms_kpp     agg=0.8449 tup=39 B=454336 r=52 [14.2s]
+[16:04:38] [c25 37c75c3819] CTRL_atoms_random  agg=0.8495 tup=35 B=454336 r=52 [2.7s]
+[16:04:44] [c25 37c75c3819] CTRL_pca_affine    agg=0.8519 tup=38 B=454336 r=52 [5.8s]
+[16:04:47] [c25 37c75c3819] CTRL_random        agg=0.6597 tup=41 B=454336 r=52 [3.1s]
+[16:05:32] [c25 37c75c3819] ITER1              agg=0.8310 tup=33 B=474416 r=21 [43.4s]
+[16:05:32] [c25] corner done in 415.3s
+[16:05:35] [c26 b5c2db9d4d] knn_proto        agg=0.8241 tup=38 B=475136
+[16:08:59] [c26 b5c2db9d4d] ARM                agg=0.8264 tup=45 B=454336 r=52 [194.8s]
+[16:09:37] [c26 b5c2db9d4d] ARM_KMEANS         agg=0.8310 tup=42 B=454336 r=52 [37.7s]
+[16:10:23] [c26 b5c2db9d4d] ADD_ONLY           agg=0.8333 tup=29 B=408576 r=0 [46.8s]
+[16:10:26] [c26 b5c2db9d4d] CTRL_mean          agg=0.3611 tup=14 B=454336 r=52 [2.6s]
+[16:11:03] [c26 b5c2db9d4d] CTRL_atoms_medoid  agg=0.8333 tup=40 B=454336 r=52 [36.8s]
+[16:11:15] [c26 b5c2db9d4d] CTRL_atoms_kpp     agg=0.8287 tup=25 B=454336 r=52 [12.6s]
+[16:11:18] [c26 b5c2db9d4d] CTRL_atoms_random  agg=0.8310 tup=35 B=454336 r=52 [2.3s]
+[16:11:23] [c26 b5c2db9d4d] CTRL_pca_affine    agg=0.8241 tup=46 B=454336 r=52 [5.2s]
+[16:11:26] [c26 b5c2db9d4d] CTRL_random        agg=0.6829 tup=46 B=454336 r=52 [2.6s]
+[16:12:04] [c26 b5c2db9d4d] ITER1              agg=0.8264 tup=49 B=474416 r=21 [37.6s]
+[16:12:04] [c26] corner done in 392.2s
+[16:12:08] [c28 1f6b16c27d] knn_proto        agg=0.9097 tup=48 B=475136
+[16:15:08] [c28 1f6b16c27d] ARM                agg=0.9190 tup=59 B=454336 r=52 [173.9s]
+[16:15:40] [c28 1f6b16c27d] ARM_KMEANS         agg=0.8889 tup=48 B=454336 r=52 [31.6s]
+[16:16:12] [c28 1f6b16c27d] ADD_ONLY           agg=0.8704 tup=40 B=408576 r=0 [32.0s]
+[16:16:14] [c28 1f6b16c27d] CTRL_mean          agg=0.6528 tup=10 B=454336 r=52 [2.5s]
+[16:16:52] [c28 1f6b16c27d] CTRL_atoms_medoid  agg=0.8750 tup=47 B=454336 r=52 [37.7s]
+[16:17:05] [c28 1f6b16c27d] CTRL_atoms_kpp     agg=0.9190 tup=62 B=454336 r=52 [12.7s]
+[16:17:07] [c28 1f6b16c27d] CTRL_atoms_random  agg=0.8264 tup=50 B=454336 r=52 [2.3s]
+[16:17:12] [c28 1f6b16c27d] CTRL_pca_affine    agg=0.9236 tup=59 B=454336 r=52 [4.6s]
+[16:17:14] [c28 1f6b16c27d] CTRL_random        agg=0.7060 tup=41 B=454336 r=52 [2.6s]
+[16:17:54] [c28 1f6b16c27d] ITER1              agg=0.8958 tup=55 B=474416 r=21 [38.4s]
+[16:17:54] [c28] corner done in 349.4s
+[16:17:57] [c29 1d997f9be4] knn_proto        agg=0.8495 tup=43 B=475136
+[16:22:25] [c29 1d997f9be4] ARM                agg=0.7731 tup=41 B=454336 r=52 [261.0s]
+[16:23:08] [c29 1d997f9be4] ARM_KMEANS         agg=0.7477 tup=44 B=454336 r=52 [42.3s]
+[16:23:52] [c29 1d997f9be4] ADD_ONLY           agg=0.7338 tup=41 B=408576 r=0 [44.4s]
+[16:23:55] [c29 1d997f9be4] CTRL_mean          agg=0.5648 tup= 4 B=454336 r=52 [2.9s]
+[16:24:39] [c29 1d997f9be4] CTRL_atoms_medoid  agg=0.7384 tup=40 B=454336 r=52 [44.1s]
+[16:24:53] [c29 1d997f9be4] CTRL_atoms_kpp     agg=0.8125 tup=35 B=454336 r=52 [13.8s]
+[16:24:56] [c29 1d997f9be4] CTRL_atoms_random  agg=0.8310 tup=36 B=454336 r=52 [2.9s]
+[16:25:01] [c29 1d997f9be4] CTRL_pca_affine    agg=0.8009 tup=42 B=454336 r=52 [5.4s]
+[16:25:04] [c29 1d997f9be4] CTRL_random        agg=0.7176 tup=43 B=454336 r=52 [2.9s]
+[16:25:53] [c29 1d997f9be4] ITER1              agg=0.7708 tup=37 B=474416 r=21 [47.2s]
+[16:25:53] [c29] corner done in 479.2s
+[16:25:57] [c30 05064cb9f5] knn_proto        agg=0.8310 tup=46 B=475136
+[16:29:57] [c30 05064cb9f5] ARM                agg=0.8125 tup=36 B=454336 r=52 [230.6s]
+[16:30:48] [c30 05064cb9f5] ARM_KMEANS         agg=0.8102 tup=37 B=454336 r=52 [51.1s]
+[16:31:39] [c30 05064cb9f5] ADD_ONLY           agg=0.8056 tup=35 B=408576 r=0 [50.8s]
+[16:31:42] [c30 05064cb9f5] CTRL_mean          agg=0.5833 tup= 9 B=454336 r=52 [3.1s]
+[16:32:28] [c30 05064cb9f5] CTRL_atoms_medoid  agg=0.8102 tup=37 B=454336 r=52 [46.1s]
+[16:32:41] [c30 05064cb9f5] CTRL_atoms_kpp     agg=0.8032 tup=36 B=454336 r=52 [13.3s]
+[16:32:44] [c30 05064cb9f5] CTRL_atoms_random  agg=0.8102 tup=32 B=454336 r=52 [2.7s]
+[16:32:50] [c30 05064cb9f5] CTRL_pca_affine    agg=0.8194 tup=39 B=454336 r=52 [5.9s]
+[16:32:53] [c30 05064cb9f5] CTRL_random        agg=0.6088 tup=30 B=454336 r=52 [2.8s]
+[16:33:34] [c30 05064cb9f5] ITER1              agg=0.8032 tup=36 B=474416 r=21 [40.0s]
+[16:33:34] [c30] corner done in 461.1s
+[16:33:37] [c31 06ee734253] knn_proto        agg=0.7894 tup=56 B=475136
+[16:38:00] [c31 06ee734253] ARM                agg=0.7431 tup=57 B=454336 r=52 [254.1s]
+[16:38:57] [c31 06ee734253] ARM_KMEANS         agg=0.7292 tup=49 B=454336 r=52 [57.5s]
+[16:40:12] [c31 06ee734253] ADD_ONLY           agg=0.7523 tup=41 B=408576 r=0 [74.6s]
+[16:40:17] [c31 06ee734253] CTRL_mean          agg=0.5278 tup= 6 B=454336 r=52 [5.0s]
+[16:41:15] [c31 06ee734253] CTRL_atoms_medoid  agg=0.7153 tup=49 B=454336 r=52 [58.0s]
+[16:41:31] [c31 06ee734253] CTRL_atoms_kpp     agg=0.7176 tup=48 B=454336 r=52 [15.9s]
+[16:41:34] [c31 06ee734253] CTRL_atoms_random  agg=0.7269 tup=42 B=454336 r=52 [2.8s]
+[16:41:40] [c31 06ee734253] CTRL_pca_affine    agg=0.7616 tup=57 B=454336 r=52 [6.3s]
+[16:41:44] [c31 06ee734253] CTRL_random        agg=0.6644 tup=53 B=454336 r=52 [3.6s]
+[16:42:47] [c31 06ee734253] ITER1              agg=0.7870 tup=48 B=474416 r=21 [61.1s]
+[16:42:47] [c31] corner done in 552.4s
+[16:42:51] [c32 fa7f5265a2] knn_proto        agg=0.6597 tup=53 B=475136
+[16:48:13] [c32 fa7f5265a2] ARM                agg=0.6782 tup=52 B=454336 r=52 [309.0s]
+[16:49:20] [c32 fa7f5265a2] ARM_KMEANS         agg=0.6713 tup=53 B=454336 r=52 [67.2s]
+[16:50:22] [c32 fa7f5265a2] ADD_ONLY           agg=0.6389 tup=45 B=408576 r=0 [61.7s]
+[16:50:26] [c32 fa7f5265a2] CTRL_mean          agg=0.4236 tup=13 B=454336 r=52 [3.4s]
+[16:51:32] [c32 fa7f5265a2] CTRL_atoms_medoid  agg=0.6204 tup=45 B=454336 r=52 [66.8s]
+[16:51:56] [c32 fa7f5265a2] CTRL_atoms_kpp     agg=0.6806 tup=52 B=454336 r=52 [23.8s]
+[16:52:00] [c32 fa7f5265a2] CTRL_atoms_random  agg=0.6551 tup=48 B=454336 r=52 [4.3s]
+[16:52:08] [c32 fa7f5265a2] CTRL_pca_affine    agg=0.6759 tup=56 B=454336 r=52 [7.9s]
+[16:52:13] [c32 fa7f5265a2] CTRL_random        agg=0.7963 tup=33 B=454336 r=52 [4.7s]
+[16:53:23] [c32 fa7f5265a2] ITER1              agg=0.8009 tup=61 B=474416 r=21 [68.1s]
+[16:53:23] [c32] corner done in 636.8s
+[16:53:28] [c33 ca39e06229] knn_proto        agg=0.6898 tup=57 B=475136
+[16:58:46] [c33 ca39e06229] ARM                agg=0.7569 tup=57 B=454336 r=52 [303.1s]
+[16:59:22] [c33 ca39e06229] ARM_KMEANS         agg=0.7130 tup=60 B=454336 r=52 [35.4s]
+[17:00:00] [c33 ca39e06229] ADD_ONLY           agg=0.5602 tup=51 B=408576 r=0 [38.3s]
+[17:00:03] [c33 ca39e06229] CTRL_mean          agg=0.4306 tup= 5 B=454336 r=52 [2.7s]
+[17:00:46] [c33 ca39e06229] CTRL_atoms_medoid  agg=0.6273 tup=54 B=454336 r=52 [43.1s]
+[17:01:00] [c33 ca39e06229] CTRL_atoms_kpp     agg=0.7106 tup=54 B=454336 r=52 [14.7s]
+[17:01:03] [c33 ca39e06229] CTRL_atoms_random  agg=0.6319 tup=52 B=454336 r=52 [2.8s]
+[17:01:09] [c33 ca39e06229] CTRL_pca_affine    agg=0.7917 tup=59 B=454336 r=52 [5.5s]
+[17:01:12] [c33 ca39e06229] CTRL_random        agg=0.8148 tup=50 B=454336 r=52 [3.5s]
+[17:01:52] [c33 ca39e06229] ITER1              agg=0.6806 tup=61 B=474416 r=21 [38.5s]
+[17:01:52] [c33] corner done in 509.0s
+[17:01:55] [c34 f153055c63] knn_proto        agg=0.8264 tup=47 B=475136
+[17:05:25] [c34 f153055c63] ARM                agg=0.7106 tup=50 B=454336 r=52 [202.1s]
+[17:06:14] [c34 f153055c63] ARM_KMEANS         agg=0.6968 tup=49 B=454336 r=52 [48.8s]
+[17:06:56] [c34 f153055c63] ADD_ONLY           agg=0.8056 tup=47 B=408576 r=0 [42.0s]
+[17:06:58] [c34 f153055c63] CTRL_mean          agg=0.3287 tup= 9 B=454336 r=52 [2.6s]
+[17:07:36] [c34 f153055c63] CTRL_atoms_medoid  agg=0.6759 tup=48 B=454336 r=52 [38.1s]
+[17:07:49] [c34 f153055c63] CTRL_atoms_kpp     agg=0.6597 tup=48 B=454336 r=52 [12.1s]
+[17:07:51] [c34 f153055c63] CTRL_atoms_random  agg=0.7176 tup=48 B=454336 r=52 [2.5s]
+[17:07:56] [c34 f153055c63] CTRL_pca_affine    agg=0.6968 tup=58 B=454336 r=52 [5.0s]
+[17:07:59] [c34 f153055c63] CTRL_random        agg=0.7222 tup=30 B=454336 r=52 [2.7s]
+[17:08:38] [c34 f153055c63] ITER1              agg=0.6898 tup=43 B=474416 r=21 [37.7s]
+[17:08:38] [c34] corner done in 405.5s
+[17:08:41] [c35 4d88305fcf] knn_proto        agg=0.8889 tup=48 B=475136
+[17:11:59] [c35 4d88305fcf] ARM                agg=0.8681 tup=54 B=454336 r=52 [191.5s]
+[17:12:39] [c35 4d88305fcf] ARM_KMEANS         agg=0.8981 tup=51 B=454336 r=52 [40.2s]
+[17:13:18] [c35 4d88305fcf] ADD_ONLY           agg=0.9074 tup=48 B=408576 r=0 [38.9s]
+[17:13:21] [c35 4d88305fcf] CTRL_mean          agg=0.3519 tup= 7 B=454336 r=52 [2.8s]
+[17:14:01] [c35 4d88305fcf] CTRL_atoms_medoid  agg=0.8472 tup=56 B=454336 r=52 [40.1s]
+[17:14:15] [c35 4d88305fcf] CTRL_atoms_kpp     agg=0.8704 tup=55 B=454336 r=52 [13.8s]
+[17:14:17] [c35 4d88305fcf] CTRL_atoms_random  agg=0.8704 tup=54 B=454336 r=52 [2.4s]
+[17:14:23] [c35 4d88305fcf] CTRL_pca_affine    agg=0.8750 tup=51 B=454336 r=52 [5.4s]
+[17:14:26] [c35 4d88305fcf] CTRL_random        agg=0.8542 tup=50 B=454336 r=52 [3.0s]
+[17:15:08] [c35 4d88305fcf] ITER1              agg=0.8403 tup=49 B=474416 r=21 [40.7s]
+[17:15:08] [c35] corner done in 389.6s
+[17:15:10] [c36 a0f2b6d536] knn_proto        agg=0.8032 tup=51 B=475136
+[17:18:11] [c36 a0f2b6d536] ARM                agg=0.8148 tup=54 B=454336 r=52 [173.6s]
+[17:18:46] [c36 a0f2b6d536] ARM_KMEANS         agg=0.7894 tup=51 B=454336 r=52 [34.3s]
+[17:19:19] [c36 a0f2b6d536] ADD_ONLY           agg=0.7778 tup=42 B=408576 r=0 [32.9s]
+[17:19:21] [c36 a0f2b6d536] CTRL_mean          agg=0.4468 tup=14 B=454336 r=52 [2.1s]
+[17:19:53] [c36 a0f2b6d536] CTRL_atoms_medoid  agg=0.7755 tup=52 B=454336 r=52 [32.2s]
+[17:20:05] [c36 a0f2b6d536] CTRL_atoms_kpp     agg=0.8194 tup=52 B=454336 r=52 [11.6s]
+[17:20:07] [c36 a0f2b6d536] CTRL_atoms_random  agg=0.7731 tup=48 B=454336 r=52 [2.0s]
+[17:20:12] [c36 a0f2b6d536] CTRL_pca_affine    agg=0.8125 tup=56 B=454336 r=52 [5.6s]
+[17:20:15] [c36 a0f2b6d536] CTRL_random        agg=0.6458 tup=34 B=454336 r=52 [2.4s]
+[17:21:10] [c36 a0f2b6d536] ITER1              agg=0.7685 tup=55 B=474416 r=21 [54.6s]
+[17:21:10] [c36] corner done in 362.7s
+[17:21:15] [c37 cab07f2d2a] knn_proto        agg=0.7685 tup=58 B=475136
+[17:24:32] [c37 cab07f2d2a] ARM                agg=0.7755 tup=51 B=454336 r=52 [189.3s]
+[17:25:08] [c37 cab07f2d2a] ARM_KMEANS         agg=0.7361 tup=48 B=454336 r=52 [35.5s]
+[17:25:43] [c37 cab07f2d2a] ADD_ONLY           agg=0.7014 tup=53 B=408576 r=0 [35.2s]
+[17:25:45] [c37 cab07f2d2a] CTRL_mean          agg=0.4259 tup= 5 B=454336 r=52 [2.5s]
+[17:26:21] [c37 cab07f2d2a] CTRL_atoms_medoid  agg=0.7662 tup=45 B=454336 r=52 [35.2s]
+[17:26:33] [c37 cab07f2d2a] CTRL_atoms_kpp     agg=0.7245 tup=54 B=454336 r=52 [11.9s]
+[17:26:35] [c37 cab07f2d2a] CTRL_atoms_random  agg=0.8079 tup=48 B=454336 r=52 [2.5s]
+[17:26:40] [c37 cab07f2d2a] CTRL_pca_affine    agg=0.7986 tup=60 B=454336 r=52 [4.7s]
+[17:26:43] [c37 cab07f2d2a] CTRL_random        agg=0.6944 tup=61 B=454336 r=52 [2.8s]
+[17:27:17] [c37 cab07f2d2a] ITER1              agg=0.7037 tup=54 B=474416 r=21 [33.2s]
+[17:27:17] [c37] corner done in 366.7s
+[17:27:20] [c38 be7ee79d89] knn_proto        agg=0.8380 tup=48 B=475136
+[17:30:21] [c38 be7ee79d89] ARM                agg=0.8519 tup=49 B=454336 r=52 [174.5s]
+[17:30:55] [c38 be7ee79d89] ARM_KMEANS         agg=0.8519 tup=47 B=454336 r=52 [34.1s]
+[17:31:29] [c38 be7ee79d89] ADD_ONLY           agg=0.8264 tup=48 B=408576 r=0 [34.1s]
+[17:31:31] [c38 be7ee79d89] CTRL_mean          agg=0.3287 tup=11 B=454336 r=52 [2.2s]
+[17:32:03] [c38 be7ee79d89] CTRL_atoms_medoid  agg=0.8403 tup=49 B=454336 r=52 [31.3s]
+[17:32:13] [c38 be7ee79d89] CTRL_atoms_kpp     agg=0.8310 tup=49 B=454336 r=52 [10.1s]
+[17:32:15] [c38 be7ee79d89] CTRL_atoms_random  agg=0.8519 tup=52 B=454336 r=52 [2.0s]
+[17:32:19] [c38 be7ee79d89] CTRL_pca_affine    agg=0.8634 tup=52 B=454336 r=52 [3.9s]
+[17:32:21] [c38 be7ee79d89] CTRL_random        agg=0.5556 tup=35 B=454336 r=52 [2.5s]
+[17:32:52] [c38 be7ee79d89] ITER1              agg=0.8727 tup=54 B=474416 r=21 [29.7s]
+[17:32:52] [c38] corner done in 334.8s
+[17:32:52] r1 confirm done in 8680.3s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table/relaunch\runs\r1_ledger_c0.jsonl

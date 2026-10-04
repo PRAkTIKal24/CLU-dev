@@ -1,0 +1,113 @@
+[19:28:58] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[19:28:58]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[19:28:58]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[19:28:58] table=best nvariants=2 corners[0:21] set=confirm
+[19:28:58]   BEST_nmf_ward_wf   K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=nmf          alloc=waterfill bytes_pred=454336
+[19:28:58]   BEST_nmf_equal_wf  K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=nmf          alloc=waterfill bytes_pred=454336
+[19:29:00] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:31:29] [c13 9025728d08] BEST_nmf_ward_wf   agg=0.7662 tup=47 B=469600 r=52 [145.2s]
+[19:34:08] [c13 9025728d08] BEST_nmf_equal_wf  agg=0.7616 tup=49 B=454336 r=52 [158.9s]
+[19:34:08] [c13] corner done in 308.7s
+[19:36:46] [c14 88b0f9e7b7] BEST_nmf_ward_wf   agg=0.8264 tup=48 B=475524 r=52 [151.9s]
+[19:38:59] [c14 88b0f9e7b7] BEST_nmf_equal_wf  agg=0.8264 tup=48 B=454336 r=52 [131.8s]
+[19:38:59] [c14] corner done in 290.2s
+[19:41:17] [c16 6e27d52e84] BEST_nmf_ward_wf   agg=0.7153 tup=53 B=465672 r=52 [135.0s]
+[19:43:27] [c16 6e27d52e84] BEST_nmf_equal_wf  agg=0.7083 tup=53 B=454336 r=52 [129.2s]
+[19:43:27] [c16] corner done in 268.0s
+[19:45:41] [c19 e87c55b7c8] BEST_nmf_ward_wf   agg=0.7940 tup=53 B=470760 r=52 [131.2s]
+[19:47:49] [c19 e87c55b7c8] BEST_nmf_equal_wf  agg=0.7847 tup=47 B=454336 r=52 [127.4s]
+[19:47:49] [c19] corner done in 262.2s
+[19:50:04] [c20 0516a0bb91] BEST_nmf_ward_wf   agg=0.8495 tup=51 B=471276 r=52 [131.8s]
+[19:52:12] [c20 0516a0bb91] BEST_nmf_equal_wf  agg=0.8356 tup=49 B=454336 r=52 [127.4s]
+[19:52:12] [c20] corner done in 263.0s
+[19:54:25] [c21 8604e2959b] BEST_nmf_ward_wf   agg=0.8218 tup=46 B=475524 r=52 [130.3s]
+[19:56:34] [c21 8604e2959b] BEST_nmf_equal_wf  agg=0.7963 tup=47 B=454336 r=52 [127.8s]
+[19:56:34] [c21] corner done in 261.9s
+[19:58:45] [c22 09225c8ea1] BEST_nmf_ward_wf   agg=0.8194 tup=48 B=467108 r=52 [128.2s]
+[20:00:52] [c22 09225c8ea1] BEST_nmf_equal_wf  agg=0.8194 tup=50 B=454336 r=52 [126.3s]
+[20:00:52] [c22] corner done in 258.6s
+[20:03:05] [c23 11b960f3fe] BEST_nmf_ward_wf   agg=0.8912 tup=57 B=471276 r=52 [130.0s]
+[20:05:05] [c23 11b960f3fe] BEST_nmf_equal_wf  agg=0.8912 tup=59 B=454336 r=52 [118.7s]
+[20:05:05] [c23] corner done in 252.6s
+[20:07:16] [c24 015098345d] BEST_nmf_ward_wf   agg=0.9375 tup=54 B=471276 r=52 [128.8s]
+[20:09:24] [c24 015098345d] BEST_nmf_equal_wf  agg=0.9167 tup=50 B=454336 r=52 [126.1s]
+[20:09:24] [c24] corner done in 258.9s
+[20:11:31] [c25 37c75c3819] BEST_nmf_ward_wf   agg=0.8889 tup=45 B=475524 r=52 [123.7s]
+[20:13:31] [c25 37c75c3819] BEST_nmf_equal_wf  agg=0.8750 tup=43 B=454336 r=52 [119.8s]
+[20:13:31] [c25] corner done in 247.5s
+[20:15:45] [c26 b5c2db9d4d] BEST_nmf_ward_wf   agg=0.8333 tup=48 B=470480 r=52 [130.4s]
+[20:17:50] [c26 b5c2db9d4d] BEST_nmf_equal_wf  agg=0.8241 tup=45 B=454336 r=52 [124.3s]
+[20:17:50] [c26] corner done in 258.8s
+[20:20:21] [c28 1f6b16c27d] BEST_nmf_ward_wf   agg=0.9190 tup=57 B=470480 r=52 [147.9s]
+[20:22:47] [c28 1f6b16c27d] BEST_nmf_equal_wf  agg=0.9144 tup=57 B=454336 r=52 [144.5s]
+[20:22:47] [c28] corner done in 296.4s
+[20:25:04] [c29 1d997f9be4] BEST_nmf_ward_wf   agg=0.8241 tup=38 B=475524 r=52 [134.3s]
+[20:27:30] [c29 1d997f9be4] BEST_nmf_equal_wf  agg=0.8032 tup=42 B=454336 r=52 [144.7s]
+[20:27:30] [c29] corner done in 283.0s
+[20:29:54] [c30 05064cb9f5] BEST_nmf_ward_wf   agg=0.8171 tup=40 B=470404 r=52 [141.7s]
+[20:32:23] [c30 05064cb9f5] BEST_nmf_equal_wf  agg=0.8125 tup=39 B=454336 r=52 [147.7s]
+[20:32:23] [c30] corner done in 293.3s
+[20:34:51] [c31 06ee734253] BEST_nmf_ward_wf   agg=0.7731 tup=57 B=472676 r=52 [144.9s]
+[20:37:24] [c31 06ee734253] BEST_nmf_equal_wf  agg=0.7546 tup=60 B=454336 r=52 [151.9s]
+[20:37:24] [c31] corner done in 301.1s
+[20:39:52] [c32 fa7f5265a2] BEST_nmf_ward_wf   agg=0.6806 tup=54 B=471468 r=52 [144.6s]
+[20:42:23] [c32 fa7f5265a2] BEST_nmf_equal_wf  agg=0.6898 tup=55 B=454336 r=52 [150.1s]
+[20:42:23] [c32] corner done in 298.7s
+[20:44:46] [c33 ca39e06229] BEST_nmf_ward_wf   agg=0.7986 tup=55 B=471468 r=52 [139.9s]
+[20:47:13] [c33 ca39e06229] BEST_nmf_equal_wf  agg=0.7963 tup=56 B=454336 r=52 [146.6s]
+[20:47:13] [c33] corner done in 290.3s
+[20:49:40] [c34 f153055c63] BEST_nmf_ward_wf   agg=0.6829 tup=59 B=471468 r=52 [143.9s]
+[20:52:12] [c34 f153055c63] BEST_nmf_equal_wf  agg=0.7037 tup=56 B=454336 r=52 [151.4s]
+[20:52:12] [c34] corner done in 299.4s
+[20:54:42] [c35 4d88305fcf] BEST_nmf_ward_wf   agg=0.8681 tup=51 B=471468 r=52 [146.7s]
+[20:57:13] [c35 4d88305fcf] BEST_nmf_equal_wf  agg=0.8681 tup=55 B=454336 r=52 [149.9s]
+[20:57:13] [c35] corner done in 300.7s
+[20:59:35] [c36 a0f2b6d536] BEST_nmf_ward_wf   agg=0.8125 tup=56 B=471468 r=52 [138.7s]
+[21:02:07] [c36 a0f2b6d536] BEST_nmf_equal_wf  agg=0.8218 tup=50 B=454336 r=52 [151.1s]
+[21:02:07] [c36] corner done in 293.8s
+[21:04:33] [c37 cab07f2d2a] BEST_nmf_ward_wf   agg=0.7963 tup=57 B=471468 r=52 [143.1s]
+[21:07:02] [c37 cab07f2d2a] BEST_nmf_equal_wf  agg=0.7755 tup=55 B=454336 r=52 [148.1s]
+[21:07:02] [c37] corner done in 295.0s
+[21:07:02] r1 best done in 5884.3s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table/relaunch\runs\r1_ledger_z0.jsonl

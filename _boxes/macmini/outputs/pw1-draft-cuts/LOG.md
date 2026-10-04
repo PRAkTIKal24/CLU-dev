@@ -1,0 +1,11 @@
+# LOG — pw1-draft-cuts
+- 2026-09-25T11:20:25Z start; read COMMON, brief, PLAN. Snapshot of live drafts in snap-before/.
+- 2026-09-25T11:23:37Z built snapshot (before) with pw1_draft_sweeps/compile_check.sh
+- 2026-09-25T11:27:03Z staged cuts in /Users/batmac/clu/outputs/pw1-draft-cuts/stage-112640 (cuts.py), built /Users/batmac/clu/outputs/pw1-draft-cuts/build-after-112658
+- 2026-09-25T11:28:06Z re-staged with pointer comments for every removed number (/Users/batmac/clu/outputs/pw1-draft-cuts/stage-112753), built /Users/batmac/clu/outputs/pw1-draft-cuts/build-after-112802
+- 2026-09-25T11:30:04Z final stage /Users/batmac/clu/outputs/pw1-draft-cuts/stage-112956; build /Users/batmac/clu/outputs/pw1-draft-cuts/build-final-112957; style diff + provenance re-run
+- 2026-09-25T11:30:21Z lock guard clean (live: pw1-plot-shapes, pw1-render-shapes); live drafts cmp-equal to snapshot; installed both .tex and PDFs, cmp-verified; hashes in installed/SHA256-install.txt
+- 2026-09-25T11:31:33Z FINDINGS.md written
+- 2026-09-25T11:31:48Z committed 08d0b79, bundle created and verified
+- note: stage-112640/stage-112753 and build-after-* are superseded iterations (pointer comments added, then table order in the lead-in); the installed files are stage-112956 + build-final-112957
+- 2026-09-25T11:31:52Z done

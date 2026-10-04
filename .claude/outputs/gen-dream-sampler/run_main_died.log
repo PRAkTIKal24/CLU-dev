@@ -1,0 +1,152 @@
+[gen-dream] dataset=shapes3d pretext=recon condition=recomb2element stage=dream seeds=[0, 1, 2] -> /Users/user/Desktop/CHLU/.claude/outputs/gen-dream-sampler/runs/shapes3d_recon
+[     0.0s] seed 0 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (asserted)
+[     3.3s]   split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+[     5.8s] cache 480000 rows (scope=full), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     8.0s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     8.0s] rows: store_train=32768 eval_a=1024 -> 512 A-split requests (⛔ A only: no B, no C)
+[    11.7s] features gathered: store (32768, 2048) dream (512, 2048)
+[    11.7s] ⭐ store plan loaded VERBATIM: K=5 n_modes=64 well sizes [303, 305, 573, 501, 366]
+[    11.7s] store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-dream-sampler/runs/shapes3d_recon/seed_0/store_s0.pkl
+[    11.7s] store: 524288 B, 30 bits/read
+[    15.9s] ⭐ no-bypass: pure codebook gather, 30 bits/read
+[    17.7s] ⭐ coupling fitted from 32768 train codes (+163840 B, EXTRA to store_bytes; channel unchanged at 30 bits)
+[    39.1s] ⭐ ceilings: decoder aggregate=0.9922 shape=0.9785 | STORE aggregate=0.6195 shape=0.5840
+[    43.9s] [full] calibrated: tau 11.13 -> 2.782 (mode_distance), T 1.518 -> 0.1518 (energy_scale); mean_max_pi at tau_start = 0.0242
+[    48.8s]   ⭐ step size tuned to 0.1 (target accept 0.7, 1 round(s): 0.1->0.61)
+[    49.1s] [full] mean_n_clamped=4.42/5 mean_n_relaxed=0.58 mean_confidence=0.755
+[   113.0s]   full__clu__mala__full: aggregate=0.5684 bal=0.5655 shape=0.5234 | acc_prob=0.848 ΔE=-0.5499 moved=0.39 maxpi=0.025 cfgs=502
+[   124.0s]   full__clu__mala__zero_step: aggregate=0.5654 bal=0.5627 shape=0.5117 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.025 cfgs=497
+[   133.2s]   full__clu__mala__prior_mode: aggregate=0.5540 bal=0.5527 shape=0.5273 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.026 cfgs=497
+[   155.4s]   full__clu__ula__full: aggregate=0.5645 bal=0.5629 shape=0.5195 | acc_prob=0.938 ΔE=-0.6361 moved=0.39 maxpi=0.025 cfgs=501
+[   192.3s]   full__clu__uld__full: aggregate=0.5615 bal=0.5589 shape=0.5273 | acc_prob=0.925 ΔE=-0.9309 moved=0.36 maxpi=0.025 cfgs=499
+[   215.5s]   full__store_removed__mala__full: aggregate=0.1025 bal=0.1069 shape=0.2305 | acc_prob=0.842 ΔE=-0.7801 moved=0.00 maxpi=0.016 cfgs=1
+[   225.3s]   full__store_removed__mala__zero_step: aggregate=0.1025 bal=0.1069 shape=0.2305 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[   235.1s]   full__store_removed__mala__prior_mode: aggregate=0.1025 bal=0.1069 shape=0.2305 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[   261.0s]   full__no_coupling__mala__full: aggregate=0.5579 bal=0.5558 shape=0.5234 | acc_prob=0.845 ΔE=-0.4820 moved=0.32 maxpi=0.025 cfgs=502
+[   272.6s]   full__no_coupling__mala__zero_step: aggregate=0.5654 bal=0.5627 shape=0.5117 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.025 cfgs=497
+[   282.7s]   full__no_coupling__mala__prior_mode: aggregate=0.5540 bal=0.5527 shape=0.5273 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.026 cfgs=497
+[   283.1s] [partial] calibrated: tau 11.13 -> 2.782 (mode_distance), T 0.4321 -> 0.04321 (energy_scale); mean_max_pi at tau_start = 0.0200
+[   288.9s]   ⭐ step size tuned to 0.025 (target accept 0.7, 8 round(s): 0.1->0.05, 0.05->0.41, 0.025->0.82, 0.05->0.41, 0.025->0.82, 0.05->0.41, 0.025->0.82, 0.05->0.40)
+[   289.2s] [partial] mean_n_clamped=1.46/5 mean_n_relaxed=3.54 mean_confidence=0.388
+[   340.4s]   partial__clu__mala__full: aggregate=0.3507 bal=0.3457 shape=0.3739 | acc_prob=0.951 ΔE=-1.5321 moved=0.96 maxpi=0.020 cfgs=496
+[   350.5s]   partial__clu__mala__zero_step: aggregate=0.3310 bal=0.3301 shape=0.3478 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.020 cfgs=282
+[   359.4s]   partial__clu__mala__prior_mode: aggregate=0.3144 bal=0.3176 shape=0.3565 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.026 cfgs=277
+[   383.1s]   partial__clu__ula__full: aggregate=0.3443 bal=0.3406 shape=0.3507 | acc_prob=0.961 ΔE=-1.5258 moved=0.96 maxpi=0.020 cfgs=500
+[   420.4s]   partial__clu__uld__full: aggregate=0.3447 bal=0.3424 shape=0.3478 | acc_prob=0.948 ΔE=-2.0720 moved=0.96 maxpi=0.020 cfgs=502
+[   446.6s]   partial__store_removed__mala__full: aggregate=0.1064 bal=0.1069 shape=0.2058 | acc_prob=0.951 ΔE=-0.4175 moved=0.00 maxpi=0.016 cfgs=1
+[   457.0s]   partial__store_removed__mala__zero_step: aggregate=0.1064 bal=0.1069 shape=0.2058 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[   467.5s]   partial__store_removed__mala__prior_mode: aggregate=0.1064 bal=0.1069 shape=0.2058 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.016 cfgs=1
+[   493.0s]   partial__no_coupling__mala__full: aggregate=0.3397 bal=0.3340 shape=0.3565 | acc_prob=0.951 ΔE=-0.9083 moved=0.95 maxpi=0.020 cfgs=502
+[   502.1s]   partial__no_coupling__mala__zero_step: aggregate=0.3310 bal=0.3301 shape=0.3478 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.020 cfgs=282
+[   513.6s]   partial__no_coupling__mala__prior_mode: aggregate=0.3144 bal=0.3176 shape=0.3565 | acc_prob=nan ΔE=+0.0000 moved=0.00 maxpi=0.026 cfgs=277
+/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py:922: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py:923: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=140)
+[   519.8s] seed 0 done
+[     0.0s] seed 1 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1
+[     1.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (asserted)
+[     3.2s]   split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+[     3.6s] cache 9288 rows (scope=used), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     7.5s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     7.5s] rows: store_train=32768 eval_a=1024 -> 512 A-split requests (⛔ A only: no B, no C)
+[     7.5s]     extending cache coverage: 32199 row(s) encoded through the frozen encoder
+[   180.5s] features gathered: store (32768, 2048) dream (512, 2048)
+[   180.6s] ⭐ store plan loaded VERBATIM: K=5 n_modes=64 well sizes [303, 305, 573, 501, 366]
+[   187.1s] training the modes (1200 steps, store-only objective) …
+[   188.5s]     step 1/1200  loss=55.85137  tau=1.000
+[   497.7s]     step 240/1200  loss=44.05746  tau=0.632
+E0912 00:26:32.137940 34935344 slow_operation_alarm.cc:73] 
+********************************
+[Compiling module jit_step for CPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+E0912 00:26:42.274774 34934601 slow_operation_alarm.cc:140] The operation took 2m10.284875s
+
+********************************
+[Compiling module jit_step for CPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************

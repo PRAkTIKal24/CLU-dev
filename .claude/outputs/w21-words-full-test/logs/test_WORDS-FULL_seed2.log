@@ -1,0 +1,37 @@
+[WORDS-FULL_test seed 2] config {'latent': 128, 'K': 2, 'n_atoms': 6, 'ridge': 1.0} rival_steps 8000 / 80000
+  CODEC latent 128  loss 0.00008  [56.9s]
+  across-wells derangement [1, 0] (no fixed point: asserted)
+  MATCHED PARAMETERS (target 4584 = CLU read floats, obs 318, out 21)
+    mlp          width  11  params    4718  (+2.92%)
+    lstm         width   9  params    4568  (-0.35%)
+    transformer  width   8  params    4749  (+3.60%)  n_layers=2 heads=2
+  MATCHED PARAMETERS (target 45840 = CLU read floats, obs 318, out 21)
+    mlp          width 100  params   45925  (+0.19%)
+    lstm         width  56  params   45693  (-0.32%)
+    transformer  width  56  params   46421  (+1.27%)  n_layers=1 heads=2
+    TRAIN rival: mlp   params    4718  loss 0.0000  [181.7s]
+    TRAIN rival@10x-steps: mlp params    4718  loss 0.0000  [1485.2s]
+    TRAIN diagnostic@10x-read-floats: mlp params   45925  loss 0.0000  [202.6s]
+    TRAIN rival: lstm  params    4568  loss 0.0000  [172.5s]
+    TRAIN rival@10x-steps: lstm params    4568  loss 0.0000  [1888.5s]
+    TRAIN diagnostic@10x-read-floats: lstm params   45693  loss 0.0000  [254.0s]
+    TRAIN rival: transformer params    4749  loss 0.0000  [336.5s]
+    TRAIN rival@10x-steps: transformer params    4749  loss 0.0000  [2836.1s]
+    TRAIN diagnostic@10x-read-floats: transformer params   46421  loss 0.0000  [268.0s]
+  MATCHED PARAMETERS (target 4584 = CLU read floats, obs 10, out 21)
+    mlp          width  44  params    4597  (+0.28%)
+  MATCHED PARAMETERS (target 45840 = CLU read floats, obs 10, out 21)
+    mlp          width 192  params   46037  (+0.43%)
+    TRAIN rival: cont_mlp params    4597  loss 0.0018  [156.7s]
+    TRAIN rival@10x-steps: cont_mlp params    4597  loss 0.0000  [1239.0s]
+    TRAIN diagnostic@10x-read-floats: cont_mlp params   46037  loss 0.0001  [156.9s]
+  row seen  n=4000  CLU 0.9645 best-rival8k 1.0000 best-rival80k 1.0000 worst-ctl 0.3528 bseq 0.9367 bcol 0.5930
+  row pair  n=2021  CLU 0.5586 best-rival8k 0.6343 best-rival80k 0.4864 worst-ctl 0.2538 bseq 0.6398 bcol 0.1440
+  row nway  n=686   CLU 0.8076 best-rival8k 0.8338 best-rival80k 0.7770 worst-ctl 0.3192 bseq 0.4519 bcol 0.1122
+  row value n=4000  CLU 0.4763 best-rival8k 0.7702 best-rival80k 0.7480 worst-ctl 0.2008 bseq 0.4915 bcol 0.2630
+  rollout CLU validity 0.0000 per-step 0.9285
+    TRAIN mlp retrain-without params    4718  loss 0.0000  [164.0s]
+    TRAIN mlp as-trained params    4718  loss 0.0000  [172.3s]
+    TRAIN mlp retrain-without params    4718  loss 0.0000  [158.6s]
+    TRAIN mlp as-trained params    4718  loss 0.0000  [157.1s]
+[WORDS-FULL_test seed 2] wrote C:/chlu/outputs/w21-words-full-test/test\WORDS-FULL_test_seed2.json [13036.3s]

@@ -1,0 +1,131 @@
+[13:46:54] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[13:46:54]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[13:46:54]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[13:46:55] table=grid nvariants=20 corners[0:3] set=select
+[13:46:55]   P2_K32_A320        K= 32 A=  320 rank= 160 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=455680
+[13:46:55]   P3_K32_A320        K= 32 A=  320 rank= 151 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474640
+[13:46:55]   P2_K32_A448        K= 32 A=  448 rank= 109 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=472960
+[13:46:55]   P3_K32_A448        K= 32 A=  448 rank= 100 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=475072
+[13:46:55]   P2_K32_A576        K= 32 A=  576 rank=  70 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473344
+[13:46:55]   P3_K32_A576        K= 32 A=  576 rank=  65 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474224
+[13:46:55]   P2_K32_A704        K= 32 A=  704 rank=  42 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=471808
+[13:46:55]   P3_K32_A704        K= 32 A=  704 rank=  40 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474496
+[13:46:55]   P2_K32_A832        K= 32 A=  832 rank=  22 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473344
+[13:46:55]   P3_K32_A832        K= 32 A=  832 rank=  21 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474416
+[13:46:55]   P2_K64_A320        K= 64 A=  320 rank= 160 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=414720
+[13:46:55]   P3_K64_A320        K= 64 A=  320 rank= 170 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474720
+[13:46:55]   P2_K64_A448        K= 64 A=  448 rank= 133 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473984
+[13:46:55]   P3_K64_A448        K= 64 A=  448 rank= 121 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=473840
+[13:46:55]   P2_K64_A576        K= 64 A=  576 rank=  95 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473216
+[13:46:55]   P3_K64_A576        K= 64 A=  576 rank=  88 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=473728
+[13:46:55]   P2_K64_A704        K= 64 A=  704 rank=  69 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=475008
+[13:46:55]   P3_K64_A704        K= 64 A=  704 rank=  64 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=473088
+[13:46:55]   P2_K64_A832        K= 64 A=  832 rank=  49 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473984
+[13:46:55]   P3_K64_A832        K= 64 A=  832 rank=  46 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=473120
+[13:46:57] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:47:26] [c0 c6221b30a0] P2_K32_A320        agg=0.6690 tup=38 B=455680 r=160 [27.4s]
+[13:47:53] [c0 c6221b30a0] P3_K32_A320        agg=0.6690 tup=35 B=474640 r=151 [26.7s]
+[13:48:21] [c0 c6221b30a0] P2_K32_A448        agg=0.7106 tup=33 B=472960 r=109 [27.4s]
+[13:48:46] [c0 c6221b30a0] P3_K32_A448        agg=0.7106 tup=32 B=475072 r=100 [25.2s]
+[13:49:21] [c0 c6221b30a0] P2_K32_A576        agg=0.7731 tup=42 B=473344 r=70 [35.5s]
+[13:49:57] [c0 c6221b30a0] P3_K32_A576        agg=0.7685 tup=41 B=474224 r=65 [36.0s]
+[13:50:28] [c0 c6221b30a0] P2_K32_A704        agg=0.8194 tup=47 B=471808 r=42 [30.5s]
+[13:50:57] [c0 c6221b30a0] P3_K32_A704        agg=0.8264 tup=45 B=474496 r=40 [29.7s]
+[13:51:33] [c0 c6221b30a0] P2_K32_A832        agg=0.8310 tup=48 B=473344 r=22 [35.5s]
+[13:52:05] [c0 c6221b30a0] P3_K32_A832        agg=0.8403 tup=49 B=474416 r=21 [32.2s]
+[13:52:21] [c0 c6221b30a0] P2_K64_A320        agg=0.6551 tup=28 B=414720 r=160 [14.1s]
+[13:52:36] [c0 c6221b30a0] P3_K64_A320        agg=0.6505 tup=27 B=474720 r=170 [15.8s]
+[13:52:55] [c0 c6221b30a0] P2_K64_A448        agg=0.7060 tup=30 B=473984 r=133 [18.3s]
+[13:53:13] [c0 c6221b30a0] P3_K64_A448        agg=0.7083 tup=32 B=473840 r=121 [18.0s]
+[13:53:31] [c0 c6221b30a0] P2_K64_A576        agg=0.7153 tup=35 B=473216 r=95 [18.0s]
+[13:53:48] [c0 c6221b30a0] P3_K64_A576        agg=0.7176 tup=35 B=473728 r=88 [17.0s]
+[13:54:10] [c0 c6221b30a0] P2_K64_A704        agg=0.7269 tup=38 B=475008 r=69 [21.9s]
+[13:54:42] [c0 c6221b30a0] P3_K64_A704        agg=0.7361 tup=38 B=473088 r=64 [32.1s]
+[13:55:10] [c0 c6221b30a0] P2_K64_A832        agg=0.7731 tup=45 B=473984 r=49 [28.9s]
+[13:55:39] [c0 c6221b30a0] P3_K64_A832        agg=0.7824 tup=42 B=473120 r=46 [28.5s]
+[13:55:39] [c0] corner done in 522.2s
+[13:56:00] [c4 f3ca5a14c3] P2_K32_A320        agg=0.8241 tup=34 B=455680 r=160 [19.0s]
+[13:56:21] [c4 f3ca5a14c3] P3_K32_A320        agg=0.8264 tup=32 B=474640 r=151 [21.5s]
+[13:56:47] [c4 f3ca5a14c3] P2_K32_A448        agg=0.8125 tup=38 B=472960 r=109 [25.7s]
+[13:57:13] [c4 f3ca5a14c3] P3_K32_A448        agg=0.8194 tup=37 B=475072 r=100 [26.3s]
+[13:57:43] [c4 f3ca5a14c3] P2_K32_A576        agg=0.8241 tup=43 B=473344 r=70 [29.8s]
+[13:58:11] [c4 f3ca5a14c3] P3_K32_A576        agg=0.8264 tup=43 B=474224 r=65 [28.0s]
+[13:58:46] [c4 f3ca5a14c3] P2_K32_A704        agg=0.8472 tup=47 B=471808 r=42 [35.2s]
+[13:59:22] [c4 f3ca5a14c3] P3_K32_A704        agg=0.8519 tup=49 B=474496 r=40 [35.7s]
+[13:59:55] [c4 f3ca5a14c3] P2_K32_A832        agg=0.8773 tup=48 B=473344 r=22 [33.3s]
+[14:00:26] [c4 f3ca5a14c3] P3_K32_A832        agg=0.8634 tup=46 B=474416 r=21 [31.1s]
+[14:00:43] [c4 f3ca5a14c3] P2_K64_A320        agg=0.8171 tup=29 B=414720 r=160 [15.6s]
+[14:00:59] [c4 f3ca5a14c3] P3_K64_A320        agg=0.8218 tup=32 B=474720 r=170 [15.8s]
+[14:01:17] [c4 f3ca5a14c3] P2_K64_A448        agg=0.8194 tup=32 B=473984 r=133 [17.5s]
+[14:01:34] [c4 f3ca5a14c3] P3_K64_A448        agg=0.8218 tup=31 B=473840 r=121 [17.6s]
+[14:01:53] [c4 f3ca5a14c3] P2_K64_A576        agg=0.8310 tup=41 B=473216 r=95 [19.1s]
+[14:02:12] [c4 f3ca5a14c3] P3_K64_A576        agg=0.8287 tup=40 B=473728 r=88 [18.6s]
+[14:02:33] [c4 f3ca5a14c3] P2_K64_A704        agg=0.8333 tup=47 B=475008 r=69 [21.1s]
+[14:02:55] [c4 f3ca5a14c3] P3_K64_A704        agg=0.8218 tup=50 B=473088 r=64 [21.7s]
+[14:03:16] [c4 f3ca5a14c3] P2_K64_A832        agg=0.8310 tup=48 B=473984 r=49 [21.4s]
+[14:03:38] [c4 f3ca5a14c3] P3_K64_A832        agg=0.8218 tup=49 B=473120 r=46 [22.1s]
+[14:03:38] [c4] corner done in 479.2s
+[14:04:00] [c5 e085c74688] P2_K32_A320        agg=0.6713 tup=26 B=455680 r=160 [19.5s]
+[14:04:20] [c5 e085c74688] P3_K32_A320        agg=0.6713 tup=25 B=474640 r=151 [20.2s]
+[14:04:40] [c5 e085c74688] P2_K32_A448        agg=0.6713 tup=32 B=472960 r=109 [20.1s]
+[14:05:01] [c5 e085c74688] P3_K32_A448        agg=0.6736 tup=32 B=475072 r=100 [21.2s]
+[14:05:25] [c5 e085c74688] P2_K32_A576        agg=0.6875 tup=41 B=473344 r=70 [23.6s]
+[14:05:48] [c5 e085c74688] P3_K32_A576        agg=0.6968 tup=40 B=474224 r=65 [22.8s]
+[14:06:14] [c5 e085c74688] P2_K32_A704        agg=0.6944 tup=46 B=471808 r=42 [25.9s]
+[14:06:40] [c5 e085c74688] P3_K32_A704        agg=0.7060 tup=50 B=474496 r=40 [26.5s]
+[14:07:07] [c5 e085c74688] P2_K32_A832        agg=0.6921 tup=51 B=473344 r=22 [27.1s]
+[14:07:47] [c5 e085c74688] P3_K32_A832        agg=0.6968 tup=51 B=474416 r=21 [39.3s]
+[14:08:09] [c5 e085c74688] P2_K64_A320        agg=0.7199 tup=21 B=414720 r=160 [21.2s]
+[14:08:27] [c5 e085c74688] P3_K64_A320        agg=0.7176 tup=20 B=474720 r=170 [17.3s]
+[14:08:48] [c5 e085c74688] P2_K64_A448        agg=0.7037 tup=32 B=473984 r=133 [21.2s]
+[14:09:04] [c5 e085c74688] P3_K64_A448        agg=0.7014 tup=32 B=473840 r=121 [16.2s]
+[14:09:24] [c5 e085c74688] P2_K64_A576        agg=0.6806 tup=38 B=473216 r=95 [20.2s]
+[14:09:44] [c5 e085c74688] P3_K64_A576        agg=0.6829 tup=37 B=473728 r=88 [19.5s]
+[14:10:04] [c5 e085c74688] P2_K64_A704        agg=0.6759 tup=39 B=475008 r=69 [20.7s]
+[14:10:25] [c5 e085c74688] P3_K64_A704        agg=0.6852 tup=37 B=473088 r=64 [20.8s]
+[14:10:47] [c5 e085c74688] P2_K64_A832        agg=0.6921 tup=45 B=473984 r=49 [21.7s]
+[14:11:06] [c5 e085c74688] P3_K64_A832        agg=0.6991 tup=48 B=473120 r=46 [18.9s]
+[14:11:06] [c5] corner done in 447.7s
+[14:11:06] r1 grid done in 1451.5s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table/relaunch\runs\r1_ledger_w0.jsonl

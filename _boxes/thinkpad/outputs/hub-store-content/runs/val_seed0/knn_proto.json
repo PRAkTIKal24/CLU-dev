@@ -1,0 +1,77 @@
+{
+ "arm": "knn_proto",
+ "base": "knn_proto",
+ "content": "P",
+ "set": "val",
+ "set_label": "val (store pool, held back)",
+ "spec": {
+  "name": "P",
+  "blocks": [
+   "p"
+  ],
+  "half_channels": [],
+  "shuffle": [],
+  "shuffle_seed": 0,
+  "D": 2048,
+  "n_atoms": 64,
+  "store_bytes": 524288,
+  "budget_bytes": 524288,
+  "byte_matched": true,
+  "dims_per_block": {
+   "p": 2048
+  },
+  "bytes_formula": "n_atoms * D * 4",
+  "note": "THE INCUMBENT CONTENT: the penultimate map alone, 64 atoms. Every number in the programme so far was measured on this."
+ },
+ "n_requests": 512,
+ "seed": 0,
+ "rows": {
+  "full": {
+   "n": 512,
+   "aggregate": 0.8424479166666666,
+   "exact_match": 0.220703125,
+   "per_factor": {
+    "floor_hue": 1.0,
+    "wall_hue": 1.0,
+    "object_hue": 1.0,
+    "scale": 0.3125,
+    "shape": 0.96875,
+    "orientation": 0.7734375
+   },
+   "launch_mode": "knn_proto",
+   "per_corner": {
+    "val": {
+     "n": 512,
+     "aggregate": 0.8424479166666666,
+     "exact_match": 0.220703125,
+     "per_factor": {
+      "floor_hue": 1.0,
+      "wall_hue": 1.0,
+      "object_hue": 1.0,
+      "scale": 0.3125,
+      "shape": 0.96875,
+      "orientation": 0.7734375
+     }
+    }
+   }
+  }
+ },
+ "byte_ledger": {
+  "deployed_bytes": 475136,
+  "budget_bytes": 524288,
+  "what": "knn_proto: (Sigma_f V_f + 1) prototypes x D float32",
+  "budget_note": "DECLARED MISMATCH: 475,136 B against the 524,288 B budget (0.906x). The prototype table is this arm's whole deployed object and it is not byte-matchable at tolerance 0 without changing what the arm IS. It is the SECOND control for this reason; basis_head is the like-for-like.",
+  "n_prototypes": 57,
+  "dim": 2048,
+  "dtype": "float32",
+  "bytes_formula": "(sum_k C_k + 1) * D * 4",
+  "bytes": 475136,
+  "role": "request embedding == the kNN arm's ADDRESSING HEAD; the store's own byte count excludes the CLU addressing head by the same convention"
+ },
+ "provenance": {
+  "rule": "mu_global + sum_terms (mu_kv - mu_global)",
+  "D": 2048,
+  "seed": 0
+ },
+ "wall_seconds": 30.024856090545654
+}

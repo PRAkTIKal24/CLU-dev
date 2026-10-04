@@ -1,0 +1,30 @@
+[BOTH_val seed 0] config {'latent': 128, 'K': 2, 'n_atoms': 6, 'ridge': 1.0} rival_steps 60 / 600
+  CODEC latent 128  loss 0.07921  [2.5s]
+  across-wells derangement [1, 0] (no fixed point: asserted)
+  MATCHED PARAMETERS (target 4584 = CLU read floats, obs 954, out 21)
+    mlp          width   4  params    4693  (+2.38%)
+    lstm         width   4  params    4817  (+5.08%)
+    transformer  width   4  params    4869  (+6.22%)  n_layers=1 heads=2
+  MATCHED PARAMETERS (target 45840 = CLU read floats, obs 954, out 21)
+    mlp          width  44  params   46133  (+0.64%)
+    lstm         width  35  params   45210  (-1.37%)
+    transformer  width  30  params   45455  (-0.84%)  n_layers=2 heads=2
+    TRAIN rival: mlp   params    4693  loss 2.2783  [1.2s]
+    TRAIN rival@10x-steps: mlp params    4693  loss 1.3706  [2.2s]
+    TRAIN diagnostic@10x-read-floats: mlp params   46133  loss 2.1610  [1.2s]
+    TRAIN rival: lstm  params    4817  loss 3.8415  [1.4s]
+    TRAIN rival@10x-steps: lstm params    4817  loss 2.0974  [2.5s]
+    TRAIN diagnostic@10x-read-floats: lstm params   45210  loss 2.2962  [1.6s]
+    TRAIN rival: transformer params    4869  loss 3.3305  [2.7s]
+    TRAIN rival@10x-steps: transformer params    4869  loss 0.1947  [3.7s]
+    TRAIN diagnostic@10x-read-floats: transformer params   45455  loss 2.1778  [3.6s]
+  row seen  n=150   CLU 0.9933 best-rival8k 0.0867 best-rival80k 0.7933 worst-ctl 0.6000 bseq 0.8867 bcol 0.6200
+  row pair  n=150   CLU 0.1667 best-rival8k 0.0000 best-rival80k 0.1600 worst-ctl 0.2200 bseq 0.5733 bcol 0.1667
+  row nway  n=150   CLU 0.5933 best-rival8k 0.0000 best-rival80k 0.1600 worst-ctl 0.3467 bseq 0.1133 bcol 0.0000
+  row value n=150   CLU 0.4533 best-rival8k 0.0400 best-rival80k 0.2467 worst-ctl 0.1733 bseq 0.4600 bcol 0.2600
+  rollout CLU validity 0.0000 per-step 0.9315
+    TRAIN mlp retrain-without params    4693  loss 2.3071  [1.0s]
+    TRAIN mlp as-trained params    4693  loss 2.2783  [0.9s]
+    TRAIN mlp retrain-without params    4693  loss 2.2936  [0.9s]
+    TRAIN mlp as-trained params    4693  loss 2.2783  [1.3s]
+[BOTH_val seed 0] wrote C:/chlu/outputs/w19-maze-t-symmetric/smoke\BOTH_val_seed0_SMOKE.json [239.3s]

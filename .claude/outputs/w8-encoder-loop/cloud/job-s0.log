@@ -1,0 +1,448 @@
+=== chlu startup 2026-09-21T04:38:57Z on chlu-w8enc-s0 ===
+job=w8enc-s0 exp=w8_encoder_loop units=[0] image=us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:69a72b670f9ee4190a2dba055b520cafa4e92918982ffa0a9309df51e954c59e remote=gs://chlu-cloud-forgisprova/jobs zone=us-central1-a
+exp_args=[--stage cloud --ckpt-every-s 300 --joint-steps 4000 --dec-steps 1800 --warm-steps 4000 --n-train 32768] artefacts=[gs://chlu-cloud-forgisprova/artefacts] commit=b405f0d79fc96caf725d6f7d9faedeb454483b53
+[exp] w8_encoder_loop -> module=chlu.experiments.exp_w8_encoder_loop out_mode=sweep needs_artefacts=1
+[resume] restoring gs://chlu-cloud-forgisprova/jobs/w8enc-s0/out -> /var/chlu/out
+[artefacts] fetching gs://chlu-cloud-forgisprova/artefacts -> /var/chlu/artefacts
+Copying gs://chlu-cloud-forgisprova/artefacts/outputs/gen-store-grouping/runs/shapes3d_recon/seed_2/store_manifest.json to file:///var/chlu/artefacts/outputs/gen-store-grouping/runs/shapes3d_recon/seed_2/store_manifest.json
+Copying gs://chlu-cloud-forgisprova/artefacts/outputs/gen-store-grouping/runs/shapes3d_recon/store_plan.json to file:///var/chlu/artefacts/outputs/gen-store-grouping/runs/shapes3d_recon/store_plan.json
+...............
+
+Average throughput: 756.8MiB/s
+[artefacts] all five roots present: CHLU_CLAUDE_ROOT=/var/chlu/artefacts
+[decoder] seed_0: recipe v1_capacity_schedule · pkl sha256 bcf39c42bc7885d8… OK (param_hash 01ef91f75eeaae7b…, 1516227 params)
+[decoder] recipe 'v1_capacity_schedule' asserted by name and by hash for seed(s): 0
+Mon Sep 21 04:39:10 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-40GB          Off |   00000000:00:04.0 Off |                    0 |
+| N/A   33C    P0             50W /  400W |       0MiB /  40960MiB |     26%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+name, driver_version, memory.total [MiB]
+NVIDIA A100-SXM4-40GB, 580.178.04, 40960 MiB
+Get:1 file:/var/cudnn-local-repo-ubuntu2404-9.13.0  InRelease [1572 B]
+Get:1 file:/var/cudnn-local-repo-ubuntu2404-9.13.0  InRelease [1572 B]
+Hit:2 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy InRelease
+Get:3 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+Get:4 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-backports InRelease [127 kB]
+Hit:5 http://packages.cloud.google.com/apt apt-transport-artifact-registry-stable InRelease
+Get:6 https://us-apt.pkg.dev/projects/gce-ai-infra gpudirect-gib-apt InRelease [1239 B]
+Get:7 https://nvidia.github.io/libnvidia-container/stable/deb/amd64  InRelease [1477 B]
+Get:8 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages [3807 kB]
+Get:9 http://security.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
+Get:10 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main Translation-en [565 kB]
+Get:11 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/restricted amd64 Packages [6564 kB]
+Get:12 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/restricted Translation-en [1259 kB]
+Get:13 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages [1283 kB]
+Get:14 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/universe Translation-en [324 kB]
+Get:15 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-backports/main amd64 Packages [95.7 kB]
+Get:16 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-backports/universe amd64 Packages [33.7 kB]
+Get:17 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-backports/universe Translation-en [16.9 kB]
+Get:18 https://us-apt.pkg.dev/projects/gce-ai-infra gpudirect-gib-apt/main amd64 Packages [11.5 kB]
+Get:19 https://nvidia.github.io/libnvidia-container/stable/deb/amd64  Packages [28.0 kB]
+Get:20 http://security.ubuntu.com/ubuntu jammy-security/main amd64 Packages [3527 kB]
+Get:21 http://security.ubuntu.com/ubuntu jammy-security/main Translation-en [496 kB]
+Get:22 http://security.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages [6306 kB]
+Get:23 http://security.ubuntu.com/ubuntu jammy-security/restricted Translation-en [1211 kB]
+Get:24 http://security.ubuntu.com/ubuntu jammy-security/universe amd64 Packages [1048 kB]
+Get:25 http://security.ubuntu.com/ubuntu jammy-security/multiverse amd64 Packages [69.4 kB]
+Get:26 http://security.ubuntu.com/ubuntu jammy-security/multiverse Translation-en [12.9 kB]
+Fetched 27.0 MB in 5s (5941 kB/s)
+Reading package lists...
+W: http://packages.cloud.google.com/apt/dists/apt-transport-artifact-registry-stable/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+W: https://us-apt.pkg.dev/projects/gce-ai-infra/dists/gpudirect-gib-apt/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  bridge-utils containerd dns-root-data dnsmasq-base pigz runc ubuntu-fan
+Suggested packages:
+  ifupdown aufs-tools cgroupfs-mount | cgroup-lite debootstrap docker-buildx
+  docker-compose-v2 docker-doc rinse zfs-fuse | zfsutils
+The following NEW packages will be installed:
+  bridge-utils containerd dns-root-data dnsmasq-base docker.io pigz runc
+  ubuntu-fan
+0 upgraded, 8 newly installed, 0 to remove and 25 not upgraded.
+Need to get 74.0 MB of archives.
+After this operation, 279 MB of additional disk space will be used.
+Get:1 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy/universe amd64 pigz amd64 2.6-1 [63.6 kB]
+Get:2 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy/main amd64 bridge-utils amd64 1.7-1ubuntu3 [34.4 kB]
+Get:3 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 runc amd64 1.3.4-0ubuntu1~22.04.1 [9569 kB]
+Get:4 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 containerd amd64 2.2.1-0ubuntu1~22.04.2 [28.3 MB]
+Get:5 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 dns-root-data all 2024071801~ubuntu0.22.04.1 [6132 B]
+Get:6 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 dnsmasq-base amd64 2.91-0ubuntu0.22.04.1 [379 kB]
+Get:7 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 docker.io amd64 29.1.3-0ubuntu3~22.04.2 [35.7 MB]
+Get:8 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy/universe amd64 ubuntu-fan all 0.12.16 [35.2 kB]
+Preconfiguring packages ...
+Fetched 74.0 MB in 2s (41.8 MB/s)
+Selecting previously unselected package pigz.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 71520 files and directories currently installed.)
+Preparing to unpack .../0-pigz_2.6-1_amd64.deb ...
+Unpacking pigz (2.6-1) ...
+Selecting previously unselected package bridge-utils.
+Preparing to unpack .../1-bridge-utils_1.7-1ubuntu3_amd64.deb ...
+Unpacking bridge-utils (1.7-1ubuntu3) ...
+Selecting previously unselected package runc.
+Preparing to unpack .../2-runc_1.3.4-0ubuntu1~22.04.1_amd64.deb ...
+Unpacking runc (1.3.4-0ubuntu1~22.04.1) ...
+Selecting previously unselected package containerd.
+Preparing to unpack .../3-containerd_2.2.1-0ubuntu1~22.04.2_amd64.deb ...
+Unpacking containerd (2.2.1-0ubuntu1~22.04.2) ...
+Selecting previously unselected package dns-root-data.
+Preparing to unpack .../4-dns-root-data_2024071801~ubuntu0.22.04.1_all.deb ...
+Unpacking dns-root-data (2024071801~ubuntu0.22.04.1) ...
+Selecting previously unselected package dnsmasq-base.
+Preparing to unpack .../5-dnsmasq-base_2.91-0ubuntu0.22.04.1_amd64.deb ...
+Unpacking dnsmasq-base (2.91-0ubuntu0.22.04.1) ...
+Selecting previously unselected package docker.io.
+Preparing to unpack .../6-docker.io_29.1.3-0ubuntu3~22.04.2_amd64.deb ...
+Unpacking docker.io (29.1.3-0ubuntu3~22.04.2) ...
+Selecting previously unselected package ubuntu-fan.
+Preparing to unpack .../7-ubuntu-fan_0.12.16_all.deb ...
+Unpacking ubuntu-fan (0.12.16) ...
+Setting up dnsmasq-base (2.91-0ubuntu0.22.04.1) ...
+Setting up runc (1.3.4-0ubuntu1~22.04.1) ...
+Setting up dns-root-data (2024071801~ubuntu0.22.04.1) ...
+Setting up bridge-utils (1.7-1ubuntu3) ...
+Setting up pigz (2.6-1) ...
+Setting up containerd (2.2.1-0ubuntu1~22.04.2) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/containerd.service → /lib/systemd/system/containerd.service.
+Setting up ubuntu-fan (0.12.16) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/ubuntu-fan.service → /lib/systemd/system/ubuntu-fan.service.
+Setting up docker.io (29.1.3-0ubuntu3~22.04.2) ...
+Adding group `docker' (GID 122) ...
+Done.
+Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /lib/systemd/system/docker.service.
+Created symlink /etc/systemd/system/sockets.target.wants/docker.socket → /lib/systemd/system/docker.socket.
+Processing triggers for dbus (1.12.20-2ubuntu4.1) ...
+Processing triggers for man-db (2.10.2-1) ...
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+time="2026-09-21T04:39:43Z" level=info msg="Config file does not exist; using empty config"
+time="2026-09-21T04:39:43Z" level=info msg="Wrote updated config to /etc/docker/daemon.json"
+time="2026-09-21T04:39:43Z" level=info msg="It is recommended that docker daemon be restarted."
+Adding credentials for: us-central1-docker.pkg.dev
+Docker configuration file updated.
+us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:69a72b670f9ee4190a2dba055b520cafa4e92918982ffa0a9309df51e954c59e: Pulling from forgisprova/chlu/chlu-cuda
+dbaa5c62f0ed: Pulling fs layer
+5916320cd9ac: Pulling fs layer
+aa448af82085: Pulling fs layer
+f21f94d43f4e: Pulling fs layer
+53b33546e756: Pulling fs layer
+e4d007770fa6: Pulling fs layer
+6128e8861235: Pulling fs layer
+882a85d46148: Pulling fs layer
+86cad72b6bd9: Pulling fs layer
+fbc8eb2a540a: Pulling fs layer
+efe10f2a409c: Pulling fs layer
+1bcf0803488e: Pulling fs layer
+fbf62993fd47: Pulling fs layer
+5916320cd9ac: Download complete
+aa448af82085: Download complete
+dbaa5c62f0ed: Download complete
+6128e8861235: Download complete
+f21f94d43f4e: Download complete
+53b33546e756: Download complete
+e4d007770fa6: Download complete
+1bcf0803488e: Download complete
+882a85d46148: Download complete
+fbf62993fd47: Download complete
+fbc8eb2a540a: Download complete
+efe10f2a409c: Download complete
+dbaa5c62f0ed: Pull complete
+5916320cd9ac: Pull complete
+6128e8861235: Pull complete
+882a85d46148: Pull complete
+fbf62993fd47: Pull complete
+f21f94d43f4e: Pull complete
+53b33546e756: Pull complete
+efe10f2a409c: Pull complete
+86cad72b6bd9: Download complete
+86cad72b6bd9: Pull complete
+aa448af82085: Pull complete
+1bcf0803488e: Pull complete
+e4d007770fa6: Pull complete
+fbc8eb2a540a: Pull complete
+Digest: sha256:69a72b670f9ee4190a2dba055b520cafa4e92918982ffa0a9309df51e954c59e
+Status: Downloaded newer image for us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:69a72b670f9ee4190a2dba055b520cafa4e92918982ffa0a9309df51e954c59e
+us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:69a72b670f9ee4190a2dba055b520cafa4e92918982ffa0a9309df51e954c59e
+image digests: us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:69a72b670f9ee4190a2dba055b520cafa4e92918982ffa0a9309df51e954c59e
+[image] built from commit b405f0d build 20260921T033548Z
+[journal] fingerprint 044d10f95aeaadaa :: 0 unit(s) already done: []
+[dataset] ⚠ no --dataset in the experiment args; nothing fetched
+=== [sweep] unit 0 -> /var/chlu/out/w8_encoder_loop :: python -u -m chlu.experiments.exp_w8_encoder_loop --seed 0 --out /var/chlu/out/w8_encoder_loop --stage cloud --ckpt-every-s 300 --joint-steps 4000 --dec-steps 1800 --warm-steps 4000 --n-train 32768
+[04:42:44] stage=cloud seed=0 arm=None out=/var/chlu/out/w8_encoder_loop quick=False
+[04:42:44] chlu package: /opt/chlu/chlu
+[04:42:44] jax devices: [CudaDevice(id=0)]
+[04:42:44]   COMPUTE OVERRIDES (equal for every arm in this launch): {'joint_steps': {'from': 400, 'to': 4000}, 'dec_refit_steps': {'from': 400, 'to': 1800}, 'warm_steps': {'from': 1500, 'to': 4000}, 'n_train': {'from': 8192, 'to': 32768}}
+[04:42:44]   rows: train=32768 probe_fit=8192 probe_eval=4096 (0 held-out rows fitted, asserted)
+[04:42:44]   streaming 32768 training images ...
+[04:43:54]   warm start: recon pretext, 4000 steps x 128 ...
+[04:44:14]     step 1/4000  loss=0.16369
+[04:44:23]     step 800/4000  loss=0.00436
+[04:44:31]     step 1600/4000  loss=0.00230
+[04:44:40]     step 2400/4000  loss=0.00172
+[04:44:49]     step 3200/4000  loss=0.00139
+[04:44:57]     step 4000/4000  loss=0.00126
+W0921 04:45:01.237458      60 hlo_rematerialization.cc:3204] Can't reduce memory use below 26.31GiB (28254683791 bytes) by rematerialization; only reduced to 27.51GiB (29536813088 bytes), down from 27.51GiB (29536813088 bytes) originally
+W0921 04:45:13.005696       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 25.51GiB (rounded to 27389329920)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:45:13.005926       1 bfc_allocator.cc:513] **********************************************__________________________****************************
+W0921 04:45:23.084383       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 6.00GiB (rounded to 6444679936)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:45:23.084567       1 bfc_allocator.cc:513] *****************************************************___________________****************************
+W0921 04:45:33.084901       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 6.00GiB (rounded to 6442582784)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:45:33.085088       1 bfc_allocator.cc:513] ************************************************************____________****************************
+W0921 04:45:43.085467       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 4.00GiB (rounded to 4295099136)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:45:43.085826       1 bfc_allocator.cc:513] *******************************************************************_____****************************
+W0921 04:45:53.086405       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 2.00GiB (rounded to 2147483648)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:45:53.086621       1 bfc_allocator.cc:513] *******************************************************************_____****************************
+W0921 04:46:03.086935       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 2.00GiB (rounded to 2147483648)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:46:03.087130       1 bfc_allocator.cc:513] *******************************************************************_____****************************
+W0921 04:46:13.087441       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 2.00GiB (rounded to 2147483648)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:46:13.087634       1 bfc_allocator.cc:513] *******************************************************************_____****************************
+W0921 04:46:23.087946       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 2.00GiB (rounded to 2147483648)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:46:23.088131       1 bfc_allocator.cc:513] *******************************************************************_____****************************
+W0921 04:46:33.088430       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 2.00GiB (rounded to 2147483648)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:46:33.088697       1 bfc_allocator.cc:513] *******************************************************************_____****************************
+W0921 04:46:43.089104       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 2.00GiB (rounded to 2147483648)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:46:43.089379       1 bfc_allocator.cc:513] *******************************************************************_____****************************
+W0921 04:46:54.597953       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 25.53GiB (rounded to 27416068608)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:46:54.598140       1 bfc_allocator.cc:513] ************************************__********************************______________________________
+W0921 04:46:56.616790      53 hlo_rematerialization.cc:3204] Can't reduce memory use below 29.08GiB (31220023951 bytes) by rematerialization; only reduced to 34.32GiB (36846960672 bytes), down from 34.32GiB (36846960672 bytes) originally
+W0921 04:47:06.945320       1 bfc_allocator.cc:502] Allocator (GPU_0_bfc) ran out of memory trying to allocate 34.07GiB (rounded to 36578525696)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0921 04:47:06.945507       1 bfc_allocator.cc:513] *********************_________________********************************______________________________
+[04:47:08]   grouping: K=5 over D=2048 ...
+[04:47:21]   decoder recipe: w8_v1_short = v1_capacity_schedule's architecture at 1800 steps (the gated winner runs 1800); DECLARED: these renders are NOT comparable with the incumbent's absolutes
+[04:47:21]   warm decoder: w8_v1_warm (200 steps, the winner's architecture) -- SHARED bit-identically by every arm ...
+[04:47:36]     step 1/200  loss=0.16426
+[04:47:36]     step 40/200  loss=0.02240
+[04:47:37]     step 80/200  loss=0.01344
+[04:47:38]     step 120/200  loss=0.00943
+[04:47:39]     step 160/200  loss=0.00822
+[04:47:40]     step 200/200  loss=0.00803
+[04:47:40]   judge: external classifier seed 0 c8741ac417d8 (hash-asserted)
+[04:47:40]   deriving FIXED ownership on 256 pinned pairs ...
+/opt/venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[04:47:48]     well 0 ( 328 ch): follow-j 0.000 0.184 0.000 0.160 0.098 0.113
+[04:47:49]     well 1 ( 117 ch): follow-j 0.000 0.008 0.000 0.133 0.074 0.070
+[04:47:49]     well 2 ( 353 ch): follow-j 0.000 0.039 0.000 0.125 0.094 0.129
+[04:47:50]     well 3 ( 716 ch): follow-j 0.000 0.000 0.512 0.207 0.309 0.059
+[04:47:51]     well 4 ( 534 ch): follow-j 0.996 0.000 0.012 0.164 0.344 0.047
+[04:47:51]   ownership FIXED at the warm start: own=[1, 3, 5, 2, 0] (identity ceiling exact=0.1875)
+[04:47:51]   warm start written -> /var/chlu/out/w8_encoder_loop/seed_0/warm_start.json
+[04:47:51] ==== unit seed 0 / arm alone ====
+[04:47:51]   judge: external classifier seed 0 c8741ac417d8 (hash-asserted)
+[04:47:51]   streaming 32768 training images ...
+[04:49:01]   checkpoint-first: fingerprint 1e7481793025a907 every 300.0s -> /var/chlu/out/w8_encoder_loop/seed_0/alone/ckpt
+[04:49:02]     [alone] no checkpoint -- fresh start
+[04:49:18]     [alone    ] step 1/4000  loss=0.00748 recon=0.00748 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[04:49:18]     [alone] checkpoint @ step 1 (save #1) -> /var/chlu/out/w8_encoder_loop/seed_0/alone/ckpt
+[04:49:52]     [alone    ] step 666/4000  loss=0.00298 recon=0.00298 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[04:50:23]     [alone    ] step 1332/4000  loss=0.00152 recon=0.00152 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[04:50:56]     [alone    ] step 1998/4000  loss=0.00082 recon=0.00082 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[04:51:27]     [alone    ] step 2664/4000  loss=0.07443 recon=0.07443 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[04:52:01]     [alone    ] step 3330/4000  loss=0.00899 recon=0.00899 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[04:52:34]     [alone    ] step 3996/4000  loss=0.00550 recon=0.00550 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=gpu device=NVIDIA A100-SXM4-40GB n_devices=1 (jax 0.9.0)
+[04:52:36]   refitting the decoder from alone's own features (w8_v1_short, the gated architecture at a declared shorter budget) ...
+[04:52:41]     step 1/1800  loss=0.15766
+[04:52:49]     step 360/1800  loss=0.01635
+[04:52:56]     step 720/1800  loss=0.00583
+[04:53:04]     step 1080/1800  loss=0.00392
+[04:53:12]     step 1440/1800  loss=0.00342
+[04:53:20]     step 1800/1800  loss=0.00328
+[04:53:37]   no-bypass OK: same-codes-different-features delta = 0.0; channel = 30.0 bits (K*log2(M))
+[04:53:37]   decoder published for the Judge -> /var/chlu/out/w8_encoder_loop/seed_0/alone/declift (declared NOT the frozen winner)
+[04:53:37]   arm alone seed 0 written -> /var/chlu/out/w8_encoder_loop/seed_0/alone/arm.json
+[04:53:37] ==== unit seed 0 / arm frozen ====
+[04:53:37]   judge: external classifier seed 0 c8741ac417d8 (hash-asserted)
+[04:53:37]   streaming 32768 training images ...
+[04:54:47]   checkpoint-first: fingerprint 8c772cd4082083e9 every 300.0s -> /var/chlu/out/w8_encoder_loop/seed_0/frozen/ckpt
+[04:54:48]     [frozen] no checkpoint -- fresh start
+[04:55:00]     [frozen   ] step 1/4000  loss=0.15708 recon=0.01791 code=0.11134 commit=0.11134 swap=0.00000 swap_exact=0.0000
+[04:55:00]     [frozen] checkpoint @ step 1 (save #1) -> /var/chlu/out/w8_encoder_loop/seed_0/frozen/ckpt
+[04:55:29]     [frozen   ] step 666/4000  loss=0.11336 recon=0.01059 code=0.08221 commit=0.08221 swap=0.00000 swap_exact=0.0000
+[04:55:56]     [frozen   ] step 1332/4000  loss=0.09739 recon=0.00861 code=0.07103 commit=0.07103 swap=0.00000 swap_exact=0.0000
+[04:56:23]     [frozen   ] step 1998/4000  loss=0.09403 recon=0.00856 code=0.06837 commit=0.06837 swap=0.00000 swap_exact=0.0000
+[04:56:50]     [frozen   ] step 2664/4000  loss=0.08906 recon=0.00581 code=0.06660 commit=0.06660 swap=0.00000 swap_exact=0.0000
+[04:57:17]     [frozen   ] step 3330/4000  loss=0.08820 recon=0.00567 code=0.06603 commit=0.06603 swap=0.00000 swap_exact=0.0000
+[04:57:45]     [frozen   ] step 3996/4000  loss=0.09137 recon=0.00673 code=0.06771 commit=0.06771 swap=0.00000 swap_exact=0.0000
+[04:57:47]   refitting the decoder from frozen's own features (w8_v1_short, the gated architecture at a declared shorter budget) ...
+[04:57:48]     step 1/1800  loss=0.15973
+[04:57:56]     step 360/1800  loss=0.00280
+[04:58:03]     step 720/1800  loss=0.00149
+[04:58:11]     step 1080/1800  loss=0.00093
+[04:58:19]     step 1440/1800  loss=0.00080
+[04:58:26]     step 1800/1800  loss=0.00079
+[04:58:33]   no-bypass OK: same-codes-different-features delta = 0.0; channel = 30.0 bits (K*log2(M))
+[04:58:33]   decoder published for the Judge -> /var/chlu/out/w8_encoder_loop/seed_0/frozen/declift (declared NOT the frozen winner)
+[04:58:33]   arm frozen seed 0 written -> /var/chlu/out/w8_encoder_loop/seed_0/frozen/arm.json
+[04:58:33] ==== unit seed 0 / arm loop_nosw ====
+[04:58:33]   judge: external classifier seed 0 c8741ac417d8 (hash-asserted)
+[04:58:33]   streaming 32768 training images ...
+[04:59:43]   checkpoint-first: fingerprint 8cdf715e19d5cd21 every 300.0s -> /var/chlu/out/w8_encoder_loop/seed_0/loop_nosw/ckpt
+[04:59:43]     [loop_nosw] no checkpoint -- fresh start
+[04:59:51]     [loop_nosw] step 1/4000  loss=0.15708 recon=0.01791 code=0.11134 commit=0.11134 swap=0.00000 swap_exact=0.0000
+[04:59:52]     [loop_nosw] checkpoint @ step 1 (save #1) -> /var/chlu/out/w8_encoder_loop/seed_0/loop_nosw/ckpt
+[05:00:25]     [loop_nosw] step 666/4000  loss=0.05724 recon=0.00985 code=0.03792 commit=0.03792 swap=0.00000 swap_exact=0.0000
+[05:00:59]     [loop_nosw] step 1332/4000  loss=0.04203 recon=0.00723 code=0.02784 commit=0.02784 swap=0.00000 swap_exact=0.0000
+[05:01:31]     [loop_nosw] step 1998/4000  loss=0.03532 recon=0.00621 code=0.02329 commit=0.02329 swap=0.00000 swap_exact=0.0000
+[05:02:04]     [loop_nosw] step 2664/4000  loss=0.02640 recon=0.00442 code=0.01758 commit=0.01758 swap=0.00000 swap_exact=0.0000
+[05:02:37]     [loop_nosw] step 3330/4000  loss=0.02291 recon=0.00390 code=0.01521 commit=0.01521 swap=0.00000 swap_exact=0.0000
+[05:03:11]     [loop_nosw] step 3996/4000  loss=0.02498 recon=0.00530 code=0.01574 commit=0.01574 swap=0.00000 swap_exact=0.0000
+[05:03:13]   refitting the decoder from loop_nosw's own features (w8_v1_short, the gated architecture at a declared shorter budget) ...
+[05:03:14]     step 1/1800  loss=0.15834
+[05:03:22]     step 360/1800  loss=0.00356
+[05:03:30]     step 720/1800  loss=0.00196
+[05:03:37]     step 1080/1800  loss=0.00118
+[05:03:45]     step 1440/1800  loss=0.00095
+[05:03:53]     step 1800/1800  loss=0.00091
+[05:03:59]   no-bypass OK: same-codes-different-features delta = 0.0; channel = 30.0 bits (K*log2(M))
+[05:04:00]   decoder published for the Judge -> /var/chlu/out/w8_encoder_loop/seed_0/loop_nosw/declift (declared NOT the frozen winner)
+[05:04:00]   arm loop_nosw seed 0 written -> /var/chlu/out/w8_encoder_loop/seed_0/loop_nosw/arm.json
+[05:04:00] ==== unit seed 0 / arm loop_swap ====
+[05:04:00]   judge: external classifier seed 0 c8741ac417d8 (hash-asserted)
+[05:04:00]   streaming 32768 training images ...
+[05:05:10]   checkpoint-first: fingerprint f3e5ffbedcfbc41f every 300.0s -> /var/chlu/out/w8_encoder_loop/seed_0/loop_swap/ckpt
+[05:05:35]     [loop_swap] beta_swap=auto -> 0.00332269 (recon_0=0.01768 / swap_0=5.32015; the two terms enter the loss at EQUAL magnitude, measured on the shared warm start)
+[05:05:35]     [loop_swap] no checkpoint -- fresh start
+[05:06:08]     [loop_swap] step 1/4000  loss=0.17169 recon=0.01791 code=0.11134 commit=0.11134 swap=4.39591 swap_exact=0.0000
+[05:06:09]     [loop_swap] checkpoint @ step 1 (save #1) -> /var/chlu/out/w8_encoder_loop/seed_0/loop_swap/ckpt
+[05:07:55]     [loop_swap] step 666/4000  loss=0.08131 recon=0.01133 code=0.04939 commit=0.04939 swap=2.48085 swap_exact=0.0000
+[05:08:35]     [loop_swap] step 1332/4000  loss=0.05445 recon=0.00894 code=0.03377 commit=0.03377 swap=0.99471 swap_exact=0.0156
+[05:09:15]     [loop_swap] step 1998/4000  loss=0.04672 recon=0.00582 code=0.02825 commit=0.02825 swap=1.67980 swap_exact=0.0312
+[05:09:55]     [loop_swap] step 2664/4000  loss=0.03576 recon=0.00473 code=0.02294 commit=0.02294 swap=0.71028 swap_exact=0.2344
+[05:10:35]     [loop_swap] step 3330/4000  loss=0.02942 recon=0.00386 code=0.01836 commit=0.01836 swap=0.78404 swap_exact=0.1094
+[05:11:09]     [loop_swap] checkpoint @ step 3905 (save #2) -> /var/chlu/out/w8_encoder_loop/seed_0/loop_swap/ckpt
+[05:11:14]     [loop_swap] step 3996/4000  loss=0.02508 recon=0.00405 code=0.01536 commit=0.01536 swap=0.54902 swap_exact=0.1719
+[05:11:16]   refitting the decoder from loop_swap's own features (w8_v1_short, the gated architecture at a declared shorter budget) ...
+[05:11:17]     step 1/1800  loss=0.16123
+[05:11:25]     step 360/1800  loss=0.00313
+[05:11:33]     step 720/1800  loss=0.00155
+[05:11:40]     step 1080/1800  loss=0.00092
+[05:11:48]     step 1440/1800  loss=0.00074
+[05:11:56]     step 1800/1800  loss=0.00071
+[05:12:02]   no-bypass OK: same-codes-different-features delta = 0.0; channel = 30.0 bits (K*log2(M))
+[05:12:03]   decoder published for the Judge -> /var/chlu/out/w8_encoder_loop/seed_0/loop_swap/declift (declared NOT the frozen winner)
+[05:12:03]   arm loop_swap seed 0 written -> /var/chlu/out/w8_encoder_loop/seed_0/loop_swap/arm.json
+[05:12:03] ==== unit seed 0 / arm alone_wc ====
+[05:12:03]   judge: external classifier seed 0 c8741ac417d8 (hash-asserted)
+[05:12:03]   streaming 32768 training images ...
+[05:13:13]   alone_wc: matching loop_swap's 338.8s at alone's 0.0531s/step -> 6376 steps (vs the equal-steps arms' 4000)
+[05:13:13]   checkpoint-first: fingerprint e35a47e53dbf73f1 every 300.0s -> /var/chlu/out/w8_encoder_loop/seed_0/alone_wc/ckpt
+[05:13:13]     [alone_wc] no checkpoint -- fresh start
+[05:13:15]     [alone_wc ] step 1/6376  loss=0.00748 recon=0.00748 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[05:13:15]     [alone_wc] checkpoint @ step 1 (save #1) -> /var/chlu/out/w8_encoder_loop/seed_0/alone_wc/ckpt
+[05:14:04]     [alone_wc ] step 1062/6376  loss=0.01026 recon=0.01026 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[05:14:53]     [alone_wc ] step 2124/6376  loss=0.00165 recon=0.00165 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[05:15:42]     [alone_wc ] step 3186/6376  loss=0.00115 recon=0.00115 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[05:16:34]     [alone_wc ] step 4248/6376  loss=0.00065 recon=0.00065 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[05:17:21]     [alone_wc ] step 5310/6376  loss=0.00396 recon=0.00396 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[05:18:10]     [alone_wc ] step 6372/6376  loss=0.00215 recon=0.00215 code=0.00000 commit=0.00000 swap=0.00000 swap_exact=0.0000
+[05:18:12]   alone_wc: NO render-decoder refit (declared in PINS). It is the WALL-CLOCK control; its train_seconds and its probe margin need no renderer, so this changes no reported number. It is therefore NOT SCOREABLE on rows 3/4.
+[05:18:19]   no-bypass OK: same-codes-different-features delta = 0.0; channel = 30.0 bits (K*log2(M))
+[05:18:19]   arm alone_wc seed 0 written -> /var/chlu/out/w8_encoder_loop/seed_0/alone_wc/arm.json
+[05:18:19] done in 2135.2s
+[sweep] unit 0 ok in 2149s
+[journal] unit 0 banked (1 done) -> gs://chlu-cloud-forgisprova/jobs/w8enc-s0/journal
+[result] {"complete": true, "dec_recipe": "v1_capacity_schedule", "exp": "w8_encoder_loop", "finished_at": "2026-09-21T05:18:32Z", "git_commit": "b405f0d79fc96caf725d6f7d9faedeb454483b53", "hostname": "chlu-w8enc-s0", "image": "us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:69a72b670f9ee4190a2dba055b520cafa4e92918982ffa0a9309df51e954c59e", "job": "w8enc-s0", "module": "chlu.experiments.exp_w8_encoder_loop", "note": "launcher completion sentinel, not a result; the experiment's own manifests are under out/<exp>/", "sweep_wall_s": 2160, "units_banked": ["0"], "units_requested": ["0"]}
+payload exited rc=0 (banked this attempt: 0; skipped: none)
+=== finishing rc=0 2026-09-21T05:18:35Z ===

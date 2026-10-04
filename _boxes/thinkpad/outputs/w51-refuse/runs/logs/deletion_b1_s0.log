@@ -1,0 +1,80 @@
+[    0.0s] bridge mode = pinned; store seed 0 reads instrument (encoder, decoder, classifier) = bridge seed 1
+[    0.1s]   field(seed 0): already built, loading
+[    0.4s]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+[   16.3s]   seed 0: 60 row-3 + 49 row-4 corners = 5688 corner requests; accept-leg row1_seen n=512
+[   16.5s]     corner requests naming the HOLE conjunction (f2=1 & f4=1): 324
+[   16.5s]     corner requests naming the EVICTED value (f2=0): 720
+[   16.5s]     corner requests naming a NEVER-HELD (f2,f4) conjunction: 2160  ⭐ these must stay ANSWERED
+[   16.5s]     matched probe groups built on row1_seen's backgrounds; alternates f2=2, f4=2
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[   46.4s]     judge[corners s0] 1024/5688 (15s)
+[   62.3s]     judge[corners s0] 2048/5688 (31s)
+[   77.4s]     judge[corners s0] 3072/5688 (46s)
+[   92.2s]     judge[corners s0] 4096/5688 (61s)
+[  106.9s]     judge[corners s0] 5120/5688 (76s)
+[  117.0s]     judge[corners s0] 5688/5688 (86s)
+[  125.0s]     judge[row1 s0] 512/512 (8s)
+[  138.5s]     judge[grp-both s0] 512/512 (7s)
+[  146.5s]     judge[grp-A_only s0] 512/512 (8s)
+[  154.1s]     judge[grp-B_only s0] 512/512 (8s)
+[  161.1s]     judge[grp-neither s0] 512/512 (7s)
+[  161.1s]   HOLE punched at (f2=1) x (f4=1); coupling index 925; 1 B
+[  161.1s]     HOLE (f2=1 & f4=1): 1 byte(s) changed of 2,054,866; OUTSIDE the permitted range: 0
+[  174.9s]     hole: rendered features bit-identical on all 5688 corner and 512 accept-leg requests: True
+[  207.2s]     HOLE field_geom      accept on the deleted conjunction 1.0000 -> 0.0000   |   accept on UNSEEN conjunctions 1.0000
+[  207.2s]     HOLE bitmap8         accept on the deleted conjunction 1.0000 -> 1.0000   |   accept on UNSEEN conjunctions 1.0000
+[  207.2s]     HOLE pair_presence   accept on the deleted conjunction 1.0000 -> 0.0000   |   accept on UNSEEN conjunctions 0.0000
+[  207.2s]     HOLE pair_deletion   accept on the deleted conjunction 1.0000 -> 0.0000   |   accept on UNSEEN conjunctions 1.0000
+[  207.2s]   evicted 6 item(s) holding factor 2 = value 0; 49,374 B of the image belong to them
+[  207.2s]     EVICT f2=0: 17,037 byte(s) changed of 2,054,866; OUTSIDE the permitted range: 0
+[  237.1s]     judge[corners-evicted s0] 1024/5688 (15s)
+[  252.3s]     judge[corners-evicted s0] 2048/5688 (30s)
+[  268.4s]     judge[corners-evicted s0] 3072/5688 (46s)
+[  283.8s]     judge[corners-evicted s0] 4096/5688 (61s)
+[  298.3s]     judge[corners-evicted s0] 5120/5688 (76s)
+[  308.5s]     judge[corners-evicted s0] 5688/5688 (86s)
+[  315.8s]     judge[row1-evicted s0] 512/512 (7s)
+[  336.7s]     EVICT field_geom      accept on the deleted value 1.0000 -> 0.0000   |   accept on survivors 1.0000
+[  336.7s]     EVICT bitmap8         accept on the deleted value 1.0000 -> 0.0000   |   accept on survivors 1.0000
+[  336.8s]   deletion(seed 0): done in 336.7s

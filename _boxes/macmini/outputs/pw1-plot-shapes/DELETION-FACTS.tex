@@ -1,0 +1,47 @@
+% pw1-plot-shapes -- PW-1 item 12.7: the numbers that leave fig_deletion with its removed panels
+% (former (a) n-CLU content vs refit-without, (b) address book vs refit-without, (c) refusal display),
+% for the deletion TABLE (tab:del) and ONE sentence of text, phrased per item 13 (no "exact").
+% Every 3-significant-figure value is verbatim from w20-shapes-data-matched/SHAPES-MATCHED.md, table
+% "Matched deletion" (l.209-219); the full float is the JSON leaf
+% SHAPES-MATCHED.json deletion_matched.per_scope.<scope>.store.<seed>.{a.max_abs_mode_dev,
+% b.b1_statistic.max_abs_count_dev, b.b1_statistic.max_abs_first_moment_dev,
+% b.b2_book.rendered_features_rel_dev_on_survivor_requests, c_DISPLAY.*}; the build re-reads and
+% records every leaf (PROVENANCE-shapes.json figures.fig_deletion.deletion_facts).
+%
+% GAP, printed and not smoothed: the brief's wording "equal the refit-without to 1e-8 on every scope
+% and seed" does NOT hold on the artefact. The n-CLU content's largest mode deviation is 1.07e-08 to
+% 5.38e-07 (all nine legs above 1e-8); the book's rendered-feature relative deviation is 5.83e-10 to
+% 7.81e-08 (two legs above 1e-8: red sphere seeds 0 and 1); the book's statistic deviation is 0 on all
+% nine. The rows and the sentence below print the measured bounds instead.
+%
+% These rows already appear in the live tab:del (columns (a), (b) statistic, (b) rendered, and the (c)
+% display rows), with the same values; they are given here in the new vocabulary ("red sphere",
+% no "exact", "held-out combination") so the installing pass can take them whole.
+
+% ---- table rows: scope & seed & (a) n-CLU max |mode dev| & (b) book statistic dev & (b) book rendered rel. dev \\
+% SRCBLOCK: w20-shapes-data-matched/SHAPES-MATCHED.md (Matched deletion table); SHAPES-MATCHED.json deletion_matched.per_scope
+value: red          & 0 & 5.96e-08 & 0 & 1.85e-09 \\ % SRC: SHAPES-MATCHED.json value.store.0: a.max_abs_mode_dev 5.960464477539063e-08; b2 1.8504165977262232e-09
+                    & 1 & 4.82e-08 & 0 & 1.42e-09 \\ % SRC: value.store.1: 4.8212314140982926e-08; 1.4153540561778755e-09
+                    & 2 & 2.01e-08 & 0 & 1.22e-09 \\ % SRC: value.store.2: 2.010899713411618e-08; 1.215328060411025e-09
+conj.: red sphere   & 0 & 5.38e-07 & 0 & 3.29e-08 \\ % SRC: conjunction_live.store.0: 5.383044481277466e-07; 3.2864523547004865e-08
+                    & 1 & 1.07e-08 & 0 & 7.81e-08 \\ % SRC: conjunction_live.store.1: 1.0743169909233075e-08; 7.812795388417726e-08
+                    & 2 & 6.25e-08 & 0 & 2.03e-09 \\ % SRC: conjunction_live.store.2: 6.252833628650478e-08; 2.0331563099773575e-09
+item: random 1\%    & 0 & 2.34e-07 & 0 & 5.83e-10 \\ % SRC: item.store.0: 2.337619662284851e-07; 5.829167148974079e-10
+                    & 1 & 1.49e-08 & 0 & 9.74e-10 \\ % SRC: item.store.1: 1.4860233932267874e-08; 9.74098579575866e-10
+                    & 2 & 3.16e-08 & 0 & 6.87e-10 \\ % SRC: item.store.2: 3.1622182206092475e-08; 6.873774882620864e-10
+% ENDSRC
+% (b) statistic dev = max_abs_count_dev 0 and max_abs_first_moment_dev 0.0 on all nine legs (asserted in the build);
+% SHAPES-MATCHED.md prints it as 0.0e+00.
+
+% ---- refusal: a display row, never a result (c_DISPLAY.DISPLAY_NEVER_A_RESULT == true on all nine, asserted)
+% SRCBLOCK: w20-shapes-data-matched/SHAPES-MATCHED.md ("1.000 / 0.000", "— / 0.000", "N/A (no hole exists)"); SHAPES-MATCHED.json c_DISPLAY
+value: red        & 0--2 & red requests refused 1.000 (720 requests per seed), false refusal on the other requests 0.000 (4,968 requests), every seed \\ % SRC: value.store.<s>.c_DISPLAY: refusal_rate_on_deleted_corner_requests 1.0, n_deleted_corner_requests 720, false_refusal_rate_on_survivor_requests 0.0, n_survivor_requests 4968
+conj.: red sphere & 0--2 & refusal undefined: no rows-3--4 held-out combination requests the red sphere; false refusal 0.000 (5,688 requests), every seed \\ % SRC: conjunction_live.store.<s>.c_DISPLAY: refusal_rate_on_deleted_corner_requests null, n_deleted_corner_requests 0, false_refusal_rate_on_survivor_requests 0.0, n_survivor_requests 5688
+item: random 1\%  & 0--2 & not applicable: an item deletion clears no value bit and punches no hole \\ % SRC: item.store.<s>.c_DISPLAY.DECLARED_NA
+% ENDSRC
+
+% ---- the one sentence (item 13 phrasing; no "exact")
+After deletion the n-CLU matches an n-CLU that was never fitted on the deleted rows, and its address % SRC: w20-shapes-data-matched/SHAPES-MATCHED.md (Matched deletion table, columns (a), (b1), (b2))
+book matches a book refit without them: over every scope and seed the content's largest mode
+deviation is at most \sci{5.38}{-07}, the book's statistic deviates by 0 and its rendered features by % SRC: SHAPES-MATCHED.md conjunction_live seed 0 (a) 5.38e-07; (b1) 0.0e+00 on all nine
+at most \sci{7.81}{-08} (relative); the frozen encoder and decoder are outside the object. % SRC: SHAPES-MATCHED.md conjunction_live seed 1 (b2) 7.81e-08

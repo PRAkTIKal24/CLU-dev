@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\PratikJawahar\chlu\chlu-bundle-v2\chlu\experiments\exp_gen_cell.py", line 2784, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "C:\Users\PratikJawahar\chlu\chlu-bundle-v2\chlu\experiments\exp_gen_cell.py", line 2777, in main
+    run_experiment_gen_cell(config, quick=bool(args.quick), out_dir=out, stage=args.stage,
+  File "C:\Users\PratikJawahar\chlu\chlu-bundle-v2\chlu\experiments\exp_gen_cell.py", line 2713, in run_experiment_gen_cell
+    man = run_seed(dataset, pretext, s, out, config, arms=arms, log=log)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PratikJawahar\chlu\chlu-bundle-v2\chlu\experiments\exp_gen_cell.py", line 1780, in run_seed
+    reenc = _assert_cache_reencodes(dataset, config, encoder, crows, feats_cache, cman,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PratikJawahar\chlu\chlu-bundle-v2\chlu\experiments\exp_gen_store.py", line 497, in _assert_cache_reencodes
+    raise AssertionError(verdicts[0][1])
+AssertionError: re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': True, 'enforced_reason': ''}
+=== gen-cell-harness: shapes3d/recon stage=cell quick=True ===
+  ⭐ PRECONDITION 1/2: classifier_gate.json gate=PASS (floor 0.95, 3 seeds)
+  ⭐ PRECONDITION 2/2: refusal_scores.json status=complete (not_run=[])
+[     0.0s] seed 0 · condition=recomb2element · frozen bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[     0.0s]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[     0.4s]   ⭐ row split: mode=stratified — val realises floor_hue 10/10 · wall_hue 10/10 · object_hue 10/10 · scale 8/8 · shape 4/4 · orientation 15/15 · max per-value count ratio 1.059
+[     0.4s] rows: store_train=32768 B=72 MS=198 fit=4096 val=256
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[     1.2s]   ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+[     1.2s]   ⭐ ENFORCED (enforced=true): no caller opinion — the strict default applies

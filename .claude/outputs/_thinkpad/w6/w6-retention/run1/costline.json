@@ -1,0 +1,375 @@
+{
+ "churn_definition": "churn = (bytes of atom_life written per decay step) x (steps to the refusal horizon). ONE definition, fixed in PREREG section 6. It is a COST LINE and is claimed nowhere.",
+ "schedule": {
+  "mu2": 26.30281182388601,
+  "rho": 0.9746794344808964,
+  "n_half": 27.026814667929827,
+  "n_refuse_steps": 539,
+  "n_refuse_half_lives": 19.943156699097823,
+  "band": "underdamped",
+  "eps": 0.05,
+  "gamma": 0.05
+ },
+ "per_seed": {
+  "0": {
+   "deletion_target": {
+    "factor": 2,
+    "value": 0,
+    "name": "object_hue = 0.0 (red)",
+    "n_items": 6,
+    "n_by_provenance": 5,
+    "n_by_geometry": 5
+   },
+   "churn": {
+    "atom_life_bytes_written_per_step": 24,
+    "steps_to_refusal_horizon": 539,
+    "total_lifetime_bytes_written": 12936,
+    "instant_eviction_bytes_written_once": 49374,
+    "ratio_decay_writes_over_eviction_writes": 0.2620002430428971,
+    "total_image_bytes": 2054866
+   },
+   "table_cost": {
+    "fit_full_pool_s": 3.5821220874786377,
+    "row_removal_s": 0.0,
+    "retrain_from_scratch_s": 3.445889472961426,
+    "rows_in_pool": 131072,
+    "rows_dropped": 11044,
+    "rows_refitted_by_retrain": 120028,
+    "rows_refitted_by_row_removal": 0
+   },
+   "learner_cost": {
+    "families": {
+     "mlp": {
+      "full_pool": {
+       "deleted_set": {
+        "REFUSED": 0.0,
+        "judge_reads_back_the_asked_object_hue": 1.0,
+        "judge_satisfies_the_full_request": 0.5277777777777778,
+        "n": 720,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits"
+       },
+       "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.019519053399562836,
+        "loss_first": 0.5153679251670837,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 10240,
+        "weight_decay": 0.0
+       },
+       "param_count": 130514,
+       "param_error": -0.0042572021484375,
+       "rows_refitted": 131072,
+       "survivor_slice": {
+        "REFUSED": 0.0,
+        "judge_reads_back_the_asked_object_hue": 1.0,
+        "judge_satisfies_the_full_request": 0.6013888888888889,
+        "n": 720,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits"
+       },
+       "wall_clock_s": 55.67659592628479
+      },
+      "without_red": {
+       "deleted_set": {
+        "REFUSED": 0.0,
+        "judge_reads_back_the_asked_object_hue": 0.075,
+        "judge_satisfies_the_full_request": 0.019444444444444445,
+        "n": 720,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits"
+       },
+       "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.020696377381682396,
+        "loss_first": 0.5158100724220276,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 9360,
+        "weight_decay": 0.0
+       },
+       "param_count": 130514,
+       "param_error": -0.0042572021484375,
+       "rows_refitted": 120028,
+       "survivor_slice": {
+        "REFUSED": 0.0,
+        "judge_reads_back_the_asked_object_hue": 1.0,
+        "judge_satisfies_the_full_request": 0.5680555555555555,
+        "n": 720,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits"
+       },
+       "wall_clock_s": 50.46766138076782
+      }
+     }
+    },
+    "footnote": "MLP / transformer / LSTM take a DASH on the refusal half of row 7 because they have no refusal verb: asked for a deleted value they emit a feature vector like any other, and the number above says what the judge then reads back. Their only deletion route is retrain-from-scratch, whose measured cost is on this page. A dash is never a win for us.",
+    "parameter_target": 131072,
+    "recipe": {
+     "declared": "inherited from w4_deletion's families leg; no tuning happens on this stage",
+     "epochs": 20,
+     "lr": 0.001,
+     "weight_decay": 0.0
+    },
+    "seed": 0
+   },
+   "learner_cost_wall_seconds": 0.018404483795166016,
+   "nearest_atom_check": {
+    "mean_address_to_nearest_atom": 0.6100026232481208,
+    "mean_distance_settled_to_nearest_atom": 11.69611924453724,
+    "mean_relative_distance": 0.3839589952637064,
+    "min_relative_distance": 0.22248741271425226,
+    "n_requests": 1024,
+    "seed": 0,
+    "verdict": "NOT a lookup table: the settled state is a strict interior point of the atoms' span, at relative distance 0.3840 from the nearest atom"
+   },
+   "never_inserted_rebuild": {
+    "seconds": 43.22518348693848,
+    "rows_removed": 11044,
+    "rows_refit": 120028,
+    "bytes_differing": 1339083
+   }
+  },
+  "1": {
+   "deletion_target": {
+    "factor": 2,
+    "value": 0,
+    "name": "object_hue = 0.0 (red)",
+    "n_items": 6,
+    "n_by_provenance": 6,
+    "n_by_geometry": 5
+   },
+   "churn": {
+    "atom_life_bytes_written_per_step": 24,
+    "steps_to_refusal_horizon": 539,
+    "total_lifetime_bytes_written": 12936,
+    "instant_eviction_bytes_written_once": 49374,
+    "ratio_decay_writes_over_eviction_writes": 0.2620002430428971,
+    "total_image_bytes": 2054866
+   },
+   "table_cost": {
+    "fit_full_pool_s": 3.723752021789551,
+    "row_removal_s": 0.0,
+    "retrain_from_scratch_s": 3.8076233863830566,
+    "rows_in_pool": 131072,
+    "rows_dropped": 11202,
+    "rows_refitted_by_retrain": 119870,
+    "rows_refitted_by_row_removal": 0
+   },
+   "learner_cost": {
+    "seed": 1,
+    "recipe": {
+     "epochs": 20,
+     "lr": 0.001,
+     "weight_decay": 0.0,
+     "declared": "inherited from w4_deletion's families leg; no tuning happens on this stage"
+    },
+    "parameter_target": 131072,
+    "families": {
+     "mlp": {
+      "full_pool": {
+       "wall_clock_s": 45.965007305145264,
+       "rows_refitted": 131072,
+       "param_count": 130514,
+       "param_error": -0.0042572021484375,
+       "fit": {
+        "steps": 10240,
+        "epochs": 20,
+        "lr": 0.001,
+        "weight_decay": 0.0,
+        "batch": 256,
+        "loss_first": 0.5285028219223022,
+        "loss_final": 0.01962115988135338,
+        "request_dropout": false,
+        "p_full_request": 1.0
+       },
+       "deleted_set": {
+        "n": 720,
+        "REFUSED": 0.0,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits",
+        "judge_satisfies_the_full_request": 0.6972222222222222,
+        "judge_reads_back_the_asked_object_hue": 1.0
+       },
+       "survivor_slice": {
+        "n": 720,
+        "REFUSED": 0.0,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits",
+        "judge_satisfies_the_full_request": 0.6736111111111112,
+        "judge_reads_back_the_asked_object_hue": 1.0
+       }
+      },
+      "without_red": {
+       "wall_clock_s": 40.4861958026886,
+       "rows_refitted": 119870,
+       "param_count": 130514,
+       "param_error": -0.0042572021484375,
+       "fit": {
+        "steps": 9360,
+        "epochs": 20,
+        "lr": 0.001,
+        "weight_decay": 0.0,
+        "batch": 256,
+        "loss_first": 0.5285067558288574,
+        "loss_final": 0.01977936550974846,
+        "request_dropout": false,
+        "p_full_request": 1.0
+       },
+       "deleted_set": {
+        "n": 720,
+        "REFUSED": 0.0,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits",
+        "judge_satisfies_the_full_request": 0.0,
+        "judge_reads_back_the_asked_object_hue": 0.004166666666666667
+       },
+       "survivor_slice": {
+        "n": 720,
+        "REFUSED": 0.0,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits",
+        "judge_satisfies_the_full_request": 0.6486111111111111,
+        "judge_reads_back_the_asked_object_hue": 1.0
+       }
+      }
+     }
+    },
+    "footnote": "MLP / transformer / LSTM take a DASH on the refusal half of row 7 because they have no refusal verb: asked for a deleted value they emit a feature vector like any other, and the number above says what the judge then reads back. Their only deletion route is retrain-from-scratch, whose measured cost is on this page. A dash is never a win for us."
+   },
+   "learner_cost_wall_seconds": 130.00679326057434,
+   "nearest_atom_check": {
+    "seed": 1,
+    "n_requests": 1024,
+    "mean_distance_settled_to_nearest_atom": 13.847028827297986,
+    "mean_relative_distance": 0.4446657863265127,
+    "min_relative_distance": 0.18166319967834244,
+    "mean_address_to_nearest_atom": 1.3166775149315353,
+    "verdict": "NOT a lookup table: the settled state is a strict interior point of the atoms' span, at relative distance 0.4447 from the nearest atom"
+   },
+   "never_inserted_rebuild": {
+    "seconds": 48.60667324066162,
+    "rows_removed": 11202,
+    "rows_refit": 119870,
+    "bytes_differing": 1338974
+   }
+  },
+  "2": {
+   "deletion_target": {
+    "factor": 2,
+    "value": 0,
+    "name": "object_hue = 0.0 (red)",
+    "n_items": 7,
+    "n_by_provenance": 7,
+    "n_by_geometry": 6
+   },
+   "churn": {
+    "atom_life_bytes_written_per_step": 28,
+    "steps_to_refusal_horizon": 539,
+    "total_lifetime_bytes_written": 15092,
+    "instant_eviction_bytes_written_once": 57603,
+    "ratio_decay_writes_over_eviction_writes": 0.2620002430428971,
+    "total_image_bytes": 2054866
+   },
+   "table_cost": {
+    "fit_full_pool_s": 3.771557092666626,
+    "row_removal_s": 0.0,
+    "retrain_from_scratch_s": 3.722365379333496,
+    "rows_in_pool": 131072,
+    "rows_dropped": 11043,
+    "rows_refitted_by_retrain": 120029,
+    "rows_refitted_by_row_removal": 0
+   },
+   "learner_cost": {
+    "seed": 2,
+    "recipe": {
+     "epochs": 20,
+     "lr": 0.001,
+     "weight_decay": 0.0,
+     "declared": "inherited from w4_deletion's families leg; no tuning happens on this stage"
+    },
+    "parameter_target": 131072,
+    "families": {
+     "mlp": {
+      "full_pool": {
+       "wall_clock_s": 43.60306668281555,
+       "rows_refitted": 131072,
+       "param_count": 130514,
+       "param_error": -0.0042572021484375,
+       "fit": {
+        "steps": 10240,
+        "epochs": 20,
+        "lr": 0.001,
+        "weight_decay": 0.0,
+        "batch": 256,
+        "loss_first": 0.546314001083374,
+        "loss_final": 0.021342091262340546,
+        "request_dropout": false,
+        "p_full_request": 1.0
+       },
+       "deleted_set": {
+        "n": 720,
+        "REFUSED": 0.0,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits",
+        "judge_satisfies_the_full_request": 0.6986111111111111,
+        "judge_reads_back_the_asked_object_hue": 0.9972222222222222
+       },
+       "survivor_slice": {
+        "n": 720,
+        "REFUSED": 0.0,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits",
+        "judge_satisfies_the_full_request": 0.7111111111111111,
+        "judge_reads_back_the_asked_object_hue": 1.0
+       }
+      },
+      "without_red": {
+       "wall_clock_s": 39.86521601676941,
+       "rows_refitted": 120029,
+       "param_count": 130514,
+       "param_error": -0.0042572021484375,
+       "fit": {
+        "steps": 9360,
+        "epochs": 20,
+        "lr": 0.001,
+        "weight_decay": 0.0,
+        "batch": 256,
+        "loss_first": 0.5443373918533325,
+        "loss_final": 0.02259117178618908,
+        "request_dropout": false,
+        "p_full_request": 1.0
+       },
+       "deleted_set": {
+        "n": 720,
+        "REFUSED": 0.0,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits",
+        "judge_satisfies_the_full_request": 0.0,
+        "judge_reads_back_the_asked_object_hue": 0.0
+       },
+       "survivor_slice": {
+        "n": 720,
+        "REFUSED": 0.0,
+        "refusal_verb": "NONE -- this family has no refusal verb; it always emits",
+        "judge_satisfies_the_full_request": 0.6888888888888889,
+        "judge_reads_back_the_asked_object_hue": 1.0
+       }
+      }
+     }
+    },
+    "footnote": "MLP / transformer / LSTM take a DASH on the refusal half of row 7 because they have no refusal verb: asked for a deleted value they emit a feature vector like any other, and the number above says what the judge then reads back. Their only deletion route is retrain-from-scratch, whose measured cost is on this page. A dash is never a win for us."
+   },
+   "learner_cost_wall_seconds": 120.28511238098145,
+   "nearest_atom_check": {
+    "seed": 2,
+    "n_requests": 1024,
+    "mean_distance_settled_to_nearest_atom": 14.468108563840266,
+    "mean_relative_distance": 0.45826691809265485,
+    "min_relative_distance": 0.26733908555110075,
+    "mean_address_to_nearest_atom": 1.3264070075000713,
+    "verdict": "NOT a lookup table: the settled state is a strict interior point of the atoms' span, at relative distance 0.4583 from the nearest atom"
+   },
+   "never_inserted_rebuild": {
+    "seconds": 47.7897834777832,
+    "rows_removed": 11043,
+    "rows_refit": 120029,
+    "bytes_differing": 1343641
+   }
+  }
+ }
+}

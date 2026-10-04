@@ -1,0 +1,2015 @@
+{
+ "artefact": "REQUEST-LAYER-READY.json",
+ "spoke": "w14/request-layer-fix",
+ "stamp_utc": "2026-09-22T06:41:38Z",
+ "status": "ready",
+ "tolerance_used": null,
+ "scored_runs_spent": 0,
+ "one_line": "CMAZE-2b -- the CMAZE-2 request layer with ONE acceptance rule added: a pair is kept iff its RULES A+B optimal route picks up >= 2 keys.  Engine, solver and exact integer judge are w8_envscout.maze_colour, imported unmodified.",
+ "provenance": {
+  "branch": "w14/request-layer-fix",
+  "head": "3bcedcef605ff946427bc00eb366e8cc0c2c822b",
+  "base": "6699665 [hub] base/iter8: fold w13/encoder-adapt",
+  "worktree": "C:/chlu/worktrees/CHLU-w14-request-layer-fix",
+  "request_layer_before": "w9_maze.task.build_site",
+  "request_layer_after": "w14_request_layer.task2.build_site_v2",
+  "generator": "w8_envscout.maze_colour.generate at ITS OWN DEFAULTS (h=w=7, n_colours=4, braid=0.40, p_tint=0.22, adversarial=2, no acceptance filter)",
+  "judge": {
+   "module": "w8_envscout.maze_colour",
+   "qualname": "judge",
+   "source_file": "w8_envscout\\maze_colour.py",
+   "sha256": "9eacdda17d87cac0ad5ced6ccbb6fa43ebc1508c0460d0cc183e545d066beaac"
+  },
+  "banks": {
+   "after_seed0": {
+    "path": "C:/chlu/outputs/w14-request-layer-fix/banks/bank_after_seed0.pkl",
+    "seed0": 1000000,
+    "n_sites": 96,
+    "n_routes": 1530,
+    "generator_seeds_tried": 582,
+    "acceptance": 0.16494845360824742,
+    "cross_maze_pool_bank": "C:/chlu/outputs/w14-request-layer-fix/banks/bank_after_seed1.pkl"
+   },
+   "after_seed1": {
+    "path": "C:/chlu/outputs/w14-request-layer-fix/banks/bank_after_seed1.pkl",
+    "seed0": 1100000,
+    "n_sites": 96,
+    "n_routes": 1545,
+    "generator_seeds_tried": 578,
+    "acceptance": 0.16608996539792387,
+    "cross_maze_pool_bank": "C:/chlu/outputs/w14-request-layer-fix/banks/bank_after_seed0.pkl"
+   },
+   "after_seed2": {
+    "path": "C:/chlu/outputs/w14-request-layer-fix/banks/bank_after_seed2.pkl",
+    "seed0": 1200000,
+    "n_sites": 96,
+    "n_routes": 1536,
+    "generator_seeds_tried": 698,
+    "acceptance": 0.13753581661891118,
+    "cross_maze_pool_bank": "C:/chlu/outputs/w14-request-layer-fix/banks/bank_after_seed0.pkl"
+   },
+   "before_seed0": {
+    "path": "C:/chlu/outputs/w14-request-layer-fix/banks/bank_before_seed0.pkl",
+    "seed0": 1000000,
+    "n_sites": 96,
+    "n_routes": 1449,
+    "generator_seeds_tried": 480,
+    "acceptance": 0.2,
+    "cross_maze_pool_bank": "C:/chlu/outputs/w14-request-layer-fix/banks/bank_before_seed1.pkl"
+   }
+  }
+ },
+ "ACCEPTANCE": {
+  "1__a_large_majority_of_routes_require_2_or_more_keys": {
+   "pass": true,
+   "fraction_multi_key_AFTER": 1.0,
+   "fraction_multi_key_BEFORE": 0.14285714285714285,
+   "threshold_used": 0.9
+  },
+  "2__blind_sequential_falls_back_toward_the_published_0.4980": {
+   "pass": true,
+   "worst_held_out_row_per_budget_condition": {
+    "GRID_REBASED/test": 0.2144702842377261,
+    "GRID_REBASED/val": 0.24509803921568626,
+    "GRID_W9/test": 0.2689075630252101,
+    "GRID_W9/val": 0.3188405797101449,
+    "SLACK10_all_pairs": 0.18104575163398692
+   },
+   "published_CMAZE1": 0.498,
+   "w9_CMAZE2_scored_seeds": [
+    0.9077,
+    0.8905,
+    0.913
+   ],
+   "note": "it lands BELOW 0.4980, not at it, and that is expected: 0.4980 is a MIXTURE over CMAZE-1's own key counts (73.6 % one-key at 0.6532, the rest at 0.1351/0.0000).  CMAZE-2b is 100 % multi-key, so it sits at CMAZE-1's multi-key BAND, not at CMAZE-1's marginal."
+  },
+  "3__ORACLE_stays_1.0000": {
+   "pass": true,
+   "distinct_values_seen": [
+    1.0
+   ],
+   "n_row_x_condition_checked": 51
+  },
+  "4__the_exact_integer_judge_does_not_move": {
+   "pass": true,
+   "tolerance_used": null,
+   "note": "w8_envscout.maze_colour.judge is imported, not wrapped and not reimplemented; its file sha256 is in provenance.judge"
+  }
+ },
+ "KEY_COUNT_HISTOGRAM": {
+  "AFTER__w14_request_layer": {
+   "histogram": {
+    "2": 3825,
+    "3": 751,
+    "4": 35
+   },
+   "n_routes": 4611,
+   "n_routes_multi_key": 4611,
+   "fraction_multi_key": 1.0
+  },
+  "BEFORE__w9_request_layer": {
+   "histogram": {
+    "1": 1242,
+    "2": 198,
+    "3": 9
+   },
+   "n_routes": 1449,
+   "n_routes_multi_key": 207,
+   "fraction_multi_key": 0.14285714285714285
+  },
+  "w9_published_figure": {
+   "histogram": {
+    "1": 1242,
+    "2": 198,
+    "3": 9
+   },
+   "n_routes": 1449,
+   "source": "/c/chlu/evidence/outputs/_thinkpad/w9/w9-maze/LOG.md lines 92 and 413"
+  },
+  "CMAZE1_proper_for_reference": {
+   "histogram": {
+    "1": 368,
+    "2": 95,
+    "3": 34,
+    "4": 3
+   },
+   "n_routes": 500,
+   "note": "CMAZE-1's OWN routes are 73.6 % single-key, so a single-key majority is not by itself what separates 0.4980 from 0.9037; the mechanism is in artefacts/anchor_breakdown.txt"
+  }
+ },
+ "BLIND_COLUMNS": {
+  "after_seed0": {
+   "SLACK10_all_pairs": {
+    "n": 1530,
+    "ORACLE": 1.0,
+    "BLIND-A": 0.02091503267973856,
+    "BLIND-B": 0.0,
+    "BLIND-COLOUR": 0.0,
+    "BLIND-FACTOR": 0.03725490196078431,
+    "BLIND-SEQUENTIAL": 0.18104575163398692,
+    "rule_b_bend_fraction": 0.9535947712418301,
+    "detour_steps": 29.144444444444446,
+    "opt_mean": 65.8202614379085
+   },
+   "GRID_W9/test": {
+    "n_train_requests": 454,
+    "budget_words": [
+     30,
+     45,
+     60
+    ],
+    "interp_words": [
+     38,
+     53
+    ],
+    "seen": {
+     "n": 454,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.0881057268722467,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.13656387665198239,
+     "BLIND-SEQUENTIAL": 0.29955947136563876,
+     "BLIND-SEQUENTIAL_bend": 0.1994949494949495,
+     "BLIND-SEQUENTIAL_nobend": 0.9827586206896551,
+     "rule_b_bend_fraction": 0.8722466960352423,
+     "detour_steps": 13.396475770925111,
+     "opt_mean": 42.680616740088105
+    },
+    "unseen_pair": {
+     "n": 64,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.078125,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.140625,
+     "BLIND-SEQUENTIAL": 0.234375,
+     "BLIND-SEQUENTIAL_bend": 0.14545454545454545,
+     "BLIND-SEQUENTIAL_nobend": 0.7777777777777778,
+     "rule_b_bend_fraction": 0.859375,
+     "detour_steps": 13.03125,
+     "opt_mean": 42.859375
+    },
+    "nway": {
+     "n": 119,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.04201680672268908,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.11764705882352941,
+     "BLIND-SEQUENTIAL": 0.2689075630252101,
+     "BLIND-SEQUENTIAL_bend": 0.2018348623853211,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9159663865546218,
+     "detour_steps": 12.495798319327731,
+     "opt_mean": 43.38655462184874
+    },
+    "budget_interp": {
+     "n": 119,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.058823529411764705,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.13445378151260504,
+     "BLIND-SEQUENTIAL": 0.24369747899159663,
+     "BLIND-SEQUENTIAL_bend": 0.16822429906542055,
+     "BLIND-SEQUENTIAL_nobend": 0.9166666666666666,
+     "rule_b_bend_fraction": 0.8991596638655462,
+     "detour_steps": 11.22689075630252,
+     "opt_mean": 40.26890756302521
+    }
+   },
+   "GRID_W9/val": {
+    "n_train_requests": 454,
+    "budget_words": [
+     30,
+     45,
+     60
+    ],
+    "interp_words": [
+     38,
+     53
+    ],
+    "seen": {
+     "n": 454,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.0881057268722467,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.13656387665198239,
+     "BLIND-SEQUENTIAL": 0.29955947136563876,
+     "BLIND-SEQUENTIAL_bend": 0.1994949494949495,
+     "BLIND-SEQUENTIAL_nobend": 0.9827586206896551,
+     "rule_b_bend_fraction": 0.8722466960352423,
+     "detour_steps": 13.396475770925111,
+     "opt_mean": 42.680616740088105
+    },
+    "unseen_pair": {
+     "n": 69,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.07246376811594203,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.14492753623188406,
+     "BLIND-SEQUENTIAL": 0.3188405797101449,
+     "BLIND-SEQUENTIAL_bend": 0.21666666666666667,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8695652173913043,
+     "detour_steps": 13.057971014492754,
+     "opt_mean": 43.26086956521739
+    },
+    "nway": {
+     "n": 128,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.0625,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.140625,
+     "BLIND-SEQUENTIAL": 0.2578125,
+     "BLIND-SEQUENTIAL_bend": 0.1592920353982301,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8828125,
+     "detour_steps": 12.578125,
+     "opt_mean": 43.828125
+    },
+    "budget_interp": {
+     "n": 114,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.08771929824561403,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.17543859649122806,
+     "BLIND-SEQUENTIAL": 0.3157894736842105,
+     "BLIND-SEQUENTIAL_bend": 0.1958762886597938,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8508771929824561,
+     "detour_steps": 10.31578947368421,
+     "opt_mean": 40.91228070175438
+    }
+   },
+   "GRID_REBASED/test": {
+    "n_train_requests": 1442,
+    "budget_words": [
+     55,
+     85,
+     105
+    ],
+    "interp_words": [
+     70,
+     95
+    ],
+    "seen": {
+     "n": 1442,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.033287101248266296,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.05409153952843273,
+     "BLIND-SEQUENTIAL": 0.210124826629681,
+     "BLIND-SEQUENTIAL_bend": 0.16162361623616237,
+     "BLIND-SEQUENTIAL_nobend": 0.9655172413793104,
+     "rule_b_bend_fraction": 0.9396671289875174,
+     "detour_steps": 23.864077669902912,
+     "opt_mean": 57.52981969486824
+    },
+    "unseen_pair": {
+     "n": 199,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.03015075376884422,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.06030150753768844,
+     "BLIND-SEQUENTIAL": 0.17587939698492464,
+     "BLIND-SEQUENTIAL_bend": 0.12972972972972974,
+     "BLIND-SEQUENTIAL_nobend": 0.7857142857142857,
+     "rule_b_bend_fraction": 0.9296482412060302,
+     "detour_steps": 23.844221105527637,
+     "opt_mean": 57.58793969849246
+    },
+    "nway": {
+     "n": 387,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.015503875968992248,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.046511627906976744,
+     "BLIND-SEQUENTIAL": 0.2144702842377261,
+     "BLIND-SEQUENTIAL_bend": 0.18059299191374664,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.958656330749354,
+     "detour_steps": 22.984496124031008,
+     "opt_mean": 57.4702842377261
+    },
+    "budget_interp": {
+     "n": 424,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.018867924528301886,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.04716981132075472,
+     "BLIND-SEQUENTIAL": 0.20754716981132076,
+     "BLIND-SEQUENTIAL_bend": 0.1691542288557214,
+     "BLIND-SEQUENTIAL_nobend": 0.9090909090909091,
+     "rule_b_bend_fraction": 0.9481132075471698,
+     "detour_steps": 22.36320754716981,
+     "opt_mean": 56.804245283018865
+    }
+   },
+   "GRID_REBASED/val": {
+    "n_train_requests": 1442,
+    "budget_words": [
+     55,
+     85,
+     105
+    ],
+    "interp_words": [
+     70,
+     95
+    ],
+    "seen": {
+     "n": 1442,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.033287101248266296,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.05409153952843273,
+     "BLIND-SEQUENTIAL": 0.210124826629681,
+     "BLIND-SEQUENTIAL_bend": 0.16162361623616237,
+     "BLIND-SEQUENTIAL_nobend": 0.9655172413793104,
+     "rule_b_bend_fraction": 0.9396671289875174,
+     "detour_steps": 23.864077669902912,
+     "opt_mean": 57.52981969486824
+    },
+    "unseen_pair": {
+     "n": 204,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.029411764705882353,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.058823529411764705,
+     "BLIND-SEQUENTIAL": 0.24509803921568626,
+     "BLIND-SEQUENTIAL_bend": 0.18947368421052632,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9313725490196079,
+     "detour_steps": 23.17156862745098,
+     "opt_mean": 56.990196078431374
+    },
+    "nway": {
+     "n": 392,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.030612244897959183,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.061224489795918366,
+     "BLIND-SEQUENTIAL": 0.21428571428571427,
+     "BLIND-SEQUENTIAL_bend": 0.16076294277929154,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9362244897959183,
+     "detour_steps": 22.369897959183675,
+     "opt_mean": 57.38520408163265
+    },
+    "budget_interp": {
+     "n": 424,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.02830188679245283,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.05660377358490566,
+     "BLIND-SEQUENTIAL": 0.22877358490566038,
+     "BLIND-SEQUENTIAL_bend": 0.17424242424242425,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9339622641509434,
+     "detour_steps": 21.89622641509434,
+     "opt_mean": 56.389150943396224
+    }
+   }
+  },
+  "after_seed1": {
+   "SLACK10_all_pairs": {
+    "n": 1545,
+    "ORACLE": 1.0,
+    "BLIND-A": 0.030420711974110032,
+    "BLIND-B": 0.0,
+    "BLIND-COLOUR": 0.007766990291262136,
+    "BLIND-FACTOR": 0.030420711974110032,
+    "BLIND-SEQUENTIAL": 0.1553398058252427,
+    "rule_b_bend_fraction": 0.96957928802589,
+    "detour_steps": 33.29061488673139,
+    "opt_mean": 68.91132686084143
+   },
+   "GRID_W9/test": {
+    "n_train_requests": 376,
+    "budget_words": [
+     30,
+     45,
+     60
+    ],
+    "interp_words": [
+     38,
+     53
+    ],
+    "seen": {
+     "n": 376,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.13031914893617022,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.04521276595744681,
+     "BLIND-FACTOR": 0.13031914893617022,
+     "BLIND-SEQUENTIAL": 0.2473404255319149,
+     "BLIND-SEQUENTIAL_bend": 0.1345565749235474,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8696808510638298,
+     "detour_steps": 13.768617021276595,
+     "opt_mean": 42.73936170212766
+    },
+    "unseen_pair": {
+     "n": 55,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.10909090909090909,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.05454545454545454,
+     "BLIND-FACTOR": 0.10909090909090909,
+     "BLIND-SEQUENTIAL": 0.2,
+     "BLIND-SEQUENTIAL_bend": 0.10204081632653061,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8909090909090909,
+     "detour_steps": 13.309090909090909,
+     "opt_mean": 42.70909090909091
+    },
+    "nway": {
+     "n": 102,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.16666666666666666,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.049019607843137254,
+     "BLIND-FACTOR": 0.16666666666666666,
+     "BLIND-SEQUENTIAL": 0.24509803921568626,
+     "BLIND-SEQUENTIAL_bend": 0.09411764705882353,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8333333333333334,
+     "detour_steps": 13.617647058823529,
+     "opt_mean": 41.666666666666664
+    },
+    "budget_interp": {
+     "n": 105,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.17142857142857143,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.05714285714285714,
+     "BLIND-FACTOR": 0.17142857142857143,
+     "BLIND-SEQUENTIAL": 0.23809523809523808,
+     "BLIND-SEQUENTIAL_bend": 0.08045977011494253,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8285714285714286,
+     "detour_steps": 12.095238095238095,
+     "opt_mean": 39.98095238095238
+    }
+   },
+   "GRID_W9/val": {
+    "n_train_requests": 376,
+    "budget_words": [
+     30,
+     45,
+     60
+    ],
+    "interp_words": [
+     38,
+     53
+    ],
+    "seen": {
+     "n": 376,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.13031914893617022,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.04521276595744681,
+     "BLIND-FACTOR": 0.13031914893617022,
+     "BLIND-SEQUENTIAL": 0.2473404255319149,
+     "BLIND-SEQUENTIAL_bend": 0.1345565749235474,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8696808510638298,
+     "detour_steps": 13.768617021276595,
+     "opt_mean": 42.73936170212766
+    },
+    "unseen_pair": {
+     "n": 57,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.14035087719298245,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.03508771929824561,
+     "BLIND-FACTOR": 0.14035087719298245,
+     "BLIND-SEQUENTIAL": 0.2982456140350877,
+     "BLIND-SEQUENTIAL_bend": 0.1836734693877551,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8596491228070176,
+     "detour_steps": 11.947368421052632,
+     "opt_mean": 40.36842105263158
+    },
+    "nway": {
+     "n": 103,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.1553398058252427,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.05825242718446602,
+     "BLIND-FACTOR": 0.1553398058252427,
+     "BLIND-SEQUENTIAL": 0.23300970873786409,
+     "BLIND-SEQUENTIAL_bend": 0.09195402298850575,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8446601941747572,
+     "detour_steps": 13.728155339805825,
+     "opt_mean": 42.15533980582524
+    },
+    "budget_interp": {
+     "n": 97,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.17525773195876287,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.061855670103092786,
+     "BLIND-FACTOR": 0.17525773195876287,
+     "BLIND-SEQUENTIAL": 0.28865979381443296,
+     "BLIND-SEQUENTIAL_bend": 0.1375,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.8247422680412371,
+     "detour_steps": 10.8659793814433,
+     "opt_mean": 38.391752577319586
+    }
+   },
+   "GRID_REBASED/test": {
+    "n_train_requests": 1430,
+    "budget_words": [
+     60,
+     85,
+     100
+    ],
+    "interp_words": [
+     72,
+     92
+    ],
+    "seen": {
+     "n": 1430,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.04195804195804196,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.012587412587412588,
+     "BLIND-FACTOR": 0.04195804195804196,
+     "BLIND-SEQUENTIAL": 0.16363636363636364,
+     "BLIND-SEQUENTIAL_bend": 0.12700729927007298,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.958041958041958,
+     "detour_steps": 26.925174825174825,
+     "opt_mean": 60.10979020979021
+    },
+    "unseen_pair": {
+     "n": 198,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.045454545454545456,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.015151515151515152,
+     "BLIND-FACTOR": 0.045454545454545456,
+     "BLIND-SEQUENTIAL": 0.15656565656565657,
+     "BLIND-SEQUENTIAL_bend": 0.1164021164021164,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9545454545454546,
+     "detour_steps": 25.71212121212121,
+     "opt_mean": 58.94444444444444
+    },
+    "nway": {
+     "n": 387,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.05426356589147287,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.015503875968992248,
+     "BLIND-FACTOR": 0.05426356589147287,
+     "BLIND-SEQUENTIAL": 0.16020671834625322,
+     "BLIND-SEQUENTIAL_bend": 0.11202185792349727,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9457364341085271,
+     "detour_steps": 26.56847545219638,
+     "opt_mean": 59.75452196382429
+    },
+    "budget_interp": {
+     "n": 400,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.05,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.015,
+     "BLIND-FACTOR": 0.05,
+     "BLIND-SEQUENTIAL": 0.1625,
+     "BLIND-SEQUENTIAL_bend": 0.11842105263157894,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.95,
+     "detour_steps": 25.2925,
+     "opt_mean": 58.095
+    }
+   },
+   "GRID_REBASED/val": {
+    "n_train_requests": 1430,
+    "budget_words": [
+     60,
+     85,
+     100
+    ],
+    "interp_words": [
+     72,
+     92
+    ],
+    "seen": {
+     "n": 1430,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.04195804195804196,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.012587412587412588,
+     "BLIND-FACTOR": 0.04195804195804196,
+     "BLIND-SEQUENTIAL": 0.16363636363636364,
+     "BLIND-SEQUENTIAL_bend": 0.12700729927007298,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.958041958041958,
+     "detour_steps": 26.925174825174825,
+     "opt_mean": 60.10979020979021
+    },
+    "unseen_pair": {
+     "n": 200,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.045,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.015,
+     "BLIND-FACTOR": 0.045,
+     "BLIND-SEQUENTIAL": 0.19,
+     "BLIND-SEQUENTIAL_bend": 0.1518324607329843,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.955,
+     "detour_steps": 25.475,
+     "opt_mean": 58.875
+    },
+    "nway": {
+     "n": 385,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.05454545454545454,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.015584415584415584,
+     "BLIND-FACTOR": 0.05454545454545454,
+     "BLIND-SEQUENTIAL": 0.15584415584415584,
+     "BLIND-SEQUENTIAL_bend": 0.10714285714285714,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9454545454545454,
+     "detour_steps": 27.524675324675325,
+     "opt_mean": 60.95844155844156
+    },
+    "budget_interp": {
+     "n": 404,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.04950495049504951,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.01485148514851485,
+     "BLIND-FACTOR": 0.04950495049504951,
+     "BLIND-SEQUENTIAL": 0.17574257425742573,
+     "BLIND-SEQUENTIAL_bend": 0.1328125,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9504950495049505,
+     "detour_steps": 26.034653465346533,
+     "opt_mean": 59.304455445544555
+    }
+   }
+  },
+  "after_seed2": {
+   "SLACK10_all_pairs": {
+    "n": 1536,
+    "ORACLE": 1.0,
+    "BLIND-A": 0.017578125,
+    "BLIND-B": 0.0,
+    "BLIND-COLOUR": 0.0,
+    "BLIND-FACTOR": 0.037109375,
+    "BLIND-SEQUENTIAL": 0.10677083333333333,
+    "rule_b_bend_fraction": 0.982421875,
+    "detour_steps": 29.504557291666668,
+    "opt_mean": 62.16015625
+   },
+   "GRID_W9/test": {
+    "n_train_requests": 456,
+    "budget_words": [
+     30,
+     45,
+     60
+    ],
+    "interp_words": [
+     38,
+     53
+    ],
+    "seen": {
+     "n": 456,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.05263157894736842,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.09868421052631579,
+     "BLIND-SEQUENTIAL": 0.16666666666666666,
+     "BLIND-SEQUENTIAL_bend": 0.12037037037037036,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9473684210526315,
+     "detour_steps": 18.06140350877193,
+     "opt_mean": 47.13815789473684
+    },
+    "unseen_pair": {
+     "n": 66,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.06060606060606061,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.12121212121212122,
+     "BLIND-SEQUENTIAL": 0.18181818181818182,
+     "BLIND-SEQUENTIAL_bend": 0.12903225806451613,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9393939393939394,
+     "detour_steps": 17.045454545454547,
+     "opt_mean": 46.484848484848484
+    },
+    "nway": {
+     "n": 125,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.064,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.112,
+     "BLIND-SEQUENTIAL": 0.152,
+     "BLIND-SEQUENTIAL_bend": 0.09401709401709402,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.936,
+     "detour_steps": 17.648,
+     "opt_mean": 45.888
+    },
+    "budget_interp": {
+     "n": 126,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.07142857142857142,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.14285714285714285,
+     "BLIND-SEQUENTIAL": 0.1746031746031746,
+     "BLIND-SEQUENTIAL_bend": 0.1111111111111111,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9285714285714286,
+     "detour_steps": 15.841269841269842,
+     "opt_mean": 43.73809523809524
+    }
+   },
+   "GRID_W9/val": {
+    "n_train_requests": 456,
+    "budget_words": [
+     30,
+     45,
+     60
+    ],
+    "interp_words": [
+     38,
+     53
+    ],
+    "seen": {
+     "n": 456,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.05263157894736842,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.09868421052631579,
+     "BLIND-SEQUENTIAL": 0.16666666666666666,
+     "BLIND-SEQUENTIAL_bend": 0.12037037037037036,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9473684210526315,
+     "detour_steps": 18.06140350877193,
+     "opt_mean": 47.13815789473684
+    },
+    "unseen_pair": {
+     "n": 61,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.06557377049180328,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.11475409836065574,
+     "BLIND-SEQUENTIAL": 0.18032786885245902,
+     "BLIND-SEQUENTIAL_bend": 0.12280701754385964,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9344262295081968,
+     "detour_steps": 16.21311475409836,
+     "opt_mean": 46.32786885245902
+    },
+    "nway": {
+     "n": 138,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.07246376811594203,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.12318840579710146,
+     "BLIND-SEQUENTIAL": 0.2391304347826087,
+     "BLIND-SEQUENTIAL_bend": 0.1796875,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.927536231884058,
+     "detour_steps": 16.36231884057971,
+     "opt_mean": 45.63768115942029
+    },
+    "budget_interp": {
+     "n": 108,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.08333333333333333,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.1388888888888889,
+     "BLIND-SEQUENTIAL": 0.21296296296296297,
+     "BLIND-SEQUENTIAL_bend": 0.1414141414141414,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9166666666666666,
+     "detour_steps": 14.87962962962963,
+     "opt_mean": 42.407407407407405
+    }
+   },
+   "GRID_REBASED/test": {
+    "n_train_requests": 1451,
+    "budget_words": [
+     55,
+     75,
+     90
+    ],
+    "interp_words": [
+     65,
+     82
+    ],
+    "seen": {
+     "n": 1451,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.024810475534114404,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.04962095106822881,
+     "BLIND-SEQUENTIAL": 0.1171605789110958,
+     "BLIND-SEQUENTIAL_bend": 0.09469964664310954,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9751895244658856,
+     "detour_steps": 24.21778084079945,
+     "opt_mean": 55.4631288766368
+    },
+    "unseen_pair": {
+     "n": 208,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.028846153846153848,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.057692307692307696,
+     "BLIND-SEQUENTIAL": 0.1201923076923077,
+     "BLIND-SEQUENTIAL_bend": 0.09405940594059406,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9711538461538461,
+     "detour_steps": 23.341346153846153,
+     "opt_mean": 54.33653846153846
+    },
+    "nway": {
+     "n": 401,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.029925187032418952,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.059850374064837904,
+     "BLIND-SEQUENTIAL": 0.11970074812967581,
+     "BLIND-SEQUENTIAL_bend": 0.09254498714652956,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.970074812967581,
+     "detour_steps": 24.209476309226932,
+     "opt_mean": 55.4214463840399
+    },
+    "budget_interp": {
+     "n": 433,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.02771362586605081,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.05542725173210162,
+     "BLIND-SEQUENTIAL": 0.11547344110854503,
+     "BLIND-SEQUENTIAL_bend": 0.09026128266033254,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9722863741339491,
+     "detour_steps": 23.780600461893766,
+     "opt_mean": 54.801385681293304
+    }
+   },
+   "GRID_REBASED/val": {
+    "n_train_requests": 1451,
+    "budget_words": [
+     55,
+     75,
+     90
+    ],
+    "interp_words": [
+     65,
+     82
+    ],
+    "seen": {
+     "n": 1451,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.024810475534114404,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.04962095106822881,
+     "BLIND-SEQUENTIAL": 0.1171605789110958,
+     "BLIND-SEQUENTIAL_bend": 0.09469964664310954,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9751895244658856,
+     "detour_steps": 24.21778084079945,
+     "opt_mean": 55.4631288766368
+    },
+    "unseen_pair": {
+     "n": 198,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.025252525252525252,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.05555555555555555,
+     "BLIND-SEQUENTIAL": 0.1111111111111111,
+     "BLIND-SEQUENTIAL_bend": 0.08808290155440414,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9747474747474747,
+     "detour_steps": 24.404040404040405,
+     "opt_mean": 56.03030303030303
+    },
+    "nway": {
+     "n": 406,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.029556650246305417,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.059113300492610835,
+     "BLIND-SEQUENTIAL": 0.1477832512315271,
+     "BLIND-SEQUENTIAL_bend": 0.1218274111675127,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9704433497536946,
+     "detour_steps": 23.773399014778324,
+     "opt_mean": 54.63054187192118
+    },
+    "budget_interp": {
+     "n": 432,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.027777777777777776,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.0,
+     "BLIND-FACTOR": 0.05555555555555555,
+     "BLIND-SEQUENTIAL": 0.13657407407407407,
+     "BLIND-SEQUENTIAL_bend": 0.11190476190476191,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.9722222222222222,
+     "detour_steps": 23.76851851851852,
+     "opt_mean": 54.83796296296296
+    }
+   }
+  },
+  "before_seed0": {
+   "SLACK10_all_pairs": {
+    "n": 1449,
+    "ORACLE": 1.0,
+    "BLIND-A": 0.28433402346445824,
+    "BLIND-B": 0.0,
+    "BLIND-COLOUR": 0.1414768806073154,
+    "BLIND-FACTOR": 0.378191856452726,
+    "BLIND-SEQUENTIAL": 0.8295376121463078,
+    "rule_b_bend_fraction": 0.6183574879227053,
+    "detour_steps": 6.754313319530711,
+    "opt_mean": 37.383022774327124
+   },
+   "GRID_W9/test": {
+    "n_train_requests": 1208,
+    "budget_words": [
+     30,
+     45,
+     60
+    ],
+    "interp_words": [
+     38,
+     53
+    ],
+    "seen": {
+     "n": 1208,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.3617549668874172,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.19039735099337748,
+     "BLIND-FACTOR": 0.46357615894039733,
+     "BLIND-SEQUENTIAL": 0.8807947019867549,
+     "BLIND-SEQUENTIAL_bend": 0.783359497645212,
+     "BLIND-SEQUENTIAL_nobend": 0.989492119089317,
+     "rule_b_bend_fraction": 0.527317880794702,
+     "detour_steps": 3.7723509933774833,
+     "opt_mean": 31.075331125827816
+    },
+    "unseen_pair": {
+     "n": 195,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.358974358974359,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.23076923076923078,
+     "BLIND-FACTOR": 0.4564102564102564,
+     "BLIND-SEQUENTIAL": 0.9076923076923077,
+     "BLIND-SEQUENTIAL_bend": 0.82,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.5128205128205128,
+     "detour_steps": 3.3692307692307693,
+     "opt_mean": 30.964102564102564
+    },
+    "nway": {
+     "n": 389,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.37789203084832906,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.2622107969151671,
+     "BLIND-FACTOR": 0.44473007712082263,
+     "BLIND-SEQUENTIAL": 0.922879177377892,
+     "BLIND-SEQUENTIAL_bend": 0.8477157360406091,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.506426735218509,
+     "detour_steps": 3.3933161953727504,
+     "opt_mean": 31.904884318766065
+    },
+    "budget_interp": {
+     "n": 434,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.3663594470046083,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.2350230414746544,
+     "BLIND-FACTOR": 0.43548387096774194,
+     "BLIND-SEQUENTIAL": 0.9216589861751152,
+     "BLIND-SEQUENTIAL_bend": 0.8440366972477065,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.5023041474654378,
+     "detour_steps": 3.2649769585253456,
+     "opt_mean": 31.65437788018433
+    }
+   },
+   "GRID_W9/val": {
+    "n_train_requests": 1208,
+    "budget_words": [
+     30,
+     45,
+     60
+    ],
+    "interp_words": [
+     38,
+     53
+    ],
+    "seen": {
+     "n": 1208,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.3617549668874172,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.19039735099337748,
+     "BLIND-FACTOR": 0.46357615894039733,
+     "BLIND-SEQUENTIAL": 0.8807947019867549,
+     "BLIND-SEQUENTIAL_bend": 0.783359497645212,
+     "BLIND-SEQUENTIAL_nobend": 0.989492119089317,
+     "rule_b_bend_fraction": 0.527317880794702,
+     "detour_steps": 3.7723509933774833,
+     "opt_mean": 31.075331125827816
+    },
+    "unseen_pair": {
+     "n": 208,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.3557692307692308,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.13942307692307693,
+     "BLIND-FACTOR": 0.47596153846153844,
+     "BLIND-SEQUENTIAL": 0.875,
+     "BLIND-SEQUENTIAL_bend": 0.7739130434782608,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.5528846153846154,
+     "detour_steps": 4.086538461538462,
+     "opt_mean": 30.552884615384617
+    },
+    "nway": {
+     "n": 392,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.39540816326530615,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.16071428571428573,
+     "BLIND-FACTOR": 0.49744897959183676,
+     "BLIND-SEQUENTIAL": 0.8596938775510204,
+     "BLIND-SEQUENTIAL_bend": 0.7319587628865979,
+     "BLIND-SEQUENTIAL_nobend": 0.9848484848484849,
+     "rule_b_bend_fraction": 0.49489795918367346,
+     "detour_steps": 3.7066326530612246,
+     "opt_mean": 30.948979591836736
+    },
+    "budget_interp": {
+     "n": 427,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.3747072599531616,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.14988290398126464,
+     "BLIND-FACTOR": 0.48243559718969553,
+     "BLIND-SEQUENTIAL": 0.8594847775175644,
+     "BLIND-SEQUENTIAL_bend": 0.7399103139013453,
+     "BLIND-SEQUENTIAL_nobend": 0.9901960784313726,
+     "rule_b_bend_fraction": 0.522248243559719,
+     "detour_steps": 3.749414519906323,
+     "opt_mean": 30.6768149882904
+    }
+   },
+   "GRID_REBASED/test": {
+    "n_train_requests": 1208,
+    "budget_words": [
+     30,
+     45,
+     60
+    ],
+    "interp_words": [
+     38,
+     52
+    ],
+    "seen": {
+     "n": 1208,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.3617549668874172,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.19039735099337748,
+     "BLIND-FACTOR": 0.46357615894039733,
+     "BLIND-SEQUENTIAL": 0.8807947019867549,
+     "BLIND-SEQUENTIAL_bend": 0.783359497645212,
+     "BLIND-SEQUENTIAL_nobend": 0.989492119089317,
+     "rule_b_bend_fraction": 0.527317880794702,
+     "detour_steps": 3.7723509933774833,
+     "opt_mean": 31.075331125827816
+    },
+    "unseen_pair": {
+     "n": 195,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.358974358974359,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.23076923076923078,
+     "BLIND-FACTOR": 0.4564102564102564,
+     "BLIND-SEQUENTIAL": 0.9076923076923077,
+     "BLIND-SEQUENTIAL_bend": 0.82,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.5128205128205128,
+     "detour_steps": 3.3692307692307693,
+     "opt_mean": 30.964102564102564
+    },
+    "nway": {
+     "n": 389,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.37789203084832906,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.2622107969151671,
+     "BLIND-FACTOR": 0.44473007712082263,
+     "BLIND-SEQUENTIAL": 0.922879177377892,
+     "BLIND-SEQUENTIAL_bend": 0.8477157360406091,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.506426735218509,
+     "detour_steps": 3.3933161953727504,
+     "opt_mean": 31.904884318766065
+    },
+    "budget_interp": {
+     "n": 433,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.3672055427251732,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.23556581986143188,
+     "BLIND-FACTOR": 0.43648960739030024,
+     "BLIND-SEQUENTIAL": 0.9214780600461894,
+     "BLIND-SEQUENTIAL_bend": 0.8433179723502304,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.5011547344110855,
+     "detour_steps": 3.2448036951501154,
+     "opt_mean": 31.605080831408777
+    }
+   },
+   "GRID_REBASED/val": {
+    "n_train_requests": 1208,
+    "budget_words": [
+     30,
+     45,
+     60
+    ],
+    "interp_words": [
+     38,
+     52
+    ],
+    "seen": {
+     "n": 1208,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.3617549668874172,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.19039735099337748,
+     "BLIND-FACTOR": 0.46357615894039733,
+     "BLIND-SEQUENTIAL": 0.8807947019867549,
+     "BLIND-SEQUENTIAL_bend": 0.783359497645212,
+     "BLIND-SEQUENTIAL_nobend": 0.989492119089317,
+     "rule_b_bend_fraction": 0.527317880794702,
+     "detour_steps": 3.7723509933774833,
+     "opt_mean": 31.075331125827816
+    },
+    "unseen_pair": {
+     "n": 208,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.3557692307692308,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.13942307692307693,
+     "BLIND-FACTOR": 0.47596153846153844,
+     "BLIND-SEQUENTIAL": 0.875,
+     "BLIND-SEQUENTIAL_bend": 0.7739130434782608,
+     "BLIND-SEQUENTIAL_nobend": 1.0,
+     "rule_b_bend_fraction": 0.5528846153846154,
+     "detour_steps": 4.086538461538462,
+     "opt_mean": 30.552884615384617
+    },
+    "nway": {
+     "n": 392,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.39540816326530615,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.16071428571428573,
+     "BLIND-FACTOR": 0.49744897959183676,
+     "BLIND-SEQUENTIAL": 0.8596938775510204,
+     "BLIND-SEQUENTIAL_bend": 0.7319587628865979,
+     "BLIND-SEQUENTIAL_nobend": 0.9848484848484849,
+     "rule_b_bend_fraction": 0.49489795918367346,
+     "detour_steps": 3.7066326530612246,
+     "opt_mean": 30.948979591836736
+    },
+    "budget_interp": {
+     "n": 425,
+     "ORACLE": 1.0,
+     "BLIND-A": 0.3764705882352941,
+     "BLIND-B": 0.0,
+     "BLIND-COLOUR": 0.15058823529411763,
+     "BLIND-FACTOR": 0.48470588235294115,
+     "BLIND-SEQUENTIAL": 0.8588235294117647,
+     "BLIND-SEQUENTIAL_bend": 0.7375565610859729,
+     "BLIND-SEQUENTIAL_nobend": 0.9901960784313726,
+     "rule_b_bend_fraction": 0.52,
+     "detour_steps": 3.7341176470588233,
+     "opt_mean": 30.57176470588235
+    }
+   }
+  }
+ },
+ "FRAGMENT_LOOKUP": {
+  "after_seed0": {
+   "GRID_W9/test": {
+    "n_eval_rows": 183,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1545,
+     "signatures_r1": 8351,
+     "signatures_r2": 14422,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.08196721311475409,
+     "r2": 0.5191256830601093,
+     "state_coverage_r1": 0.9710346572223627,
+     "state_coverage_r2": 0.9505438907159119,
+     "signatures_r1": 3471,
+     "signatures_r2": 5015,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_W9/val": {
+    "n_eval_rows": 197,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1545,
+     "signatures_r1": 8351,
+     "signatures_r2": 14422,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.04060913705583756,
+     "r2": 0.5228426395939086,
+     "state_coverage_r1": 0.9714950552646888,
+     "state_coverage_r2": 0.9477603257707969,
+     "signatures_r1": 3471,
+     "signatures_r2": 5015,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_REBASED/test": {
+    "n_eval_rows": 586,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1545,
+     "signatures_r1": 8351,
+     "signatures_r2": 14422,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.005119453924914676,
+     "r2": 0.48293515358361777,
+     "state_coverage_r1": 0.989406842526928,
+     "state_coverage_r2": 0.9776564493635204,
+     "signatures_r1": 6996,
+     "signatures_r2": 11749,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_REBASED/val": {
+    "n_eval_rows": 596,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1545,
+     "signatures_r1": 8351,
+     "signatures_r2": 14422,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.0050335570469798654,
+     "r2": 0.4664429530201342,
+     "state_coverage_r1": 0.9903871516075144,
+     "state_coverage_r2": 0.9788693180152985,
+     "signatures_r1": 6996,
+     "signatures_r2": 11749,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   }
+  },
+  "after_seed1": {
+   "GRID_W9/test": {
+    "n_eval_rows": 157,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1530,
+     "signatures_r1": 7905,
+     "signatures_r2": 13626,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.044585987261146494,
+     "r2": 0.6369426751592356,
+     "state_coverage_r1": 0.9819669646916199,
+     "state_coverage_r2": 0.9712077587513259,
+     "signatures_r1": 3234,
+     "signatures_r2": 4460,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_W9/val": {
+    "n_eval_rows": 160,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1530,
+     "signatures_r1": 7905,
+     "signatures_r2": 13626,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.08125,
+     "r2": 0.65625,
+     "state_coverage_r1": 0.9781725124190878,
+     "state_coverage_r2": 0.9616137287370164,
+     "signatures_r1": 3234,
+     "signatures_r2": 4460,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_REBASED/test": {
+    "n_eval_rows": 585,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1530,
+     "signatures_r1": 7905,
+     "signatures_r2": 13626,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.0,
+     "r2": 0.5692307692307692,
+     "state_coverage_r1": 0.9883032532474997,
+     "state_coverage_r2": 0.9764053339464306,
+     "signatures_r1": 7145,
+     "signatures_r2": 11976,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_REBASED/val": {
+    "n_eval_rows": 585,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1530,
+     "signatures_r1": 7905,
+     "signatures_r2": 13626,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.010256410256410256,
+     "r2": 0.5658119658119658,
+     "state_coverage_r1": 0.991317671092952,
+     "state_coverage_r2": 0.9811315401203041,
+     "signatures_r1": 7145,
+     "signatures_r2": 11976,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   }
+  },
+  "after_seed2": {
+   "GRID_W9/test": {
+    "n_eval_rows": 191,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1530,
+     "signatures_r1": 7905,
+     "signatures_r2": 13626,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.031413612565445025,
+     "r2": 0.5392670157068062,
+     "state_coverage_r1": 0.9764879600181735,
+     "state_coverage_r2": 0.960358927760109,
+     "signatures_r1": 4349,
+     "signatures_r2": 6443,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_W9/val": {
+    "n_eval_rows": 199,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1530,
+     "signatures_r1": 7905,
+     "signatures_r2": 13626,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.020100502512562814,
+     "r2": 0.5226130653266332,
+     "state_coverage_r1": 0.9738053485313459,
+     "state_coverage_r2": 0.9539675580885576,
+     "signatures_r1": 4349,
+     "signatures_r2": 6443,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_REBASED/test": {
+    "n_eval_rows": 609,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1530,
+     "signatures_r1": 7905,
+     "signatures_r2": 13626,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.014778325123152709,
+     "r2": 0.5041050903119869,
+     "state_coverage_r1": 0.9855336157012468,
+     "state_coverage_r2": 0.9707987830340631,
+     "signatures_r1": 6424,
+     "signatures_r2": 10982,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_REBASED/val": {
+    "n_eval_rows": 604,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 1530,
+     "signatures_r1": 7905,
+     "signatures_r2": 13626,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.0,
+     "r2": 0.5480132450331126,
+     "state_coverage_r1": 0.989481276672477,
+     "state_coverage_r2": 0.9774899320791008,
+     "signatures_r1": 6424,
+     "signatures_r2": 10982,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   }
+  },
+  "before_seed0": {
+   "GRID_W9/test": {
+    "n_eval_rows": 584,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 723,
+     "signatures_r1": 4317,
+     "signatures_r2": 6801,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.059931506849315065,
+     "r2": 0.5342465753424658,
+     "state_coverage_r1": 0.9770719280177788,
+     "state_coverage_r2": 0.9380454225161255,
+     "signatures_r1": 5770,
+     "signatures_r2": 10424,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_W9/val": {
+    "n_eval_rows": 600,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 723,
+     "signatures_r1": 4317,
+     "signatures_r2": 6801,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.02666666666666667,
+     "r2": 0.46,
+     "state_coverage_r1": 0.9738735327527451,
+     "state_coverage_r2": 0.9426083193595499,
+     "signatures_r1": 5770,
+     "signatures_r2": 10424,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_REBASED/test": {
+    "n_eval_rows": 584,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 723,
+     "signatures_r1": 4317,
+     "signatures_r2": 6801,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.059931506849315065,
+     "r2": 0.5342465753424658,
+     "state_coverage_r1": 0.9770719280177788,
+     "state_coverage_r2": 0.9380454225161255,
+     "signatures_r1": 5770,
+     "signatures_r2": 10424,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   },
+   "GRID_REBASED/val": {
+    "n_eval_rows": 600,
+    "CROSS_MAZE__the_published_quantity": {
+     "r1": 0.0,
+     "r2": 0.0,
+     "pool_routes": 723,
+     "signatures_r1": 4317,
+     "signatures_r2": 6801,
+     "published_CMAZE1_reference": [
+      0.0006,
+      0.0
+     ]
+    },
+    "SAME_MAZE__a_DIFFERENT_quantity": {
+     "r1": 0.02666666666666667,
+     "r2": 0.46,
+     "state_coverage_r1": 0.9738735327527451,
+     "state_coverage_r2": 0.9426083193595499,
+     "signatures_r1": 5770,
+     "signatures_r2": 10424,
+     "w9_CMAZE2_reference": [
+      0.0741,
+      0.5105
+     ],
+     "note": "the table contains routes through the very maze being evaluated; NOT comparable with the cross-maze 0.0006/0.0000"
+    }
+   }
+  }
+ },
+ "BUDGET_GRID": {
+  "primary": "GRID_W9 -- w9's unchanged absolute words 30/45/60, interp 38/53",
+  "rebased": {
+   "w9_grid": [
+    30,
+    45,
+    60
+   ],
+   "w9_interp": [
+    38,
+    53
+   ],
+   "percentiles_of_w9_grid_in_before_bank": [
+    33.88543823326432,
+    78.32988267770877,
+    92.40855762594893
+   ],
+   "raw_quantiles_of_after_bank": [
+    54.0,
+    82.66390614216698,
+    103.0
+   ],
+   "rebased_grid": [
+    55,
+    85,
+    105
+   ],
+   "rebased_interp": [
+    70,
+    95
+   ],
+   "before_opt": {
+    "n": 1449,
+    "mean": 37.383022774327124,
+    "median": 36.0,
+    "max": 111.0
+   },
+   "after_opt": {
+    "n": 1530,
+    "mean": 65.8202614379085,
+    "median": 64.0,
+    "max": 128.0
+   },
+   "writable_fraction_before_at_w9_grid": {
+    "30": 0.3388543823326432,
+    "45": 0.7832988267770876,
+    "60": 0.9240855762594893
+   },
+   "writable_fraction_after_at_w9_grid": {
+    "30": 0.02679738562091503,
+    "45": 0.20065359477124184,
+    "60": 0.44248366013071894
+   },
+   "writable_fraction_after_at_rebased_grid": {
+    "55": 0.3660130718954248,
+    "85": 0.8058823529411765,
+    "105": 0.9366013071895425
+   }
+  },
+  "rule": "the rebased words sit at the same percentiles of the AFTER bank's route-length distribution that w9's words occupy in the BEFORE bank's, rounded to the nearest 5; the interpolation words are the midpoints.  The rule mentions route lengths and nothing else.",
+  "self_check": "applying the rule with BEFORE as both source and target returns w9's own grid [30, 45, 60]; the interpolation words come back [38, 52] against w9's [38, 53] because Python rounds 52.5 to even.  Declared, not silently fixed.",
+  "writable_fraction": {
+   "after_seed0": {
+    "GRID_W9": {
+     "n_pairs": 1530,
+     "opt_mean": 65.8202614379085,
+     "opt_median": 64.0,
+     "opt_max": 128.0,
+     "fraction_writable": {
+      "30": 0.02679738562091503,
+      "45": 0.20065359477124184,
+      "60": 0.44248366013071894,
+      "38": 0.08954248366013072,
+      "53": 0.330718954248366
+     }
+    },
+    "GRID_REBASED": {
+     "n_pairs": 1530,
+     "opt_mean": 65.8202614379085,
+     "opt_median": 64.0,
+     "opt_max": 128.0,
+     "fraction_writable": {
+      "55": 0.3660130718954248,
+      "85": 0.8058823529411765,
+      "105": 0.9366013071895425,
+      "70": 0.6248366013071895,
+      "95": 0.8784313725490196
+     }
+    }
+   },
+   "after_seed1": {
+    "GRID_W9": {
+     "n_pairs": 1545,
+     "opt_mean": 68.91132686084143,
+     "opt_median": 68.0,
+     "opt_max": 151.0,
+     "fraction_writable": {
+      "30": 0.03365695792880259,
+      "45": 0.1533980582524272,
+      "60": 0.36245954692556637,
+      "38": 0.08155339805825243,
+      "53": 0.2627831715210356
+     }
+    },
+    "GRID_REBASED": {
+     "n_pairs": 1545,
+     "opt_mean": 68.91132686084143,
+     "opt_median": 68.0,
+     "opt_max": 151.0,
+     "fraction_writable": {
+      "60": 0.36245954692556637,
+      "85": 0.7773462783171521,
+      "100": 0.9229773462783172,
+      "72": 0.5766990291262136,
+      "92": 0.8498381877022654
+     }
+    }
+   },
+   "after_seed2": {
+    "GRID_W9": {
+     "n_pairs": 1536,
+     "opt_mean": 62.16015625,
+     "opt_median": 59.0,
+     "opt_max": 129.0,
+     "fraction_writable": {
+      "30": 0.008463541666666666,
+      "45": 0.138671875,
+      "60": 0.5240885416666666,
+      "38": 0.056640625,
+      "53": 0.3515625
+     }
+    },
+    "GRID_REBASED": {
+     "n_pairs": 1536,
+     "opt_mean": 62.16015625,
+     "opt_median": 59.0,
+     "opt_max": 129.0,
+     "fraction_writable": {
+      "55": 0.3990885416666667,
+      "75": 0.798828125,
+      "90": 0.9309895833333334,
+      "65": 0.6334635416666666,
+      "82": 0.884765625
+     }
+    }
+   },
+   "before_seed0": {
+    "GRID_W9": {
+     "n_pairs": 1449,
+     "opt_mean": 37.383022774327124,
+     "opt_median": 36.0,
+     "opt_max": 111.0,
+     "fraction_writable": {
+      "30": 0.3388543823326432,
+      "45": 0.7832988267770876,
+      "60": 0.9240855762594893,
+      "38": 0.5942028985507246,
+      "53": 0.8847481021394065
+     }
+    },
+    "GRID_REBASED": {
+     "n_pairs": 1449,
+     "opt_mean": 37.383022774327124,
+     "opt_median": 36.0,
+     "opt_max": 111.0,
+     "fraction_writable": {
+      "30": 0.3388543823326432,
+      "45": 0.7832988267770876,
+      "60": 0.9240855762594893,
+      "38": 0.5942028985507246,
+      "52": 0.8778467908902692
+     }
+    }
+   }
+  }
+ },
+ "ANCHOR_CMAZE1_proper": {
+  "n": 500,
+  "seeds": "0..499, zero rejections",
+  "bend_fraction": 0.778,
+  "key_count_hist": {
+   "1": 368,
+   "2": 95,
+   "3": 34,
+   "4": 3
+  },
+  "blind": {
+   "ORACLE": 1.0,
+   "BLIND-A": 0.154,
+   "BLIND-B": 0.0,
+   "BLIND-COLOUR": 0.1,
+   "BLIND-FACTOR": 0.262,
+   "BLIND-SEQUENTIAL": 0.52
+  },
+  "published_reference": {
+   "blind_sequential": 0.498,
+   "w9_harness_remeasurement": 0.5317,
+   "rule_b_bends": 0.816,
+   "fragment_lookup_cross_maze": [
+    0.0,
+    0.0
+   ]
+  }
+ },
+ "MECHANISM": {
+  "source": "artefacts/anchor_breakdown.txt (CMAZE-1 proper, n=400)",
+  "blind_sequential_by_key_count_of_the_A_plus_B_optimum": {
+   "1": [
+    194,
+    297,
+    0.6532
+   ],
+   "2": [
+    10,
+    74,
+    0.1351
+   ],
+   "3": [
+    0,
+    26,
+    0.0
+   ],
+   "4": [
+    0,
+    3,
+    0.0
+   ]
+  },
+  "blind_sequential_when_ruleA_key_order_EQUALS_A_plus_B": [
+   201,
+   201,
+   1.0
+  ],
+  "blind_sequential_when_it_DIFFERS": [
+   3,
+   199,
+   0.0151
+  ],
+  "why_one_key_is_fatal": "with ONE key the constraint key_order=(c,) admits exactly one pickup of exactly colour c -- which is what the oracle does too -- so BLIND-SEQUENTIAL *is* the oracle on a one-key route",
+  "root_cause_of_the_w9_defect": "the >= 2-key property is all-or-nothing per maze and DIRECTIONAL: where it holds, 18/18 cross pairs need >= 2 keys and the REVERSE direction is 0/18 FEASIBLE, because the cut door's key lives on one side of the cut. w9's layer required cross pairs in BOTH directions, so its own symmetry requirement selected for single-key cuts.  See artefacts/probe_direction.txt (13 of 40 mazes) and artefacts/probe_density.txt."
+ },
+ "REFUSAL_MATERIAL_AND_CONTROLS": {
+  "before_seed0": {
+   "n_sites": 96,
+   "sites_with_walled_target": 93,
+   "walled_requests_IMPOSSIBLE": 837,
+   "budget_infeasible_requests": 280,
+   "mt_unseen_control_requests": 573,
+   "mazes_with_mt_unseen": 96,
+   "mazes_with_nway": 96,
+   "mazes_with_unseen_pair": 96
+  },
+  "after_seed0": {
+   "n_sites": 96,
+   "sites_with_walled_target": 56,
+   "walled_requests_IMPOSSIBLE": 504,
+   "budget_infeasible_requests": 660,
+   "mt_unseen_control_requests": 191,
+   "mazes_with_mt_unseen": 95,
+   "mazes_with_nway": 93,
+   "mazes_with_unseen_pair": 95
+  },
+  "after_seed0_rebased": {
+   "n_sites": 96,
+   "sites_with_walled_target": 56,
+   "walled_requests_IMPOSSIBLE": 504,
+   "budget_infeasible_requests": 257,
+   "mt_unseen_control_requests": 602,
+   "mazes_with_mt_unseen": 95,
+   "mazes_with_nway": 93,
+   "mazes_with_unseen_pair": 95
+  }
+ },
+ "DECLARED_DIFFERENCES_FROM_CMAZE2": [
+  "The kept set is no longer symmetric in direction: all six agent words sit in the source door-free component and all six target words in the destination one.  Direction is a CONSTANT of the split, not a balanced factor; it cannot confound a held-out comparison because it does not vary, but it is a difference and it is stated.",
+  "The >= 2-key screen is applied to the UNSEALED maze, before the walled target is chosen, so the refusal walls cannot be what creates the multi-key structure.",
+  "Generator-seed acceptance falls from 0.2000 (before) to ~0.165 (after): the cost of the repair is generator seeds, not code.",
+  "Routes are longer -- mean optimum 37.4 -> 65.8 steps -- which is why GRID_REBASED exists.  At w9's unchanged words the split carries 454 training requests against w9's 1208; at the rebased words it carries about 1442.",
+  "The WALLED target -- the second refusal condition -- is harder to place: all six target words now sit in one component, so sealing one without breaking the other pairs' >= 2-key routes succeeds on 56 of 96 sites against 93 of 96 before.  504 impossible requests remain (837 before)."
+ ],
+ "DECLARED_NOT_RUN": [
+  "Any SCORED run.  This spoke is 0/0 by its own task file; no arm is fitted, no store exists, no RESULT row is claimed.",
+  "The learned arms, the CLU, the encoder and the pipeline ceiling on the fixed split -- that is hub/read-verb's work, and this file is its precondition, not its result.",
+  "A BEFORE bank at seed indices 1 and 2.  Only `before 0` (96 sites) and a 48-site `before 1` pool were built; the BEFORE column is one bank, which is enough because it reproduces w9's published numbers exactly.",
+  "Any change to w8_envscout.maze_colour.  The engine, the solver and the exact integer judge are imported, and the judge's file sha256 is recorded so that claim is checkable rather than asserted.",
+  "GPU and cluster.  Local CPU only, three concurrent processes."
+ ]
+}

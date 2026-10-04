@@ -1,0 +1,79 @@
+{
+ "scope": "SCOPE: the hold-out is from the STORE'S FIT POOL, not from the encoder, decoder or judge. Those three are frozen, hash-pinned and were fitted on a split containing every hue. 'Never seen' here means: the store never held a row carrying that value.",
+ "seed": 0,
+ "pin": {
+  "n_store_train": 32768,
+  "n_fit": 32256,
+  "n_val": 512,
+  "n_modes": 64,
+  "k_wells": 5,
+  "train_steps": 1200,
+  "train_batch": 128,
+  "train_lr": 0.003,
+  "commitment_beta": 0.25,
+  "tau_start": 1.0,
+  "tau_end": 0.1,
+  "address_book_smoothing": 1.0,
+  "ridge_phi": 0.01,
+  "ridge_atom": 1e-06,
+  "pool_rng": "default_rng(seed*7919 + 20260910), permutation, first n",
+  "fit_val_rule": "gen_rowsplit.split_fit_val(mode='stratified')",
+  "well_partition": "the PINNED store_plan.json labels, verbatim",
+  "grouping_method": "ward"
+ },
+ "split_info": {
+  "mode": "stratified",
+  "rule": "deficit-priority greedy on the pool's own per-factor marginals (target[f][v] = n_val * count_pool[f][v] / n_pool), seeded tie-break",
+  "n_pool": 32768,
+  "n_fit": 32256,
+  "n_val": 512,
+  "tiebreak_jitter": 1.0,
+  "rng": "np.random.default_rng(0*6637+20260914)",
+  "fit_is_pool_minus_val": true
+ },
+ "feature_cache": {
+  "D": 2048,
+  "feat_shape": [
+   128,
+   4,
+   4
+  ],
+  "dtype": "float16",
+  "n_rows": 480000,
+  "scope": "full",
+  "encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+  "features_sha256": "d6728f01d102b0d0301198dc617f40bfb8ddb6c5b4a12b21a1ec08e1d974f2e2"
+ },
+ "well_sizes": [
+  303,
+  305,
+  573,
+  501,
+  366
+ ],
+ "store_bytes": {
+  "store_bytes": 524288,
+  "store_bytes_per_well": [
+   77568,
+   78080,
+   146688,
+   128256,
+   93696
+  ],
+  "n_wells": 5,
+  "n_modes": 64,
+  "n_modes_per_well": [
+   64,
+   64,
+   64,
+   64,
+   64
+  ],
+  "uniform_allocation": true,
+  "dim": 2048,
+  "dtype": "float32",
+  "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+  "bits_per_read": 30.0,
+  "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes."
+ }
+}

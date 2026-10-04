@@ -1,0 +1,64 @@
+⭐ gen-encoder-pretrain · dataset=shapes3d · variants=['random_init_hires'] · seeds=[0, 1, 2] · REDUCED SCALE (n_enc_train=4096, enc_steps=400)
+  split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  corner (matched-seen, SEEN): 216 rows
+  seed 0: rows enc_train=4096 probe_train=4096 probe_eval=2048 corner_eval=213 (corner rows dropped for landing in enc_train: 3)
+    streamed 10453 images in 51.5s
+  [random_init_hires] fitting encoder (random, x0 steps) …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    [random_init_hires/linear] grid scale=0.8936 orientation=0.9746  -> FAIL
+    [random_init_hires/mlp] grid scale=0.8555 orientation=0.9531  -> FAIL
+  [random_init_hires] done in 3.4s train / 1.5s encode
+  seed 1: rows enc_train=4096 probe_train=4096 probe_eval=2048 corner_eval=216 (corner rows dropped for landing in enc_train: 0)
+    streamed 10456 images in 52.4s
+  [random_init_hires] fitting encoder (random, x0 steps) …
+    [random_init_hires/linear] grid scale=0.8975 orientation=0.9712  -> FAIL
+    [random_init_hires/mlp] grid scale=0.8716 orientation=0.9531  -> FAIL
+  [random_init_hires] done in 0.0s train / 1.9s encode
+  seed 2: rows enc_train=4096 probe_train=4096 probe_eval=2048 corner_eval=215 (corner rows dropped for landing in enc_train: 1)
+    streamed 10455 images in 55.1s
+  [random_init_hires] fitting encoder (random, x0 steps) …
+    [random_init_hires/linear] grid scale=0.9004 orientation=0.9697  -> PASS
+    [random_init_hires/mlp] grid scale=0.8789 orientation=0.9453  -> FAIL
+  [random_init_hires] done in 0.0s train / 1.8s encode
+⭐ VERDICT: FAIL — ⛔ NO variant clears the bar on the spread grid with the headline linear probe. Per the pre-registered stop rule: report and STOP — the store is not touched and no cache is promoted.

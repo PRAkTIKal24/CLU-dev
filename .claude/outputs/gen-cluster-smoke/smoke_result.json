@@ -1,0 +1,23 @@
+{
+  "status": "ok",
+  "date": "2026-09-14",
+  "git_commit": "22f9dc5",
+  "what": "CSF3 plumbing smoke, round 3. First time the certificate stage has ever executed on the cluster.",
+  "runs": [
+    {"path": "encoder/clu_s0",     "status": "ok", "exit_code": 0, "job_id": 20344190},
+    {"path": "certificate/clu_s0", "status": "ok", "exit_code": 0, "job_id": 20344191},
+    {"path": "certificate/clu_s1", "status": "ok", "exit_code": 0, "job_id": 20344192},
+    {"path": "certificate/clu_s2", "status": "ok", "exit_code": 0, "job_id": 20344193}
+  ],
+  "gpu_preflight": {
+    "status": "ok",
+    "job_id": 20325642,
+    "note": "JAX initialises the A100. Banked from round 1; an environment fact, unaffected by the tree version."
+  },
+  "verified_by": "Hub, from run_manifest.json status + exit_code + git_commit + slurm.job_id on all four runs",
+  "not_covered": [
+    "SMOKE=1 payload only - no stage module ran, no science",
+    "the real certificate run still needs bridge/store artefacts staged onto scratch (push_repo.sh excludes .claude/)",
+    "sbatch --export with spaces in a value remains UNTESTED - round 3 used single-seed submissions"
+  ]
+}

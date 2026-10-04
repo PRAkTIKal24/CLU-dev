@@ -1,0 +1,83 @@
+=== gen-cell-harness: shapes3d/recon stage=cell quick=False ===
+  ⭐ PRECONDITION 1/2: classifier_gate.json gate=PASS (floor 0.95, 3 seeds)
+  ⭐ PRECONDITION 2/2: refusal_scores.json status=complete (not_run=[])
+[     0.0s] seed 1 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (hash + recipe asserted)
+[     0.1s]   ⭐ external classifier aa69b436989b2de5… (978873 params) — THE instrument, identical across every arm in this seed
+[     1.5s]   ⭐ row split: mode=stratified — val realises floor_hue 10/10 · wall_hue 10/10 · object_hue 10/10 · scale 8/8 · shape 4/4 · orientation 15/15 · max per-value count ratio 1.061
+[     1.5s] rows: store_train=32768 B=72 MS=199 fit=32256 val=512
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     2.7s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     2.7s] cache 9288 rows (scope=used), D=2048; re-encode check bit-identical on 64 rows
+[     2.7s]     extending cache coverage: 32199 row(s) encoded through the frozen encoder
+[    85.5s]     extending cache coverage: 196 row(s) encoded through the frozen encoder
+[    88.0s]     extending cache coverage: 31698 row(s) encoded through the frozen encoder
+[   170.4s]     extending cache coverage: 501 row(s) encoded through the frozen encoder
+[   226.3s]   ⚠ this seed's encoder differs from the plan's (fc05e2c5f396… vs 98d326028316…), so the grouping is re-derived on its own channels — ⛔ the plan's label vector would be a size-matched RANDOM partition here
+[   226.3s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_1/store_s1.pkl (⛔ not re-trained)
+[   227.4s] ⭐ byte ledger: store 524288 B + addressing head 74240 B (⛔ coupling 163840 B EXCLUDED; ⛔ not 688128)
+[   228.7s] ⭐ no-bypass: pure codebook gather, 30 bits/read (R20's declared design constant) · ⭐ request-only path asserted on all four legs (⛔ no feature argument on ANY CLU call; gen_store.soft_read NOT imported)
+[   232.7s] ⭐ DECODER ceiling on IMAGES: external in-corner balacc=0.9472 · probe=0.9365
+[   237.9s]   ⭐ [clu] IMAGE-space in-corner shape balacc=0.6307 (AUROC 0.7513, TPR 1.000 / TNR 0.261) · distinct on B: 8 vectors / 8 factor-tuples of 72 · probe companion 0.6809
+[   243.0s]   ⭐ [store_removed] IMAGE-space in-corner shape balacc=0.5000 (AUROC 0.5025, TPR 0.000 / TNR 1.000) · distinct on B: 1 vectors / 1 factor-tuples of 72 · probe companion 0.5000
+[   246.7s]   ⭐ [knn_proto] IMAGE-space in-corner shape balacc=0.9453 (AUROC 0.9981, TPR 0.986 / TNR 0.905) · distinct on B: 72 vectors / 51 factor-tuples of 72 · probe companion 0.8844
+[   246.7s]   ⭐ [lace] inheriting the SELECTED configuration from disk: sigma=0.03 form=both shrinkage=1e-3 (gate fired=True, 36 trials inherited, ⛔ not re-selected)
+[   250.2s]   [lace] whitening shrinkage=1e-3: |diag-1|=0.2304 |offdiag|=0.006104
+[   567.7s]   [lace] classifier: 12600 steps, loss 2.3726 -> 0.0007; its own val per-factor mean 0.9967
+[   653.0s]   ⭐ [lace] IMAGE-space in-corner shape balacc=0.6582 (AUROC 0.7036, TPR 0.472 / TNR 0.844) · distinct on B: 72 vectors / 71 factor-tuples of 72 · probe companion 0.6423
+[   657.0s]   ⭐ [lace/ld_published] IMAGE-space in-corner shape balacc=0.5885 (AUROC 0.8057, TPR 0.222 / TNR 0.955) · distinct on B: 72 vectors / 61 factor-tuples of 72 · probe companion 0.5108
+[   661.3s]   ⭐ [lace/ld_corrected] IMAGE-space in-corner shape balacc=0.6480 (AUROC 0.7242, TPR 0.417 / TNR 0.879) · distinct on B: 72 vectors / 72 factor-tuples of 72 · probe companion 0.6033
+[   766.2s]   [ebm] 6 independent experts trained; their OWN val accuracy per factor [1.0, 1.0, 1.0, 0.9922, 1.0, 1.0] (mean 0.9987)
+[   766.2s]   [ebm] tuning budget: 36 trials (⭐ the SAME budget every arm is entitled to: 36)
+[   770.5s]   [ebm] trial 1/36 {'step_size': 0.003, 'prior_sigma': 0.5, 'n_steps': 50, 'clip': True}: val agg=0.1491
+[   792.5s]   [ebm] trial 6/36 {'step_size': 0.003, 'prior_sigma': 1.0, 'n_steps': 50, 'clip': False}: val agg=0.1471
+[   822.2s]   [ebm] trial 12/36 {'step_size': 0.003, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': False}: val agg=0.1497
+[   848.9s]   [ebm] trial 18/36 {'step_size': 0.01, 'prior_sigma': 1.0, 'n_steps': 50, 'clip': False}: val agg=0.1647
+[   880.4s]   [ebm] trial 24/36 {'step_size': 0.01, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': False}: val agg=0.1673
+[   906.0s]   [ebm] trial 30/36 {'step_size': 0.03, 'prior_sigma': 1.0, 'n_steps': 50, 'clip': False}: val agg=0.1543
+[   937.0s]   [ebm] trial 36/36 {'step_size': 0.03, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': False}: val agg=0.1914
+[   937.0s]   ⭐ [ebm] SELECTED (validation aggregate, ⛔ C never enters): {'step_size': 0.03, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': True, 'val_aggregate': 0.21223958333333334, 'val_compositional': 0.35546875}
+[   946.5s]   ⭐ [ebm_compose] IMAGE-space in-corner shape balacc=0.5551 (AUROC 0.5872, TPR 0.181 / TNR 0.930) · distinct on B: 72 vectors / 72 factor-tuples of 72 · probe companion 0.5108
+[   946.5s] seed 1 done in 947s
+=== done in 947s ===

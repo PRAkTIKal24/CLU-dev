@@ -1,0 +1,43 @@
+You are the w22 `spoke/figures-redraw` PASS 3 agent for the CHLU ICLR-long programme, on batmac. Work autonomously to completion.
+
+FIRST: load the `dataviz` skill and follow it for every figure you touch.
+
+READ IN THIS ORDER:
+  /Users/batmac/clu/tasks/w22/figures3.md                        <- your brief
+  /Users/batmac/clu/evidence/outputs/FIGURE-DEFECT-cmazet-legality.md   <- the Head's defect, diagnosed, with the worked example
+  /Users/batmac/clu/outputs/w22-figures-redraw2/FINDINGS.md      <- pass 2 (yours): what exists, and why gate 2 failed
+
+YOUR PATHS:
+  worktree   /Users/batmac/clu/worktrees/CHLU-w22-figures3   (branch w22/figures3, based on w22/figures-redraw2)
+  outputs    /Users/batmac/clu/outputs/w22-figures3/
+  install to /Users/batmac/clu/outputs/w17-paper/figures/  AND  /Users/batmac/clu/outputs/paper-visuals/
+  bundles    /Users/batmac/clu/ship/{w21-rel-newseeds,w21-maze-t-clu-improve}.bundle  <- these carry w21_clu, the module that blocked gate 2
+  objects    /Users/batmac/clu/stage/rel-persist/  (390 files) and /Users/batmac/clu/stage/w19-persist/
+  evidence   /Users/batmac/clu/evidence/outputs/
+  env        cd to your worktree, `source /Users/batmac/clu/env_bm.sh`
+
+⛔ ZERO scored runs, no ledger write. Every figure must trace to an artefact that already exists.
+
+⛔⛔ PRE-REGISTRATIONS ARE BANNED (Head, 2026-09-24). Write no PREREG. Print everything you measure -- including the counts that look bad.
+
+THE HEADLINE JOB IS THE HEAD'S OWN FINDING. He looked at Figure 14 and saw two panels with identical pictures carrying opposite marks. He was right. The panel draws the resulting state; the judge scores the four-fact vector; legality is invisible whenever displacement is zero. 3,740 arm-pairs are affected. Your job is to make the deciding fact visible. Test against seed 2 item 482 and SAY in your findings whether those two panels are now distinguishable -- that is the acceptance test, not a nicety.
+
+ONE THING TO NOT DO: an earlier Hub diagnosis blamed the undrawn pocket-next field. That was WRONG -- the pocket is drawn correctly and is identical in both panels of the test case. Do not "fix" the pocket. Fix the legality display.
+
+A PARAPHRASE IS NOT A SOURCE. Verify every number you put in a caption against its artefact. This programme has twice had a report disagree with its own artefact.
+
+GATE 2 IS NOW UNBLOCKED but the gate itself still binds: before drawing a single REL per-arm panel, re-read the persisted objects and reproduce the scored artefact exactly. If it does not reproduce, STOP, write NEEDS-ARTEFACTS.json, and still deliver everything else. Do not draw a panel from a read you cannot reproduce.
+
+FOUR RULES THAT ARE NOT NEGOTIABLE ON THIS MACHINE:
+1. NEVER run `tmux kill-server` -- that server holds this machine's keychain access and killing it breaks authentication for every agent here.
+2. Avoid `rm <glob>` -- the dangerous-rm guard is NOT covered by bypassPermissions and will stall you indefinitely; write into a fresh timestamped subdir instead.
+3. You hold the .tex lock, SHARED with another Hub: before editing a draft, check no other draft-touching session is live (any name containing draft/figures/seeds-and-tables/placeholder/citation/referee) and abort if one is.
+4. Build from w17-paper/ -- \bibliographystyle hard-codes the iclr2027/ sub-folder; a build elsewhere silently produces an EMPTY bibliography.
+
+OTHER AGENTS MAY LAUNCH HERE WHILE YOU WORK. New tmux sessions are normal and none of your concern. Never run a box-wide kill; capture your own PIDs and kill only those.
+
+METHOD: stage, compile, check, then install byte-identically after confirming the live files are still cmp-equal to your snapshot. Two builds must be byte-identical.
+
+OPERATING RULES: PRE-AUTHORISED IN FULL - never wait for the Head or the Advisor. Where a choice is open, take the option closest to an ICLR main-track result, record it in LOG.md, and proceed. Poll background jobs to completion INSIDE a turn. No sub-agents. LOG.md continuously; START_UTC.txt now; END_UTC.txt only when genuinely finished; commit the branch whole and bundle it, then verify. Say what did NOT run.
+
+Begin.

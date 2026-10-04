@@ -1,0 +1,242 @@
+=== cls seed 0 scope=used -> /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_cls/seed_0 (21:23:02) ===
+[gen-bridge] dataset=shapes3d pretext=cls stage=all arm=clu seed=0 out=/Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_cls/seed_0
+[gen-bridge] ⛔ arm is metadata only: the bridge is arm-independent.
+  split shapes3d: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  ⭐ R3.3 no-leak: 8192 training rows checked, 72/72 held-out images excluded, 0 leaked
+  streaming 8192 train images …
+  fitting encoder (pretext=cls, 1500 steps) …
+    step 1/1500  loss=2.23538
+    step 300/1500  loss=0.00446
+    step 600/1500  loss=0.00098
+    step 900/1500  loss=0.00033
+    step 1200/1500  loss=0.00019
+    step 1500/1500  loss=0.00010
+  caching penultimate features: scope=used, 9288 rows …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cached 8192/9288
+    cached 9288/9288
+  ⭐ D = 2048 ((128, 4, 4)) — D=2048 <= 20000: a full D x D eigendecomposition is feasible, so the LACE arm runs in fully whitened coordinates and is NOT pushed onto channel-only whitening.
+  split shapes3d: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  ⭐ R3.3 no-leak: 8192 decoder-training rows checked, 72/72 held-out images excluded, 0 leaked
+  streaming 9288 images (train + eval_A + eval_B, one pass) …
+  fitting THE shared decoder (1200 steps, encoder frozen) …
+    step 1/1200  loss=0.18042
+    step 240/1200  loss=0.01308
+    step 480/1200  loss=0.00809
+    step 720/1200  loss=0.00614
+    step 960/1200  loss=0.00521
+    step 1200/1200  loss=0.00446
+  fitting the probe on REAL images (1500 steps) …
+    step 1/1500  loss=2.23690
+    step 300/1500  loss=0.00633
+    step 600/1500  loss=0.00108
+    step 900/1500  loss=0.00047
+    step 1200/1500  loss=0.00023
+    step 1500/1500  loss=0.00015
+  A: n=1024  ceiling=0.9232  probe_on_real=1.0000  decode_mse=0.00515
+  B: n=72  ceiling=0.8634  probe_on_real=1.0000  decode_mse=0.00412
+  ⭐ seed 0: ceiling_A=0.9232 ceiling_B=0.8634 ratio=0.9353 -> PROCEED
+=== cls seed 1 scope=used -> /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_cls/seed_1 (22:08:10) ===
+[gen-bridge] dataset=shapes3d pretext=cls stage=all arm=clu seed=1 out=/Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_cls/seed_1
+[gen-bridge] ⛔ arm is metadata only: the bridge is arm-independent.
+  split shapes3d: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  ⭐ R3.3 no-leak: 8192 training rows checked, 72/72 held-out images excluded, 0 leaked
+  streaming 8192 train images …
+  fitting encoder (pretext=cls, 1500 steps) …
+    step 1/1500  loss=2.23390
+    step 300/1500  loss=0.00438
+    step 600/1500  loss=0.00083
+    step 900/1500  loss=0.00036
+    step 1200/1500  loss=0.00021
+    step 1500/1500  loss=0.00012
+  caching penultimate features: scope=used, 9288 rows …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cached 8192/9288
+    cached 9288/9288
+  ⭐ D = 2048 ((128, 4, 4)) — D=2048 <= 20000: a full D x D eigendecomposition is feasible, so the LACE arm runs in fully whitened coordinates and is NOT pushed onto channel-only whitening.
+  split shapes3d: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  ⭐ R3.3 no-leak: 8192 decoder-training rows checked, 72/72 held-out images excluded, 0 leaked
+  streaming 9288 images (train + eval_A + eval_B, one pass) …
+  fitting THE shared decoder (1200 steps, encoder frozen) …
+    step 1/1200  loss=0.16781
+    step 240/1200  loss=0.01157
+    step 480/1200  loss=0.00793
+    step 720/1200  loss=0.00649
+    step 960/1200  loss=0.00545
+    step 1200/1200  loss=0.00476
+  fitting the probe on REAL images (1500 steps) …
+    step 1/1500  loss=2.24331
+    step 300/1500  loss=0.00552
+    step 600/1500  loss=0.00111
+    step 900/1500  loss=0.00039
+    step 1200/1500  loss=0.00019
+    step 1500/1500  loss=0.00017
+  A: n=1024  ceiling=0.9266  probe_on_real=1.0000  decode_mse=0.00516
+  B: n=72  ceiling=0.8750  probe_on_real=1.0000  decode_mse=0.00350
+  ⭐ seed 1: ceiling_A=0.9266 ceiling_B=0.8750 ratio=0.9443 -> PROCEED
+=== cls seed 2 scope=used -> /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_cls/seed_2 (22:49:44) ===
+[gen-bridge] dataset=shapes3d pretext=cls stage=all arm=clu seed=2 out=/Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_cls/seed_2
+[gen-bridge] ⛔ arm is metadata only: the bridge is arm-independent.
+  split shapes3d: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  ⭐ R3.3 no-leak: 8192 training rows checked, 72/72 held-out images excluded, 0 leaked
+  streaming 8192 train images …
+  fitting encoder (pretext=cls, 1500 steps) …
+    step 1/1500  loss=2.25287
+    step 300/1500  loss=0.00556
+    step 600/1500  loss=0.00102
+    step 900/1500  loss=0.00038
+    step 1200/1500  loss=0.00020
+    step 1500/1500  loss=0.00013
+  caching penultimate features: scope=used, 9288 rows …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cached 8192/9288
+    cached 9288/9288
+  ⭐ D = 2048 ((128, 4, 4)) — D=2048 <= 20000: a full D x D eigendecomposition is feasible, so the LACE arm runs in fully whitened coordinates and is NOT pushed onto channel-only whitening.
+  split shapes3d: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  ⭐ R3.3 no-leak: 8192 decoder-training rows checked, 72/72 held-out images excluded, 0 leaked
+  streaming 9288 images (train + eval_A + eval_B, one pass) …
+  fitting THE shared decoder (1200 steps, encoder frozen) …
+    step 1/1200  loss=0.17366
+    step 240/1200  loss=0.01074
+    step 480/1200  loss=0.00746
+    step 720/1200  loss=0.00545
+    step 960/1200  loss=0.00452
+    step 1200/1200  loss=0.00396
+  fitting the probe on REAL images (1500 steps) …
+    step 1/1500  loss=2.22402
+    step 300/1500  loss=0.00430
+    step 600/1500  loss=0.00073
+    step 900/1500  loss=0.00031
+    step 1200/1500  loss=0.00018
+    step 1500/1500  loss=0.00011
+  A: n=1024  ceiling=0.9390  probe_on_real=1.0000  decode_mse=0.00457
+  B: n=72  ceiling=0.9051  probe_on_real=1.0000  decode_mse=0.00364
+  ⭐ seed 2: ceiling_A=0.9390 ceiling_B=0.9051 ratio=0.9639 -> PROCEED
+=== aggregate (23:19:26) ===
+[gen-bridge] dataset=shapes3d pretext=cls stage=aggregate arm=clu seed=0 out=/Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_cls
+[gen-bridge] ⛔ arm is metadata only: the bridge is arm-independent.
+⭐ GATE (shapes3d/cls, seeds [0, 1, 2]): ceiling_A=0.9296±0.0068 ceiling_B=0.8812±0.0176 ratio=0.9479 floor=0.8 -> PROCEED
+=== done cls 23:19:33 ===

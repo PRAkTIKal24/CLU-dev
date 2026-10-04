@@ -1,0 +1,75 @@
+{
+  "bounds": {
+    "differing_fraction": 0.01,
+    "per_element_ulp": 1.0
+  },
+  "check": "exp_gen_store._assert_cache_reencodes, the SHIPPED gate, run against both generations with the encoder stored beside each cache",
+  "generations": {
+    "generation_1": {
+      "0": {
+        "frac_differing": 0.009765625,
+        "max_abs_delta": 0.001953125,
+        "max_ulp_delta": 51.0,
+        "n_differing": 1280,
+        "n_elements": 131072,
+        "passed": false
+      },
+      "1": {
+        "frac_differing": 0.0048828125,
+        "max_abs_delta": 0.001953125,
+        "max_ulp_delta": 81.0,
+        "n_differing": 640,
+        "n_elements": 131072,
+        "passed": false
+      },
+      "2": {
+        "frac_differing": 0.00939178466796875,
+        "max_abs_delta": 0.001953125,
+        "max_ulp_delta": 59.0,
+        "n_differing": 1231,
+        "n_elements": 131072,
+        "passed": false
+      }
+    },
+    "generation_2": {
+      "0": {
+        "frac_differing": 7.62939453125e-06,
+        "max_abs_delta": 9.5367431640625e-07,
+        "max_ulp_delta": 1.0,
+        "n_differing": 1,
+        "n_elements": 131072,
+        "passed": true
+      },
+      "1": {
+        "frac_differing": 2.288818359375e-05,
+        "max_abs_delta": 0.000244140625,
+        "max_ulp_delta": 3.0,
+        "n_differing": 3,
+        "n_elements": 131072,
+        "passed": false
+      },
+      "2": {
+        "frac_differing": 1.52587890625e-05,
+        "max_abs_delta": 9.5367431640625e-07,
+        "max_ulp_delta": 1.0,
+        "n_differing": 2,
+        "n_elements": 131072,
+        "passed": true
+      }
+    }
+  },
+  "note": "The gate re-encodes cache_rows[:64] - deterministic, no sampling - and compares against the cached values at the cache dtype. It is the gate exp_gen_cell calls at the top of every run_seed.",
+  "verdict": {
+    "generation_1_max_ulp_range": [
+      51.0,
+      81.0
+    ],
+    "generation_1_passes": 0,
+    "generation_2_max_ulp_range": [
+      1.0,
+      3.0
+    ],
+    "generation_2_passes": 2,
+    "statement": "Generation 1 is not reproduced by the encoder shipped beside it on this box, on any seed, by 51-81 ULP on 0.49-0.98% of elements - the documented CPU-vs-GPU signature (~53 ULP on ~1% of elements). Generation 2 sits at 1-3 ULP on 1e-5 of elements, the floor batch-shape reordering allows. This does NOT invalidate any published generation-1 number: those numbers were computed on those features. It says generation 1 cannot be reproduced, extended or audited here."
+  }
+}

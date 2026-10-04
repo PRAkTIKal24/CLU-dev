@@ -1,0 +1,391 @@
+{
+  "cost_line": {
+    "cost_ratio_gold_over_edit": null,
+    "cost_ratio_note": "not reported as a ratio: the edit is a single O(D) row copy and falls below the clock's resolution, so a ratio against it would be an artifact of the timer",
+    "deleted": "object_hue=0.5 (grid index 5)",
+    "edit_below_timer_resolution": true,
+    "judge_on_deleted_factor": {
+      "edit_forget": 0.0,
+      "edit_retain": 1.0,
+      "gold_forget": 0.0,
+      "gold_retain": 1.0
+    },
+    "one_line": "deleting object_hue=0.5 costs 3.08s and a refit of 29,099 rows by the gold standard, against an O(D) copy of one prototype row and 0 refitted rows by mean-substitution (below timer resolution, so no ratio is quoted); on the forget set the judge reads the deleted factor at 0.0 (gold) vs 0.0 (edit), and on the retain set 1.0 vs 1.0",
+    "rows_dropped": 3157,
+    "rows_refitted_by_edit": 0,
+    "rows_refitted_by_gold_standard": 29099,
+    "scope": "SCOPE OF THE DELETION COMPARATOR. The value is held out of the ARM'S FIT POOL only, not from the encoder, the decoder or the judge, which are frozen and were fitted on a split containing every hue. 'Never trained on' means the arm never fitted a row carrying that value. The decoder can still render it and the judge can still recognise it, which is what makes the comparison scorable at all.",
+    "wall_clock_edit_s": 0.0,
+    "wall_clock_gold_standard_s": 3.0811245441436768
+  },
+  "methods": {
+    "cont_mlp_retrain_from_scratch": {
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.14652204513549805,
+        "loss_first": 0.5436599850654602,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 2260,
+        "weight_decay": 0.0
+      },
+      "param_count": 119525,
+      "param_error": 0.006238213900862069,
+      "refit_rows": 29099,
+      "role": "GOLD STANDARD for the cont_mlp rival",
+      "scores": {
+        "forget": {
+          "feature_mse": 0.17374256253242493,
+          "judge_aggregate": 0.28,
+          "judge_on_deleted_factor": 0.0,
+          "judge_per_factor": {
+            "floor_hue": 0.18,
+            "object_hue": 0.0,
+            "orientation": 0.16,
+            "scale": 0.38,
+            "shape": 0.28,
+            "wall_hue": 0.68
+          },
+          "n": 50
+        },
+        "retain": {
+          "feature_mse": 0.14813870191574097,
+          "judge_aggregate": 0.3142135642135642,
+          "judge_on_deleted_factor": 0.22943722943722944,
+          "judge_per_factor": {
+            "floor_hue": 0.29004329004329005,
+            "object_hue": 0.22943722943722944,
+            "orientation": 0.19480519480519481,
+            "scale": 0.21428571428571427,
+            "shape": 0.5151515151515151,
+            "wall_hue": 0.44155844155844154
+          },
+          "n": 462
+        }
+      },
+      "wall_clock_s": 75.5715970993042
+    },
+    "lstm_retrain_from_scratch": {
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.03906001150608063,
+        "loss_first": 0.5200248956680298,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 2260,
+        "weight_decay": 0.0
+      },
+      "param_count": 119125,
+      "param_error": 0.002870757004310345,
+      "refit_rows": 29099,
+      "role": "GOLD STANDARD for the lstm rival",
+      "scores": {
+        "forget": {
+          "feature_mse": 0.12761422991752625,
+          "judge_aggregate": 0.4033333333333333,
+          "judge_on_deleted_factor": 0.0,
+          "judge_per_factor": {
+            "floor_hue": 0.6,
+            "object_hue": 0.0,
+            "orientation": 0.46,
+            "scale": 0.26,
+            "shape": 0.72,
+            "wall_hue": 0.38
+          },
+          "n": 50
+        },
+        "retain": {
+          "feature_mse": 0.03957308456301689,
+          "judge_aggregate": 0.7853535353535355,
+          "judge_on_deleted_factor": 0.9956709956709957,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 0.9956709956709957,
+            "orientation": 0.6861471861471862,
+            "scale": 0.2727272727272727,
+            "shape": 0.7575757575757576,
+            "wall_hue": 1.0
+          },
+          "n": 462
+        }
+      },
+      "wall_clock_s": 91.94908499717712
+    },
+    "mlp_180k_retrain_from_scratch": {
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.04075627028942108,
+        "loss_first": 0.5192850828170776,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 2260,
+        "weight_decay": 0.0
+      },
+      "param_count": 117878,
+      "param_error": -0.0076272898706896556,
+      "refit_rows": 29099,
+      "role": "GOLD STANDARD for the mlp_180k rival",
+      "scores": {
+        "forget": {
+          "feature_mse": 0.0924682542681694,
+          "judge_aggregate": 0.5666666666666668,
+          "judge_on_deleted_factor": 0.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 0.0,
+            "orientation": 0.52,
+            "scale": 0.28,
+            "shape": 0.6,
+            "wall_hue": 1.0
+          },
+          "n": 50
+        },
+        "retain": {
+          "feature_mse": 0.04274307191371918,
+          "judge_aggregate": 0.7965367965367965,
+          "judge_on_deleted_factor": 1.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 1.0,
+            "orientation": 0.7229437229437229,
+            "scale": 0.2943722943722944,
+            "shape": 0.7619047619047619,
+            "wall_hue": 1.0
+          },
+          "n": 462
+        }
+      },
+      "wall_clock_s": 68.2977991104126
+    },
+    "mlp_retrain_from_scratch": {
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.04146543890237808,
+        "loss_first": 0.5186821222305298,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 2260,
+        "weight_decay": 0.0
+      },
+      "param_count": 117878,
+      "param_error": -0.0076272898706896556,
+      "refit_rows": 29099,
+      "role": "GOLD STANDARD for the mlp rival",
+      "scores": {
+        "forget": {
+          "feature_mse": 0.0922454372048378,
+          "judge_aggregate": 0.5666666666666668,
+          "judge_on_deleted_factor": 0.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 0.0,
+            "orientation": 0.52,
+            "scale": 0.28,
+            "shape": 0.6,
+            "wall_hue": 1.0
+          },
+          "n": 50
+        },
+        "retain": {
+          "feature_mse": 0.04276721552014351,
+          "judge_aggregate": 0.7954545454545455,
+          "judge_on_deleted_factor": 1.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 1.0,
+            "orientation": 0.7164502164502164,
+            "scale": 0.2878787878787879,
+            "shape": 0.7683982683982684,
+            "wall_hue": 1.0
+          },
+          "n": 462
+        }
+      },
+      "wall_clock_s": 69.54738593101501
+    },
+    "table_edit_mean_substitution": {
+      "refit_rows": 0,
+      "role": "the cheap O(D) alternative: replace the deleted value's prototype with the global mean, touching nothing else",
+      "scores": {
+        "forget": {
+          "feature_mse": 0.07115203887224197,
+          "judge_aggregate": 0.62,
+          "judge_on_deleted_factor": 0.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 0.0,
+            "orientation": 0.8,
+            "scale": 0.22,
+            "shape": 0.7,
+            "wall_hue": 1.0
+          },
+          "n": 50
+        },
+        "retain": {
+          "feature_mse": 0.047404106706380844,
+          "judge_aggregate": 0.801948051948052,
+          "judge_on_deleted_factor": 1.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 1.0,
+            "orientation": 0.8268398268398268,
+            "scale": 0.25757575757575757,
+            "shape": 0.7272727272727273,
+            "wall_hue": 1.0
+          },
+          "n": 462
+        }
+      },
+      "wall_clock_s": 0.0
+    },
+    "table_full_pool": {
+      "refit_rows": 32256,
+      "role": "the arm before any deletion - the reference both methods move from",
+      "scores": {
+        "forget": {
+          "feature_mse": 0.040818143635988235,
+          "judge_aggregate": 0.8166666666666668,
+          "judge_on_deleted_factor": 1.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 1.0,
+            "orientation": 0.78,
+            "scale": 0.32,
+            "shape": 0.8,
+            "wall_hue": 1.0
+          },
+          "n": 50
+        },
+        "retain": {
+          "feature_mse": 0.047404106706380844,
+          "judge_aggregate": 0.801948051948052,
+          "judge_on_deleted_factor": 1.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 1.0,
+            "orientation": 0.8268398268398268,
+            "scale": 0.25757575757575757,
+            "shape": 0.7272727272727273,
+            "wall_hue": 1.0
+          },
+          "n": 462
+        }
+      },
+      "wall_clock_s": 18.743512630462646
+    },
+    "table_retrain_from_scratch": {
+      "n_per_value_after": [
+        3236,
+        3223,
+        3164,
+        3243,
+        3312,
+        0,
+        3324,
+        3114,
+        3272,
+        3211
+      ],
+      "refit_rows": 29099,
+      "role": "GOLD STANDARD: the value was never in the pool",
+      "scores": {
+        "forget": {
+          "feature_mse": 0.08129171282052994,
+          "judge_aggregate": 0.62,
+          "judge_on_deleted_factor": 0.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 0.0,
+            "orientation": 0.82,
+            "scale": 0.24,
+            "shape": 0.66,
+            "wall_hue": 1.0
+          },
+          "n": 50
+        },
+        "retain": {
+          "feature_mse": 0.0472906269133091,
+          "judge_aggregate": 0.8048340548340548,
+          "judge_on_deleted_factor": 1.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 1.0,
+            "orientation": 0.8333333333333334,
+            "scale": 0.2662337662337662,
+            "shape": 0.7294372294372294,
+            "wall_hue": 1.0
+          },
+          "n": 462
+        }
+      },
+      "wall_clock_s": 3.0811245441436768
+    },
+    "transformer_retrain_from_scratch": {
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.04828402400016785,
+        "loss_first": 0.8517853617668152,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 2260,
+        "weight_decay": 0.0
+      },
+      "param_count": 119858,
+      "param_error": 0.00904162176724138,
+      "refit_rows": 29099,
+      "role": "GOLD STANDARD for the transformer rival",
+      "scores": {
+        "forget": {
+          "feature_mse": 0.08577827364206314,
+          "judge_aggregate": 0.5033333333333333,
+          "judge_on_deleted_factor": 0.0,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 0.0,
+            "orientation": 0.34,
+            "scale": 0.16,
+            "shape": 0.52,
+            "wall_hue": 1.0
+          },
+          "n": 50
+        },
+        "retain": {
+          "feature_mse": 0.04974665865302086,
+          "judge_aggregate": 0.726911976911977,
+          "judge_on_deleted_factor": 0.9978354978354979,
+          "judge_per_factor": {
+            "floor_hue": 1.0,
+            "object_hue": 0.9978354978354979,
+            "orientation": 0.3658008658008658,
+            "scale": 0.3225108225108225,
+            "shape": 0.6753246753246753,
+            "wall_hue": 1.0
+          },
+          "n": 462
+        }
+      },
+      "wall_clock_s": 178.22693538665771
+    }
+  },
+  "partition": {
+    "eval_source": "the validation rows",
+    "factor": "object_hue",
+    "factor_index": 2,
+    "n_dropped": 3157,
+    "n_fit_after": 29099,
+    "n_fit_before": 32256,
+    "value": 0.5,
+    "value_index": 5
+  },
+  "scope": "SCOPE OF THE DELETION COMPARATOR. The value is held out of the ARM'S FIT POOL only, not from the encoder, the decoder or the judge, which are frozen and were fitted on a split containing every hue. 'Never trained on' means the arm never fitted a row carrying that value. The decoder can still render it and the judge can still recognise it, which is what makes the comparison scorable at all."
+}

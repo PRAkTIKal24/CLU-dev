@@ -1,0 +1,47 @@
+% pw1-plot-shapes -- captions for the figures this branch changed (PW-1 items 10, 11, 12; items 2, 3, 13
+% vocabulary). One \figslot per figure, keyed by its \label, in the draft's own macro so the installing
+% pass can replace the live slot whole. Every number carries its source in a % SRC comment (evidence
+% root ~/clu/evidence/outputs/). fig_headline_steps has no slot in the paper (w22 Ruling 2) and gets
+% no caption here; its image was brought into the vocabulary all the same.
+
+% ---------------------------------------------------------------- fig:ladder (fig_ladder, item 10)
+\figslot{fig_ladder}{\textbf{The ladder at $\Kstar$ against data-matched baselines, 3 seeds.} Distinct
+valid novel tuples per held-out combination against $n$, the number of factors jointly held out. The
+n-CLU and the four baselines (MLP, LSTM, Transformer, Continuous MLP) are fitted on each rung's own % SRC: w20-shapes-data-matched/FINDINGS.md (Caption line: "every rung's store AND data-matched rivals fit on the rung's own **131,072**-row pool")
+131,072-row pool, the same rows for every model. Each baseline is drawn, per seed, at the fit carried % SRC: w20-shapes-data-matched/SHAPES-MATCHED.json ladder.<n>.convergence_evidence.<fam>.<seed>.<declared|tenx>.n_fit_rows == 131072 (asserted in the build)
+by the convergence check: 20,480 optimiser steps, or $10\times$ training steps (204,800) where the % SRC: SHAPES-MATCHED.json ladder.<n>.convergence_evidence.<fam>.<seed>.declared.optimizer_steps == 20480, .tenx.optimizer_steps == 204800 (asserted); carried fit = ladder.<n>.P3_margin.store_K32_n131072.per_family.<fam>.<seed>.carried_rival
+20,480-step fit had not converged (filled markers). Open markers are the seeds (0, 1, 2); the line is % SRC: w20-shapes-data-matched/FINDINGS.md l.73-74 ("Where P1 failed, the TENX fit carries it", across the line break)
+their mean. The lookup table is the floor. For $n\ge3$ the rungs probe the same 120 held-out % SRC: w12-composition-ladder/FINDINGS.md l.51 ("Those four rungs probe the *identical* 120 corners")
+combinations, so the horizontal axis is a fit-pool coverage axis, not a depth axis
+(Tab.~\ref{tab:ladder}).}{fig:ladder}
+
+% ---------------------------------------------------------------- fig:crossover (fig_crossover, item 11)
+\figslot{fig_crossover}{\textbf{The $K$-curve, validation, 3 seeds at every $K$.} (a)~Validation
+composition against $K$: the n-CLU's mean over seeds 0, 1 and 2 with a band of one seed standard % SRC: w15-crossover-seeds/CROSSOVER-3SEED.json per_K.<K>.val_composition (n_seeds == 3 at every K, asserted)
+deviation, each seed marked, and the highest of the four controls (landscape removed, landscape
+shuffled, shuffled across wells, random atoms). (b)~The memory footprint in its four parts (atoms, % SRC: w15-crossover-seeds/CROSSOVER-3SEED.json per_K.<K>.control_gate (the four keys)
+covariance and count, address book, coupling and hole table; symmetric-triangle convention), the
+seed mean stacked by part and summed, with the seed standard deviation of the total; 524,288~B is a % SRC: CROSSOVER-3SEED.json per_K.32.per_seed.0.ledger_four_part.reference_pin_bytes == 524288
+reference line, not a limit. Three seeds do not resolve the validation plateau % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
+(Sec.~\ref{sec:shapes}); the values are those of Tab.~\ref{tab:kcurve3}.}{fig:crossover}
+
+% ---------------------------------------------------------------- fig:deletion (fig_deletion, items 12, 13)
+\figslot{fig_deletion}{\textbf{Deletion on the single design at $\Kstar$, rows 3--4, test, fit pool
+131,072 rows, seeds 0, 1 and 2.} Deleting a value (red), a conjunction (red sphere) or a random 1\% % SRC: w20-shapes-data-matched/SHAPES-MATCHED.json deletion_matched.per_scope.{value,conjunction_live,item}
+of items downdates the n-CLU's content, downdates the address book's statistic and refits the book
+from it, and punches the hole (Tab.~\ref{tab:del}). (a)~Composition on the surviving held-out
+combinations (89 for the value, 109 for the others), after minus before, per seed, with its 95\% % SRC: SHAPES-MATCHED.json deletion_matched.per_scope.<scope>.store.<seed>.d.n_survivor_corners (89 value; 109 conjunction_live, item)
+bootstrap interval. The value deletion moves the n-CLU by under one tuple per held-out combination;
+the red sphere deletion lowers it by 6.13, 6.43 and 6.30 on seeds 0, 1 and 2; deleting a random 1\% % SRC: w20-shapes-data-matched/FINDINGS.md l.35 ("−6.13 / −6.43 / −6.30 on all 109 corners")
+of items, the control for refit instability, moves it by 0.02, 0.11 and 0.01. The n-CLU after % SRC: w20-shapes-data-matched/FINDINGS.md l.165 ("nothing (−0.02 / −0.11 / −0.01)")
+deletion and an n-CLU refit without the rows compose identically on every surviving combination. % SRC: SHAPES-MATCHED.json ...store.<seed>.d.downdate_minus_refit_without_pipeline.mean_paired_delta == 0.0, corners_tied == n_survivor_corners (asserted)
+(b)~The n-CLU after deletion minus each baseline retrained without the same rows of the same pool,
+with 95\% intervals: above zero for every baseline and seed on the value and item deletions; on red % SRC: SHAPES-MATCHED.json deletion_matched.per_scope.<scope>.rivals.<fam>.<seed>.ci95 (lower bound > 0 on value and item, all 24)
+sphere the interval includes zero against the MLP at seeds 1 and 2 and against the LSTM at seed 2.}{fig:deletion} % SRC: SHAPES-MATCHED.json ...conjunction_live.rivals.mlp.1.ci95 [-0.936, 6.018], mlp.2 [-0.505, 5.670], lstm.2 [-0.872, 5.817]
+
+% ---------------------------------------------------------------- fig:adapt (fig_encoder_adapt, items 2, 3)
+% The live caption needs no number change; this wording only swaps "single design" / "best learned
+% baseline" for the n-CLU / baseline vocabulary the image now uses.
+\figslot{fig_encoder_adapt}{\textbf{Encoder adaptation margins.} The n-CLU minus the 180k-parameter % SRC: w13-encoder-adapt/CROSS-ARM.md (mlp_180k on every leg); w13-encoder-adapt/FINDINGS.md l.71 (178,952 params, all nine legs)
+MLP baseline, in novel tuples per held-out combination, per seed at $\Kstar$, with the frozen encoder,
+an adapter and an anchor (Tab.~\ref{tab:adapt}).}{fig:adapt}

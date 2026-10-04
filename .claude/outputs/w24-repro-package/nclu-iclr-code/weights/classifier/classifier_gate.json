@@ -1,0 +1,51 @@
+{
+ "decoder": {
+  "param_hash_per_seed": {
+   "0": "01ef91f75eeaae7be8d83a220c9cc6629120345357da9033db22375c278ab196",
+   "1": "001011bc603a7cb914cfaa592f43087685727431902ffc133755de30dbb21e4f",
+   "2": "2d7eea75add770441fcd0068ffc7a3dcc0b02cd16d6a31b3e095f47b64aa2455"
+  },
+  "recipe": "v1_capacity_schedule",
+  "source": "winner"
+ },
+ "floor": 0.95,
+ "gate": "PASS",
+ "mean": 1.0,
+ "min": 1.0,
+ "n_seeds": 3,
+ "n_seeds_requested": 3,
+ "no_leak": {
+  "n_decoder_renders_in_training": 0,
+  "n_holdout_images_in_training": 0,
+  "per_seed_holdout_excluded": {
+   "0": 72,
+   "1": 72,
+   "2": 72
+  },
+  "per_seed_render_rows_checked": {
+   "0": 64,
+   "1": 64,
+   "2": 64
+  }
+ },
+ "note": "the external classifier can read real held-out-combination images in the corner, so a low number on the decoder's renders is the decoder's, not the instrument's",
+ "per_seed": {
+  "0": 1.0,
+  "1": 1.0,
+  "2": 1.0
+ },
+ "probe_companion_on_real": {
+  "mean": 1.0,
+  "n": 3,
+  "per_seed": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "std": 0.0
+ },
+ "rule": "PASS iff EVERY seed >= floor (the mean is reported, not read)",
+ "seeds_not_run": [],
+ "statistic": "in-corner shape balanced accuracy on REAL held-out images",
+ "std": 0.0
+}

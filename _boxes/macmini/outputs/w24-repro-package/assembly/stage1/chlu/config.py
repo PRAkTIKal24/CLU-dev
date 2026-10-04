@@ -1,0 +1,5526 @@
+"""
+Central configuration management for CHLU.
+
+This module defines all configurable parameters using dataclasses,
+providing type safety and defaults for all experiments, training, and models.
+"""
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, List, Optional
+import yaml
+@dataclass
+class ModelConfig:
+    """Model architecture parameters."""
+
+    hidden_dim: int = 64
+    rest_mass: float = 1.0
+    speed_of_causality: float = 1.0
+    log_mass_init_scale: float = 0.1
+
+
+@dataclass
+class TrainingConfig:
+    """Training hyperparameters for both dynamics and generative training."""
+
+    # Common parameters
+    epochs: int = 1000
+    learning_rate: float = 1e-3
+    batch_size: int = 64
+    dt: float = 0.05
+    buffer_capacity: int = 10000
+
+    # Dynamics training (Experiments A & B)
+    lyapunov_lambda: float = 0.01
+    # Penalty on the step-Jacobian log singular values (local Lyapunov
+    # exponents): "max" (max_i log sigma_i, chaos-relevant, default), "sq"
+    # (sum_i (log sigma_i)^2), "pos" (sum_i max(0, log sigma_i)), "none"
+    # (disabled), or "legacy_degenerate" (mean_i log sigma_i — provably
+    # theta-independent, identically 0.5*ln(1-gamma); reproduction only,
+    # see F5 Prop-5).
+    lyapunov_penalty: str = "max"
+    sleep_steps: int = 500
+    clamp_strength: float = 1000.0
+    clamp_ramp: float = 0.5
+    sleep_frequency: int = 5
+    # If True, evolved sleep states are written back into the replay buffer at
+    # their sampled indices (true PCD, mirrors train_generative). Default False
+    # preserves the current Exp A/B behavior: CD with fresh random negatives.
+    persistent_sleep_buffer: bool = False
+    # Learning-rate multiplier for the inertial-mass parameters (log_mass leaves
+    # of every unit): the optimizer runs those leaves at learning_rate *
+    # mass_lr_mult on their own Adam slot (optax.multi_transform), the rest at
+    # learning_rate. Motivation (critique P5/G4): three corroborations report
+    # that learned M never differentiates into a hierarchy ("designed-in or
+    # induced" doctrine), but log_mass was never given its own lr — while the
+    # gamma_phi(q) two-timescale work proved this exact class of q-space-adjacent
+    # parameter cannot move at the base Adam lr. Default 1.0 = bit-compatible
+    # (log_mass shares the base slot, identical to plain optax.adam); a lattice
+    # of units shares one multiplier. Inert for kinetic_mode="newtonian_identity"
+    # (H never reads log_mass => zero gradient => zero Adam update at any lr).
+    mass_lr_mult: float = 1.0
+    # V(data)-energy anchor (sleep-erosion cure; anchor-robustness P11). Adds a
+    # wake term lambda * (mean_i V(anchor_i) - target)^2 to the loss, where the
+    # anchor points are the data q's at the window start (data[:, 0, :dim]) and
+    # target = the epoch-0 mean V(anchor) captured from the initial model. This
+    # PINS the potential's value on the data manifold, preventing the wake-sleep
+    # CD sleep phase from inverting a DESIGNED degenerate vacuum along its flat
+    # (Goldstone) direction — the failure the wake MSE cannot see (handover
+    # §7.14 / anchor-robustness). Envelope (exp-d SO(2), CD, f5/s500, 3000 ep,
+    # 5 seeds): lambda=0 destroys the vacuum 5/5; lambda in {1,10,100} hold it;
+    # lambda=100 is seed-bulletproof (r*=0.911+-0.016) at ~35x wake-MSE cost,
+    # lambda~=10 gives the strongest noise rejection but 1/5 seeds can collapse.
+    # Default 0.0 = OFF = bit-compatible with all prior runs (term not added).
+    # Orthogonal to volume conservation: does NOT rescue a non-symplectic vacuum.
+    anchor_data_energy_lambda: float = 0.0
+
+    # Generative training (Experiment C)
+    reinit_prob: float = 0.25  # Probability of resetting chains to noise
+    k_steps: int = 100  # Negative phase evolution steps
+    clamp_outputs: bool = True  # Enable hard pixel clamping to [-1, 1]
+    energy_weight: float = 1.0  # Weight for contrastive energy loss
+    input_noise_sigma: float = 0.05  # Gaussian noise std for real data (denoising EBM)
+
+    # Friction (used differently: 0.0 for dynamics, 0.1 for generative)
+    sleep_friction: float = 0.0
+
+    # Langevin dynamics (temperature-based noise for exploration)
+    sleep_temperature: float = 0.5  # Temperature for sleep phase (0.0 = deterministic)
+    # Langevin noise scale: "legacy" = sqrt(2*gamma*T*dt) (historical; violates
+    # the discrete FDT — per-mode effective temperature 2*dt*T/((2-gamma)*M_eff),
+    # F5 Prop-9) or "fdt" = per-mode sigma_i* = sqrt(M_eff_i*T*gamma*(2-gamma)).
+    #
+    # "fdt" is the exact discrete fluctuation-dissipation noise — temperatures
+    # in energy units, stationary law exp(-H/T) — **only for the Newtonian
+    # kinetic modes** (newtonian_identity / newtonian_learned). In
+    # kinetic_mode="relativistic" NO sigma gives a Gibbs invariant (CM-17):
+    # the coded O-step p<-(1-gamma)p+sigma*xi is a linear OU recursion whose
+    # stationary momentum law is Gaussian, while relativistic Gibbs demands
+    # Maxwell-Juttner. Root cause: the Gibbs-preserving underdamped Langevin
+    # damps the *velocity* grad_p T, this code damps *p* — the same thing iff
+    # T is Newtonian (Gamma = gamma*M). The defect is governed by d*Theta
+    # (Theta = T/(m0*c^2)), NOT Theta alone (see CHLU.gibbs_defect_parameter);
+    # Exp-C runs at d=784, Theta=1 => d*Theta=784. Raising c/rest_mass is NOT a
+    # free fix at that d; the exact fix is langevin_noise="fdt_relativistic"
+    # (latent-mass thermostat). CHLU.stochastic_step warns (does not raise) on
+    # relativistic+fdt.
+    #
+    # Default "legacy" preserves behavior for existing checkpoints/schedules.
+    # NOTE: under "legacy" T is NOT in energy units (dt and M_eff are absorbed)
+    # and there is no Gibbs invariant in any kinetic mode — any temperature
+    # claim must state this flag.
+    langevin_noise: str = "legacy"
+
+    # --- Friction field gamma_phi(q) (trash regions; F5 Def-5/Prop-11) ---
+    # "none" (default; scalar-gamma damping, bit-compatible with all prior
+    # behavior), "fixed" (hand-placed frozen holes — oracle/control arms),
+    # "learned" (contrastively trained holes: wake protects data, sleep damns
+    # hallucinations — brainstorm Thread 1).
+    friction_field: str = "none"
+    friction_field_k: int = 1  # number of holes K
+    friction_field_gamma_max: float = 0.5  # strict cap: gamma_phi in [0, gamma_max)
+    friction_field_width: float = 0.25  # horizon width w
+    # Horizon gate shape: "sigmoid" (default; smooth, infinite tail) or
+    # "compact" (smoothstep with an EXACT hard cutoff at each hole radius r_k —
+    # gamma_phi identically 0 beyond r_k, closing the sigmoid tail-leakage
+    # retention gap seen for learned arms in the S1 pilot; gamma-field-build
+    # follow-up 2).
+    friction_field_gate: str = "sigmoid"
+    friction_field_init_radius: float = 1.0  # hole radius at init ("learned")
+    friction_field_init_strength: float = 0.15  # hole strength gamma_k at init
+    friction_field_init_center_scale: float = 1.0  # centers ~ N(0, scale^2)
+    # Hand-placed centers for "fixed" mode: list of [dim]-lists; None -> origin
+    friction_field_fixed_centers: Optional[List[List[float]]] = None
+    friction_field_fixed_radius: float = 0.6  # hole radius for "fixed"
+    friction_field_fixed_strength: float = 0.3  # hole strength for "fixed"
+    # Contrastive-training weights (only active when the model carries a field)
+    friction_field_protect_lambda: float = 1.0  # wake: push gamma_phi(q_data) down
+    friction_field_hallu_lambda: float = 1.0  # sleep: push gamma_phi(q_hallu) up
+    # Which negatives count as hallucinations (Thread-1 says "persistent"):
+    # "energy" (default) weights each evolved negative by how far its energy
+    # sits above the current wake window's band, sigmoid((H - max_H_data)/std)
+    # — CD negatives that converged into the data band get ~no friction vote
+    # (ungated, they drag friction onto the data manifold, fighting the
+    # protection term; observed in the S1 smoke run). "all" = ungated.
+    friction_field_hallu_gate: str = "energy"
+    # Optional C1 ablation (mo-deep-read §5): nudge gamma_k -> 2*dt*mu(c_k),
+    # the critical-damping forgetting optimum. 0.0 = OFF (measure, don't force).
+    friction_field_c1_lambda: float = 0.0
+    # Learning rate for the field's own parameters (two-timescale training):
+    # hole centers live in q-space and must travel O(units), but Adam caps
+    # parameter velocity at ~lr/step — at the base lr the placement cannot
+    # move at pilot scale (observed in the S1 smoke run). None = base lr.
+    friction_field_lr: Optional[float] = 1e-2
+    # --- Adaptive-K (gamma-field-build follow-up 1) ---
+    # When True, the sleep phase spawns a new hole where persistent
+    # (energy-gated) hallucination density accumulates beyond a threshold, and
+    # prunes holes whose strength decays below a floor. Fixes the S1 finding
+    # that a lone sigmoid hole far from all negatives gets no placement
+    # gradient (gradient locality => locus discovery 2/6). Default False keeps
+    # the fixed-K behavior. Structural edits reset the optimizer state.
+    friction_field_adaptive_k: bool = False
+    friction_field_max_k: int = 8  # hard cap on spawned holes
+    # Decayed uncovered energy-gated weight at which to spawn (per sleep event)
+    friction_field_spawn_threshold: float = 5.0
+    friction_field_spawn_min_dist: float = 0.5  # min distance from existing holes
+    friction_field_spawn_radius: float = 0.5  # radius of a spawned hole
+    friction_field_spawn_strength: float = 0.15  # strength gamma_k of a spawned hole
+    friction_field_prune_floor: float = 0.02  # prune holes with gamma_k below this
+
+
+@dataclass
+class ExperimentAConfig:
+    """Configuration for Experiment A: Stability Test."""
+
+    # Cycle-based parameters for geometry learning
+    dt: float = 0.05  # Time step
+    n_train_cycles: int = 3  # Train on 3 full cycles
+    n_test_cycles: int = 50  # Test on 50 full cycles
+    window_size: int = 64  # Window size for sub-sequence sampling
+    n_final_cycles_to_plot: int = 2  # Number of final cycles to show in plots
+    train_epochs: int = 1000
+    use_pretrained: bool = False  # Load pre-trained models if available
+    kinetic_energy_mode: str = "newtonian_identity"  # KE calculation mode: newtonian_identity, newtonian_learned, relativistic
+    # Note: chlu_dim is always 2 for Figure-8 (not configurable)
+    node_dim: int = 4
+    hidden_dim: int = 64
+
+    @property
+    def steps_per_cycle(self) -> int:
+        """Number of steps per cycle (period = 2π)."""
+        import math
+
+        return int(2 * math.pi / self.dt)
+
+    @property
+    def train_steps(self) -> int:
+        """Total training steps."""
+        return self.n_train_cycles * self.steps_per_cycle
+
+    @property
+    def test_steps(self) -> int:
+        """Total test steps."""
+        return self.n_test_cycles * self.steps_per_cycle
+
+
+@dataclass
+class ExperimentBConfig:
+    """Configuration for Experiment B: Noise Rejection."""
+
+    n_waves: int = 100
+    steps: int = 1000
+    train_epochs: int = 1000
+    use_pretrained: bool = False  # Load pre-trained models if available
+    kinetic_energy_mode: str = "newtonian_learned"  # KE calculation mode
+    sleep_friction: float = 0.2
+    friction_ramp: float = 0.05
+    use_governor: bool = True  # Use energy-based governor for dynamic friction
+    governor_sensitivity: float = 0.95  # Controls correction speed for governor
+    dt: float = 0.05
+    sigma_min: float = 0.1
+    sigma_max: float = 1.0
+    n_sigma: int = 10
+    chlu_dim: int = 1
+    node_dim: int = 2
+    hidden_dim: int = 64
+
+
+@dataclass
+class ExperimentCConfig:
+    """Configuration for Experiment C: Dreaming/Generation."""
+
+    pca_dim: int = 784
+    train_epochs: int = 500
+    use_pretrained: bool = False  # Load pre-trained models if available
+    kinetic_energy_mode: str = "relativistic"  # KE calculation mode
+    potential_type: str = "conv"  # Potential network type: 'mlp', 'deep_mlp', 'conv'
+    n_samples: int = 10000
+    dream_steps: int = 1000
+    friction: float = 0.3
+    dt: float = 0.05
+    n_dreams: int = 64
+    hidden_dim: int = 1024
+    p_train_scale: float = 0.1
+    q_noise_scale: float = 1.0
+    p_noise_scale: float = 0.1
+    snapshot_steps: List[int] = field(default_factory=lambda: [0, 200, 400, 600, 800])
+
+    # Langevin dynamics parameters
+    temperature: float = 1.0  # Base temperature for dreaming (0.0 = deterministic)
+    temperature_annealing: bool = True  # Enable temperature annealing (cooling)
+    temperature_start: float = 1.0  # Starting temperature for annealing
+    temperature_end: float = 0.01  # Ending temperature for annealing
+    annealing_schedule: str = (
+        "exponential"  # Annealing schedule type: 'exponential' or 'linear'
+    )
+
+    # Initialization mode parameters
+    init_mode: str = "random"  # Initialization mode: 'random' or 'centroid'
+    centroid_noise_scale: float = (
+        0.5  # Gaussian perturbation scale when using centroid init
+    )
+
+
+@dataclass
+class ExperimentDConfig:
+    """Configuration for Experiment D: SO(2) Goldstone memory (V2).
+
+    Measures the F5 §3.3–§3.4 mode-budget predictions on a CLU with a
+    designed SO(2) channel over coordinates (0, 1): the latch, the half-life
+    law, Noether-charge decay, and kinetic isotropy. Nomenclature per F5
+    Def-2: inertial mass M vs spectral mass mu — never "mass" unqualified.
+    """
+
+    dim: int = 4  # 2 channel dims + (dim-2) curved spectator dims
+    hidden_dim: int = 64
+    # Default lowered 1000 -> 150 after v2-full-runs Finding 0 (handover §7.14):
+    # at 1000 epochs the wake–sleep sleep phase EROSES the designed SO(2)
+    # vacuum (8/8 seeds: r*->0, the data ring inverts into a local MAXIMUM,
+    # ring depth +0.060@150 -> -0.047@1000 with inversion between 300–600 ep).
+    # 150 ep is the engineer-validated regime where the designed vacuum is
+    # intact. Set sleep_mode="off" for the wake-only, data-pinned regime
+    # (r*=1.0000 through 1000 ep) if you need longer training.
+    train_epochs: int = 150
+    # Sleep-phase switch for the erosion study. "on" (default) = standard
+    # wake–sleep contrastive training. "off" = wake-only (sleep_frequency->inf):
+    # the vacuum is data-pinned and does not erode (v2-full-runs Finding 0).
+    sleep_mode: str = "on"
+    use_pretrained: bool = False
+    kinetic_energy_mode: str = (
+        "newtonian_learned"  # learned M => isotropy falsifiable is live
+    )
+    potential_type: str = (
+        "so2_invariant"  # "so2_invariant" (designed) or "mlp" (emergent)
+    )
+    tie_channel_mass: bool = (
+        True  # kinetic isotropy (F5 §4.1); False = broken-isotropy switch
+    )
+    tilt_delta: float = (
+        0.0  # explicit breaking delta*cos(n*theta) (GMOR probe, F5 §3.3c)
+    )
+    tilt_n: int = 1
+    # Linear AMBIENT spurion -delta*(u.q) along the channel direction u (the
+    # ChPT quark-mass term). Unlike the angular tilt above it lets the vacuum
+    # radius r* run with delta, resolving mu^2, F^2 = M_ch*r*^2 and the
+    # condensate Sigma = r* independently => GMOR proper (mu^2 F^2 = delta*Sigma
+    # exactly). 0.0 (default) = no spurion, behavior unchanged.
+    spurion_delta: float = 0.0
+    spurion_angle: float = 0.0  # angle (rad) of u in the channel plane
+    dt: float = 0.05
+
+    # Dataset: constant trajectories on a circle of attractors (SO(2)-degenerate vacuum)
+    n_points: int = 256
+    seq_len: int = 65  # training window = seq_len - 1
+    circle_radius: float = 1.0
+
+    # Measurement harness defaults
+    settle_gamma: float = 0.1
+    settle_steps: int = 2000
+    probe_gamma: float = 0.05
+    probe_steps: int = 4000
+    probe_kick: float = 0.1
+
+
+@dataclass
+class ExperimentV1GateConfig:
+    """Configuration for the V1 L0 gate experiment: boost-retry cascade on MQAR.
+
+    An energy-based associative memory (CHLU trained with generative PCD on a
+    per-episode MQAR dictionary) is queried by governed relaxation; failed
+    retrievals are retried with mass-weighted symplectic squeezes S^(M)
+    (F5 Def-6/7). Measures Q1 (residual-energy-vs-correctness calibration)
+    and Q2 (boost-retry recovery vs matched-compute controls).
+    """
+
+    # --- MQAR task (Zoology-legible knobs) ---
+    vocab_size: int = 256  # scaled down from Zoology's 8192 for small CLU dims
+    embed_dim: int = 16  # per-token embedding; CLU dim = 2 * embed_dim (key||value)
+    # embedding norm scale (entries ~ scale/sqrt(embed_dim)); default 2.0 puts
+    # entries at ~0.5 so data lives at the scale train_generative's negative
+    # chains explore (buffer N(0,1), re-init U(-1,1), clamp [-1,1])
+    embed_scale: float = 2.0
+    # Difficulty grid: list of [seq_len N, num_kv_pairs] levels
+    difficulty_levels: List[List[int]] = field(
+        default_factory=lambda: [[64, 4], [64, 8], [128, 16], [128, 32], [256, 64]]
+    )
+    min_trials_per_level: int = 64  # episodes are added until this many queries
+    max_episodes_per_level: int = 8
+    gap_distribution: str = "uniform"  # or "powerlaw" ("Based"-style gaps)
+    powerlaw_alpha: float = 0.01
+
+    # --- memory model & PCD training (per-episode "write") ---
+    kinetic_energy_mode: str = "relativistic"
+    potential_type: str = "mlp"  # coercive potential (confinement) — see F5 Prop-10
+    hidden_dim: int = 128
+    train_epochs: int = 500
+    train_lr: float = 1e-3
+    train_batch_size: int = 32
+    train_k_steps: int = 50
+    train_buffer_capacity: int = 256
+    train_friction: float = 0.3
+    train_temperature: float = 0.3
+    train_input_noise_sigma: float = 0.05
+    use_pretrained: bool = False
+
+    # --- retrieval / cascade (F5 Def-7, single shell) ---
+    # Cue-conditioned retrieval: freeze the key half (q_k = cue, p_k = 0) and
+    # relax only the value subspace — the standard associative-memory readout
+    # (Hopfield's setting); the frozen-coordinate map is the legitimate
+    # sub-system Hamiltonian dynamics for all three kinetic modes.
+    clamp_key: bool = True
+    dt: float = 0.05
+    relax_steps: int = 300  # base governed relaxation n0
+    retry_relax_steps: int = 150  # re-relaxation per line-search candidate
+    governor_sensitivity: float = 0.95
+    retry_budget: int = 3  # B
+    zeta_grid: List[float] = field(
+        default_factory=lambda: [-0.6, -0.3, -0.15, 0.15, 0.3, 0.6]
+    )
+    zeta_scale_per_retry: float = 1.5  # retry b uses zeta_grid * scale**b
+    n_tau: int = 9  # post-hoc tau sweep = this many quantiles of the residual
+
+    # --- baselines / comparison flags ---
+    compare_raw_squeeze: bool = True  # mass-blind S_zeta cascade (F5 says: flag only)
+    compare_noise_kick: bool = True  # random p-kick retries at matched energy injection
+    hopfield_beta: float = 20.0  # modern-Hopfield softmax inverse temperature
+
+    # --- v1-pivot: learned calibration head + escalation/abstention ---
+    # (exp_v1_calibration; Head decision 2026-07-07: squeeze retries PARKED,
+    #  escalation = staged governed relaxation on the gate run's cost ladder.)
+    calib_difficulty_levels: List[List[int]] = field(
+        default_factory=lambda: [[128, 16], [128, 24], [128, 32]]
+    )
+    calib_n_seeds: int = 5  # replicate seeds = project.seed + i
+    calib_min_trials_per_level: int = 128
+    calib_max_episodes_per_level: int = 8
+    # Write-time self-test probes: per stored key, jittered cues at these noise
+    # scales (cycled); plus impostor cues from unbound keys (label: wrong by
+    # definition — the memory holds no binding for them).
+    calib_probes_per_key: int = 8
+    calib_cue_noise_scales: List[float] = field(
+        default_factory=lambda: [0.05, 0.15, 0.3]
+    )
+    calib_n_impostors: int = 16
+    calib_features: str = "r_margin"  # deployed gate: "r" | "margin" | "r_margin"
+    calib_l2: float = 1.0  # ridge strength of the head fit
+    calib_fit_all_stages: bool = True  # fit on probe states at every ladder stage
+    # Escalation ladder: base relax_steps, then n_stages x stage_steps more
+    # (defaults reproduce the gate run's cost ladder 300/1200/2100/3000).
+    calib_n_stages: int = 3
+    calib_stage_steps: int = 900
+    calib_p_exit: float = 0.5  # learned-gate exit/abstain threshold on p_wrong
+    calib_n_policy_taus: int = 25  # swept-threshold points for compute curves
+    calib_risk_targets: List[float] = field(default_factory=lambda: [0.05, 0.10])
+    calib_ltt_delta: float = 0.1  # LTT confidence parameter
+
+    # --- v1-hopfield-stress: CLU-vs-Hopfield regime map (Head decision 1b) ---
+    # The v1-pivot run showed Hopfield is near-perfect (acc 0.983-1.0) on the
+    # vanilla MQAR at kv<=32, so the abstention head-to-head is unwinnable
+    # there. This block charts *where the trade actually lives* by stressing
+    # both systems and classifying each grid cell (Hopfield-dominant /
+    # comparable / CLU-gate-advantage). Two stress mechanics, both fair (CLU
+    # and Hopfield see the identical stressed cues/embeddings):
+    #   - eval_noise: Gaussian sigma added to the deployment query cue (memory
+    #     written from clean patterns; degrades retrieval, not storage).
+    #   - correlation: key/value embeddings pulled toward shared cluster
+    #     centroids (reduced separation = the classic Hopfield failure mode;
+    #     changes stored content -> the memory is retrained per correlation).
+    # Defaults are laptop-scale (pilot first; report runtimes).
+    # (N, kv) with N >= 3*kv (kv-block 2*kv + kv queries fit the sequence) AND
+    # kv < vocab_size/2 (distinct keys/values per half-vocab). To push kv past
+    # ~vocab_size/2 - 1 (127 at the default vocab), raise vocab_size too.
+    regime_capacity_levels: List[List[int]] = field(
+        default_factory=lambda: [[128, 32], [256, 64], [384, 96]]
+    )
+    regime_stress_axis: str = "correlation"  # "correlation" | "eval_noise"
+    regime_stress_grid: List[float] = field(
+        default_factory=lambda: [0.0, 0.3, 0.6, 0.9]
+    )
+    regime_n_seeds: int = 3
+    regime_episodes_per_cell: int = 1  # episodes per (capacity, stress, seed)
+    regime_n_clusters: int = 8  # centroids for the correlated-embedding stress
+    # applied deployment cue noise when the stress axis is NOT eval_noise
+    regime_base_eval_noise: float = 0.0
+    # applied key correlation when the stress axis is NOT correlation
+    regime_base_correlation: float = 0.0
+    # classification band: |delta| below this = "comparable" (acc & AURC units)
+    regime_comparable_margin: float = 0.03
+
+    # --- v1.1: gate stack on a Hopfield memory (exp_v1_hopfield_gate) ---
+    # The Hopfield memory is near-perfect on vanilla MQAR (v1-pivot), so the
+    # gate has nothing to rank; these apply a stress so it errs and the
+    # calibration-transfer / allocation / LTT metrics carry signal. Default 0
+    # = vanilla (degenerate, near-perfect). Correlation reuses the regime-map
+    # clustered-embedding stress; eval_noise adds Gaussian sigma to BOTH the
+    # self-test probe cues and the deployment cues (matched difficulty).
+    hopfield_gate_correlation: float = 0.0
+    hopfield_gate_eval_noise: float = 0.0
+
+
+@dataclass
+class ExperimentV1WormholeConfig:
+    """Configuration for the V1 wormhole-routing experiment (V1 third pillar).
+
+    A chain lattice of N CHLU associative-memory units (each an EBM over its
+    own KV subset). A query arrives at the query unit (unit 0); its answer is
+    either local (bound in unit 0) or distant (bound only in the archive unit,
+    N-1). An energy-gated sparse non-local edge (built on the lattice's smooth
+    coupling machinery) opens as a function of the LOCAL residual energy
+    R0 = H_0(settled) - floor_0: high R0 (local retrieval failed => the answer
+    is elsewhere) opens the wormhole. The open edge is a gated KEY-channel
+    spring that TRANSPORTS the query key to the archive's free key half; the
+    archive then relaxes to the matching stored pattern and the answer is read
+    at the *terminal* (archive) unit. Low R0 (local hit) keeps the gate closed
+    and reads unit 0. Mis-routing a local query (gate wrongly open) pulls the
+    archive to a cue it does not store => wrong, so gate selectivity has real
+    teeth (F5 §7.4 smooth gate; Def-7 escalation beyond one shell; squeezes
+    PARKED). Five arms: local-only / gated-wormhole / dense-always-open /
+    chain-multi-hop / calibrated-tau-gate.
+    """
+
+    # --- lattice / task ---
+    n_units_values: List[int] = field(default_factory=lambda: [4, 8])
+    embed_dim: int = 12  # per-token embedding; unit dim = 2 * embed_dim (key||value)
+    embed_scale: float = 2.0
+    vocab_size: int = 128
+    kv_per_unit: int = 3  # stored KV pairs per unit (units hold disjoint pairs)
+    n_seeds: int = 2  # replicate seeds = project.seed + i
+    trials_per_type: int = 48  # jittered queries per {local, distant} per (N, seed)
+    query_cue_noise: float = 0.05  # cue jitter (noisy queries => genuine statistics)
+
+    # --- memory model & PCD "write" (per unit) ---
+    kinetic_energy_mode: str = "relativistic"
+    potential_type: str = "mlp"  # coercive (confinement) — see F5 Prop-10
+    hidden_dim: int = 128
+    train_epochs: int = 400
+    train_lr: float = 1e-3
+    train_batch_size: int = 16
+    train_k_steps: int = 50
+    train_buffer_capacity: int = 128
+    train_friction: float = 0.3
+    train_temperature: float = 0.3
+    train_input_noise_sigma: float = 0.05
+
+    # --- retrieval / routing ---
+    dt: float = 0.05
+    relax_steps: int = 250  # local relaxation (phase 1; the routing signal R0)
+    route_steps: int = 250  # joint routed relaxation (phase 2)
+    governor_sensitivity: float = 0.95
+    kappa_wormhole: float = 2.0  # gated key-channel transport strength (direct edge)
+    kappa_chain: float = 2.0  # adjacent key-channel coupling (multi-hop substrate)
+    # Smooth energy gate g = sigmoid((z - gate_z_threshold)/gate_z_width),
+    # z = (R0 - median R0)/(IQR R0 + eps): a LABEL-FREE within-deployment
+    # normalization of the residual (the v1-l0-gate finding: raw R is not
+    # cross-model comparable). g -> 1 as R0 rises (local failure => route).
+    gate_z_threshold: float = 0.0
+    gate_z_width: float = 0.7
+    gate_route_threshold: float = 0.5  # route (and read the terminal) iff g > this
+
+    # --- calibrated tau-gate arm (Def-7 story minus squeezes) ---
+    calib_probes_per_key: int = 8
+    calib_cue_noise_scales: List[float] = field(
+        default_factory=lambda: [0.05, 0.15, 0.3]
+    )
+    calib_features: str = "r_margin"  # head input: "r" | "margin" | "r_margin"
+    calib_l2: float = 1.0
+    calib_p_route: float = 0.5  # route iff head.p_wrong(R0[,margin0]) > this
+    # Which units supply the impostor (route=True) probes when FITTING the
+    # deployed calibrated head (the impostor-composition study, item 4 of
+    # v1-router-baseline). At deployment the only DISTANT queries come from the
+    # archive (unit N-1), but the legacy head trains impostors from the whole
+    # non-local pool (units 1..N-1); as N grows that pool is dominated by
+    # non-archive units, shifting the route boundary and OVER-ROUTING local
+    # queries (measured local false-positive 53%). Options:
+    #   "all_others"    - units 1..N-1 (default; legacy, bit-compatible)
+    #   "archive_only"  - just the archive: matches the deployment distant source
+    #                     (the measured fix: local FP 53% -> 7%)
+    #   "neighbors_only"- units 1..N-2 (everything EXCEPT the archive; worst-case
+    #                     mismatch control)
+    impostor_policy: str = "all_others"
+
+    # --- learned-router-MLP arm (P9/V1.2: the boring physics-free baseline) ---
+    # A 2-layer MLP on the raw query CUE embedding (no energy, no relaxation) that
+    # decides route-or-not. Same sparsity budget as the gated wormhole (a binary
+    # route decision + the same direct edge on route); trained write-time on the
+    # same own-key/impostor probe set as the calibrated head, but consuming the
+    # embedding rather than the energy residual. The FLOPs baseline the energy
+    # gate must beat: it can SKIP phase-1 relaxation on routed queries (its
+    # decision needs no settle), unlike the residual-driven gates.
+    router_hidden_dim: int = 32  # MLP hidden width (parameter-matched, tiny)
+    router_epochs: int = 300  # Adam steps for the router fit
+    router_lr: float = 3e-3
+    router_l2: float = 1e-3  # weight decay on the router MLP
+    router_p_route: float = 0.5  # route iff sigmoid(mlp(cue)) > this
+
+    # --- workload realism (P9/V1.2): report cost/accuracy per local:nonlocal mix
+    # by reweighting the balanced per-query outcomes (each query is processed
+    # independently against a fixed calibration pool, so reweighting is exact).
+    workload_mixes: List[List[float]] = field(
+        default_factory=lambda: [[0.5, 0.5], [0.8, 0.2], [0.95, 0.05]]
+    )
+
+    # --- honest cost accounting (P9/V1.2): a FLOPs model replaces unit-steps ---
+    # FLOPs per potential value-and-grad eval ~ flops_grad_factor * MACs of the
+    # PotentialMLP (fwd MACs = dim*hidden + hidden*hidden + hidden); a Verlet step
+    # evaluates grad_H flops_verlet_grads times per active unit.
+    flops_grad_factor: float = 6.0  # fwd(2) + bwd(4) FLOP/MAC for a value-and-grad
+    flops_verlet_grads: float = 2.0  # grad_q H evals per velocity-Verlet step
+
+    # --- reference baseline ---
+    hopfield_beta: float = 20.0  # modern-Hopfield over the UNION of all patterns
+
+
+@dataclass
+class ExperimentLatticeConfig:
+    """Configuration for the CLU-lattice experiment (V3 first build, F5 §7).
+
+    A joint-Hamiltonian lattice of CHLU units (chlu.core.lattice.CLULattice):
+    position-only coupling on a declared edge list, one global Verlet step,
+    designed inertial-mass banding. The experiment measures the F5 §7.2
+    communication-pricing claim on a designed 2-unit SO(2) lattice (sync
+    timescale ∝ kappa_c^{-1/2}; relative-memory retention ∝ 1/kappa_c; shared
+    channel = exact latch at every kappa_c), runs N ∈ scaling_sizes chain
+    smoke checks (joint symplecticity, energy drift, wall-clock), a wormhole
+    gate smoke, and a small banded-vs-uniform training smoke.
+
+    Nomenclature per F5 Def-2: inertial mass M vs spectral mass mu.
+    """
+
+    # --- lattice / coupling knobs (build_lattice) ---
+    # "auto" = channel_spring for so2_invariant units (U(1)-preserving; the
+    # xy-lattice-theory P5 design rule), "spring" for every other potential
+    # type — so this default is behavior-identical to the old "spring" for
+    # every lattice this experiment builds (all use potential_type="mlp").
+    # Explicit: "spring" (kappa*||W_i q_i - W_j q_j||^2, learnable W),
+    # "channel_spring" (fixed identity-on-channel W: exact XY, J = 2 kappa r*^2),
+    # or "mlp".
+    coupling_type: str = "auto"
+    coupling_dim: int = 2
+    kappa_c: float = 0.05  # coupling strength for trained/smoke lattices
+    proj_init_scale: float = 0.1  # init scale of learnable spring projections W
+    # "random" (legacy; a generic W breaks the lattice's global U(1)) or
+    # "conformal" (W = 1_k at init, still trainable). Only used by "spring".
+    proj_init_mode: str = "random"
+    kinetic_energy_mode: str = "newtonian_learned"  # banding needs log_mass read
+    hidden_dim: int = 32
+    dt: float = 0.05
+
+    # --- pricing measurement (designed 2-unit SO(2) lattice; no training) ---
+    hat_lambda: float = 1.0  # Mexican-hat stiffness (radial mu^2 = 8*lam*f^2/M)
+    vacuum_radius: float = 1.0  # designed vacuum circle radius f
+    channel_inertia: float = 1.0  # designed channel inertial mass M (per unit)
+    kappa_sweep: List[float] = field(
+        default_factory=lambda: [0.003, 0.01, 0.03, 0.1, 0.3]
+    )
+    sync_delta0: float = 0.4  # initial relative angle for the sync-time probe
+    sync_max_steps: int = 4000  # gamma=0 rollout cap for first alignment
+    probe_gamma: float = 0.2  # overdamped probe friction (h* = 0.111)
+    probe_kick: float = 0.05  # canonical kick size for retention/latch probes
+    max_probe_steps: int = 24000  # retention rollout cap (smallest kappa is slowest)
+    latch_steps: int = 3000  # shared-channel latch probe length
+
+    # --- scaling smoke ---
+    scaling_sizes: List[int] = field(default_factory=lambda: [2, 4, 8])
+    scaling_steps: int = 2000  # energy-drift & wall-clock rollout length
+
+    # --- wormhole skeleton ---
+    wormhole_gate_threshold: float = 1.0  # gate opens for V_c below ~threshold
+    wormhole_gate_width: float = 0.25  # smooth gate width (energy units)
+    # "free_energy" (default) = -w*softplus((t-v)/w), the annealed free energy of
+    # the Ising gate; force = <sigma>*grad v, monotone & attractive. "mean_energy"
+    # = the legacy <sigma>*v, whose force reverses sign at v = 0.802 (t=1, w=0.25)
+    # — the wormhole repels its own endpoints. Legacy is kept, never defaulted.
+    gate_energy_mode: str = "free_energy"
+
+    # --- training smoke (2-unit banded vs uniform, single seed = indicative) ---
+    train_epochs: int = 300
+    use_pretrained: bool = False
+    train_n_traj: int = 64
+    train_seq_len: int = 256
+    train_window: int = 64
+    data_omegas: List[float] = field(default_factory=lambda: [0.5, 2.0])
+    data_masses: List[float] = field(default_factory=lambda: [4.0, 0.25])
+    data_radius: float = 1.0
+    banded_mass_scales: List[float] = field(default_factory=lambda: [4.0, 0.25])
+    train_kappa_c: float = 0.01  # small learnable coupling during training smoke
+    eval_steps: int = 255  # held-out rollout length for eval MSE
+
+
+@dataclass
+class ExperimentPaidAccessConfig:
+    """Configuration for the w7 paid-access battery (V1 pillar-4 gate).
+
+    The discriminating end-to-end test of intra-unit *access* mechanisms
+    (paid-access-theory §7.1-7.3): does a relativistic CLU's causal box
+    C_T (Prop-A2, half-width L_i = T*eps*c/sqrt(M_i)) gate reach exactly as
+    predicted, and do the paid mechanisms (squeeze cures escape, wormhole
+    cures reach) hold their certificates?
+
+    §7.1 multi-basin REACH task: a K-basin analytic potential with basin
+    distances d_k spanning below AND above L; arms = plain relax, S^(M)
+    squeeze (line-searched zeta), intra-unit wormhole (matched channel),
+    Newtonian-squeeze control (energy DOES buy reach), no-physics router
+    (CM-7), dense/throat-V discriminator. §7.2 latch transit. §7.3
+    certificates on every arm.
+
+    Mass banding is a PREREQUISITE (theory §3.3 reason 2): all squeeze arms
+    run with a designed band so S^(M) is directional (else the l0-gate
+    uniform-M ambiguity repeats). ``mass_band`` states it.
+    """
+
+    # --- geometry / physics ---
+    dim: int = 2  # small (2-4); channel = coords (0, 1)
+    c: float = 1.0  # speed of causality (relativistic cap c/sqrt(M))
+    rest_mass: float = 1.0  # m0
+    dt: float = 0.05  # Verlet step
+    reach_steps: int = 100  # T: rollout horizon that sets the causal box L
+    # (default band [4.0,0.25] => M0=4 => L = T*dt*c/sqrt(M0) = 100*0.05/2 = 2.5,
+    #  which sits mid-list in basin_distances so some d<L, some d>L.)
+    # Designed inertial-mass band applied to log_mass (softplus). The reach
+    # direction is coord 0; a LIGHT coord-0 mass gives a wide box, heavy the
+    # opposite — band = [M_light_dir_scale, M_other...] via softplus target.
+    mass_band: List[float] = field(default_factory=lambda: [4.0, 0.25])
+
+    # --- K-basin potential (analytic double/triple well along coord 0) ---
+    barrier_height: float = 1.0  # Delta V_b between adjacent basins
+    basin_curvature: float = 4.0  # quadratic stiffness inside each basin
+    # basin center distances d_k from the start basin, along coord 0. The
+    # experiment places basins at 0, +d_1, +d_2, ... and reports L so some
+    # d_k < L (reach OK) and some d_k > L (reach FAILS).
+    basin_distances: List[float] = field(
+        default_factory=lambda: [0.8, 1.6, 2.4, 3.2, 4.0, 5.0]
+    )
+
+    # --- governor / relaxation (fixed so plain relax provably cannot escape) ---
+    gamma: float = 0.1  # dissipation for plain relaxation
+    relax_steps: int = 400  # relaxation length after any injection
+    init_momentum: float = 1.2  # p0 along coord 0 (KE0 < Delta V_b by design)
+
+    # --- squeeze (line search over rapidity) ---
+    zeta_grid: List[float] = field(
+        default_factory=lambda: [0.0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0]
+    )
+
+    # --- wormhole channel (oracle placement; radii) ---
+    capture_radius: float = 0.35
+
+    # --- throat / dense-V discriminator ---
+    throat_depth: float = 1.5  # lowers the barrier between adjacent basins
+
+    # --- latch transit (§7.2) ---
+    latch_radius: float = 3.0  # vacuum-circle radius f for SO(2) sector
+    latch_momentum: float = 0.5  # p scale for the charge Q = p^T X q
+
+    # --- certificate payoff A: router latch erasure (§7.2b, referee F3.1) ---
+    # A cloud of incoming states inside the capture ball is pushed through each
+    # arm. The wormhole (canonical translation, det J = 1) is injective: it
+    # TRANSPORTS the spread of Q by the exact constant p^T X Delta. The
+    # no-physics router (q := exit, det J = 0) is non-injective: every incoming
+    # state exits with the same Q => the latch is ERASED (Var(Q_out) = 0).
+    payoff_latch_samples: int = 16  # incoming states drawn in the capture ball
+    payoff_capture_jitter: float = 0.3  # <= capture_radius; spread of incoming q
+
+    # --- certificate payoff B: coercive-exit BIBO (§7.4, theory issue 7) ---
+    # V(q) = 0.5*k*q0^2 - eps*q0^4 (+ transverse confinement): coercive only
+    # inside the component |q0| < x_b = sqrt(k/(4 eps)); barrier V_b =
+    # k^2/(16 eps). Exits are requested BOTH inside and outside that component.
+    # NOTE (why an energy-only test is not enough): V(4.0) < V_b even though
+    # 4.0 > x_b -- the receipt must test COMPONENT MEMBERSHIP, not just energy.
+    bibo_k: float = 1.0  # coercive curvature near the origin
+    bibo_quartic: float = 0.02  # -eps*q0^4 non-coercive tail => x_b = 3.536
+    bibo_exit_distances: List[float] = field(
+        default_factory=lambda: [1.0, 2.0, 3.0, 3.6, 4.0, 5.0]
+    )
+    bibo_init_momentum: float = 0.3  # p0 along coord 0 at the entrance
+    bibo_steps: int = 2000  # T; r* measured at T and 2T (growth test)
+    bibo_gamma: float = 0.02  # dissipation: bounded arms must settle
+    bibo_escape_radius: float = 20.0  # ||q|| beyond this counts as escaped
+    bibo_margin: float = 1e-3  # receipt safety margin on both tests
+
+    # --- landing criterion / seeds ---
+    landing_tol: float = 0.4  # |q0 - basin_center| < tol counts as landed
+    n_seeds: int = 5
+    seed0: int = 0
+    quick_seeds: int = 2
+    quick_distances: int = 3  # first N basin_distances in --quick
+
+
+@dataclass
+class ExperimentS1Config:
+    """Configuration for the S1 pilot: trash-region Pareto (gamma-field study).
+
+    Signal attractor (Figure-8 lemniscate, Exp-A machinery) + structured noise
+    injected from a localized off-attractor cluster. Arms: (i) global gamma
+    sweep, (ii) energy governor, (iii) learned gamma_phi (K in
+    ``learned_k_values``), (iv) fixed oracle hole at the known noise locus.
+    Metric: signal-retention vs noise-rejection Pareto (brainstorm Thread 1;
+    F5 Def-5/Prop-11; C1 comparison per mo-deep-read §5).
+    """
+
+    dt: float = 0.05
+    n_train_cycles: int = 3
+    window_size: int = 64
+    train_epochs: int = 500
+    hidden_dim: int = 64
+    kinetic_energy_mode: str = "newtonian_identity"  # match Exp-A defaults
+    use_pretrained: bool = False
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    sleep_steps: int = 100  # shorter sleep evolution than the global default
+
+    # Structured noise = the garbage source: a Gaussian cluster at a fixed
+    # off-attractor locus (known, so arm (iv) can place the oracle hole on it).
+    # Kept >~1.5 units off the lemniscate: sigmoid horizon tails leak friction
+    # onto the curve if the locus is closer (observed in the smoke run at
+    # [1.2, 1.2] — the oracle's own tail damped the signal orbit).
+    noise_center: List[float] = field(default_factory=lambda: [1.5, 1.5])
+    noise_q_std: float = 0.15
+    noise_p_std: float = 0.6
+    # Fraction of the replay buffer seeded at the noise locus: the training
+    # environment EXPOSES the garbage source to the sleep phase; the field
+    # must still LEARN to place friction there (exposure != placement).
+    buffer_noise_frac: float = 0.3
+
+    # Evaluation protocol
+    eval_clean_steps: int = 2000  # retention horizon (clean free-run)
+    eval_kick_steps: int = 400  # rejection horizon per injection
+    n_injections: int = 16
+    # Arm (i): global-gamma sweep traces the Pareto trade-off curve
+    # (0.0 = conservative reference point / model ceiling)
+    global_gamma_sweep: List[float] = field(
+        default_factory=lambda: [0.0, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3]
+    )
+    governor_sensitivity: float = 0.95  # arm (ii)
+
+    # Arm (iii): learned fields (one trained model per K per seed). Field
+    # geometry (gamma_max, width, init_*) comes from training.friction_field_*
+    # — single source of truth.
+    learned_k_values: List[int] = field(default_factory=lambda: [1, 4])
+    # Arm (iv): oracle hole hand-placed at noise_center. Width is harder than
+    # the learned default: the frozen control cannot retreat from the curve,
+    # so its horizon tail must not reach it.
+    oracle_radius: float = 0.6
+    oracle_strength: float = 0.3
+    oracle_width: float = 0.1
+
+
+@dataclass
+class ExperimentKTConfig:
+    """Configuration for the Kosterlitz-Thouless memory-phase suite (Thread-10).
+
+    An ``L x L`` torus of designed SO(2) CLU registers (``channel_spring(kappa)``
+    + ``MexicanHatPotential``, ``newtonian_learned``, no governor) reduces on its
+    vacuum ring to the 2-D XY model with ``J = 2 kappa r*^2``, giving the
+    Nelson-Kosterlitz universal jump at
+
+        T_KT = 1.786 kappa r*^2 = **0.0893** CLU units at kappa=0.05 (= 0.8929 J)
+
+    ⚠ NOT "0.1786" — that value is wrong by a factor 2 and is retracted.
+
+    Defaults reproduce the validated ``kt-2d-csf3`` laptop run exactly (that is
+    the round-trip acceptance gate, ``tests/test_kt.py``). The CSF3/A100 tranche
+    overrides them explicitly on the sbatch command line — see
+    ``scripts/csf3/job_gpu_kt.sh`` — so every scaled run carries its own
+    provenance. See chlu/experiments/kt/.
+    """
+
+    # ---- designed-register physics (the XY dictionary J = 2 kappa r*^2) ----
+    lam: float = 1.0  # Mexican-hat quartic; k_r = 8 lam f^2 = 8
+    f: float = 1.0  # vacuum radius parameter (r* = f = 1)
+    kappa: float = 0.05  # channel spring; kappa/k_r = 0.00625 (Born-Oppenheimer safe)
+    rstar: float = 1.0
+    dt: float = 0.02  # Langevin step
+    gamma: float = 0.10  # Langevin friction
+    n_walkers: int = 256  # vmapped walkers (the A100 knob: 1024+ is cheap)
+    kinetic_mode: str = "newtonian_learned"
+    # ⚠ handover §7.22: the repo default is "legacy", under which T is NOT in
+    # energy units and NONE of this physics holds. clu_path.assert_kt_settings
+    # raises if this is not "fdt".
+    langevin_noise: str = "fdt"
+
+    # ---- mode winding1d: 1-D CLU ring, bias-free winding MSD (exponent (b)) ----
+    # Laptop: T/J=1.0 gave slope -0.7 because xi~1.2 there (slips not
+    # independent). The clean tau ~ 1/N slope -1 needs T/J=0.5 (xi~2.8) + long
+    # runs: that is the CSF3 override.
+    winding1d_n_values: List[int] = field(default_factory=lambda: [8, 16, 32, 64])
+    winding1d_tj: float = 1.0
+    winding1d_chunks: int = 300  # N <= 16
+    winding1d_chunks_large: int = 200  # N > 16
+    winding1d_chunk_steps: int = 100
+    winding1d_seed: int = 31
+    # Fit the MSD only over the diffusive window MSD <= this value. None keeps
+    # the original full-range fit (bit-exact round-trip vs the laptop JSONs) —
+    # but see clu_path.run_winding_msd: the full-range fit is SATURATION-
+    # DOMINATED at T/J=1.0, which is very likely why the laptop slope came out
+    # -0.7. Set ~0.3 for any run whose purpose is the exponent.
+    winding1d_msd_fit_max: Optional[float] = None
+
+    # ---- mode winding2d: 2-D winding survival tau(L) (exponent (a)) ----
+    # Laptop reached L<=16 only, where vortex-diffusion traversal (~L^2) masks
+    # the negative Arrhenius exponent above T_KT. L>=32 is the CSF3 override.
+    winding2d_l_values: List[int] = field(default_factory=lambda: [8, 12, 16])
+    winding2d_tj_values: List[float] = field(
+        default_factory=lambda: [0.60, 0.70, 1.10, 1.30]
+    )
+    winding2d_nwalk: int = 24
+    winding2d_nmax_below: int = 20000  # first-passage censor below T_KT
+    winding2d_nmax_above: int = 6000  # ... and above
+    winding2d_tkt_over_j: float = 0.9  # which censor applies (measured T_KT/J = 0.898)
+    winding2d_seed: int = 700
+
+    # ---- mode bridge: CLU-Langevin vs reduced-XY rho_s (kill criterion) ----
+    bridge_l: int = 8
+    bridge_tj_values: List[float] = field(default_factory=lambda: [0.70, 0.85, 1.00])
+    bridge_chunks: int = 40
+    bridge_burn_chunks: int = 10
+    bridge_chunk_steps: int = 200
+    bridge_seed: int = 7
+    bridge_equil_seed: int = 1234
+    bridge_equil_sweeps: int = 1500
+
+    # ---- mode reduced: reduced-XY phase diagram (sections B, C, F) ----
+    reduced_l_values: List[int] = field(default_factory=lambda: [8, 16, 32])
+    reduced_tj_values: List[float] = field(
+        default_factory=lambda: [
+            0.50,
+            0.60,
+            0.70,
+            0.80,
+            0.85,
+            0.90,
+            0.95,
+            1.00,
+            1.10,
+            1.20,
+        ]
+    )
+    reduced_seeds: List[int] = field(default_factory=lambda: [100, 101, 102])
+    reduced_nwalk_small: int = 4  # L <= 16
+    reduced_nwalk_large: int = 2  # L > 16
+    reduced_therm_small: int = 1500
+    reduced_therm_large: int = 3000
+    reduced_meas_small: int = 4000
+    reduced_meas_large: int = 6000
+    reduced_meas_every: int = 5
+    # section C: twist-response route B (⚠ leaks the w=0 sector at L>=16 near T_KT)
+    reduced_twist_l_values: List[int] = field(default_factory=lambda: [8, 16])
+    reduced_twist_tj_values: List[float] = field(
+        default_factory=lambda: [0.60, 0.80, 0.90, 1.00, 1.10]
+    )
+    reduced_twist_a: float = 0.2
+    # section F: broken-symmetry null (the random-W p=2 anisotropy) -> no KT jump
+    reduced_broken_l: int = 16
+    reduced_broken_h2: float = 1.0
+    reduced_broken_tj_values: List[float] = field(
+        default_factory=lambda: [0.60, 0.80, 0.90, 1.00, 1.20]
+    )
+
+
+@dataclass
+class ExperimentMinusPhysicsConfig:
+    """Configuration for the 'CLU minus the physics' controls (G2 / P6).
+
+    Three identical-capacity arms — CHLU (symplectic), BrokenVolumeCHLU
+    (det J != 1), UnconstrainedTwin (free residual recurrence) — run through
+    ONE measurement protocol on the SO(2)-degenerate circle-vacuum task,
+    isolating what symplecticity (integrator structure | volume conservation)
+    functionally buys. See chlu/experiments/exp_minus_physics.py.
+    """
+
+    dim: int = 4
+    hidden_dim: int = 64
+    # "mlp" keeps the potential architecture IDENTICAL between CHLU and the
+    # broken-volume arm, so the ablation isolates symplecticity (not a designed
+    # SO(2) potential). Emergent flat direction, if any, comes from the data.
+    potential_type: str = "mlp"
+    kinetic_energy_mode: str = "newtonian_learned"
+    dt: float = 0.05
+    train_epochs: int = 150
+    n_seeds: int = 3
+    measure_erosion: bool = True
+
+    # Dataset (circle-vacuum, shared with Experiment D)
+    n_points: int = 256
+    seq_len: int = 65
+    circle_radius: float = 1.0
+
+    # Measurement harness
+    settle_gamma: float = 0.1
+    settle_steps: int = 2000
+    # BIBO diagnostic: settled radius above settle_bound * R counts as diverged
+    # (the volume-breaking arms lose the bounded attractor; F5 Prop-10 / §7.7).
+    settle_bound: float = 20.0
+    probe_gamma: float = 0.05
+    probe_steps: int = 4000
+    probe_kick: float = 0.1
+    eval_steps: int = 400
+
+
+@dataclass
+class ExperimentRetrievalConfig:
+    """Configuration for the hand-built write -> address -> retrieve loop.
+
+    Stage-1 empirical test of the Head's addressable-dynamical-memory vision
+    (handover 2026-07-21): a HAND-DESIGNED ``RingRegisterPotential`` holding K
+    items, hand-picked addresses ``(m, q0, p0)``, and a LINEAR read on the
+    rollout tail. **Nothing here is learned** except the address itself in the
+    item-5 restructuring test. See chlu/experiments/exp_retrieval.py.
+    """
+
+    # ---- designed landscape geometry ----
+    lam: float = 1.0  # ring quartic; radial spectral mass mu_rad^2 = 8*lam*f^2
+    f: float = 1.0  # vacuum radius
+    # Angular barrier between item sites. 0.2, NOT 0.05: at 0.05 the well is
+    # too weak to hold a JITTERED query within the rollout (measured: mean
+    # payload error 0.18 at K=8, vs 0.002 at 0.2) — the particle never settles
+    # and every downstream number degrades for a reason that has nothing to do
+    # with memory capacity.
+    barrier: float = 0.2
+    payload_kappa: float = 1.0  # payload-channel spring constant
+    bump_width: float = 0.05  # payload bump width (FIXED as K grows -> interference)
+    payload_seed: int = 0  # seed for the designed non-monotone payload values
+
+    # ---- rollout ----
+    dt: float = 0.05
+    gamma: float = 0.02  # friction: needed for the particle to SETTLE in a well
+    steps: int = 1200
+    tail_frac: float = 0.25  # read only the tail (the head still carries the address)
+    n_subsample: int = 8
+
+    # ---- queries / linear probe ----
+    n_query_per_item: int = 64
+    query_sigma_theta: float = 0.15
+    query_sigma_r: float = 0.05
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1  # |readout - a_k| below this counts as "settled"
+    # Where along the rollout the survival read is taken (fraction of `steps`)
+    survival_fracs: List[float] = field(
+        default_factory=lambda: [0.05, 0.1, 0.25, 0.5, 0.75, 0.99]
+    )
+
+    # ---- item 2: mass as address key ----
+    mass_probe_K: int = 8
+    mass_probe_p: float = 0.5  # fixed |p0| components at the launch point
+    mass_log_lo: float = -1.5
+    mass_log_hi: float = 1.5
+    mass_n: int = 25  # scalar sweep resolution
+    mass_n_vec: int = 9  # per-axis resolution of the (m0, m1) grid
+    # Robustness of the mass key: a key is only usable if a small error in the
+    # mass still retrieves the same item. Counting DISTINCT items reachable by
+    # mass is not enough — a chaotic map has many reachable items and is still
+    # useless as an address.
+    mass_jitter_rel: float = 0.01
+    mass_jitter_n: int = 8
+    mass_robust_threshold: float = 0.9  # frac_same needed to count a mass cell
+
+    # ---- item 3: three write modes (ThreeModePotential, dim=4) ----
+    tm_beta: float = 1.0
+    tm_d: float = 1.0
+    tm_write_theta: float = 0.7
+    tm_write_dr: float = 0.3
+    tm_write_sign: int = 1
+    tm_steps: int = 2000
+
+    # ---- item 4: interference ----
+    item_counts: List[int] = field(default_factory=lambda: [2, 4, 8, 16, 32])
+    selectivity_threshold: float = 0.9
+
+    # ---- item 5: address restructuring (the learnability crux, weak form) ----
+    restructure_K: int = 8
+    restructure_offsets: List[int] = field(default_factory=lambda: [1, 2, 4])
+    address_lr: float = 0.05
+    address_steps: int = 300
+    smooth_n_theta: int = 181
+    smooth_rollout_steps: List[int] = field(
+        default_factory=lambda: [25, 50, 100, 200, 400, 800]
+    )
+    # gamma scan for the retrieval-vs-learnability tension (friction is what
+    # makes the read stable AND what kills the address gradient)
+    smooth_gammas: List[float] = field(
+        default_factory=lambda: [0.0, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1]
+    )
+    # item 5c: gamma-annealed address search (the repair implied by 5b)
+    anneal_gamma_lo: float = 0.001
+    anneal_n_stages: int = 6
+
+
+@dataclass
+class ExperimentDimScalingConfig:
+    """Configuration for the address-space DIMENSION-SCALING measurement (w20).
+
+    w19 (``exp_retrieval``) measured a capacity ceiling of **8 items** on a 2-D
+    ring. That 8 is a property of the ring's *angular* resolution
+    (``K_max ~ 0.2 * 2*pi / sigma_theta``), not of CLU — the theorist's packing
+    bound ``(1 + 2R/w)^d`` is exponential in the address dimension ``d``. This
+    experiment generalizes the ring to a ``d``-dimensional address ball
+    (``BallRegisterPotential``) and measures ``K_max`` vs ``d``.
+
+    Fidelity criteria are the w19 criteria **verbatim** so the numbers are
+    comparable, including the mandatory blank-landscape control on every cell.
+    See chlu/experiments/exp_dim_scaling.py.
+    """
+
+    # ---- designed landscape geometry ----
+    R: float = 1.0  # radius of the region the SITES occupy (the "R" of the bound)
+    # Clearance between the outermost sites and the confining wall. Load-bearing,
+    # NOT cosmetic: farthest-point sampling pushes sites onto the boundary of the
+    # site region, so with zero margin a query jittered OUTWARD from a boundary
+    # site starts outside the wall. Measured at d=2: such a query began at
+    # V=+0.68 with KE=0.44, was slingshotted across the ball and captured by a
+    # well 1.37 away -- 4/128 queries, capping selectivity at 0.94 even at K=2.
+    # 0.5 > 3 * query_sigma keeps 3-sigma queries inside the force-free region.
+    wall_margin: float = 0.5
+    well_width: float = 0.15  # Gaussian well width w (the "w" of the packing bound)
+    well_depth: float = 1.0  # b: well depth
+    # Payload-channel spring constant. The payload term 0.5*kappa*(y - s(x))^2
+    # exerts a force kappa*(y-s)*s'(x) ON THE ADDRESS PLANE, so kappa trades the
+    # read-out's settling speed against how much it perturbs addressing.
+    # Measured at the densest resolvable d=2 cell (K=16), codebook read accuracy:
+    #   kappa   1.00    0.30    0.10    0.03
+    #   acc     0.508   0.898   0.906   0.766
+    # kappa=1 is too stiff (the payload force perturbs the address once wells are
+    # close); kappa=0.03 is too slack (payload has not settled within the
+    # rollout: |err| 3e-3 vs 4e-5). 0.1 is the measured optimum.
+    # NOTE: selectivity is essentially kappa-independent (0.930-0.945 across the
+    # whole sweep) -- kappa affects the READ, not the addressing. The query
+    # ejection that capped selectivity at K=2 was `wall_margin`, not kappa.
+    payload_kappa: float = 0.1
+    c_conf: float = 10.0  # stiffness of the confining wall outside the ball
+    site_seed: int = 0  # seed for the farthest-point site packing
+    payload_seed: int = 0  # seed for the designed non-monotone payload values
+
+    # ---- rollout (w19 values, so the cells are comparable) ----
+    dt: float = 0.05
+    gamma: float = 0.02  # friction: needed for the particle to SETTLE in a well
+    steps: int = 1200
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+    # Rollouts are vmapped in chunks: a (K * n_query) x steps x 2*dim trajectory
+    # buffer is what actually bites at large K, not the flop count.
+    rollout_chunk: int = 512
+
+    # ---- queries / linear read (w19 criteria verbatim) ----
+    n_query_per_item: int = 32
+    # Total-query budget per cell. Cost scales as n_queries * steps * K (the
+    # potential sums over all K wells at every step), so the per-item count is
+    # reduced at large K to keep a cell affordable:
+    #   n_eff = clip(max_total_queries // K, min_query_per_item, n_query_per_item)
+    # steps is deliberately NOT reduced instead: at steps=600 the borderline
+    # d=2 K=16 cell flips from 0.906 to 0.867 accuracy, which would move K_max.
+    # The 1200-step rollout is load-bearing for comparability with w19.
+    max_total_queries: int = 8192
+    min_query_per_item: int = 4
+    query_sigma: float = 0.15  # address jitter magnitude (w19 sigma_theta = 0.15)
+    # How query_sigma is interpreted as d grows. "fixed_norm" (default) sets the
+    # per-axis scale to sigma/sqrt(d) so the jitter NORM is sigma at every d --
+    # the apples-to-apples generalization of w19's 1-D ring arc jitter, holding
+    # query PRECISION fixed and varying only the address dimension. "per_axis"
+    # uses sigma literally, so the jitter norm grows as sigma*sqrt(d). The two
+    # give materially different capacity curves; both are reported.
+    query_noise_mode: str = "fixed_norm"
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1
+    selectivity_threshold: float = 0.9  # w19 threshold for "retrieved"
+    # A cell whose BLANK control beats chance by more than this is discarded, not
+    # reported: it means the read is leaking the address, not reading the memory.
+    blank_margin: float = 0.15
+
+    # ---- item 1: the K_max vs d curve ----
+    # d=1 is included deliberately: w19's ring is a 1-D address MANIFOLD embedded
+    # in 2-D, so the ring ceiling's comparison point is d=1, not d=2.
+    dims: List[int] = field(default_factory=lambda: [1, 2, 3, 4, 6, 8, 12, 16])
+    # Geometric K ladder; the search stops at the first K below threshold.
+    k_ladder: List[int] = field(
+        default_factory=lambda: [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+    )
+    k_cap: int = 2048  # compute cap; a cell stopped here is reported CENSORED
+
+    # ---- capture radius (the MEASURED w of the packing bound) ----
+    capture_n_dirs: int = 16
+    capture_n_offsets: int = 24
+    capture_max_offset: float = 1.0
+
+    # ---- item 2: basin-width sweep at fixed d ----
+    width_sweep_dims: List[int] = field(default_factory=lambda: [2, 3, 4])
+    width_sweep: List[float] = field(
+        default_factory=lambda: [0.08, 0.15, 0.22, 0.30, 0.45]
+    )
+    # The width sweep is 3 dims x 5 widths = 15 ladders, so it gets a tighter
+    # compute cap than the headline curve. Cells stopped here are CENSORED and
+    # the sweep is read for its SHAPE (plateau vs power law), not absolute K_max.
+    width_sweep_k_cap: int = 512
+
+    # ---- item 5: ADDRESSING capacity, decoder-free ----
+    # Item 1 walks the ladder on the w19 codebook read, which stops when the
+    # single scalar payload channel runs out of resolution -- at d >= 6 that
+    # happens while addressing is still perfect (d=6, K=512: read 0.599,
+    # selectivity 1.000). This sweep re-walks the ladder on selectivity alone so
+
+    # ---- item 4: does dissipation still gate retrieval at d > 2? ----
+    gamma_sweep_dims: List[int] = field(default_factory=lambda: [2, 4, 8])
+    gamma_sweep: List[float] = field(
+        default_factory=lambda: [0.0, 0.002, 0.005, 0.01, 0.02, 0.05]
+    )
+    gamma_sweep_K: int = 8
+
+
+@dataclass
+class ExperimentLearnedMemoryConfig:
+    """Configuration for the LEARNED write -> address -> read loop (w20).
+
+    w19 (``ExperimentRetrievalConfig``) ran the loop on a HAND-DESIGNED
+    landscape. This group runs the same loop on a landscape whose potential is
+    **trained** (``chlu.training.train_memory``), across a design-freedom ladder
+    from the w19 hand-built landscape to a free MLP, and measures the
+    fidelity-vs-design-freedom curve. See chlu/experiments/exp_learned_memory.py.
+
+    Geometry defaults are deliberately IDENTICAL to the w19 group so the two
+    experiments are directly comparable; only the potential family changes.
+    """
+
+    # ---- geometry (matched to ExperimentRetrievalConfig) ----
+    lam: float = 1.0
+    f: float = 1.0
+    barrier: float = 0.2
+    payload_kappa: float = 1.0
+    bump_width: float = 0.05
+    payload_seed: int = 0
+
+    # ---- design-freedom ladder ----
+    rungs: List[str] = field(
+        default_factory=lambda: [
+            "designed",
+            "skeleton_residual",
+            "sites_learned_payload",
+            "local_rbf",
+            "free_mlp",
+        ]
+    )
+    hidden: int = 64  # learned MLP width
+    n_atoms: int = 24  # learned RBF dictionary size
+    residual_scale: float = 0.1  # learned residual weight at rung `skeleton_residual`
+    rbf_init_width: float = 0.3
+
+    # ---- write objective (chlu/training/train_memory.py) ----
+    write_steps: int = 600
+    write_lr: float = 3e-3
+    write_weight_decay: float = 1e-4
+    write_n_perturb: int = 32
+    write_sigma_addr: float = 0.25
+    write_sigma_pay: float = 0.6
+    write_margin: float = 0.15
+    write_barrier: float = 0.2
+
+    # ---- TWO-PHASE retrieval ----
+    # Phase 1 relaxes the query to its address (dissipative, no gradient needed);
+    # phase 2 rolls out from the address for the read (where gradients are safe).
+    dt: float = 0.05
+    gamma_address: float = 0.05
+    gamma_read: float = 0.0
+    address_steps: int = 400
+    read_steps: int = 800
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+
+    # ---- queries / read ----
+    n_query_per_item: int = 32
+    query_sigma_theta: float = 0.15  # x f => q-space jitter, matched to w19 arc length
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1
+    item_counts: List[int] = field(default_factory=lambda: [2, 4, 8, 16])
+    survival_fracs: List[float] = field(
+        default_factory=lambda: [0.05, 0.1, 0.25, 0.5, 0.75, 0.99]
+    )
+
+    # ---- pass criteria for the minimum-viable-design point ----
+    # The design-freedom question is only asked at item counts where the
+    # reference (fully designed) landscape itself passes — otherwise a rung is
+    # charged for the ring's CAPACITY ceiling (w19: ~8 items) rather than for
+    # anything to do with learning.
+    reference_rung: str = "designed"
+    pass_strict: float = 0.9
+    pass_read: float = 0.9
+    # A blank landscape must read within this of chance, else the cell is not a
+    # measurement (w19: blank 0.469 vs chance 0.500).
+    blank_margin: float = 0.15
+    # A blank landscape must also fail the VALUE read: it stores 0 everywhere, so
+    # its strict-success rate must be ~0. This control is leak-immune, which is
+    # why it, not the classification control, defines the primary criterion.
+    blank_strict_max: float = 0.1
+
+    # ---- item 3: cross-write interference ----
+    interference_K: int = 4
+    interference_write_steps: int = 300
+
+    # ---- item 4: the 2-D gamma map ----
+    gamma_map_K: int = 4
+    gamma_map_rungs: List[str] = field(
+        default_factory=lambda: ["designed", "sites_learned_payload"]
+    )
+    gamma_address_grid: List[float] = field(
+        default_factory=lambda: [0.0, 0.005, 0.02, 0.05, 0.1]
+    )
+    gamma_read_grid: List[float] = field(
+        default_factory=lambda: [0.0, 0.005, 0.02, 0.05, 0.1]
+    )
+
+    # w19 reference numbers, carried in the results JSON so any comparison in a
+    # report is made against the actual measured baseline, not a remembered one.
+    w19_baseline: Dict[str, float] = field(
+        default_factory=lambda: {
+            "payload_abs_err": 9.98e-4,
+            "codebook_read_K2": 1.000,
+            "codebook_read_K8": 0.992,
+            "blank_control_K2": 0.469,
+            "designed_corruption": 4.17e-7,
+        }
+    )
+
+
+@dataclass
+class ExperimentPotentialClassConfig:
+    """Configuration for the POTENTIAL FUNCTION CLASS sweep (w21, Task D).
+
+    w20 found that no learned rung of the design-freedom ladder clears strict
+    0.9 at both K=4 and K=8, that write locality collapses (0.000 -> 2.9e-2 ..
+    5.0e-1) and that one subsequent write destroys the best rung. **Every w20
+    learned rung used ``PotentialMLP``.** Two hypotheses explain that:
+
+    * **H-EXPR** — the MLP is too weak; more capacity fixes it.
+    * **H-SUPP** — the failure is *global parameter support*: any weight update
+      moves every stored item, so attention (more global still) should fail at
+      least as badly and only *atom* writes can be local.
+
+    They make OPPOSITE predictions on the transformer arm, which is why this
+    group sweeps the **function class** with everything else held at the w20
+    values (the geometry/retrieval fields below are deliberately identical to
+    ``ExperimentLearnedMemoryConfig`` so the two experiments are comparable).
+    See chlu/experiments/exp_potential_class.py.
+    """
+
+    # ---- geometry / retrieval: IDENTICAL to the w20 group ----
+    lam: float = 1.0
+    f: float = 1.0
+    barrier: float = 0.2
+    payload_kappa: float = 1.0
+    bump_width: float = 0.05
+    payload_seed: int = 0
+    dt: float = 0.05
+    gamma_address: float = 0.05
+    gamma_read: float = 0.0
+    address_steps: int = 400
+    read_steps: int = 800
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+    n_query_per_item: int = 32
+    query_sigma_theta: float = 0.15
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1
+    survival_fracs: List[float] = field(
+        default_factory=lambda: [0.05, 0.1, 0.25, 0.5, 0.75, 0.99]
+    )
+    blank_margin: float = 0.15
+    blank_strict_max: float = 0.1
+    pass_strict: float = 0.9
+    pass_read: float = 0.9
+    reference_rung: str = "designed"
+
+    # ---- write objective: IDENTICAL to the w20 group ----
+    write_steps: int = 600
+    write_lr: float = 3e-3
+    write_weight_decay: float = 1e-4
+    write_n_perturb: int = 32
+    write_sigma_addr: float = 0.25
+    write_sigma_pay: float = 0.6
+    write_margin: float = 0.15
+    write_barrier: float = 0.2
+    # A LOCAL write is one masked, single-item write per item. Same per-write
+    # step budget as the global write; because each sub-write carries one target
+    # instead of K, total write FLOPs stay comparable (reported in the cost
+    # table, never assumed).
+    local_write_steps: int = 600
+
+    # ---- ⭐ the swept variable: the potential's function class ----
+    # "designed"       rung 0, zero learned parameters (the ceiling)
+    # "mlp"            w20 baseline (PotentialMLP)                 GLOBAL support
+    # "hopfield"       modern-Hopfield energy at beta_soft         support ~exp(-beta d)
+    # "hopfield_sharp" the same class at beta_sharp                (capacity held FIXED)
+    # "attn"           cross-attention w/ learned proj + values    GLOBAL-ish
+    # "atoms"          Gaussian atom dictionary, GLOBAL grad write LOCAL support
+    # "atoms_local"    the same class, per-item MASKED write       LOCAL support + LOCAL write
+    potential_classes: List[str] = field(
+        default_factory=lambda: [
+            "designed",
+            "mlp",
+            "hopfield",
+            "hopfield_sharp",
+            "attn",
+            "atoms",
+            "atoms_local",
+        ]
+    )
+    reference_class: str = "designed"
+    baseline_class: str = "mlp"
+
+    # ---- matched parameter count (⚠ an unmatched comparison settles nothing) ----
+    # PotentialMLP(dim=3, hidden=64) = 3*64+64 + 64*64+64 + 64+1 = 4481.
+    param_target: int = 4481
+    param_tol: float = 0.05
+    hidden: int = 64  # mlp
+    n_atoms: int = 896  # atoms: 896 * (3 + 1 + 1) = 4480
+    hopfield_n_mem: int = 1120  # hopfield: 1120 * (3 + 1) = 4480
+    attn_n_mem: int = 495  # attn: 8*3 + 495*8 + 495 = 4479
+    attn_d_head: int = 8
+
+    # ---- family hyperparameters ----
+    hopfield_beta_soft: float = 2.0
+    hopfield_beta_sharp: float = 8.0
+    # alpha = 1/2 makes V EXACTLY the modern-Hopfield energy: grad V = 0 reads
+    # q = sum_i softmax(beta <q,k_i>)_i k_i, i.e. one step of attention.
+    hopfield_confine: float = 0.5
+    hopfield_key_init: float = 0.1
+    attn_beta: float = 1.0
+    attn_key_init: float = 0.5
+    # Coercivity for every family EXCEPT hopfield (which needs alpha=1/2 to be
+    # the exact modern-Hopfield energy). 0.05 is PotentialMLP's own confinement,
+    # so the arms are coercive on identical terms (F5 Prop-10).
+    learned_confine: float = 0.05
+    atom_init_width: float = 0.3
+    atom_init_scale: float = 1.0
+    # Initial atom DEPTH (A_j = amp_j^2, so amp is init'd at sqrt of this). 1e-4
+    # => the dictionary starts FLAT and the writer digs the wells. w20's RBFAtoms
+    # started at softplus(N(0,0.1)) ~ 0.69 per atom, i.e. rugged on the same
+    # length scale retrieval has to traverse - a candidate explanation for the
+    # w20 local_rbf failure, measured here rather than assumed. See
+    # AtomDictionaryPotential's docstring for why the amplitude is NOT a softplus
+    # (a flat softplus start has a 3.4e-4 gradient and the write silently no-ops).
+    atom_depth_init: float = 1e-4
+
+    # ---- the sweep ----
+    class_item_counts: List[int] = field(default_factory=lambda: [4, 8])
+    class_seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+
+    # ---- cross-write interference (the H-EXPR/H-SUPP discriminator) ----
+    interference_K: int = 4
+    interference_write_steps: int = 300
+    # 7, not 5: the pre-registered adversarial check ("if an attention arm beats
+    # the atom dictionary on interference, re-run at 2 extra seeds") triggered.
+    interference_seeds: List[int] = field(
+        default_factory=lambda: [0, 1, 2, 3, 4, 5, 6]
+    )
+
+    # ---- support radius, MEASURED (decay of ||grad dV|| vs distance) ----
+    support_radii: List[float] = field(
+        default_factory=lambda: [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0]
+    )
+    support_probes_per_radius: int = 96
+    support_decay_threshold: float = 0.1  # defines r_10
+    support_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # ---- does the design-freedom curve move? (w20 re-run with the best class) ----
+    run_ladder_rerun: bool = True
+    # Families to re-run the ladder with. "auto" => the best class from the sweep.
+    ladder_families: List[str] = field(default_factory=lambda: ["atoms", "hopfield"])
+    ladder_rungs: List[str] = field(
+        default_factory=lambda: [
+            "skeleton_residual",
+            "sites_learned_payload",
+            "free_mlp",
+        ]
+    )
+    ladder_item_counts: List[int] = field(default_factory=lambda: [4, 8])
+    ladder_seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+
+    # w20 reference numbers, carried in the results JSON so every comparison is
+    # made against the measured baseline rather than a remembered one.
+    w20_baseline: Dict[str, float] = field(
+        default_factory=lambda: {
+            "designed_strict_K4": 1.000,
+            "designed_strict_K8": 0.986,
+            "free_mlp_strict_K4": 0.853,
+            "free_mlp_strict_K8": 0.599,
+            "skeleton_residual_strict_K4": 0.903,
+            "skeleton_residual_strict_K8": 0.959,
+            "local_rbf_strict_K4": 0.623,
+            "local_rbf_strict_K8": 0.348,
+            "designed_corruption": 0.0,
+            "free_mlp_corruption": 3.53e-1,
+            "sites_learned_payload_corruption": 4.95e-1,
+        }
+    )
+
+
+@dataclass
+class ExperimentDesignedMechanismConfig:
+    """Configuration for the K=8-wall discriminator (w22): GEOMETRY or LEARNING?
+
+    A fixed designed MECHANISM (``AtomDictionaryPotential``: learned amplitudes/
+    centers/widths, group-masked writes) with **learned content** (trained by
+    ``chlu.training.train_memory``) on a ``d``-dimensional address ball. Sweeps the
+    address dimension ``d`` and measures ``K_learned`` = the largest item count a
+    LEARNED atom dictionary clears at strict 0.9 (leak-immune value criterion, blank
+    control per cell), overlaid on ``K_designed`` re-measured on the SAME harness
+    with a hand-built ``BallRegisterPotential``.
+
+    ⚠ The atom count is scaled with K (``n_atoms = atoms_per_item·K``, ``n_groups =
+    K``) so a plateau in ``K_learned`` is a LEARNING failure, not a
+    parameterization-capacity failure (theorist §4.3, ``B_total ≤ P·b_θ``). See
+    chlu/experiments/exp_designed_mechanism.py.
+    """
+
+    # ---- d-ball geometry (shared with the designed dim-scaling arm) ----
+    R: float = 1.0
+    wall_margin: float = 0.5
+    well_width: float = 0.15  # designed BallRegisterPotential well width
+    well_depth: float = 1.0
+    payload_kappa: float = 0.1
+    c_conf: float = 10.0
+    site_seed: int = 0
+    payload_seed: int = 0
+
+    # ---- two-phase retrieval rollout ----
+    dt: float = 0.05
+    gamma_address: float = 0.05  # phase 1: dissipative relaxation to the address
+    # phase 2: value retrieval REQUIRES dissipation (address-space-dimension-scaling
+    # item 4: payload err 0.57 at gamma=0 vs ~1e-6 at gamma=0.02). The payload is the
+    # d-th coordinate of the atom-well center, launched at 0, and must dissipate up
+    # to a_i — a conservative read (gamma_read=0) leaves it oscillating and the tail
+    # mean misses the stored value, so strict success is ~0 even for the DESIGNED arm.
+    gamma_read: float = 0.02
+    address_steps: int = 400
+    read_steps: int = 800
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+    rollout_chunk: int = 256
+
+    # ---- queries + read (fixed_norm jitter, w19-comparable) ----
+    n_query_per_item: int = 32
+    max_total_queries: int = 4096
+    min_query_per_item: int = 4
+    query_sigma: float = 0.15
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1
+    pass_strict: float = 0.9
+    blank_strict_max: float = 0.1  # value blank must score at/below this
+    blank_margin: float = 0.15  # classification blank margin over chance (reported)
+
+    # ---- the LEARNED atom-dictionary mechanism ----
+    # Atoms PER ITEM. n_atoms = atoms_per_item * K, so the parameter budget scales
+    # with K and a plateau is a learning failure, not a capacity-of-parameters one.
+    atoms_per_item: int = 32
+    # Floor on the total atom count. HARD lower bound, dimension-independent; the
+    # dimension-aware geometric floor below (min_atoms_base * min_atoms_c**d)
+    # dominates in the discriminator sweep. A large over-complete dictionary smooths
+    # the write optimization; scaling atoms DOWN at small K starves the write (d=4
+    # K=2 with 64 atoms: write loss stuck at 0.18 on some seeds). The floor keeps
+    # every cell over-complete; the atoms_per_item*K term dominates once K is large.
+    min_atoms: int = 384
+    # ⚠ DIMENSION-AWARE atom floor (w23 dimension-aware-budget). The atom count is
+    #     n_atoms = max(atoms_per_item*K, min_atoms, round(min_atoms_base*min_atoms_c**d)).
+    # w22 (designed-mechanism-learned-content) scaled the budget with K ONLY, with a
+    # FIXED floor (min_atoms=2048 in the clean run). That floor is inadequate at high
+    # d: the atoms init N(0, atom_init_scale) in the (d+1)-ball, and the fraction
+    # landing near any stored site (radius ~R) DECAYS roughly geometrically per added
+    # dimension, so a fixed atom count starves the write at high d (d=8 K=2 stalled at
+    # strict 0.400 despite a geometrically-trivial site separation 1.838). The ladder
+    # walk then terminates at a starved low-K cell and K_learned reads as an optimizer
+    # artifact, not a capacity. A geometric floor c**d compensates: it holds the
+    # atoms-near-each-site count ~constant across d. c = min_atoms_c = sqrt(2) is
+    # anchored EMPIRICALLY (w23 adequacy probe): the near-site atom count needed for a
+    # converged write grows ~sqrt(2) per added dimension — w22 shows d=6 adequate at
+    # 2048 atoms and the w23 probe shows d=8 K=16 reaches strict 1.000 by 4096-8192
+    # (2048*(sqrt2)^2 = 4096). This is BELOW the a-priori 4*2^d rate (c=2) because the
+    # achieved atom packing is non-ideal (address-space-dimension-scaling: d_eff~0.72d,
+    # shell concentration), so the effective per-dimension thinning is sub-2. base =
+    # min_atoms_base = 512 pins the floor with margin at every sweep dimension (d=2 ->
+    # 1024, d=6 -> 4096 = 2x w22, d=8 -> 8192 = strict 1.000 in the probe). Per-point
+    # budget adequacy is verified empirically (a failing K must fail with a budget
+    # whose further increase does not change the verdict).
+    min_atoms_base: int = 512
+    min_atoms_c: float = 1.4142135623730951  # sqrt(2)
+    # centers ~ N(0, init_scale). ⚠ LOAD-BEARING and MEASURED: at init_scale=0.5 the
+    # flat-start atoms cluster near the origin and the writer cannot dig a well that
+    # reaches an item whose payload |a_i|=1 from the payload=0 launch manifold — d=2
+    # K=4 caps at strict 0.500 (only the |a_i|<1 items retrieve) regardless of atom
+    # count (tested to 1024 atoms). At init_scale=1.0 the atoms are spread across the
+    # full (d+1)-ball including the payload axis and d=2 K=4 reaches strict 1.000.
+    # This is the basin-reach limit potential-function-class flagged (open-Q #2),
+    # defused by the initialization, not by more parameters.
+    atom_init_scale: float = 1.0
+    atom_init_width: float = 0.3  # initial well width s
+    atom_depth_init: float = 1e-4  # flat start; the writer digs the wells (A=amp^2)
+    learned_confine: float = 0.05  # coercivity alpha*|q|^2
+    bits_per_param: int = 32  # for the reported B_total = P * bits_per_param
+    # ⭐ w26 (r2-excursion-reach) STAGE A — the N98 localized atom init, ported from
+    # ExperimentShardedStoreConfig so the 2x2 init x width factorial runs on the w23
+    # designed-mechanism harness (value-blank controlled). Group j's atoms start in a
+    # ball of radius atom_init_local_mult * atom_init_width around item j's ADDRESS
+    # site (address axes only -- localizing the payload axis would hand the writer the
+    # answer AND destroy the basin-reach property, see AtomDictionaryPotential N46
+    # note). False = the historical scatter, bit-identical. ⛔ NOT a default (Head
+    # ruling B1.4: the factorial measures, it does not promote).
+    atom_init_local: bool = False
+    atom_init_local_mult: float = 2.0
+
+    # ---- ⭐ w26 arm (a): the MULTI-CHANNEL PAYLOAD read-out code ----
+    # The stored value occupies channels q[d:d+n_payload_channels]. m=1 with
+    # payload_code="linspace" is the shipped w20-w25 harness, bit-identical.
+    #
+    # ⚠ The five binding fairness conditions (Head ruling B1.3) live here:
+    #  1. BITS PER ITEM CONSTANT. Every arm stores one of K codewords whose MINIMUM
+    #     PAIRWISE SEPARATION is the same delta = 2/(K-1) as the 1-channel linspace
+    #     codebook. Same K, same delta, same per-axis noise => same discriminability
+    #     => same bits. The grid code only lowers the per-axis EXCURSION
+    #     (max |a_j| ~ delta*(K^(1/m)-1)/2), which is the reach demand -- never the
+    #     precision.
+    #  2. BYTE ACCOUNTING. m channels cost m-1 extra latent coordinates, i.e.
+    #     n_atoms*(m-1) extra learned floats; n_learned_params is reported per cell and
+    #     the `spectator` control (m channels allocated, code in channel 0 only)
+    #     separates "extra dimensions" from "the code".
+    #  3. PAYLOAD READ NOISE (payload_launch_sigma / payload_obs_sigma below).
+    #  4. The DESIGNED arm reads the SAME code (BallRegisterPotential takes (K,m)).
+    #  5. The laundering control (designed arm) travels with every number.
+    n_payload_channels: int = 1
+    # "linspace" = designed_payloads (the shipped non-monotone permuted grid on
+    # [-1,1]); "grid" = the m-dimensional min-separation-preserving lattice code.
+    payload_code: str = "linspace"
+
+    # ---- ⭐ w26 condition 3: PAYLOAD READ NOISE (the crux) ----
+    # w25's harness launched every query at EXACTLY payload = 0 with a noise-free
+    # value channel, which is precisely why shrinking the excursion was free there
+    # (r2-geometry-revival §4.1) and why no K_learned may be quoted at pscale != 1
+    # without this switched on.
+    # payload_launch_sigma: the query's payload channel starts at N(0, sigma) instead
+    #   of exactly 0 (the store must DENOISE it -- this is the reach test proper).
+    # payload_obs_sigma: additive observation noise on the read-out value, per
+    #   channel, before the value test (the store cannot denoise this one).
+    payload_launch_sigma: float = 0.0
+    payload_obs_sigma: float = 0.0
+    # Value criterion. "tol" = the pre-w27 absolute test ||read - a_i|| < payload_tol.
+    # "decode" = nearest-codeword decoding (the honest test under noise: an absolute
+    # error tolerance is blind to the codebook spacing, so it neither rewards nor
+    # punishes a change of excursion, while a decode does both). "decode" is STRICTER
+    # than "tol" wherever the codebook spacing is below payload_tol (K >= 32 at m=1).
+    # ⭐ w27 CORRECTNESS FIX (Head ruling, r2-d-sweep-close stage 1), NOT a lever
+    # promotion. "tol" is VACUOUS at m > 1: the whole grid codebook lives inside
+    # payload_tol whenever max|a| < 0.1 (m=4, K=32: max||a|| = 0.0912), so a
+    # VALUE-BLANK landscape scores strict = 1.0000 on "tol" while scoring exactly
+    # chance (1/K) on "decode" -- measured, r2-excursion-reach §4/§7. The default is
+    # therefore "decode"; "tol" stays selectable for bit-exact reproduction of
+    # pre-w27 (w20-w26) runs, which were all m = 1.
+    pass_metric: str = "decode"
+
+    # ---- ⭐ w26 arm (b): the ANNEALED / CONTINUATION read ----
+    # Widen every well during settling and shrink the extra width to zero on a
+    # schedule: s_eff(t) = sqrt(s^2 + s_extra(t)^2), s_extra(t) -> 0. Analytically a
+    # Gaussian blur of the stored landscape (a Gaussian convolved with a Gaussian is a
+    # Gaussian), so it changes the READ ONLY -- the stored payload format, the write
+    # objective and the atom budget are untouched. read_anneal_stages=1 (default) is
+    # the shipped single-stage read, bit-identical.
+    # ⚠ Equal-compute by construction: address_steps / read_steps are SPLIT across the
+    # stages, so an annealed read integrates exactly as many Verlet steps as the
+    # baseline read, and the value tail is always sampled in the FINAL stage, where
+    # s_extra = 0 (i.e. the value is always read off the true stored landscape).
+    read_anneal_stages: int = 1
+    read_anneal_s0: float = 0.0  # extra width at stage 0 (0 disables annealing)
+    # s_extra(l) = s0 * ((L-1-l)/(L-1))**power
+    read_anneal_power: float = 1.0
+    # "amplitude" keeps the well DEPTH A_j and only widens (force at the launch
+    # manifold grows); "mass" is the exact Gaussian convolution, A_j *=
+    # (s_j/s_eff)^dim (total well mass preserved, depth falls).
+    read_anneal_mode: str = "amplitude"
+    # "both" anneals the address relaxation and the value read; "read" anneals only
+    # the second phase.
+    read_anneal_phases: str = "both"
+    # ⭐ the ANISOTROPIC variant. Isotropic blurring has a built-in conflict: widening
+    # enough to reach a payload at |a| = 1 also merges neighbouring wells in the
+    # ADDRESS space (d=4 K=32: site separation 0.710 vs payload excursion 1.000).
+    # "payload" widens ONLY the payload channels, by a multiplicative factor falling
+    # from read_anneal_payload_mult to exactly 1 — reach without address damage.
+    # "all" (default) is the isotropic blur.
+    read_anneal_axes: str = "all"
+    read_anneal_payload_mult: float = 1.0
+
+    # ---- write objective (static, per-item minimum-digging) ----
+    write_steps: int = 600  # global write (matched to potential-function-class)
+    local_write_steps: int = 300  # per masked single-item write
+    write_lr: float = 3e-3
+    write_weight_decay: float = 1e-4
+    write_n_perturb: int = 32
+    write_sigma_addr: float = 0.25
+    write_sigma_pay: float = 0.6
+    write_margin: float = 0.15
+    write_barrier: float = 0.2
+
+    # ---- item 1: the discriminator sweep ----
+    dims: List[int] = field(default_factory=lambda: [2, 3, 4, 6, 8])
+    k_ladder: List[int] = field(
+        default_factory=lambda: [2, 4, 8, 16, 32, 64, 128]
+    )
+    k_cap: int = 128
+    # The discriminator uses the mechanism's BEST single-shot FIDELITY write =
+    # GLOBAL (potential-function-class: atoms global 1.000 vs local 0.859 at K=4),
+    # so a K_learned plateau cannot be blamed on a suboptimal write operator. The
+    # masked-vs-global write is compared explicitly in item 3 (interference).
+    learned_arm: str = "learned_global"
+    discriminator_seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+    designed_seeds: List[int] = field(default_factory=lambda: [0])
+
+    # ---- item 2: mass arm + coupling check ----
+    mass_dim: int = 3
+    mass_K: int = 4
+    mass_spread: float = 4.0  # per-item masses span [1/spread, spread] geometrically
+    mass_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    mass_help_threshold: float = 0.02  # delta-strict above which "mass helps"
+
+    # ---- item 3: interference across d ----
+    interference_dims: List[int] = field(default_factory=lambda: [2, 3, 4])
+    interference_K: int = 4
+    interference_write_steps: int = 300
+    interference_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+
+@dataclass
+class ExperimentPrimitiveHarnessConfig:
+    """Configuration for the primitive harness (w20).
+
+    Evaluates the CLU as a GENERAL primitive: MLP / GRU / SSM / attention / CLU
+    are dropped into one interchangeable slot (``chlu/core/blocks.py``) at
+    matched parameter count, trained identically, on >= 2 task families reported
+    SEPARATELY (never averaged). See chlu/experiments/exp_primitive_harness.py.
+    """
+
+    # ---- the shared slot (identical for every primitive) ----
+    primitives: List[str] = field(
+        default_factory=lambda: ["mlp", "gru", "ssm", "attention", "clu"]
+    )
+    d_model: int = 64
+    n_layers: int = 2  # 2, not 1: MQAR needs an induction-head circuit, which a
+    # 1-layer attention model provably cannot form (Zoology). A 1-layer harness
+    # would hobble the strongest baseline and flatter every other primitive.
+    # Budget is matched on the parameters of the BLOCK STACK (the primitive's
+    # own parameters, summed over n_layers). Embedding / positional embedding /
+    # head are identical across primitives by construction, so including them
+    # would dilute the match; total params are reported alongside.
+    target_block_params: int = 40000
+    param_tol: float = 0.05  # accept |params/target - 1| <= tol
+    width_search_lo: int = 4
+    width_search_hi: int = 512
+
+    # ---- optimisation (identical for every primitive) ----
+    lr_grid: List[float] = field(default_factory=lambda: [3e-4, 1e-3, 3e-3])
+    train_steps: int = 2000
+    # LR selection runs short (same length for every primitive, so the tuning
+    # budget stays equal by construction); the winning LR is then re-trained at
+    # full length for n_seeds. 600 steps discriminates the grid cleanly —
+    # measured: attention on MQAR T=64 kv=4 reaches 0.44 at lr=1e-3 vs 0.99 at
+    # lr=3e-3 by step 800, i.e. the grid ordering is already resolved.
+    tune_steps: int = 600
+    batch_size: int = 32
+    eval_batch: int = 256
+    grad_clip: float = 1.0
+    n_seeds: int = 3  # seeds for the final (best-LR) numbers
+
+    # ---- family 1: MQAR ----
+    mqar_vocab: int = 256
+    mqar_seq_lens: List[int] = field(default_factory=lambda: [32, 64, 128, 256])
+    mqar_kv_fixed: int = 4  # kv held fixed while seq_len sweeps (distractor axis)
+    mqar_kv_sweep: List[int] = field(default_factory=lambda: [2, 4, 8, 16])
+    mqar_seq_len_fixed: int = 128  # seq_len held fixed while kv sweeps
+
+    # ---- family 2: adding problem ----
+    adding_seq_len: int = 128
+
+    # ---- family 3: parity ----
+    parity_seq_len: int = 64
+
+    # ---- CLU block physics (defaults, NOT tuned per family) ----
+    clu_dt: float = 0.1
+    # gamma > 0 was the w20 concession, justified by a w19 measurement that was
+    # retracted in the same wave (see CLUBlock docstring). It is now a swept
+    # knob; the default is left at the shipped value so w20 numbers reproduce.
+    clu_gamma: float = 0.05
+    clu_steps: int = 1  # Verlet steps per token
+    clu_hidden: int = 32  # potential-MLP hidden width
+    clu_kinetic_mode: str = "newtonian_learned"
+    clu_potential_type: str = "mlp"
+    clu_read_mode: str = "endpoint"  # "endpoint" (settled) | "trajectory" (fiber)
+    # EXPLORATORY (w21, outside the pre-registered grid): "linear" is the shipped
+    # write current p += W_in x; "gated" multiplies it by sigmoid(W_gate x),
+    # supplying the input-conditioned multiplicative write that the GRU, the
+    # selective SSM and attention all have. Default preserves shipped behaviour.
+    clu_write_mode: str = "linear"
+    ssm_selective: bool = True  # Mamba-style input-dependent timescale
+    attn_heads: int = 4
+
+    # ---- w21 gamma-read sweep grids (CLU-INTERNAL knobs only) ----
+    # Fairness: gamma / clu_steps / read_mode have no counterpart in the MLP,
+    # GRU, SSM or attention blocks, so sweeping them is category (a) of the task
+    # fairness rule -- a knob no other primitive has. Nothing here touches the
+    # shared slot, so the shipped baselines remain directly comparable.
+    clu_gamma_sweep: List[float] = field(
+        default_factory=lambda: [0.0, 0.001, 0.005, 0.01, 0.02, 0.05, 0.1]
+    )
+    clu_read_mode_sweep: List[str] = field(
+        default_factory=lambda: ["endpoint", "trajectory"]
+    )
+    clu_steps_sweep: List[int] = field(default_factory=lambda: [1, 2, 4])
+
+    # ---- w22 gated-write performance test (exp_gated_write.py) ----
+    # The gated-write comparison re-runs the WHOLE five-primitive slot at the
+    # published-numbers budget (train 1200 / tune 400) so the re-run baselines
+    # double as a reproduction check. These fields drive that experiment only;
+    # they do not touch the shipped harness defaults above.
+    gw_train_steps: int = 1200
+    gw_tune_steps: int = 400
+    # MQAR runs the CLU at gamma=0 (gamma-read-sweep §1: +0.040 free, monotone,
+    # a category-(a) knob no baseline has); adding/parity keep the shipped gamma.
+    gw_mqar_gamma: float = 0.0
+    # Item 3a: long-horizon extrapolation — train at gw_extrap_train_T, test at
+    # each multiple. The founding CHLU claim (Exp A) is stable extrapolation.
+    gw_extrap_train_T: int = 64
+    gw_extrap_mults: List[int] = field(default_factory=lambda: [1, 2, 4])
+    gw_extrap_families: List[str] = field(
+        default_factory=lambda: ["adding", "parity"]
+    )
+    # Item 3c: robustness — Gaussian noise added to the (continuous) input at
+    # inference only. Sweep the std; adding problem (noise on the value channel).
+    gw_noise_grid: List[float] = field(
+        default_factory=lambda: [0.0, 0.05, 0.1, 0.2, 0.4]
+    )
+
+
+@dataclass
+class ExperimentSequentialWriteConfig:
+    """Configuration for SEQUENTIAL-WRITE interference + the admission gate (w21).
+
+    w20 measured its worst result — write A, write B, A destroyed (strict
+    1.000 -> 0.000) — with **ungated** writes. The theorist measured the same
+    contrast with the MVC-0 admission gate and got max drift 8.0e-5. This group
+    runs both, on the exact w20 setup and on a K = 1..16 sequential-write curve,
+    plus the cross-primitive comparison in the `primitive-harness` slot.
+    See chlu/experiments/exp_sequential_write.py.
+
+    Geometry / write / retrieval defaults are deliberately IDENTICAL to
+    ``ExperimentLearnedMemoryConfig`` so the gated arm is directly comparable to
+    the w20 ungated numbers; only the controller changes.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+
+    # ---- geometry + landscape family (matched to ExperimentLearnedMemoryConfig) ----
+    lam: float = 1.0
+    f: float = 1.0
+    barrier: float = 0.2
+    payload_kappa: float = 1.0
+    bump_width: float = 0.05
+    payload_seed: int = 0
+    hidden: int = 64
+    n_atoms: int = 24
+    residual_scale: float = 0.1
+    rbf_init_width: float = 0.3
+
+    # ---- write objective (chlu/training/train_memory.py) ----
+    write_steps: int = 600
+    write_lr: float = 3e-3
+    write_weight_decay: float = 1e-4
+    write_n_perturb: int = 32
+    write_sigma_addr: float = 0.25
+    write_sigma_pay: float = 0.6
+    write_margin: float = 0.15
+    write_barrier: float = 0.2
+
+    # ---- TWO-PHASE retrieval (w20 §5: fidelity depends on gamma_address only) ----
+    dt: float = 0.05
+    gamma_address: float = 0.05
+    gamma_read: float = 0.0
+    address_steps: int = 400
+    read_steps: int = 800
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+    n_query_per_item: int = 32
+    n_query_sequential: int = 16  # cheaper: the sequential curve evaluates K times
+    query_sigma_theta: float = 0.15
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1
+    # ...capped at this fraction of the codebook spacing (w20's ratio at K<=8),
+    # so "the stored value came back" stays unambiguous as K grows.
+    payload_tol_frac: float = 0.35
+
+    # ---- the MVC-0 admission gate (clu-controller-spec §C3/§C5/§4) ----
+    # d_safe = d_safe_mult * s. At 4.4 a Gaussian atom write contributes
+    # exp(-4.4^2/2) = 6.3e-5 of its gradient scale at a neighbouring minimum.
+    d_safe_mult: float = 4.4
+    # C3 budget on the predicted fixed-point drift ||H^-1 grad dV(q*)|| of a
+    # stored item. 0.1 is ~1/14 of the w20 ring's site spacing (1.414), i.e. well
+    # inside the deadband where address error is measured to be free.
+    delta_budget: float = 0.1
+    c3_chunk_steps: int = 25  # write granularity at which C3 is re-checked
+    n_relocation_candidates: int = 400
+    proposal_radius: float = 2.0  # disk the controller proposes sites in
+
+    # ---- item 1: the gate on the EXACT w20 failing setup ----
+    interference_K: int = 4
+    interference_write_steps: int = 300
+    gate_rungs: List[str] = field(
+        default_factory=lambda: ["designed", "sites_learned_payload", "free_mlp"]
+    )
+    gate_arms: List[str] = field(
+        default_factory=lambda: ["ungated", "gated_spacing", "gated_c3", "anchored"]
+    )
+    gate_proposals: List[str] = field(default_factory=lambda: ["ring", "disk"])
+
+    # ---- item 2: the sequential-write curve ----
+    n_sequential_items: int = 16
+    sequential_write_steps: int = 600
+    # ⚠ free_mlp, NOT the w20 rung: sequential writes place items at arbitrary
+    # gate-chosen locations in a disk, and `sites_learned_payload` carries a
+    # DESIGNED K-well ring at radius f that would fight every off-ring site.
+    # The w20 rung is used where the w20 geometry is used -- item 1.
+    sequential_rung: str = "free_mlp"
+    sequential_arms: List[str] = field(
+        default_factory=lambda: [
+            "designed_gated",
+            "designed_ungated",
+            "learned_gated",
+            "learned_ungated",
+            # "anchored" is NOT a gate: it is a structured write operator
+            # (C3 option (b), rehearsal from the codebook), carried as the arm
+            # that shows what actually rescues a global-support write.
+            "learned_anchored",
+        ]
+    )
+    # designed store (AtomStorePotential; theorist S3 values)
+    atom_width: float = 0.35
+    atom_alpha: float = 0.02
+    atom_amp: float = 1.0
+
+    # ---- item 3: the cross-primitive comparison (primitive-harness slot) ----
+    kv_primitives: List[str] = field(
+        default_factory=lambda: ["mlp", "gru", "attention", "clu"]
+    )
+    kv_n_items: int = 16
+    kv_select_items: int = 8  # shorter run used for the (equal) LR selection
+    # >= kv_extended_items + 1: values are sampled WITHOUT replacement so that
+    # "retention" is per-item unambiguous.
+    kv_vocab: int = 128
+    kv_key_len: int = 4
+    kv_max_write_steps: int = 200
+    kv_check_every: int = 1  # 1 => full resolution on compute-to-criterion
+    # A second, LONGER sweep at the selected LR only: K=16 is matched to the CLU
+    # arm, but if a primitive does not forget at all there, the curve is
+    # uninformative and the interesting quantity is WHERE it breaks.
+    kv_extended_items: int = 64
+    # ...and give the extended sweep its own symmetric rescue: the LR selected at
+    # K=16 need not be the best one at K=64, and the extended table is the
+    # deliverable, so it must not inherit an unrescued LR.
+    kv_extended_rescue: bool = True
+
+    # ---- item 4: retrieval cost scaling in K ----
+    cost_K_grid: List[int] = field(default_factory=lambda: [1, 2, 4, 8, 16])
+
+
+@dataclass
+class ExperimentControllerMvpConfig:
+    """Configuration for the MVC-0 controller on a designed store (w23).
+
+    The N75 rematch: put CLU + the hand-coded controller (admission + placement +
+    eviction/decay, NO learning) on the SAME retention-vs-K chart as the w21
+    gru/mlp/attention lines, and report BOTH retention-per-admitted-item and
+    retention-per-offered-item (the abstention-vs-accuracy trade, stated before a
+    referee does). The controller writes the designed ``AtomStorePotential`` whose
+    atom writes are C3-local; the four primitive baselines are the
+    `primitive-harness` slot reused verbatim.
+
+    Geometry defaults are chosen so the gate CAN fire (N74): the designed store's
+    ``d_safe = d_safe_mult * atom_width = 4.4 * 0.35 = 1.54``, and proposals land
+    in a disk of radius ``proposal_radius = 2.0`` whose packing bound is ~6.1 —
+    so a majority of offers at K >= 8 are refused or relocated (on the w20 ring
+    the same gate was arithmetically vacuous). Retrieval / query / write knobs are
+    inherited from the sequential-write group so the numbers are directly
+    comparable to w21. See chlu/experiments/exp_controller_mvp.py.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+
+    # ---- designed store (AtomStorePotential; theorist S3 values, = seq-write) ----
+    atom_width: float = 0.35
+    atom_alpha: float = 0.02
+    atom_amp: float = 1.0
+    payload_kappa: float = 1.0
+    payload_seed: int = 0
+
+    # ---- the admission gate (d_safe = d_safe_mult * atom_width) ----
+    d_safe_mult: float = 4.4
+    n_relocation_candidates: int = 400
+    proposal_radius: float = 2.0  # disk the controller proposes sites in (FIXED geom)
+
+    # ---- the K ladder for the rematch (controller lines are cheap: no training) ----
+    K_grid: List[int] = field(default_factory=lambda: [1, 2, 4, 8, 16, 32, 64])
+
+    # ---- budget / eviction / decay (the third decision rule) ----
+    # None => budget == store capacity (eviction fires only on a genuinely full
+    # store). A finite budget forces staleness/depth eviction earlier.
+    budget: Optional[int] = None
+    evict_policy: str = "staleness"  # or "depth"
+    leak: float = 0.0  # default per-tick decay for a leaky well (0 => never forgets)
+    amp_floor: float = 0.05  # a leaky well self-evicts below this depth
+    # "sized" geometry arm: grow the disk radius so the packing bound >= K, to
+    # show the controller wins per-offered too once the address space fits the load.
+    run_sized_geometry: bool = True
+    # ---- canonical placement (PGCP, w26) ----
+    # Adds a "canon_sized" arm: the same sized geometry, but allocated by
+    # chlu.core.placement.CanonicalPlacer instead of refuse-and-relocate. Admission
+    # becomes deterministic (= the lattice cell count) and the store gains the exact
+    # deletion verb. OFF by default so the shipped rematch chart is unchanged.
+    run_canonical_placement: bool = False
+    # Radius multiplier for the canonical arm's lattice. 1.0 = radius_for_capacity(K)
+    # verbatim (61 cells at K=64, the un-inflated sizing); 1.05 gives n_cells >= K for
+    # K in {16,32,64,128} (theorist's sizing rule).
+    canonical_radius_mult: float = 1.0
+    # ⭐ P2 waitlist (w27). Under canonical placement, an offer the lattice cannot seat is
+    # kept in Controller.waiting (offered, not stored) and re-seated by priority as soon as
+    # a cell frees, instead of being forgotten. This is what removes the "below capacity"
+    # qualifier from the exact-deletion claim: without it, a background item refused while
+    # the target was resident does not counterfactually return when the target is deleted
+    # (8 offers into a 7-cell lattice: post-delete AUC(n_live) = 1.000, byte-equality
+    # 0/3072). No shipped number moves at or below capacity, where nothing ever waits.
+    canonical_waitlist: bool = True
+
+    # ---- gated-stiffness payload channel (option (d), w27 readout-channel-theory) ----
+    # OFF by default: the shipped payload channel 0.5*kappa*(y - S(q))^2 is unchanged, and
+    # every published designed-store number stands. ON replaces it with
+    # 0.5*kappa*G(q)*(y - abar(q))^2, G = g0 + sum m A e (floored), abar unfloored -- the
+    # fix for mia-D3 (retention correlates r = -0.846 with a_i^2 on the baseline).
+    payload_gate: bool = False
+    payload_gate_g0: float = 0.05  # == amp_floor: payload-independent but step-shaped
+    payload_gate_eps: float = 1e-6
+
+    # ---- eviction/decay demo (item: permanent + leaky wells in one store) ----
+    decay_demo_K: int = 8
+    decay_demo_leak: float = 0.35  # ~half-life 2 ticks; a permanent item survives all
+
+    # ---- two-phase retrieval (identical to sequential-write / w20) ----
+    dt: float = 0.05
+    gamma_address: float = 0.05
+    gamma_read: float = 0.0
+    address_steps: int = 400
+    read_steps: int = 800
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+    n_query_per_item: int = 16
+    query_sigma_theta: float = 0.15
+    query_sigma_p: float = 0.05
+    f: float = 1.0
+    payload_tol: float = 0.1
+    payload_tol_frac: float = 0.35
+
+    # ---- the four-primitive baselines (primitive-harness slot; parametric) ----
+    run_primitives: bool = True
+    kv_primitives: List[str] = field(
+        default_factory=lambda: ["mlp", "gru", "attention", "clu"]
+    )
+    kv_baseline_K: int = 64  # the N75 rematch point
+    kv_vocab: int = 128
+    kv_key_len: int = 4
+    kv_max_write_steps: int = 200
+    kv_check_every: int = 1
+    kv_select_items: int = 8
+
+
+@dataclass
+class ExperimentWriteCeilingConfig:
+    """Configuration for WRITE-CEILING-BREAK (w24): can any write operator break
+    the d-INDEPENDENT learned-capacity ceiling ``K_ceiling ~= 32``?
+
+    w23 (``dimension-aware-budget``) pinned ``K_learned(d) = min(2^d, K_ceiling)``
+    with ``K_ceiling ~= 32`` and showed the ceiling is **not** the terrain (the
+    designed register reaches >= 256 on the identical harness), **not** the
+    parameter count (d=6 K=64 gets *worse* at 2x atoms: 0.855 -> 0.809) and **not**
+    the dimension (K=64 is unwritable at d=6 AND d=8 despite 4x different
+    geometric room). What is left is the WRITE OPERATOR: one static GLOBAL
+    gradient dig asked to carve K disjoint valleys jointly, whose write loss
+    reaches ~0 while retrieval already fails -- i.e. an objective blind to
+    crowding.
+
+    This group configures the three levers, run as separate arms on the SAME
+    geometry/retrieval/budget as w23 (which it reads from
+    ``experiment_designed_mechanism``, so the ``baseline_global`` arm reproduces
+    the w23 line by construction):
+
+    * ``sequential_masked`` / ``sequential_free`` -- write items ONE AT A TIME so
+      no two valleys are dug by the same gradient step (masked = each item may
+      only move its own contiguous atom block, which w22/w23 already partitioned;
+      free = one item at a time but all atoms movable, which isolates "one
+      gradient at a time" from "parameter-space masking").
+    * ``scale_invariant`` -- rescale the write's LENGTH scales with the site
+      separation (which shrinks as ``K^{-1/d}``) and switch the item aggregation
+      to ``sum`` so the per-item gradient does not shrink as K grows. This closes
+      the "signal dilution vs optimization interference" question by measurement.
+    * ``crowding_aware`` -- an objective that can SEE crowding: worst-direction
+      (``max``) minimum-violation instead of the mean, nearest-neighbour barrier
+      instead of the ``1/K``-diluted all-pairs mean, and an explicit atom
+      encroachment penalty at ``d_safe`` (the write-time analogue of the MVC-0
+      spacing gate, :func:`chlu.core.admission.admit_site`).
+    * ``combo`` -- all three.
+
+    ⚠ **Fairness (N46).** Every arm keeps the same learned content
+    (amplitudes/centers/widths of an atom dictionary written by gradient descent)
+    and the same supplied structure as w23 (target sites are given by the writer;
+    atoms are partitioned into K contiguous blocks). A ceiling that breaks only by
+    making the WRITE more designed would be a scope collapse, not a win.
+    """
+
+    # ---- arms and grid ----
+    arms: List[str] = field(
+        default_factory=lambda: [
+            "baseline_global",
+            "sequential_masked",
+            "sequential_free",
+            "scale_invariant",
+            "crowding_aware",
+            "combo",
+        ]
+    )
+    dims: List[int] = field(default_factory=lambda: [4, 5, 6, 8])
+    k_ladder: List[int] = field(default_factory=lambda: [16, 32, 64, 128])
+    # Per-``dims`` entry: the rung the ladder walk STARTS at (the largest K that
+    # passed under the w23 baseline). The ceiling question lives above it; the
+    # start rung is still evaluated, so an arm that LOSES capacity is visible.
+    k_start: List[int] = field(default_factory=lambda: [16, 32, 32, 32])
+    k_cap: int = 128
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    # Seeds used while WALKING the ladder (screening). The decisive cells (last
+    # pass + first fail) are re-run at the full ``seeds`` list.
+    screen_seeds: int = 1
+    # Value-blank control seeds per cell (the control has never failed in w22/w23;
+    # 1 seed keeps it while halving the cost of the sweep).
+    blank_seeds: int = 1
+    # Queries per item for the read (w23 used 32; 16 halves the read cost and puts
+    # the strict-rate standard error at ~1% at K>=32 -- declared, and identical
+    # across arms so the comparison is internal).
+    n_query_per_item: int = 16
+
+    # ---- sequential / masked write ----
+    seq_steps_per_item: int = 300
+    seq_passes: int = 1  # sweeps over the item list
+
+    # ---- scale-invariant write ----
+    # sigma_addr = scale_sigma_frac * site_separation (w23 used a FIXED 0.25 while
+    # the separation shrinks as K^{-1/d}: at d=6 K=64, sep=0.795, so the
+    # perturbation ball reaches a THIRD of the way into the neighbour's cell).
+    scale_sigma_frac: float = 0.30
+    scale_width_frac: float = 0.35  # atom init width = frac * site_separation
+    scale_item_agg: str = "sum"  # per-item gradient independent of K
+
+    # ---- crowding-aware objective ----
+    crowd_weight: float = 1.0
+    crowd_d_safe_frac: float = 0.5  # d_safe = frac * site separation
+    crowd_d_safe_mult: float = 4.4  # cap at mult * atom width (admission.D_SAFE_MULT)
+    crowd_min_agg: str = "max"
+    crowd_barrier_pairs: str = "nn"
+
+    # ---- controls (N92 budget-adequacy protocol) ----
+    run_adequacy_recheck: bool = True  # first-fail cell re-run at 2x atoms
+    adequacy_atom_mult: float = 2.0
+    adequacy_seeds: int = 2
+    run_steps_recheck: bool = True  # first-fail cell re-run at 2x write steps
+    steps_recheck_mult: float = 2.0
+
+
+@dataclass
+class ExperimentShardedStoreConfig:
+    """Configuration for the **N-unit sharded store** (w25, R2 revival route ii).
+
+    `lattice-capacity-theory` (w24) proved **Prop L2** (a masked write on disjoint
+    atom groups IS N independent optimizers — AdamW's state factorizes elementwise,
+    so there is nothing to synchronize) and **Theorem L1**
+
+    .. code-block:: text
+
+        K_total = min( K_addr(Q, s, sigma_q) ,  sum_r K_write(unit r) )
+
+    Nobody had built the store. This group configures that build
+    (:mod:`chlu.core.shard_store`) and the §5.1 **2x2 discriminator**: does splitting
+    the SAME items across N units, each written by its own dig, clear a wall the
+    monolithic store cannot?
+
+    Everything about geometry, the two-phase read, the write operator, the query
+    noise and the pass criterion is inherited VERBATIM from
+    ``experiment_designed_mechanism`` (w23/w24), so the ``monolithic`` arm
+    reproduces the w23/w24 line by construction and is the mandatory **laundering
+    control** at every ``K_total``. Only the sharding knobs live here.
+
+    ⚠ The routing half of a sharded store is **classical nearest-neighbour
+    indexing** (N89 discipline). The approved claim is narrow: *the write is
+    additive at zero optimizer cost, and the read stays O(1) in depth, because a
+    classical O(N) score suffices to route.* "Capacity multiplies by sharding" is
+    NOT a dynamical result. See chlu/experiments/exp_sharded_store.py.
+    """
+
+    # ---- the 2x2 discriminator grid: cells are "d:K:n_shards" ----
+    # d=6 K=64 2x32 : the headline (additivity: min(K_addr, N*32))
+    # d=4 K=32 2x16 : ⭐ the CONTROL — must still FAIL (geometry-bound below the ceiling)
+    # d=8 K=64 2x32 / 4x16 : additivity is in N*K_ceiling, not in shard size
+    # d=8 K=256 8x32 : where geometry takes over (d_eff < d may bite)
+    cells: List[str] = field(
+        default_factory=lambda: ["6:64:2", "4:32:2", "8:64:2", "8:64:4"]
+    )
+    # Arms. ``monolithic`` = the w23/w24 line = the laundering control.
+    # ``sharded_matched``   : N shards, TOTAL atoms = the monolithic budget
+    #                         (parameter-matched; a win here is a free lunch).
+    # ``sharded_per_shard`` : each shard gets the budget a monolithic store of K/N
+    #                         items would get (the literal "N independent stores";
+    #                         total params ~N x, so its laundering line is...)
+    # ``monolithic_nx``     : ...the monolithic store at that SAME total atom count
+    #                         (w23 measured that more atoms make d=6 K=64 *worse*).
+    arms: List[str] = field(
+        default_factory=lambda: [
+            "monolithic",
+            "sharded_matched",
+            "sharded_per_shard",
+            "monolithic_nx",
+        ]
+    )
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    # Queries per item (w23 used 32; 16 halves the read cost at ~1% strict SE for
+    # K>=32 — declared, and identical across arms, exactly as w24 did).
+    n_query_per_item: int = 16
+    blank_seeds: int = 1  # value-blank control seeds per cell (leak-immunity)
+
+    # ---- allocation + partition (build item 3) ----
+    # "global" = ONE farthest-point packing of the UNION then dealt to shards (what
+    # Theorem L1's condition W4 requires); "local" = each shard packs its own set
+    # without knowing the others (the control that collapses the union separation).
+    allocation: str = "global"
+    partition: str = "spread"  # spread | contiguous | roundrobin
+
+    # ---- routing (build item 4) ----
+    router: str = "R2"  # headline router; ⛔ R1 is not implemented (N97)
+    routers: List[str] = field(default_factory=lambda: ["R2", "R3", "RG"])
+    # Top-2 abstention deadband. 0.0 = never abstain, so the headline number is
+    # per-offered and directly comparable to the monolithic arm (N91 discipline:
+    # no abstention credit in a headline). The sweep is reported separately.
+    abstain_deadband: float = 0.0
+    deadband_sweep: List[float] = field(
+        default_factory=lambda: [0.0, 0.01, 0.05, 0.2, 1.0]
+    )
+
+    # ---- localized atom init (build item 2, the N98 fix) ----
+    # OFF in the headline 2x2: it is an INITIALISATION, so turning it on inside the
+    # headline would confound the sharding effect with an init effect (and invites
+    # an N46 fairness attack). Reported as its own ablation, applied identically to
+    # BOTH arms. Radius = mult * atom_init_width; ADDRESS axes only (the payload
+    # axis keeps the w23 scatter, which is load-bearing for basin reach).
+    atom_init_local: bool = False
+    atom_init_local_mult: float = 2.0
+    init_ablation_cells: List[str] = field(default_factory=lambda: ["6:64:2"])
+    init_ablation_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # ---- item 2: the read-parity check (§5.3, DESIGNED shards, no write) ----
+    # Isolates the READ side: if global-allocator sharding still degrades with N,
+    # Prop L4 ("read-side discrimination is conserved by sharding") is wrong and
+    # there is an unmodelled cross-shard channel -> escalate, do not paper over.
+    parity_d: int = 4
+    parity_K: int = 32
+    parity_shards: List[int] = field(default_factory=lambda: [1, 2, 4, 8])
+    parity_allocations: List[str] = field(default_factory=lambda: ["global", "local"])
+    parity_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    parity_n_query_per_item: int = 16
+
+    # ---- item 3: wall-clock of routing vs read (the O(1)-in-depth claim) ----
+    timing_d: int = 6
+    timing_K: int = 64
+    timing_shards: List[int] = field(default_factory=lambda: [2, 4, 8])
+    timing_queries: int = 64
+    timing_repeats: int = 3
+
+    # ---- item 4: the global allocator demo (registry vs per-shard registries) ----
+    alloc_demo_K: int = 24
+    alloc_demo_shards: int = 4
+    alloc_demo_radius: float = 2.0
+    alloc_demo_s: float = 0.35  # well width; d_safe = 4.4 * s (admission.D_SAFE_MULT)
+    alloc_demo_seed: int = 0
+
+    # ---- which items run ----
+    run_discriminator: bool = True
+    run_read_parity: bool = True
+    run_timing: bool = True
+    run_allocator: bool = True
+    run_init_ablation: bool = True
+    run_deadband_sweep: bool = True
+
+
+@dataclass
+class ExperimentHopfieldCapacityConfig:
+    """Configuration for the Hopfield-capacity PERFORMANCE benchmark (w22).
+
+    The ONE external benchmark where a *designed* CLU is admissible (scout
+    #1-ranked target): the modern-Hopfield / dense-associative-memory retrieval
+    protocol, matched VERBATIM to ``MAGICS-LAB/UHop @ cdac754``
+    (``memory_retrieval.py``) and ``ml-jku/hopfield-layers @ f56f929``. Nothing
+    is learned on either side (the Hopfield line writes patterns in closed form;
+    CLU designs a landscape), so the w20 "learning destroys everything" blocker
+    does not bind. See chlu/experiments/exp_hopfield_capacity.py.
+
+    ⚠ The repo's success metric is **mean sqdiff** (Σ(clamp(x,0,1)−clamp(x̂,0,1))²
+    over pixels), NOT cosine>0.9 — the scout's cosine number was single-sourced.
+    We match sqdiff and ALSO report cosine + identity-retrieval accuracy.
+    """
+
+    datasets: List[str] = field(default_factory=lambda: ["mnist"])
+    load_grid: List[int] = field(default_factory=lambda: [16, 32, 64, 128, 256, 512])
+    noise_levels: List[float] = field(
+        default_factory=lambda: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    )
+    noise_fixed_load: int = 128  # load at which the noise sweep is run
+    n_data_pool: int = 2000  # how many images to draw the store from
+    mask_p: float = 0.5  # dropout fraction (the "50% masked" query) — repo verbatim
+
+    # Hopfield arms
+    hopfield_beta: float = 1.0  # repo default (β=1, 1 step)
+    hopfield_steps: int = 1  # repo default
+    hopfield_beta_tuned: float = 0.0  # 0 ⇒ auto β·⟨x,x⟩≈200 (sharp) rule
+    hopfield_steps_tuned: int = 2
+    activations: List[str] = field(default_factory=lambda: ["softmax", "sparsemax"])
+
+    # CLU designed register (GaussianMemoryPotential + damped Verlet).
+    # well width s = clu_s_frac * median NN pattern distance. MUST be < ~0.4:
+    # Gaussian wells wider than the inter-pattern spacing merge into one basin
+    # and every query settles to the centroid (measured: acc 1.00 at 0.3 vs 0.17
+    # = chance at 0.5 on 6 well-separated 32-d patterns). This is the localized
+    # dense-associative-memory regime; it is NOT tuned per load.
+    clu_s_frac: float = 0.3
+    clu_b: float = 1.0
+    clu_alpha: float = 1e-3
+    clu_gamma: float = 0.1  # settling friction (address phase)
+    clu_steps: int = 200
+    clu_dt: float = 0.0  # 0 ⇒ auto-set for stability from s and b
+    clu_tail_frac: float = 0.1  # read = mean of last tail_frac of the rollout
+    clu_kinetic_mode: str = "newtonian_identity"
+
+    # Retry differentiator (codebook-gated boosted second pass)
+    retry_enabled: bool = True
+    retry_boost: float = 1.5  # KE boost applied to the query on the retry launch
+    retry_conf_frac: float = 0.5  # bottom-fraction of first-pass confidences retried
+
+    success_cosine: float = 0.9  # scout's secondary criterion, reported alongside
+    seed: int = 0
+    rollout_chunk: int = 256
+
+
+@dataclass
+class ExperimentPhiReadInConfig:
+    """Configuration for the learned read-in ``φ`` around a DESIGNED store (w23).
+
+    The phase-doctrine flagship: *learn around a designed core*. A learned read-in
+    ``φ: raw x → feature`` lifts the query into a representation space; the store is
+    a **designed key–value register** (address = ``φ(x)`` written as a Gaussian
+    well; payload = the raw ``x``), and read-out ``ψ`` = settle → return the
+    payload. The w22 Hopfield/U-Hop protocol is re-fought in ``φ``-space against
+    **kNN-in-φ** (the trivial baseline, now a fair fight — cf. the pixel-space NN
+    floor that beat everyone in w22), **closed-form Hopfield-in-φ**, and the w22
+    **raw-space CLU** line (continuity control). See chlu/experiments/
+    exp_phi_read_in.py.
+
+    ⚠ **Laundering control (Item 3, mandatory):** same ``φ``, trivial store swap.
+    If kNN-in-φ matches CLU-in-φ everywhere, the win is ``φ``'s, not the store's
+    (the C17-3 lesson). A CLU margin that exists ONLY with the designed store is
+    the result the program needs.
+
+    Two ``φ`` arms, both trained OFF the CLU side (w20's law):
+      - ``pca``: frozen PCA-k (unsupervised, linear, cheap).
+      - ``ae``:  a small autoencoder trained on a DISJOINT data-distribution pool
+        with a reconstruction loss only — never sees the store, wells, or a
+        retrieval loss.
+    Both are fit on ``n_fit_pool`` images drawn disjoint from the store pool.
+
+    Metric = mean ``sqdiff`` in **pixel space** on the returned payload (identical
+    to w22 for comparability); identity-retrieval accuracy reported alongside.
+    """
+
+    datasets: List[str] = field(default_factory=lambda: ["mnist"])
+    phi_arms: List[str] = field(default_factory=lambda: ["pca", "ae"])
+    load_grid: List[int] = field(default_factory=lambda: [16, 32, 64, 128, 256])
+    noise_levels: List[float] = field(
+        default_factory=lambda: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    )
+    noise_fixed_load: int = 128
+    n_data_pool: int = 1500  # store pool (patterns drawn from here)
+    n_fit_pool: int = 3000  # DISJOINT pool used to fit/train φ
+    mask_p: float = 0.5  # dropout fraction (the 50%-masked query) — repo verbatim
+
+    # φ read-in
+    phi_dim: int = 32  # feature dimension k (the store's address space)
+    # φ-B autoencoder (trained on the disjoint pool, reconstruction only)
+    ae_hidden: int = 256
+    ae_epochs: int = 400  # full-batch Adam steps
+    ae_lr: float = 1e-3
+    ae_batch: int = 512
+
+    # closed-form Hopfield-in-φ arm
+    hopfield_beta: float = 1.0
+    hopfield_steps: int = 1
+    activations: List[str] = field(default_factory=lambda: ["softmax", "sparsemax"])
+
+    # CLU designed register in φ-space (GaussianMemoryPotential + damped Verlet)
+    clu_s_frac: float = 0.3  # s = clu_s_frac * median-NN(φ) distance (fixed rule)
+    clu_b: float = 1.0
+    clu_alpha: float = 1e-3
+    clu_gamma: float = 0.1
+    clu_steps: int = 200
+    clu_dt: float = 0.0  # 0 ⇒ auto-set from s and b
+    clu_tail_frac: float = 0.1
+    clu_kinetic_mode: str = "newtonian_identity"
+
+    # Item 4 — retry confidence probe (distance-to-nearest-well at settle)
+    probe_retry_confidence: bool = True
+
+    success_cosine: float = 0.9
+    seed: int = 0
+    rollout_chunk: int = 256
+
+
+@dataclass
+class ExperimentRetryComputeConfig:
+    """Configuration for the RETRY-COMPUTE study (w23) — the accuracy-vs-compute
+    curve for CLU retrieval, with five pre-registered controls.
+
+    Promotes w22's single retry demo point (+46.9pp at ×1.5 compute) into a
+    defensible curve. On the w22 retrieval protocol (Gaussian noise queries,
+    matched to ``MAGICS-LAB/UHop`` ``memory_retrieval_noise.py``), sweeps a retry
+    ladder k ∈ {0,1,2,4,8} at ≥2 loads (M) and ≥2 noise levels (σ), reporting
+    identity accuracy vs total relaxation-step count for six lines:
+    CLU-gated retry, ungated-retry-all, ensemble-of-k-reads, random-kick retry,
+    feedforward-NN matched-compute, Hopfield-k-steps.
+    See chlu/experiments/exp_retry_compute.py.
+    """
+
+    datasets: List[str] = field(default_factory=lambda: ["mnist"])
+    # Loads/σ chosen for HEADROOM: first-pass CLU accuracy in [0.2, 0.9] (measured
+    # M=128/σ=0.3→0.69, M=256/σ=0.3→0.22, M=*/σ=0.2→0.83-0.92). Beyond the σ≈0.4
+    # basin-capture cliff every arm collapses to chance and no retry can recover a
+    # query that has left every well (the Δ_req limit — hopfield-capacity §2.2).
+    load_grid: List[int] = field(default_factory=lambda: [128, 256])  # ≥2 loads
+    noise_levels: List[float] = field(default_factory=lambda: [0.2, 0.3])  # ≥2 σ
+    # Query protocol: "mask" = torch.dropout(p) (the w22 capacity protocol where the
+    # retry boost recovers misses); "noise" = clamp(|x+N(0,σ)|,0,1) (Gaussian). The
+    # boost is MASK-specific (measured); both are run so the finding travels.
+    query_types: List[str] = field(default_factory=lambda: ["mask", "noise"])
+    mask_fracs: List[float] = field(default_factory=lambda: [0.5, 0.7])  # ≥2 mask lvls
+    n_data_pool: int = 2000
+    retry_ladder: List[int] = field(default_factory=lambda: [0, 1, 2, 4, 8])
+    retry_step_frac: float = 0.1  # fraction of lowest-conf reads retried per round
+    # cosine gate thresholds swept for the gated line (Item 1: "threshold swept").
+    # cos|correct≈0.998, cos|wrong≈0.95, so 0.99 cleanly gates the wrong tail;
+    # 0.95 under-retries; 1.0 (no gate) over-retries and corrupts correct reads.
+    conf_thresholds: List[float] = field(
+        default_factory=lambda: [0.95, 0.97, 0.99, 1.0]
+    )
+    main_threshold: float = 0.99  # threshold used for the main-figure gated line
+    retry_boost: float = 1.5  # KE boost injected toward the query on a retry launch
+
+    # CLU designed register (mirrors ExperimentHopfieldCapacityConfig defaults)
+    clu_s_frac: float = 0.3
+    clu_b: float = 1.0
+    clu_alpha: float = 1e-3
+    clu_gamma: float = 0.1
+    clu_steps: int = 150  # = 1 compute unit (one first-pass settle)
+    clu_dt: float = 0.0  # 0 ⇒ auto-set for stability from s and b
+    clu_tail_frac: float = 0.1
+    clu_kinetic_mode: str = "newtonian_identity"
+
+    # feedforward-NN matched-compute control (TTA augmentation + majority vote)
+    ff_aug_sigma: float = 0.1
+    # Hopfield-k-steps control (closed-form line iterated)
+    hopfield_beta: float = 1.0
+    hopfield_beta_tuned: float = 0.0  # 0 ⇒ auto β·⟨x,x⟩≈200 (floored at repo β)
+
+    # ── w24 AMBIGUITY REGIMES (the headroom benchmark) ───────────────────────
+    # w23 could not win the benchmark because there was nothing to win: on
+    # masked-pixel MNIST the trivial NN floor sits at 0.99–1.00 (N90). The fix is
+    # HEADROOM, and the ⭐ design constraint is that the headroom must come from
+    # AMBIGUITY (several stored items are consistent with the query) and NOT from
+    # DESTRUCTION (full-field Gaussian noise past the σ≈0.4 basin-capture cliff,
+    # where the query has left every well and no retry can recover it).
+    #
+    # A "regime" is "<store_mode>:<query_type>":
+    #   store_mode ∈ {"iid", "crowded"} · query_type ∈ {"mask", "noise", "block"}
+    # EMPTY (the default) ⇒ derived from ``query_types`` at store_mode "iid",
+    # i.e. byte-identical to the w23 grid. Nothing below changes w23 behaviour.
+    regimes: List[str] = field(default_factory=list)
+    # R-BLOCK levels: contiguous-occlusion AREA fraction (correlated erasure).
+    block_fracs: List[float] = field(default_factory=lambda: [0.5, 0.7])
+    # Survivor rescaling (1/(1-f), the torch.dropout convention) for BLOCK queries.
+    # True = inherited convention. ⚠ MEASURED (w24 gate iter 1): under *correlated*
+    # erasure the rescaling amplifies a surviving crop by 2-3.3x and destroys the
+    # query (first-pass 0.086 / NN floor 0.383 at f=0.4) — destruction, not
+    # ambiguity. False = the PARTIAL-KEY reading (query = pattern restricted to the
+    # surviving coordinates), which is the arm that produces real headroom.
+    block_rescale: bool = True
+    # R-CROWD levels: the iid dropout mask p used on a CROWDED store (ambiguity
+    # comes from the geometry, so the query degradation is kept mild).
+    crowd_mask_fracs: List[float] = field(default_factory=lambda: [0.3, 0.5])
+    # index of the pool pattern the crowded cluster is grown around
+    crowd_anchor: int = 0
+    # Contraction of the crowded store about its own centroid: xi' = c + rho(xi-c).
+    # 1.0 = plain nearest-neighbour cluster (no contraction). ⚠ MEASURED (w24 gate
+    # iter 1): the NN cluster ALONE creates no ambiguity (NN floor 1.000 everywhere)
+    # because the well width s = clu_s_frac*median-NN is store-ADAPTIVE and the NN
+    # rule is scale-free — a k-times tighter cluster simply gets k-times tighter
+    # wells. rho<1 shrinks median-NN while leaving the erasure displacement
+    # (proportional to the centroid norm) fixed, so sigma_q/median-NN grows as 1/rho.
+    crowd_rho: float = 1.0
+
+    # Item 2 — the headroom GATE, checked before spending a full ladder.
+    # Pass ⇔ first-pass CLU accuracy ∈ band AND NN floor < ceiling.
+    headroom_band: List[float] = field(default_factory=lambda: [0.5, 0.75])
+    headroom_nn_ceiling: float = 0.95
+
+    # ≥3 seeds are required on any cell that produces a headline (w23 ran 1).
+    # seeds = [seed, seed+1, …, seed+n_seeds-1]; the pool subsample, the store,
+    # the queries and the retry RNG all move with the seed.
+    n_seeds: int = 1
+    # the τ-sweep is expensive (4 extra gated ladders); run it on the first
+    # ``sweep_seeds`` seeds only.
+    sweep_seeds: int = 1
+
+    seed: int = 0
+    rollout_chunk: int = 256
+
+
+@dataclass
+class ExperimentPhiStreamConfig:
+    """Configuration for the ``φ`` STREAM-DISCIPLINE study (w24) — what may the
+    learned read-in ``φ`` legitimately see in a CONTINUAL stream?
+
+    w23's ``φ`` (``exp_phi_read_in``) was fit on a disjoint pool that saw **all
+    ten classes**. For static recall that is fair. In **Class-IL it is data
+    leakage**: ``φ`` must not be trained on data from tasks the model has not yet
+    reached. This experiment implements three ``φ``-stream regimes behind one flag
+    and measures the **cost of strictness**.
+
+    Regimes (``phi_regimes``):
+      - ``task1_only`` — ⭐ **PRIMARY (Head ruling).** ``φ`` is fit on task 1's
+        classes only, then **frozen for the whole stream**. The defensible arm;
+        every headline number comes from here.
+      - ``generic_frozen`` — the w23-style all-classes pool, carried as a
+        **declared upper bound**. Clearly labelled, **never the headline**.
+      - ``online`` — **stub / interface only, not run** (see
+        ``chlu/experiments/exp_phi_stream.py::OnlineReadIn``). Its own experiment
+        later; whether it enters the CL results is a separate decision.
+
+    Stream = Split-MNIST-shaped: ``n_tasks`` × ``classes_per_task`` classes
+    (default 5×2). The store stays **DESIGNED** (Gaussian wells over ``φ(x)``,
+    payload = raw ``x``) and ``φ`` is **never trained through the store** (the w20
+    law, unchanged). ``kNN-in-φ`` is reported in **every** regime — the mandatory
+    laundering control (N89, CM-22(i)).
+    """
+
+    dataset: str = "mnist"
+    n_tasks: int = 5
+    classes_per_task: int = 2
+    phi_regimes: List[str] = field(
+        default_factory=lambda: ["task1_only", "generic_frozen"]
+    )
+    phi_arms: List[str] = field(default_factory=lambda: ["pca", "ae"])
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # stream / store sizing
+    items_per_task: int = 32  # items written into the designed store per task
+    n_fit_pool: int = 3000  # φ fit pool per regime (DISJOINT from the store pool)
+    n_store_region: int = 20000  # index region reserved for store draws
+    mask_p: float = 0.5  # 50%-masked query (repo-verbatim dropout query)
+
+    # φ read-in (shared by both regimes — only the FIT POOL differs)
+    phi_dim: int = 32
+    ae_hidden: int = 256
+    ae_epochs: int = 400
+    ae_lr: float = 1e-3
+    ae_batch: int = 512
+
+    # ---- w26 (cl-encoder): the conv arms, ``phi_arms`` ∈ randconv|convae|simclr.
+    # Inert unless such an arm is selected; see chlu/experiments/phi_encoders.py.
+    enc_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
+    enc_pool: int = 2
+    enc_groups: int = 8
+    enc_steps: int = 8000
+    enc_batch: int = 128
+    enc_lr: float = 1e-3
+    enc_temperature: float = 0.5
+    enc_proj_dim: int = 64
+    enc_head: str = "pca"  # pca | pca_whiten | none
+    enc_l2_normalize: bool = True
+    enc_aug_crop_pad: int = 4
+    enc_aug_zoom_p: float = 0.5
+    enc_aug_zoom_size: int = 20
+    enc_aug_flip_p: float = 0.5
+    enc_aug_color_p: float = 0.8
+    enc_aug_color_strength: float = 0.4
+    enc_aug_gray_p: float = 0.2
+
+    # CLU designed register in φ-space (GaussianMemoryPotential + damped Verlet)
+    clu_s_frac: float = 0.3  # s = clu_s_frac * median-NN(φ keys) — one fixed rule
+    clu_b: float = 1.0
+    clu_alpha: float = 1e-3
+    clu_gamma: float = 0.1
+    clu_steps: int = 200
+    clu_dt: float = 0.0  # 0 ⇒ auto-set from s and b
+    clu_tail_frac: float = 0.1
+    clu_kinetic_mode: str = "newtonian_identity"
+    # well-width policy along the stream: "refit" recomputes s from the CURRENT
+    # keys at every stream position (uses only already-stored items — no future
+    # leakage); "task1_frozen" fixes s from the task-1 keys and never re-plans.
+    s_policy: str = "refit"
+
+    laundering_tie_band: float = 0.03
+    success_cosine: float = 0.9
+    seed: int = 0
+    rollout_chunk: int = 256
+
+
+@dataclass
+class ExperimentClEntryConfig:
+    """⭐ Configuration for the w25 CONTINUAL-LEARNING ENTRY (``exp_cl_entry``).
+
+    Rehearsal-free **Class-Incremental Learning** (task identity NOT given at test
+    time) on Split-MNIST / Split-CIFAR-10, from scratch, with a **designed CLU store**
+    addressed by a frozen task-1-only ``φ`` and driven by the MVC-0 controller. One
+    build carries three results: the entry (ACC + forgetting/BWT vs the mandatory
+    baseline table), the R3-native retry ladder on crowded-store recall of past-task
+    items, and the R1 **scheduled per-item retention** demonstration.
+
+    Binding protocol constraints encoded here:
+      - ``phi_dim >= 16`` (PREREG_CL_PHI §7 — below that the leakage-free arm pays a
+        real double-digit penalty);
+      - ``phi_regimes`` may only contain ``task1_only`` (PRIMARY) and
+        ``generic_frozen`` (declared upper bound, never a headline);
+      - ``memory_items`` is matched across the store, ER, iCaRL, GDumb and both
+        kNN-in-φ laundering lines (N89 / CM-22(i));
+      - the sizing rule (``controller-mvp`` handover item 4): the admission radius is
+        ``d_safe = d_safe_mult · s`` with ``s = clu_s_frac · median-NN(stored keys)``,
+        so ``d_safe_mult · clu_s_frac <= 1`` keeps the spacing gate self-consistent
+        with the width rule instead of refusing almost everything.
+    """
+
+    dataset: str = "mnist"  # mnist | cifar10
+    n_tasks: int = 5
+    classes_per_task: int = 2
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    items: List[str] = field(default_factory=lambda: ["entry", "retry", "retention"])
+
+    # ---- stream sizing ----
+    n_train_per_task: int = 2000  # stream items offered per task (store AND baselines)
+    n_test_per_task: int = 1000  # held-out test items per task (Class-IL evaluation)
+    n_fit_region: int = 10000  # train indices reserved for φ fit pools (disjoint)
+    n_fit_pool: int = 3000  # φ fit pool size (same in both regimes)
+
+    # ---- φ (PREREG_CL_PHI) ----
+    phi_regimes: List[str] = field(
+        default_factory=lambda: ["task1_only", "generic_frozen"]
+    )
+    phi_arm: str = "pca"  # pca | ae | randconv | convae | simclr
+    phi_dim: int = 32  # ⚠ must be >= 16 (binding)
+    ae_hidden: int = 256
+    ae_epochs: int = 400
+    ae_lr: float = 1e-3
+    ae_batch: int = 512
+
+    # ---- w26 (cl-encoder): the CL-capable CONV read-in arms -------------------
+    # ``phi_arm ∈ {randconv, convae, simclr}`` selects a small conv trunk fit on the
+    # regime's own (unsupervised, task-1-only for the PRIMARY arm) pool; ``h`` is
+    # reduced to ``phi_dim`` by a PCA head so the address dimension keeps its meaning.
+    # Every knob is inert while ``phi_arm ∈ {pca, ae}`` (w24/w25 callers unchanged).
+    # See chlu/experiments/phi_encoders.py for the arm definitions.
+    enc_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
+    enc_pool: int = 2  # side of the final average-pooled map (h_dim = C·pool²)
+    enc_groups: int = 8  # GroupNorm groups (0 ⇒ no normalisation); stateless by design
+    # ⭐ measured on the w26 CIFAR gate (seed 0, `cl-encoder`): the read-out choices
+    # below are NOT free — at 8 000 steps the gate metric moves 0.298 (whitened,
+    # unnormalised) → 0.350 (plain PCA + cosine), and 2 000 steps only reaches 0.285.
+    enc_steps: int = 8000  # optimizer steps for the φ fit (NOT stream training)
+    enc_batch: int = 128  # images per step; simclr sees 2× that many views
+    enc_lr: float = 1e-3
+    enc_temperature: float = 0.5  # NT-Xent τ
+    enc_proj_dim: int = 64  # projection head width (discarded after fitting)
+    enc_head: str = "pca"  # h → φ: pca | pca_whiten | none (whitening measured WORSE)
+    enc_l2_normalize: bool = True  # cosine addresses; ⚠ this changes the store geometry
+    enc_aug_crop_pad: int = 4
+    enc_aug_zoom_p: float = 0.5
+    enc_aug_zoom_size: int = 20
+    enc_aug_flip_p: float = 0.5
+    enc_aug_color_p: float = 0.8
+    enc_aug_color_strength: float = 0.4
+    enc_aug_gray_p: float = 0.2
+
+    # ---- the designed store + MVC-0 controller ----
+    memory_items: int = 200  # matched memory budget (items) for every method
+    clu_s_frac: float = 0.2  # s = clu_s_frac · median-NN(stored φ keys)
+    d_safe_mult: float = 4.4  # admission radius in units of s (4.4·0.2 = 0.88·median-NN)
+    s_policy: str = "refit"  # refit | task1_frozen
+    s_init_items: int = 200  # task-1 keys used to set the initial width
+    store_alpha: float = 1e-3  # address-space confinement
+    clu_b: float = 1.0
+    clu_alpha: float = 1e-3
+    clu_gamma: float = 0.1
+    clu_steps: int = 150
+    clu_dt: float = 0.0  # 0 ⇒ auto (0.5·s/√b)
+    clu_tail_frac: float = 0.1
+    clu_kinetic_mode: str = "newtonian_identity"
+    rollout_chunk: int = 256
+
+    # ---- baselines (cl_baselines.py) ----
+    baselines: List[str] = field(
+        default_factory=lambda: ["finetune", "ewc", "si", "lwf", "er", "derpp",
+                                 "icarl", "gdumb", "joint"]
+    )
+    backbone: str = "mlp"  # mlp (MNIST) | cnn (CIFAR-10)
+    cnn_channels: List[int] = field(default_factory=lambda: [16, 32, 32])
+    mlp_width: int = 400
+    mlp_depth: int = 2
+    baseline_iters: int = 500  # optimizer steps per task, identical for every method
+    baseline_batch: int = 128
+    baseline_lr: float = 1e-3
+    ewc_lambda: float = 5000.0
+    si_c: float = 1.0
+    si_xi: float = 0.1
+    lwf_alpha: float = 1.0
+    lwf_temp: float = 2.0
+    # LwF's training cross-entropy scope: "seen" (the standard single-head
+    # Class-IL convention, and the one under which EWC/SI/finetune reproduce their
+    # published Split-MNIST values here to <=0.5 pp) or "current_task" (the other
+    # published decomposition). ⚠ NOT a hyper-parameter: it swings LwF's Class-IL
+    # score by tens of points. Default = the calibrated convention.
+    lwf_ce_scope: str = "seen"
+    fisher_samples: int = 200
+    eval_chunk: int = 1024
+    # N78 tuning discipline: each rehearsal-free baseline's ONE defining
+    # hyper-parameter is swept on seed 0 and the best value is used for all seeds;
+    # the grid and the winner are reported. Nothing else is tuned per method.
+    tune_baselines: bool = True
+    ewc_lambda_grid: List[float] = field(
+        default_factory=lambda: [100.0, 1000.0, 10000.0]
+    )
+    si_c_grid: List[float] = field(default_factory=lambda: [0.1, 1.0, 10.0])
+    # ⚠ w26 LwF retune (matched-bytes-frontier item 5): w25's winner sat at the
+    # OLD grid's upper edge (2.0) with ACC 4.3 pp below the published Split-MNIST
+    # Class-IL value, so the grid was mis-specified. Extended upward.
+    lwf_alpha_grid: List[float] = field(
+        default_factory=lambda: [0.5, 1.0, 2.0, 5.0, 10.0]
+    )
+    # ---- DER++ (Buzzega et al. 2020), the strongest cheap replay baseline ----
+    derpp_alpha: float = 0.5  # weight on the stored-logit MSE term
+    derpp_beta: float = 0.5  # weight on the buffer cross-entropy term
+    tune_derpp: bool = True
+    derpp_alpha_grid: List[float] = field(default_factory=lambda: [0.2, 0.5, 1.0])
+    derpp_beta_grid: List[float] = field(default_factory=lambda: [0.5, 1.0])
+
+    # ---- ⭐ w26: the matched-BYTES forgetting frontier (`items=["frontier"]`) ----
+    # Every method is given the SAME byte budget and converts it to items at its own
+    # per-item cost (``cl_baselines.floats_per_stored_item``): raw-exemplar replay
+    # gets B/785 items, the CLU store B/41 wells, the kNN-in-φ ring-buffer launder
+    # B/34 keys. The grid below spans exactly 50× and its P5 point (157 000 floats)
+    # is the w25 operating point: exactly 200 raw exemplars, label included.
+    frontier_budgets_floats: List[int] = field(
+        default_factory=lambda: [6280, 19625, 39250, 78500, 157000, 314000]
+    )
+    frontier_methods: List[str] = field(
+        default_factory=lambda: ["er", "derpp", "icarl", "gdumb"]
+    )
+    frontier_fixed_methods: List[str] = field(
+        default_factory=lambda: ["finetune", "ewc", "si", "lwf", "joint"]
+    )
+    frontier_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    frontier_n_test_per_task: int = 0  # 0 ⇒ inherit n_test_per_task
+    frontier_max_clu_items: int = 0  # 0 ⇒ uncapped; a binding cap is reported
+    frontier_tuning_budget: int = 0  # 0 ⇒ the second-largest grid point
+    # anti-degeneracy clause (PREREG §2): a forgetting win is only counted where
+    # CLU's learning accuracy is within this band of the best LA at that budget —
+    # a method that never learned never forgets.
+    frontier_la_band: float = 0.10
+    # per-item accounting: count the controller's ItemRecord scalars against the
+    # store (conservative — it makes CLU's per-item cost LARGER). See PREREG §1.
+    count_controller_record_floats: bool = True
+    bytes_per_float: int = 4
+
+    # ---- Item 3: the R3-native retry ladder ----
+    retry_ladder: List[int] = field(default_factory=lambda: [0, 1, 2, 4, 8])
+    retry_tau: float = 0.99  # confidence gate threshold (swept below)
+    retry_tau_grid: List[float] = field(
+        default_factory=lambda: [0.99, 0.999, 0.9999, 1.0]
+    )
+    retry_boost: float = 1.5
+    retry_step_frac: float = 0.1
+    retry_mask_p: float = 0.5  # PIXEL-space dropout (used by the retention probe)
+    retry_mask_levels: List[float] = field(default_factory=lambda: [0.5, 0.8])
+    retry_mid_task: int = 2  # store snapshot for the MID-STREAM retry cell (0-indexed)
+    ff_aug_sigma: float = 0.1  # matched-compute feedforward TTA noise
+
+    # ---- Item 4: scheduled per-item retention (R1 survivor) ----
+    # ⛔ naming (CM-22 m/n/o): scheduled per-item retention / scheduled forgetting.
+    # NEVER "certified", "unlearning", "deletion by construction", "exact deletion".
+    ticks_per_task: int = 4  # decay ticks per task (20 over a 5-task stream)
+    leak_slow: float = 0.0866  # half-life 8 ticks
+    leak_fast: float = 0.3466  # half-life 2 ticks
+    amp_floor: float = 0.05  # a well below this self-evicts
+    permanent_per_task: int = 10  # cap on the leak=0 cohort (permanence costs budget)
+
+    laundering_tie_band: float = 0.03
+
+    # ---- ⭐ C2W8 (`c2w8-cifar-strong-phi`): the strong-φ re-price of the CIFAR null --
+    # charter §A4.3: **φ parameters ride on the byte ledger of every arm**, the
+    # kNN-in-φ laundering control included, because the launder reads through the
+    # SAME φ the store does. A strong encoder that is off the ledger is a hidden
+    # capacity increase — the matched-bytes violation in its most obvious form.
+    # Additive: switching it off restores the pre-C2W8 (memory-only) ledger columns;
+    # it never changes an accuracy number.
+    count_phi_param_floats: bool = True
+    seed: int = 0
+
+
+@dataclass
+class ExperimentPersistentStoreConfig:
+    """⭐ **C2W10 — the persistent store and its THREE-STATE lifecycle**
+    (:mod:`chlu.experiments.exp_persistent_store`), charter Add.12 §A34.3.
+
+    The states are **PROTECTED <-> ACTIVE -> TRASH**. Every lifecycle verb ships
+    **OFF**: with ``persistent_store = False`` and ``lifecycle = False`` the rig
+    is bit-identical and parameter-count-identical to current ``main`` (L7), and
+    the existing ``gamma_phi`` OFF regressions are untouched.
+
+    ⚠ ``d_dwell > window`` is **derived, not chosen** (a burst holds the
+    trailing-window test for exactly ``window`` chunks, so the hysteresis binds
+    only above it) and is asserted at construction of
+    :class:`~chlu.core.store_lifecycle.StoreLifecycle`.
+    ⛔ Depth never enters the usefulness criterion (§A28.3(ii)); ``read_hits`` is
+    the registered proxy. ⛔ The synthetic stream is a **mechanics instrument and
+    never a claim venue** (§A14.8).
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # ---- the single toggle (PREREG-C2W10 §1) ----
+    persistent_store: bool = False   # True => the store survives stream boundaries
+
+    # ---- the three-state lifecycle (all verbs OFF by default: L7) ----
+    lifecycle: bool = False
+    promote: bool = True
+    demote: bool = True
+    trash: bool = True
+    h_hi: int = 2            # trailing-window read hits qualifying for promotion
+    h_lo: int = 1            # below this the well counts as unused
+    window: int = 2          # trailing window, in chunks
+    d_dwell: int = 3         # chunks the >= h_hi condition must be SUSTAINED
+    d_demote: int = 2        # chunks below h_lo before PROTECTED -> ACTIVE
+    k_streams: int = 3       # stream boundaries L3's criterion looks back over
+    trash_criterion: str = "last_k_streams"  # or "since_first_seen"
+    censoring_guard: bool = True   # never-useful-YET is not never-useful
+    f_max: float = 0.25      # the protected-fraction bound (Hub default)
+    refresh_monotonic: bool = False   # the store-level I1 guard (L5)
+    refresh_max_gain: float = 4.0     # amplitude-gain cap (depth gain is its square)
+
+    # ---- the synthetic regime-switcher (MECHANICS INSTRUMENT ONLY) ----
+    n_regimes: int = 3
+    n_classes: int = 4
+    n_features: int = 8
+    n_per_stream: int = 64
+    schedule: List[int] = field(default_factory=lambda: [0, 1, 2, 0, 1, 2])
+    drift_free: bool = False   # the control condition
+    #: distinct ADDRESSABLE items, shared by every stream, so a revisit returns
+    #: to the same addresses. ⚠ `n_anchors > well_budget` IS this rig's capacity
+    #: pressure, and `well_budget / n_anchors` is the ceiling on the read's
+    #: launch-point coverage — hence on the usage proxy's resolution.
+    n_anchors: int = 96
+    jitter: float = 0.02       # per-instance noise around the anchor
+
+    # ---- the real stream (one frozen file, one sha256, all arms) ----
+    benchmark_gate_path: str = "runs/benchmark_gate.json"
+    decimation_m: int = 1      # filed by the Hub into PREREG-C2W10 §9 before any claim
+    wall_target_s: float = 7200.0   # the <= 2 h/seed pricing target
+
+    # ---- the store (carried rig facts, §A34.10, all pytest-pinned) ----
+    addr_dim: int = 12         # d = 12 operational; d = 16 is a declared NOT-RUN
+    payload_dim: int = 1
+    well_budget: int = 64      # the I2 spoke gates on n_live_max >= 64
+    capacity: int = 72
+    leak: float = 0.02
+    payload_scale: float = 8.0
+    d_safe_frac: float = 0.88          # d_safe = frac x median-NN(stream-0 keys)
+    atom_width_frac_spacing: float = 1.5   # the BANKED census value
+    atom_kernel: str = "wendland"      # compact; only a compact gate is exactly 0
+    atom_kernel_cutoff: float = 2.5
+    atom_site_local_init: bool = True  # the placing write
+
+    # ---- the read/write budget (chunk granularity, charter §2.2) ----
+    chunk_size: int = 8        # instances per chunk
+    offers_per_chunk: int = 3
+    #: queries per read event. A declared BUDGET (reads are batched, so this is
+    #: nearly free); it sets the RESOLUTION of the usage proxy — see the note in
+    #: `exp_persistent_store.run_cell`.
+    read_batch: int = 128
+    write_steps: int = 40      # ⚠ N94: >= 40 for any promotable reading
+    read_steps: int = 200
+    address_steps: int = 100
+    depth_every: int = 2       # chunks between depth measurement points
+    quick: bool = False
+
+
+@dataclass
+class ExperimentWellLifecycleConfig:
+    """⭐ C2W8 — the WELL LIFECYCLE census (``exp_well_lifecycle``), stage 1.
+
+    The CL stream of :mod:`chlu.experiments.exp_cl_entry` ported onto the **full
+    CLU system** (``CluSystem``, learned ``V_theta``) so that the K1 census —
+    *is there anything to prune, is there anything to merge?* — is measured on
+    the arm the wave would actually build on, at genuine capacity pressure.
+
+    ⛔ The arm's store is the learned ``V_theta``. The CL harness supplies
+    **only** the stream, the ``phi`` (``task1_only``, the binding primary), the
+    baseline table and the kNN-in-``phi`` launder; its designed per-item Gaussian
+    array is a labelled reference row and **never an arm** (intervention §8.2).
+
+    ⚠ ``addr_dim`` is the store's address dimension **and** the ``phi`` output
+    dimension: they are one number. See ``ERRATA-C2W8.md`` §3 for why the census
+    runs below the CL entry's ``phi_dim >= 16`` band (the learned store is
+    measurably inert at 16 on this rig) and why every reading taken here is
+    therefore labelled non-promotable as a CL benchmark entry.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    dataset: str = "mnist"
+    phi_arm: str = "pca"
+    phi_regime: str = "task1_only"  # the binding primary; no leakage
+    addr_dim: int = 8  # = phi output dim = the store's address dimension
+    payload_dim: int = 1
+
+    # ---- the over-dug store ----
+    well_budget: int = 8  # the DESIGNED budget stage 2 would merge down to
+    capacity: int = 16  # slots available while over-digging (>= 2 x well_budget)
+    n_offer_per_task: int = 8  # items offered per task before the read batch
+    overdig_target: float = 2.0  # prereg §3.4: admitted / well_budget >= 2.0
+    payload_scale: float = 9.0  # label -> payload: (label - 4.5) / payload_scale
+
+    # ---- lifetimes (so B1 has a designed decay to net out) ----
+    leak: float = 0.02
+    permanent_per_task: int = 1  # the protected (leak = 0) cohort, per task
+    ticks_per_task: int = 1
+
+    # ---- the reads that make "never read" computable (B2) ----
+    read_batch: int = 16  # held-out queries per read event
+    read_every: int = 4  # admissions between read events
+
+    # ---- the census instrument ----
+    capture_dirs: int = 16  # SC-6 bisection directions (theta_att is MEASURED)
+    capture_bisect_steps: int = 8
+    measure_capture: bool = True
+    loo_repeats: int = 2  # the SECONDARY leg, reported only with its ICC(1,1)
+    run_loo: bool = True
+
+    # ---- ⭐ C2W8 PASS 3: G-ADDR, the addressability leg (charter §A30.1) ----
+    # Additive. `run_gate_addr = False` restores the pass-1/pass-2 cell exactly
+    # (the census dict itself is untouched either way; G-ADDR is a new key).
+    run_gate_addr: bool = True
+    #: cue jitter as a DIMENSIONLESS multiple of the measured key spacing.
+    #: ⛔ Never an absolute sigma — see `well_lifecycle.GADDR_KAPPA_Q` and the
+    #: scale-invariance guard (PREREG-C2W8-PASS3 §4).
+    gaddr_kappa_q: float = 1.0
+    gaddr_n_query_per_item: int = 8
+    #: ⭐ the SCALE-ONLY control (PREREG-C2W8-PASS3 §4): multiply the address
+    #: scale by a declared constant with `phi` otherwise identical. G-ADDR must
+    #: move by ~0; if it moves, the leg measures the scale and does not ship.
+    addr_scale_mult: float = 1.0
+
+    # ---- ⭐⭐ C2W8 CLOSE-OUT: the gate-hardening knobs (charter §A32.3) ----
+    # All additive. Two of them CHANGE a default deliberately, per the ratified
+    # instrument debts; both legacy behaviours stay reachable by config.
+
+    #: ⭐ item (i) — the TWO-SIDED drift leg's FLOOR, as a fraction of the
+    #: **measured codebook spacing**. ⛔ Never an absolute constant: the leg
+    #: must fail when drift -> 0 (D2a, table-expressible, §A29.6/§A31.5) exactly
+    #: as it fails when drift exceeds the spacing. 0.01 is registered in this
+    #: spoke's `PREREG.md` §1 (2x above the measured table-expressible point).
+    gdrift_floor_frac_spacing: float = 0.01
+    #: the ceiling, unchanged from pass 2 (`median site_drift < key spacing`).
+    gdrift_ceil_frac_spacing: float = 1.0
+
+    #: ⭐⭐ item (v) — which POPULATION `d_safe` is sized on.
+    #: ``"store"`` (the repaired default, §A31.2): the NN spacing of a key set
+    #: the size of the **store's own population**, estimated by subsampling the
+    #: sizing pool. ``"sizing"`` restores the pre-close-out behaviour — the NN
+    #: spacing of the full ~200-key sizing set applied to a 16-item store, which
+    #: made monitor #3's 0.000 refusal rate **arithmetic, not a finding**.
+    d_safe_population: str = "store"  # "store" | "sizing"
+    #: how many keys the sizing set draws (the pre-existing hard-coded 200).
+    d_safe_sizing_n: int = 200
+    #: subsample draws used to estimate the store-population spacing.
+    d_safe_population_draws: int = 64
+
+    #: ⭐ item (vi.6) — which spacing the G-ADDR cue jitter is normalised on.
+    #: ``"codebook"`` (repaired default) is the resolution the read must actually
+    #: beat; ``"sizing"`` is the pre-close-out `median_nn_task1`, which made the
+    #: cue difficulty ARM-DEPENDENT (0.927 / 0.875 / 0.710, a 30 % spread).
+    gaddr_spacing_population: str = "codebook"  # "codebook" | "sizing"
+
+    #: ⭐ item (vi.5) — the census REFUSES to run at a width nobody selected.
+    #: The effective atom width is recovered as a fraction of the cell's own
+    #: measured key spacing and must match a DECLARED selection. `None` here
+    #: means "resolve the selection from the arm configs"; set it to pin the
+    #: width explicitly (it then takes absolute priority).
+    atom_width_selection: Optional[float] = None
+    refuse_unselected_atom_width: bool = True
+    atom_width_selection_rtol: float = 1e-6
+
+    # ---- store geometry (the shipped CluSystem band unless stated) ----
+    d_safe_frac: float = 0.88  # d_safe = d_safe_frac x median-NN(task-1 phi keys)
+    write_steps: int = 300
+    read_steps: int = 800
+    address_steps: int = 400
+    n_query_per_item: int = 8
+    quick: bool = False
+
+
+@dataclass
+class ExperimentPhiGeometryConfig:
+    """⭐ C2W8 **PASS 3, wt2** — *does strong ``phi`` actually SEPARATE at ``addr_dim``?*
+    (:mod:`chlu.experiments.exp_phi_geometry`).
+
+    This is **instrumentation, not a claim cell**: it builds the ``phi_dim ->
+    addr_dim`` map that ``exp_well_lifecycle.PhiAddress`` never had (it forces
+    ``phi_dim = addr_dim`` and truncates) and then MEASURES the address geometry the
+    spine would inherit, on the substrate where the strong encoders were built and
+    priced (**Split-CIFAR-10**, Head ruling R1).
+
+    ⚠ Everything geometric is reported as a **dimensionless ratio with the scale
+    stated**: addresses are normalised to unit radius (``scale = 1 / r95``) while
+    ``sigma_q`` is absolute, so an absolute-units leg can be moved by rescaling
+    ``phi`` with zero information gain (``PREREG-C2W8-PASS3`` §4).
+
+    ⛔ ``(addr_dim, atom budget)`` is ONE joint dial: ``n_atoms = round(512 *
+    sqrt(2)**d)`` makes ``d = 256`` cost 1.7e41 atoms, so the feasible band is
+    ``d in {8, 12, 16}`` and every table states both numbers together.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    dataset: str = "cifar10"  # Head ruling R1: the substrate is where phi was priced
+
+    #: the joint dial's first half — the candidate address dimensions
+    addr_dims: List[int] = field(default_factory=lambda: [8, 12, 16])
+
+    #: the strong arm (built + priced by `c2w8-cifar-strong-phi`) and its controls
+    phi_arm_strong: str = "simclr"
+    phi_arm_control: str = "randconv"  # the cheap unfitted encoder control
+    phi_arm_reference: str = "pca"  # ⛔ the weak-phi reference, at MATCHING d
+    phi_dim_strong: int = 256
+    phi_regime: str = "task1_only"  # binding; no leakage from unseen tasks
+    enc_steps: int = 8000  # the priced encoder, unchanged
+    n_fit_region: int = 25000
+    n_fit_pool: int = 6000
+
+    #: the declared map and the maps it is measured against
+    projection: str = "pca"  # the PRIMARY declared phi -> addr map
+    projection_controls: List[str] = field(
+        default_factory=lambda: ["truncate", "gaussian"]
+    )
+
+    #: key populations. Spacing is essentially geometric in ``(n, d)``, so ``n`` is
+    #: declared, never implicit. The primary is the pass-1/2 store item population.
+    n_keys_primary: int = 16
+    n_keys_grid: List[int] = field(default_factory=lambda: [16, 64, 200])
+    n_offer_per_task: int = 8  # the census's offer order, reproduced for the keys
+
+    #: geometry constants, taken from shipped config, never tuned here
+    query_sigma: float = 0.15  # sigma_q (CluSystemConfig.query_sigma)
+    d_safe_frac: float = 0.88  # the rig's own sizing rule
+    d_safe_sizing_n: int = 200  # the rig sizes d_safe on THIS many task-1 keys
+
+    #: the GO/NO-GO rule (registered; computed mechanically, never argued)
+    go_min_seeds_positive: int = 3
+    go_se_multiple: float = 2.0
+
+    #: rider (a) — the revived (d, atom-budget) cell: does the store dig at all?
+    depth_probe: bool = True
+    depth_probe_dims: List[int] = field(default_factory=lambda: [8, 12, 16])
+    depth_probe_writes: int = 6
+    depth_probe_seed: int = 0
+    depth_inert_tol: float = 1e-6  # median fitted depth below this ⇒ INERT
+    capacity: int = 16
+    well_budget: int = 8
+    write_steps: int = 300
+    read_steps: int = 800
+    address_steps: int = 400
+    n_query_per_item: int = 8
+
+    quick: bool = False
+
+
+@dataclass
+class ExperimentCaptureStrongPhiConfig:
+    """⭐ C2W8 **PASS 3, THE SPINE** — *does the physics add anything once the
+    encoder is not the bottleneck?* (:mod:`chlu.experiments.exp_capture_strong_phi`).
+
+    The frozen census + the **COMPLETED** gate (G-CAP · G-DEC · G-DRIFT ·
+    **G-ADDR**) run on arm A's **co-scaled-width** store over the strong-φ rig,
+    on **Split-CIFAR-10** (Head ruling R1: the substrate where the encoders were
+    built and priced). ⛔ Pass-1/pass-2 census numbers are MNIST and are **not**
+    the baseline; the weak-φ comparison is the ``pca`` reference arm **in this
+    same run, at the same** ``addr_dim``.
+
+    ⛔ **The store arm is "CO-SCALED WIDTH", not "compact"** (§A29.4(i)): kernel
+    form is a declared SECONDARY axis, never the headline. ⚠ The banked arm-A
+    census ran at ``atom_width_frac_spacing = 1.5``, which is **not** the
+    :class:`ExperimentCaptureArmAConfig` default (0.5, the pilot cell); it is
+    therefore declared explicitly here so the spine cannot silently score a
+    different store (`c2w8p3-gate-addr` reconciliation item 2).
+
+    ⛔ ``(addr_dim, atom budget)`` is **ONE joint dial**: ``n_atoms = round(512 *
+    sqrt(2)**d)``. ``addr_dim = 12`` ⇒ **32 768 atoms**. The geometry-favoured
+    ``d = 16`` is **NOT** run: wt2 measured the store **inert** there
+    (median fitted depth 5.44e-7 at a fully honoured 131 072-atom budget), and an
+    inert store makes a census vacuous for a reason that is **not** the gate's
+    reason (Head ruling R1's attached risk; R3 resolved by measurement).
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    dataset: str = "cifar10"  # Head ruling R1
+
+    #: ⭐ the joint dial's first half. 12 ⇒ 32 768 atoms. ⛔ never 16 (inert).
+    addr_dim: int = 12
+
+    #: the arms, in run order. ``pca`` is the INTERNAL weak-φ reference at the
+    #: SAME ``addr_dim``, run in this same harness — never a banked number.
+    arms: List[str] = field(default_factory=lambda: ["randconv", "simclr", "pca"])
+    phi_arm_strong: str = "simclr"  # the primary (built + priced, enc_steps=8000)
+    phi_arm_control: str = "randconv"  # the cheap unfitted control arm
+    phi_arm_reference: str = "pca"  # ⛔ the weak-φ reference, at MATCHING d
+    phi_dim_strong: int = 256  # the conv arms' φ width, BEFORE the map
+    phi_regime: str = "task1_only"  # binding; no leakage from unseen tasks
+    enc_steps: int = 8000  # the priced encoder, unchanged
+    n_fit_region: int = 25000
+    n_fit_pool: int = 6000
+
+    #: the declared φ_dim → addr_dim map (wt2's; Head ruling R2). The ``pca``
+    #: reference is built at ``phi_dim = addr_dim`` and mapped by ``identity``,
+    #: which is provably neutral (PCA-of-PCA = PCA).
+    projection: str = "pca"
+
+    # ---- the store: arm A's CO-SCALED WIDTH, declared not inherited ----
+    atom_width_frac_spacing: Optional[float] = 1.5  # ⭐ the BANKED value, not 0.5
+    atom_kernel: str = "wendland"  # SECONDARY axis (§A29.4(i)), never the headline
+    atom_kernel_cutoff: float = 2.5
+    site_local_init: bool = True
+    site_local_radius_frac: float = 1.0
+
+    #: ⭐ the D2a diagnostic (§A29.6): does the settled point approach a
+    #: deterministic function of the stored key? Reported TWO-SIDED; ⛔ never a
+    #: target. Costs one extra read on the G-ADDR cue set.
+    d2a_probe: bool = True
+
+    quick: bool = False
+
+
+@dataclass
+class ExperimentCaptureArmAConfig:
+    """⭐ C2W8 **PASS 2, ARM A** — *make the store capture by bounding how far each
+    atom reaches* (``exp_capture_armA``).
+
+    ⛔ The census itself is **FROZEN**: this experiment calls
+    :func:`chlu.experiments.exp_well_lifecycle.run_census_cell` unmodified, on the
+    unmodified :mod:`chlu.core.well_lifecycle` instrument, so arm A and arm B are
+    raced on one arithmetic. Everything here configures **the store**, never the
+    measurement.
+
+    The one thing pass 1 diagnosed is **reach**: C3 locality holds in parameter
+    space and fails in function space because Gaussian atoms have tails. So the
+    atom influence profile becomes **compact** (``atom_kernel``) with its support
+    radius ``R = cutoff x s`` and the width ``s`` **co-scaled to the MEASURED key
+    spacing of that seed's own run** (``atom_width_frac_spacing x
+    median_nn_task1``, recovered inside the cell as ``d_safe / d_safe_frac`` —
+    ⛔ never hardcoded).
+    """
+
+    #: census seeds (the gate is >= 3 seeds); pilot seeds are DISJOINT
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    pilot_seeds: List[int] = field(default_factory=lambda: [7, 8])
+
+    # ---- the designed lever ----
+    atom_kernel: str = "wendland"  # compact, C^2; "gaussian" = the pass-1 store
+    atom_kernel_cutoff: float = 2.5  # support radius in units of the atom width s
+    #: atom width as a fraction of the MEASURED task-1 median-NN key spacing.
+    #: ``None`` => leave the shipped ``atom_width`` (0.3) alone.
+    atom_width_frac_spacing: Optional[float] = 0.5
+    #: the companion lever (see ``CluSystemConfig.atom_site_local_init``): the
+    #: admitted slot's atoms are re-drawn in a ball of ``radius_frac x s`` around
+    #: the item's own address, because at the shipped scattered init the nearest
+    #: of ALL atoms is 4x further away than a co-scaled compact support radius and
+    #: the write gradient is then exactly zero.
+    site_local_init: bool = True
+    site_local_radius_frac: float = 1.0  # in units of the resulting atom width s
+
+    # ---- arms to run (the OFF arm is the pass-1 store, re-run here) ----
+    run_baseline_gaussian: bool = False  # re-measure pass 1 on this branch
+
+
+@dataclass
+class ExperimentCaptureArmBConfig:
+    """⭐ C2W8 PASS 2, **ARM B** — the emission head (``exp_capture_armB``).
+
+    A standard MLP-class head on ``phi`` emits the well parameters (center,
+    width, depth, payload) and the item's atom block is *set* to that designed
+    well: **a forward pass instead of 300 gradient steps**. The census is
+    pass 1's, re-run unchanged (``chlu.core.well_lifecycle`` is read-only this
+    wave); only the write mechanism differs, so the gate legs G-CAP / G-DEC /
+    G-DRIFT compare like with like.
+
+    ⛔ **K8.** One well per item is *private wells* = explicit per-item store
+    parameters = laundered by construction, so every artifact this experiment
+    writes carries ``wells_per_item``, ``vocabulary_shared`` and the
+    ``NO_TIER_II_CLAIM`` label (``chlu.core.emission_head.emission_ledger``).
+
+    ⛔ **No performance claim.** The pass-2 gate is *retrievability* and is
+    **byte-blind** (``ERRATA-C2W8-PASS2.md`` §1 Q3); the byte ledger is reported
+    on every arm regardless, and this arm's is its sharpest column because bytes
+    move out of the atom store and into head parameters.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # ---- the head (mirrors the CluSystemConfig band; set here so an arm can be
+    #      re-priced from a project YAML without editing the store's defaults) ----
+    head_hidden: int = 64
+    head_layers: int = 2
+    #: ⚠ both floors are MEASURED, not guessed — see `CluSystemConfig`:
+    #: the width floor is the payload reach (|a| <= 0.5), the depth floor is
+    #: pass 1's measured foreign background at a live site (0.611 - 1.261).
+    width_min: float = 0.30
+    width_max: float = 0.80
+    depth_min: float = 1.5
+    depth_max: float = 3.0
+    payload_delta_max: float = 0.05  # strictly below the read's payload_tol
+    #: ⭐ trainable linear skip on phi, initialised at `gain * I`. An
+    #: INITIALISATION (symmetry-breaking), never a constraint: decoupled weight
+    #: decay shrinks it toward ZERO, i.e. toward IGNORING phi. 0.0 = plain init.
+    center_skip_gain: float = 1.0
+
+    # ---- the amortised write cost (paid ONCE, and ledgered) ----
+    pretrain_steps: int = 600
+    pretrain_batch: int = 16
+    pretrain_lr: float = 3e-3
+    pretrain_weight_decay: float = 1e-4
+    pretrain_pool: int = 256  # phi fit-pool rows the head is trained on
+    #: ⭐ the ONLY term that mentions `phi`: a reach HINGE with a free width.
+    #: ⛔ Never a pin — `reach_weight = 0.0` disables it entirely and the arm
+    #: still writes; a pinning term would be load-bearing (see
+    #: `chlu/core/emission_head.py`).
+    reach_weight: float = 1.0
+    reach_rho: float = 2.0
+    #: ⭐ THE designed write->phi organization gradient (charter §A28.1): each
+    #: launch must be attributed to its OWN well by a margin. Competitive, so it
+    #: constrains placement RELATIVE to the other wells and never to phi itself;
+    #: vacuous for a single item, where a pin is at its most active.
+    attr_weight: float = 10.0
+    attr_margin: float = 0.15
+    #: the shipped w24 crowding lever, at the rig's own admission radius: an atom
+    #: inside `d_safe` of a site it does not own is penalized.
+    crowd_weight: float = 1.0
+
+    #: the SECONDARY cell: the same arm at the atom budget the emission head
+    #: actually needs (one designed well per item), which is the structural half
+    #: of the byte finding. ⛔ Never the gate cell — the gate runs at pass 1's
+    #: atom budget so the race is a race.
+    run_min_store_cell: bool = True
+    min_store_atoms_per_item: int = 1
+
+    quick: bool = False
+
+
+@dataclass
+class DataConfig:
+    """Data generation and processing parameters."""
+
+    figure8_dt: float = 0.01
+    figure8_scale: float = 1.0
+    sine_dt: float = 0.01
+    sine_freq_min: float = 0.5
+    sine_freq_max: float = 2.0
+    sine_amp_min: float = 0.5
+    sine_amp_max: float = 1.5
+    mnist_pca_dim: int = 784
+    train_test_split: float = 0.8
+
+
+@dataclass
+class GenDataConfig:
+    """Generative-benchmark datasets (Shapes3D / dSprites) + the Montero splits.
+
+    Backs ``chlu data shapes3d`` / ``chlu data dsprites`` and
+    ``chlu.data.{shapes3d,dsprites,gen_splits}``.  The split itself carries no
+    seed (it is a deterministic boolean mask over the exhaustive factor grid);
+    ``project.seed`` is threaded only into the ``--quick`` train subsample and
+    the C-set builder.
+    """
+
+    #: Dataset root; ``None`` -> ``$CHLU_GEN_DATA_ROOT`` else ``<repo>/.claude/data/gen``.
+    data_root: Optional[str] = None
+    condition: str = "recomb2element"
+    variant: str = "leave1out"
+    #: Verify the pinned sha256 on download (never disable in a reported run).
+    verify_checksum: bool = True
+    #: Run the hold-out assertion over the full train split at load time.
+    holdout_assert: bool = True
+    #: Assert the realised held-out counts (Shapes3D 72; dSprites 6292 — the
+    #: float-boundary-realised value, NOT the nominal 5808). ``False`` reports
+    #: without asserting; a disagreement is a finding, never a silent fix.
+    assert_expected_counts: bool = True
+    #: Train rows kept by ``--quick`` (the assertion still runs over all rows).
+    quick_rows: int = 4096
+    #: Also fetch the dSprites hdf5 mirror (lazy per-row image access).
+    dsprites_with_images: bool = True
+    #: C set (structurally invalid factor requests) size per kind, and its seed.
+    #: ``None`` (default) derives it from the split so that ``|C| ~= |B|`` -- the
+    #: Head ruling of 2026-09-09: the primary refusal metric is AUROC(B vs C), and a
+    #: C set much larger or smaller than B distorts it. Set an int to override.
+    c_invalid_n_per_kind: Optional[int] = None
+    c_invalid_seed: int = 0
+    #: ⭐ A7, the term-count CONTROL for the C set (R26 ruling 1): valid requests
+    #: carrying one REDUNDANT term (a factor repeated at the value it already has),
+    #: so they are ``n_factors + 1`` terms long like a ``duplicate_factor`` record
+    #: and still satisfiable.  ⛔ Emitting it is not optional in a reported run: a C
+    #: set without its structural control hands every arm an AUROC of 0.75 that a
+    #: one-line term-count function also gets (gen-certificate §3).
+    emit_a7: bool = True
+    #: ``|A7|``; ``None`` -> ``|C| = 2 * c_invalid_n_per_kind`` so the shipped file is
+    #: class-balanced against the set it controls for.  ⭐ The construction itself is
+    #: a 1:1 map over valid requests (``|A7| = |A|``); this only sizes the artifact.
+    a7_n_requests: Optional[int] = None
+    #: Seed for A7's deterministic TRAIN-row sample (⛔ never held-out rows: B is
+    #: the evaluation set and must not be spent on a control).
+    a7_seed: int = 0
+    #: Widened SECONDARY hold-out (``condition="recomb2element_wide"``, R17).
+    #: ⛔ Montero's ``recomb2element`` remains the untouched headline; the wide
+    #: condition is a SEPARATE full configuration (the frozen encoder/decoder
+    #: trained under Montero's split have SEEN these rows) and its numbers are
+    #: reported separately, never pooled with Montero's 72.
+    #: Number of ADDITIONAL held-out cells, each structurally identical to
+    #: Montero's cell (72 rows) but placed across the hue/contrast range.
+    wide_n_cells: int = 12
+    #: Seed for the wide cells' hue-band placement (the rule is otherwise fixed).
+    wide_seed: int = 0
+    #: Carry Montero's own cell as cell 0 of the wide condition, so a wide-trained
+    #: stack has also never seen Montero's 72 (a strict superset hold-out).
+    wide_include_montero: bool = True
+
+
+@dataclass
+class GenBridgeConfig:
+    """The frozen encoder / feature cache / ONE shared frozen decoder bridge.
+
+    Backs ``chlu exp-gen-bridge`` and ``chlu.experiments.exp_gen_bridge``.  The
+    bridge is arm-independent by construction: every random draw is threaded
+    from ``seed`` alone, so the decoder frozen at a given seed is bit-identical
+    whichever arm asks for it — which is what "ONE decoder, shared by every arm,
+    forever" has to mean operationally.
+
+    ⭐ ``D = prod(encoder.feat_shape)`` is a *design constraint*, not a free
+    choice: the LACE baseline is only valid in whitened coordinates and needs a
+    ``D x D`` eigendecomposition, feasible only up to ``D ~ 2e4``.  The default
+    ``enc_channels``/``enc_stride`` give ``128 x 4 x 4 = 2048``.
+    """
+
+    #: Default dataset/pretext; the CLI ``--dataset``/``--pretext`` override these.
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+
+    # --- encoder (train split only; frozen after fitting) ---
+    enc_channels: List[int] = field(default_factory=lambda: [32, 64, 128, 128])
+    enc_kernel: int = 4
+    enc_stride: int = 2
+    #: GroupNorm groups (0 disables). GroupNorm, not BatchNorm: stateless, so a
+    #: frozen encoder reads identically at fit and eval time.
+    enc_groups: int = 8
+    enc_steps: int = 1500
+    enc_batch: int = 128
+    enc_lr: float = 1e-3
+
+    # --- THE shared decoder (fit against the FROZEN encoder) ---
+    dec_channels: List[int] = field(default_factory=lambda: [128, 64, 32])
+    dec_groups: int = 8
+    dec_steps: int = 1200
+    dec_batch: int = 128
+    dec_lr: float = 1e-3
+
+    # --- the decoder RECIPE (gen-decoder-lift) ---
+    # ⭐ Whatever wins the lift is a RECIPE — architecture + schedule + loss,
+    # refit per feature space — NOT one fitted .pkl that every rung reuses. A
+    # later factorisation rung retrains the encoder, so its features differ and
+    # its decoder must be refit; ``chlu.core.gen_bridge.DECODER_RECIPES`` names
+    # the presets and ``resolve_decoder_cfg`` turns one into these knobs.
+    # ⛔ Nothing here is a function of the feature width ``D``: ``dec_width_mult``
+    # scales the existing channel list and the number of upsampling stages is
+    # derived from ``feat_shape`` at construction.
+    #: Named preset applied on top of the knobs below ("baseline" = no override,
+    #: i.e. the shipped decoder, bit-identical).
+    dec_recipe: str = "baseline"
+    #: Multiplies every entry of ``dec_channels`` (capacity, width-agnostic).
+    dec_width_mult: float = 1.0
+    #: 3x3 conv+GroupNorm+ReLU blocks per upsampling stage (skip-free; 1 = shipped).
+    dec_blocks_per_stage: int = 1
+    #: ``"mse"`` (uniform pixel MSE, shipped) | ``"object_weighted"``.
+    #: ⚠ Uniform pixel MSE is never asked to preserve *silhouette identity*: the
+    #: object is a small pixel fraction, so a wrong-but-right-sized blob is
+    #: almost free. ``object_weighted`` reweights by an image-derived edge map
+    #: and adds a gradient-matching term. ⛔ No factor label enters it (R1).
+    dec_loss: str = "mse"
+    #: ``object_weighted`` only: w = 1 + alpha * s, s = per-image mean-1 edge map.
+    dec_edge_weight: float = 8.0
+    #: ``object_weighted`` only: box-blur width used to dilate the edge map.
+    dec_edge_blur: int = 5
+    #: ``object_weighted`` only: weight of the gradient-matching term.
+    dec_grad_weight: float = 1.0
+    #: ``"constant"`` (shipped) | ``"cosine"`` (warmup then cosine decay to 0).
+    dec_lr_schedule: str = "constant"
+    dec_warmup_frac: float = 0.05
+
+    # --- the probe: the measurement instrument for the whole phase ---
+    probe_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
+    probe_groups: int = 8
+    probe_steps: int = 1500
+    probe_batch: int = 128
+    probe_lr: float = 1e-3
+
+    #: Train-split rows used to fit encoder/decoder/probe (⛔ never a held-out row).
+    n_train: int = 8192
+    #: A-split rows held back from every fitting stage — the ceiling_A eval set.
+    n_eval_a: int = 1024
+    eval_batch: int = 256
+
+    #: ``"full"`` caches every row the factor grid indexes; ``"used"`` caches only
+    #: the rows this run touches (train + eval_A + all held-out).
+    cache_scope: str = "full"
+    cache_dtype: str = "float16"
+    #: Contiguous rows per HDF5 read. The files are chunked (15000, 4, 4, 1) and
+    #: gzipped, so scattered fancy indexing is ~40x slower than a block scan.
+    cache_block: int = 8192
+
+    #: R3.1 gate: PROCEED iff ``ceiling_B >= ceiling_floor * ceiling_A``.
+    ceiling_floor: float = 0.8
+
+    # --- the DISCRIMINATION read (R20) ---
+    # ⭐ Kill rule (i) reads discrimination WITHIN the colour corner, never a
+    # detection rate: a one-class held-out cell makes bare accuracy degenerate
+    # (answer "cylinder" to everything in that corner and score 1.000).  The
+    # read is therefore the **balanced accuracy / AUROC** of the cell's shape
+    # against **matched-seen** negatives — the same corner, a seen shape.
+    #: Floor on the ratio (held-out / seen normaliser) of the balanced metric.
+    disc_floor: float = 0.8
+    #: Absolute floor on the balanced metric itself (0.5 is chance).
+    disc_abs_floor: float = 0.75
+    #: Refuse to score a cell with fewer matched-seen negatives than this
+    #: (⛔ a balanced accuracy over 3 negatives is not a measurement).
+    disc_min_negatives: int = 20
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    make_plots: bool = True
+    #: Verify the feature-cache sha256 on load (never disable in a reported run).
+    verify_cache_checksum: bool = True
+
+    # --- quick mode (plumbing smoke only; ⛔ never a reported ceiling) ---
+    quick_enc_steps: int = 30
+    quick_dec_steps: int = 30
+    quick_probe_steps: int = 30
+    quick_n_train: int = 256
+    quick_n_eval_a: int = 64
+    quick_cache_scope: str = "used"
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+
+
+@dataclass
+class GenStoreConfig:
+    """⭐ R0 of the factorisation ladder: channel grouping, per-well modes, and the
+    store-only read.
+
+    Backs ``chlu exp-gen-store`` and ``chlu.experiments.exp_gen_store``.  The store
+    is fit on the **frozen** feature cache written by ``gen-feature-bridge``; the
+    decoder and probe are loaded frozen and never trained here (R18: the store is
+    upstream of the decoder, so a decoder fix cannot invalidate it).
+
+    ⛔ ``K`` is chosen by the pre-registered eigengap rule on TRAIN activations
+    only and is then **pinned into** ``store_plan.json``; every later ladder rung
+    loads that plan verbatim, because the ladder's whole logic is that only the
+    grouping changes.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    #: Where ``gen-feature-bridge`` wrote ``<dataset>_<pretext>/seed_<seed>/``.
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+
+    # --- grouping ---
+    #: ``None`` -> choose by the eigengap rule over ``[k_min, k_max]``; an int pins it.
+    k_wells: Optional[int] = None
+    k_min: int = 4
+    k_max: int = 16
+    #: Seed whose cached activations the ``K`` choice is read from; ``K`` is then
+    #: pinned for every seed and BOTH groupings (⛔ never re-derived per arm).
+    k_choice_seed: int = 0
+    #: ``auto`` walks ``GROUPING_ORDER`` ("average" first, the pre-registered
+    #: default) and takes the first method whose smallest well clears
+    #: ``min_well_frac`` of an equal share.  ⚠ On the shipped Shapes3D/``recon``
+    #: cache plain average linkage CHAINS (one well of ~1976 + singletons), so the
+    #: fallback is load-bearing, not cosmetic.  ⛔ The trigger is a property of the
+    #: train activations alone; no held-out quantity and no arm outcome enters it.
+    grouping_method: str = "auto"
+    #: A well holding less than this fraction of an equal share is degenerate.
+    min_well_frac: float = 0.10
+    #: Rows used for the channel-correlation matrix (train split only).
+    n_corr: int = 16384
+    #: ⭐ Always both: ``random`` is the laundering control, a full arm, never a footnote.
+    groupings: List[str] = field(default_factory=lambda: ["correlation", "random"])
+
+    # --- the store ---
+    #: Modes per well.  ``store_bytes = n_modes * D * 4`` independently of K.
+    n_modes: int = 64
+    #: Train rows the modes are fit on (⛔ never a held-out row, never an eval_A row).
+    n_store_train: int = 32768
+    train_steps: int = 1200
+    train_batch: int = 128
+    train_lr: float = 3e-3
+    commitment_beta: float = 0.25
+    #: Soft-assignment temperature, annealed geometrically start -> end.
+    tau_start: float = 1.0
+    tau_end: float = 0.1
+
+    # --- the per-well leakage probes (the ladder x-axis; measurement only) ---
+    n_probe_train: int = 8192
+    probe_steps: int = 400
+    probe_batch: int = 512
+    probe_lr: float = 3e-3
+
+    # --- evaluation ---
+    eval_batch: int = 256
+    #: Rows per on-the-fly encoding chunk when the bridge cache does not cover a
+    #: row.  ⚠ ``gen-feature-bridge`` wrote seed 0 at ``cache_scope="full"`` but
+    #: seeds 1/2 at ``"used"`` (9,288 rows), so coverage IS extended in practice.
+    encode_chunk: int = 16384
+    #: Deletion modes measured against the intact store (``zero`` is the headline).
+    delete_modes: List[str] = field(default_factory=lambda: ["zero", "mean", "scramble"])
+    #: Top-1 well share above which a C record's conflict counts as intra-well.
+    c_top_share: float = 0.5
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    make_plots: bool = True
+    verify_cache_checksum: bool = True
+
+    # --- quick mode (plumbing smoke only; ⛔ never a reported number) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_corr: int = 1024
+    quick_n_store_train: int = 2048
+    quick_train_steps: int = 30
+    quick_n_probe_train: int = 1024
+    quick_probe_steps: int = 30
+    quick_n_modes: int = 8
+    quick_k_max: int = 6
+
+
+@dataclass
+class GenR0WideConfig:
+    """⭐ R24: R0 of the factorisation ladder, re-fitted on the **wide** cache.
+
+    Backs the wide re-fit of ``exp-gen-store``'s store.  The ladder holds the
+    store configuration, the byte budget and ``K`` fixed across rungs and R1-R5
+    run on the widened hold-out condition, so R0 must be measured on the **same**
+    configuration: *a monotonicity claim on a mixed baseline is no claim at all*.
+
+    ⛔ Montero's R0 is NOT touched by anything here.  It stays as the published
+    link to the literature and is read back only for the cache-consistency gate
+    (``chlu.core.gen_store.read_margin_gate``); the ladder figure carries
+    wide-configuration rungs only, never both on one axis.
+    """
+
+    #: The hold-out condition R0 is re-fitted against (``gen_data.condition``'s
+    #: widened sibling).  ⛔ Montero's ``recomb2element`` remains the headline.
+    condition: str = "recomb2element_wide"
+    #: Where the wide bridge wrote ``<dataset>_<pretext>_<condition>/seed_<s>/``.
+    #: ``None`` -> ``$CHLU_GEN_WIDE_BRIDGE_ROOT`` else the repo's
+    #: ``.claude/outputs/gen-bridge-wide/runs``.
+    bridge_runs_root: Optional[str] = None
+    #: The shipped Montero R0 run directory (``store_manifest.json`` per seed and
+    #: ``store_plan.json``), read **read-only** for the grouping-agreement metric
+    #: and the gate.  ``None`` -> ``$CHLU_GEN_STORE_RUNS``.
+    montero_store_runs: Optional[str] = None
+    #: The pinned ladder contract; ``None`` -> ``<montero_store_runs>/store_plan.json``.
+    #: ⛔ ``K`` is loaded from it verbatim and is never re-derived on a later rung.
+    store_plan: Optional[str] = None
+    #: ⛔ THE DECODER TRAP.  ``gen_bridge.dec_recipe`` still defaults to
+    #: ``"baseline"`` so Montero's history reproduces — and that decoder FAILED the
+    #: gate (0.7191 balanced accuracy vs the winner's 0.9414).  ⭐ Here the winner
+    #: is the default and the loaded decoder's recipe is asserted against it.
+    dec_recipe: str = "v1_capacity_schedule"
+    assert_dec_recipe: bool = True
+    #: ⛔ THE GATE: |wide margin - Montero margin| above this many pooled seed
+    #: spreads is a PLUMBING FAULT (the two caches are not the same encoder's)
+    #: and it STOPS the ladder.  It is never rationalised as a property of the split.
+    gate_tolerance_sigmas: float = 3.0
+    #: ⭐ The pre-registered ruling-2 fallback: a ``shape``-leakage margin smaller
+    #: than this many seed spreads means ``shape``-leakage is declared
+    #: **underpowered, in those words** — a pre-registered outcome, not a failure.
+    underpowered_spread_multiple: float = 3.0
+    #: R23.3 — ``montero`` and ``wide-000`` are the SAME colour corner and are a
+    #: two-class corner, never pooled.  The pooled headline runs on the other cells
+    #: and the corner pair is reported alongside.
+    exclude_shared_corner_from_pooled: bool = True
+    shared_corner_cells: List[str] = field(
+        default_factory=lambda: ["montero", "wide-000"]
+    )
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    verify_cache_checksum: bool = True
+    make_plots: bool = True
+
+
+@dataclass
+class GenMetricInvarianceConfig:
+    """⭐ R26 ruling 2 — the **pre-registered configuration-invariance check** every
+    comparison metric on the ladder or the cell must pass before it is used.
+
+    Backs :mod:`chlu.core.gen_store` section 10 (``relabelling_invariance``,
+    ``class_count_invariance``, ``configuration_invariance``, ``invariance_verdict``).
+    The criterion, verbatim: *"the axis must give the same value for the same
+    features under different partitions."*
+
+    ⛔ Every tolerance here is **pre-registered**: it is fixed before the axis is
+    measured and is never re-tuned afterwards.  ⛔ The check is also required to be
+    *capable of failing*: the axis it replaced (probe-transfer leakage) is scored
+    through the identical functions as the negative control, and if it passes, the
+    check is wrong.
+    """
+
+    #: Leg 1a — a pure relabelling of the SAME set partition must leave the axis
+    #: identical to this absolute tolerance.  ⭐ It is expected to be exactly 0.
+    relabel_tol: float = 1e-12
+    #: Leg 2 / 2b — the class-count nuisance may move the correlation-minus-random
+    #: margin by at most this fraction of its own size, and never flip its sign.
+    class_count_tol_ratio: float = 0.5
+    #: Leg 2 — minimum number of (configuration x seed) cells whose restricted
+    #: margin must keep the full margin's sign.  Default 5 of 6.
+    class_count_min_sign_agreement: int = 5
+    #: Leg 3 — the two configurations' mean margins must sit inside this factor
+    #: band of each other.  ⛔ A ratio, not a sigma test: two hold-out conditions
+    #: legitimately differ in LEVEL, and a sigma test would fail an axis for being
+    #: precise.  3.0 is the programme's standing "3x spread" convention.
+    configuration_band: float = 3.0
+    #: The class-count stress: how many values of each named factor survive.  ⭐ The
+    #: defaults are the counts the WIDE CORNERS ACTUALLY REALISE (6 of 15
+    #: orientations, 6 of 8 scales; ``gen-r0-wide-refit`` §4.2) — a reproduction of
+    #: the diagnosed failure, ⛔ not a knob.
+    class_budget: Dict[str, int] = field(
+        default_factory=lambda: {"orientation": 6, "scale": 6}
+    )
+    #: The partitions the features are held fixed against.  The first two are the
+    #: ladder's own arms; the rest are the additional partitions R26's criterion
+    #: demands.  ⛔ ``well_permuted`` is the SAME set partition as ``correlation``.
+    partitions: List[str] = field(
+        default_factory=lambda: [
+            "correlation",
+            "random",
+            "random_alt",
+            "well_permuted",
+            "contiguous",
+            "balanced_random",
+        ]
+    )
+    #: Offset added to the seed for the second random draw (``random_alt``).
+    random_alt_offset: int = 1000
+    #: ⛔ THE NEGATIVE CONTROL.  The axis already known to be broken is scored
+    #: first, through the identical check; if it passes, the run STOPS and reports
+    #: that the check has no teeth.
+    negative_control_axis: str = "leak_raw"
+    #: The candidate the ladder is waiting on, and its companion (R26 ruling 2).
+    candidate_axis: str = "dci_c"
+    companion_axis: str = "leak_cc"
+    #: The two hold-out configurations the sign must agree across.
+    configurations: List[str] = field(
+        default_factory=lambda: ["recomb2element", "recomb2element_wide"]
+    )
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+
+@dataclass
+class GenDreamConfig:
+    """⭐ Conditional dreaming: clamp the wells a request addresses, relax the rest,
+    run Langevin on the store's landscape, decode through the ONE frozen decoder.
+
+    Backs ``chlu exp-gen-dream`` and ``chlu.experiments.exp_gen_dream``.  ⛔ The
+    store, encoder, decoder and probe are all consumed **frozen**; this block only
+    describes the sampler, the addressing head and the audit trail.
+
+    ⛔ **The decoder trap.** ``GenBridgeConfig.dec_recipe`` still defaults to
+    ``"baseline"`` — the SUPERSEDED decoder that failed the gate (0.7191 balanced
+    accuracy, 0/3 seeds) — deliberately, so Montero's history reproduces.  This
+    block therefore defaults to loading ``gen-decoder-lift``'s **winner**
+    checkpoint and asserting both its parameter hash and its recipe name; a run
+    through the baseline looks entirely normal in the logs and is void.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    #: Where the frozen bridge runs live. ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT``
+    #: else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ``.claude`` root for the shipped artifacts (a worktree has none of its own).
+    claude_root: Optional[str] = None
+    #: ``gen-store-grouping``'s pinned plan (``K``, ``n_modes``, ``D``, bytes).
+    store_plan: Optional[str] = None
+    #: ⛔⭐ How the channel grouping is obtained. ``per_seed`` (default) re-derives
+    #: it by the plan's own procedure on THIS seed's train activations, at the
+    #: plan's ``K``, and asserts bit-identity with the plan on the seed whose
+    #: encoder wrote it. ``plan`` takes the plan's label vector verbatim — ⛔ which
+    #: is only meaningful on that one seed: the labels index ENCODER CHANNELS and
+    #: every bridge seed trained its own encoder, so on any other seed the plan's
+    #: vector is a size-matched RANDOM partition wearing the clustered grouping's
+    #: name. Kept only so the defect is reproducible.
+    grouping_source: str = "per_seed"
+
+    # --- ⛔ the decoder guard ---
+    #: ``winner`` = gen-decoder-lift's frozen V1 checkpoint (default, and the only
+    #: safe choice against Montero's bridge); ``bridge`` = the bridge directory's
+    #: own decoder, valid only when its manifest records the winning recipe.
+    decoder_source: str = "winner"
+    winner_root: Optional[str] = None
+    winner_decoder_pattern: str = "decoder_v1_s{seed}.pkl"
+    #: ⛔ Refuse any other recipe. ``"baseline"`` is the decoder that FAILED the gate.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+
+    # --- the landscape ---
+    #: ⚠ Inter-well PMI coupling strength. ⛔ At 0 the energy is SEPARABLE and
+    #: conditional dreaming is provably inert — which is why ``no_coupling`` is run
+    #: as a full arm rather than argued about.
+    coupling_strength: float = 1.0
+    coupling_smoothing: float = 1.0
+    address_smoothing: float = 1.0
+    #: Top-1 posterior mass above which a request is said to ADDRESS a well (and
+    #: the well is clamped). Below it the well is relaxed.
+    clamp_threshold: float = 0.5
+    #: How relaxed wells start: ``centroid`` (least committed), ``prior_sample``,
+    #: ``prior_mode``.
+    init_mode: str = "centroid"
+
+    # --- the sampler (declared, per the Head's sampler ruling) ---
+    #: ⭐ ``mala`` APPLIES a Metropolis-Hastings correction. ``ula`` is the same
+    #: proposal with the correction removed (so its cost is measured, not argued);
+    #: ``uld`` is the repo's underdamped integrator at ``noise_mode="fdt"``.
+    sampler: str = "mala"
+    samplers: List[str] = field(default_factory=lambda: ["mala", "ula", "uld"])
+    steps: int = 200
+    #: ``None`` -> tuned on TRAIN requests to ``target_accept`` (⛔ an acceptance
+    #: target, never an accuracy); a float pins it.
+    step_size: Optional[float] = None
+    step_size_init: float = 0.1
+    target_accept: float = 0.7
+    accept_tolerance: float = 0.1
+    tune_rounds: int = 8
+    tune_steps: int = 20
+    tune_factor: float = 2.0
+    n_tune_requests: int = 128
+    #: ⭐ Geometric anneals, in CALIBRATED units. ⛔ ``tau_start``/``tau_end`` are
+    #: **fractions of the store's own median inter-mode distance**
+    #: (``tau_calibration="mode_distance"``), not absolute numbers: on a 2048-dim
+    #: cache the squared distance to a mode is of order hundreds, so an absolute
+    #: tau of ~1 leaves ``exp(-d^2/2 tau^2)`` saturated one-hot, the coupling
+    #: term's gradient vanishes and the chain cannot move (measured: only 5 % of
+    #: rollouts changed a single code). ``"absolute"`` keeps the literal numbers
+    #: and reproduces that pre-fix behaviour.
+    tau_calibration: str = "mode_distance"
+    tau_start: float = 1.0
+    tau_end: float = 0.25
+    #: ⭐ Sampling temperature as a fraction of the landscape's OWN energy scale
+    #: (median ``|E(x0)|`` at ``tau_end``) — the only way ``exp(-dE/T)`` means
+    #: anything once tau is calibrated. ``"absolute"`` keeps the literal numbers.
+    temp_calibration: str = "energy_scale"
+    temp_start: float = 0.05
+    temp_end: float = 0.005
+    #: The underdamped arm's integrator knobs (``chlu.core.integrators``).
+    uld_dt: float = 0.05
+    uld_gamma: float = 0.1
+
+    # --- the cells ---
+    #: ⛔ ``store_removed`` (the ablation this spoke owns) and ``no_coupling`` (the
+    #: separability control) are never optional.
+    arms: List[str] = field(
+        default_factory=lambda: ["clu", "store_removed", "no_coupling"]
+    )
+    #: ⭐ ``zero_step`` is THE laundering control: decode the clamp, no Langevin.
+    variants: List[str] = field(
+        default_factory=lambda: ["full", "zero_step", "prior_mode"]
+    )
+    #: ``full`` = all factors (cell-native); ``partial`` drops factors so the
+    #: relaxed set cannot be empty. The headline is chosen by a PRE-REGISTERED rule.
+    request_protocols: List[str] = field(default_factory=lambda: ["full", "partial"])
+    request_drop_factors: int = 2
+    n_dream: int = 512
+    eval_batch: int = 256
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    save_traces: bool = True
+    make_plots: bool = True
+    use_store_checkpoint: bool = True
+    verify_cache_checksum: bool = True
+    store_removed_delete_mode: str = "mean"
+
+    # --- quick mode (plumbing smoke only; ⛔ never a reported number) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_dream: int = 64
+    quick_steps: int = 10
+    quick_tune_rounds: int = 2
+    quick_n_store_train: int = 2048
+    quick_store_train_steps: int = 30
+    quick_arms: List[str] = field(default_factory=lambda: ["clu", "no_coupling"])
+    quick_samplers: List[str] = field(default_factory=lambda: ["mala"])
+    quick_request_protocols: List[str] = field(default_factory=lambda: ["partial"])
+
+
+@dataclass
+class GenCertificateConfig:
+    """⭐ The **composition certificate**: refusal derived from the R0 store, with
+    zero invalid-example supervision.
+
+    Backs ``chlu exp-gen-certificate`` and
+    ``chlu.experiments.exp_gen_certificate``.  Everything here is a knob of the
+    *derivation*, never of a refusal target: ⛔ there is no learned refusal head and
+    no threshold in this block is fitted against invalid data.  Thresholds are
+    quantiles of the **valid** A set, fitted through
+    :class:`chlu.eval.gen_cert_eval.ValidOnlyFitter`, whose audit asserts that no C
+    record id ever reached a fit.
+
+    ⚠ The store's own hyper-parameters are NOT duplicated here — the certificate
+    re-materialises the ladder's pinned store and therefore reads ``gen_store`` for
+    ``n_modes``, ``n_store_train``, ``train_steps``, ``tau_end`` and the grouping
+    method.  A knob that appears in both places would let this stage silently fit a
+    different store than the one the ladder pinned.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: Where ``gen-store-grouping`` wrote ``store_plan.json`` (the ladder contract).
+    #: ``None`` -> ``$CHLU_GEN_STORE_RUNS`` else ``<repo>/.claude/outputs/gen-store-grouping/runs``.
+    store_runs: Optional[str] = None
+    #: ⛔ The single-sourced C set.  ``None`` -> ``<gen_data.data_root>/<dataset>/c_invalid.json``.
+    #: It is read verbatim and **never regenerated** (R2).
+    c_invalid_path: Optional[str] = None
+
+    #: ⭐ Both groupings, always: ``random`` is the store-level laundering control.
+    groupings: List[str] = field(
+        default_factory=lambda: ["correlation", "random"]
+    )
+    #: Laplace smoothing of the per-``(factor, value)`` mode histograms.  ⛔ A
+    #: property of the estimator, not a tuned refusal parameter.
+    laplace_alpha: float = 1.0
+    #: Reach is measured in units of ``radius = reach_radius_frac * median grid
+    #: spacing``; ``0.5`` is the factor's own **Voronoi radius** — the distance at
+    #: which a requested value stops being *the* nearest realised value.
+    reach_radius_frac: float = 0.5
+    #: Temperature of the soft energy whose Hessian gives the curvature component.
+    #: ``None`` -> ``gen_store.tau_end`` (the store's own final training temperature).
+    tau_curvature: Optional[float] = None
+    #: Operating point: accept below this quantile of the **A** (valid) scores.
+    #: ⛔ Fitted on valid data only; the audit asserts it.
+    accept_quantile: float = 0.95
+    #: Cap on the number of A requests (``None`` = every held-back ``eval_a`` row).
+    n_requests_a: Optional[int] = None
+    #: ⭐ Score a **term-count control** (``A7``): valid requests carrying a redundant
+    #: extra term, so they are as long as a ``duplicate_factor`` C record without
+    #: being invalid.  ⛔ Never off in a reported run — a statistic that only counts
+    #: terms separates A from C-duplicates at AUROC 1.000 for free.
+    term_count_control: bool = True
+    #: Write the re-materialised modes beside the manifest, so a later rung does not
+    #: have to re-train a store that is reproducible but not cheap.
+    save_store: bool = True
+    #: Assert the re-materialised store reproduces the shipped manifest bit-for-bit
+    #: (costs one extra ``eval_a`` gather; ⛔ off only in quick mode).
+    assert_store_bit_identity: bool = True
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    make_plots: bool = True
+
+    # --- quick mode (plumbing smoke only; ⛔ never a reported number) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_store_train: int = 2048
+    quick_n_corr: int = 1024
+    quick_train_steps: int = 30
+    quick_n_modes: int = 8
+    quick_n_requests_a: int = 64
+
+
+@dataclass
+class ProjectConfig:
+    """Project-level configuration."""
+
+    name: str = "default"
+    seed: int = 42
+    device: str = "auto"
+    save_dir: Optional[str] = None
+
+
+@dataclass
+class CHLUConfig:
+    """Master configuration containing all sub-configs."""
+
+    model: ModelConfig = field(default_factory=ModelConfig)
+    training: TrainingConfig = field(default_factory=TrainingConfig)
+    experiment_a: ExperimentAConfig = field(default_factory=ExperimentAConfig)
+    experiment_b: ExperimentBConfig = field(default_factory=ExperimentBConfig)
+    experiment_c: ExperimentCConfig = field(default_factory=ExperimentCConfig)
+    experiment_d: ExperimentDConfig = field(default_factory=ExperimentDConfig)
+    experiment_v1_gate: ExperimentV1GateConfig = field(
+        default_factory=ExperimentV1GateConfig
+    )
+    experiment_v1_wormhole: ExperimentV1WormholeConfig = field(
+        default_factory=ExperimentV1WormholeConfig
+    )
+    experiment_lattice: ExperimentLatticeConfig = field(
+        default_factory=ExperimentLatticeConfig
+    )
+    experiment_s1: ExperimentS1Config = field(default_factory=ExperimentS1Config)
+    experiment_paid_access: ExperimentPaidAccessConfig = field(
+        default_factory=ExperimentPaidAccessConfig
+    )
+    experiment_minus_physics: ExperimentMinusPhysicsConfig = field(
+        default_factory=ExperimentMinusPhysicsConfig
+    )
+    experiment_kt: ExperimentKTConfig = field(default_factory=ExperimentKTConfig)
+    experiment_learned_memory: ExperimentLearnedMemoryConfig = field(
+        default_factory=ExperimentLearnedMemoryConfig
+    )
+    experiment_retrieval: ExperimentRetrievalConfig = field(
+        default_factory=ExperimentRetrievalConfig
+    )
+    experiment_dim_scaling: ExperimentDimScalingConfig = field(
+        default_factory=ExperimentDimScalingConfig
+    )
+    experiment_potential_class: ExperimentPotentialClassConfig = field(
+        default_factory=ExperimentPotentialClassConfig
+    )
+    experiment_designed_mechanism: ExperimentDesignedMechanismConfig = field(
+        default_factory=ExperimentDesignedMechanismConfig
+    )
+    experiment_primitive_harness: ExperimentPrimitiveHarnessConfig = field(
+        default_factory=ExperimentPrimitiveHarnessConfig
+    )
+    experiment_sequential_write: ExperimentSequentialWriteConfig = field(
+        default_factory=ExperimentSequentialWriteConfig
+    )
+    experiment_hopfield_capacity: ExperimentHopfieldCapacityConfig = field(
+        default_factory=ExperimentHopfieldCapacityConfig
+    )
+    experiment_phi_read_in: ExperimentPhiReadInConfig = field(
+        default_factory=ExperimentPhiReadInConfig
+    )
+    experiment_retry_compute: ExperimentRetryComputeConfig = field(
+        default_factory=ExperimentRetryComputeConfig
+    )
+    experiment_controller_mvp: ExperimentControllerMvpConfig = field(
+        default_factory=ExperimentControllerMvpConfig
+    )
+    experiment_write_ceiling: ExperimentWriteCeilingConfig = field(
+        default_factory=ExperimentWriteCeilingConfig
+    )
+    experiment_phi_stream: ExperimentPhiStreamConfig = field(
+        default_factory=ExperimentPhiStreamConfig
+    )
+    experiment_cl_entry: ExperimentClEntryConfig = field(
+        default_factory=ExperimentClEntryConfig
+    )
+    experiment_sharded_store: ExperimentShardedStoreConfig = field(
+        default_factory=ExperimentShardedStoreConfig
+    )
+    experiment_well_lifecycle: ExperimentWellLifecycleConfig = field(
+        default_factory=ExperimentWellLifecycleConfig
+    )
+    # --- BEGIN c2w10-lifecycle (additive) ---
+    experiment_persistent_store: ExperimentPersistentStoreConfig = field(
+        default_factory=ExperimentPersistentStoreConfig
+    )
+    # --- END c2w10-lifecycle ---
+    # --- BEGIN c2w8p3-phi-geometry (additive) ---
+    experiment_phi_geometry: ExperimentPhiGeometryConfig = field(
+        default_factory=ExperimentPhiGeometryConfig
+    )
+    # --- END c2w8p3-phi-geometry ---
+    # --- BEGIN c2w8p3-capture-strong-phi (additive) ---
+    experiment_capture_strong_phi: ExperimentCaptureStrongPhiConfig = field(
+        default_factory=ExperimentCaptureStrongPhiConfig
+    )
+    # --- END c2w8p3-capture-strong-phi ---
+    experiment_capture_arm_a: ExperimentCaptureArmAConfig = field(
+        default_factory=ExperimentCaptureArmAConfig
+    )
+    # ⭐ C2W8 pass 2, arm B (additive; no existing default touched)
+    experiment_capture_armb: ExperimentCaptureArmBConfig = field(
+        default_factory=ExperimentCaptureArmBConfig
+    )
+    data: DataConfig = field(default_factory=DataConfig)
+    gen_data: GenDataConfig = field(default_factory=GenDataConfig)
+    gen_bridge: GenBridgeConfig = field(default_factory=GenBridgeConfig)
+    gen_store: GenStoreConfig = field(default_factory=GenStoreConfig)
+    # --- gen-r0-wide-refit (additive; R24) ---
+    gen_r0_wide: GenR0WideConfig = field(default_factory=GenR0WideConfig)
+    # --- gen-metric-invariance (additive; R26 ruling 2) ---
+    gen_metric_invariance: GenMetricInvarianceConfig = field(
+        default_factory=GenMetricInvarianceConfig
+    )
+    gen_dream: GenDreamConfig = field(default_factory=GenDreamConfig)
+    gen_certificate: GenCertificateConfig = field(
+        default_factory=GenCertificateConfig
+    )
+    # --- BEGIN gen-baselines (additive) ---
+    # ⭐ String annotation + lambda factory: ``GenBaselinesConfig`` is defined at
+    # the END of this file (the shared append anchor for four concurrent spokes),
+    # so neither the annotation nor the default may be evaluated here.
+    gen_baselines: "GenBaselinesConfig" = field(
+        default_factory=lambda: GenBaselinesConfig()
+    )
+    # --- END gen-baselines ---
+    # --- BEGIN gen-read-compose (additive; R26 ruling 3) ---
+    # ⭐ Same lazy pattern, same reason: ``GenComposeConfig`` is defined at the END
+    # of this file (the shared append anchor for the concurrent gen spokes).
+    gen_compose: "GenComposeConfig" = field(
+        default_factory=lambda: GenComposeConfig()
+    )
+    # --- END gen-read-compose ---
+    # --- BEGIN gen-external-classifier (additive; R29 pivot item 2) ---
+    # ⭐ Same lazy pattern, same reason: ``GenClassifierConfig`` is defined at the
+    # END of this file (the shared append anchor for the concurrent gen spokes).
+    gen_classifier: "GenClassifierConfig" = field(
+        default_factory=lambda: GenClassifierConfig()
+    )
+    # --- END gen-external-classifier ---
+    # --- BEGIN gen-cell-harness (additive; R29 pivot item 2 — the headline table) ---
+    # ⭐ Same lazy pattern, same reason: ``GenCellConfig`` is defined at the END of
+    # this file (the shared append anchor for the gen spokes).
+    gen_cell: "GenCellConfig" = field(
+        default_factory=lambda: GenCellConfig()
+    )
+    # --- END gen-cell-harness ---
+    # --- BEGIN gen-bridge-dsprites (additive; the SECOND dataset) ---
+    # ⭐ Same lazy pattern, same reason: ``GenBridgeDspritesConfig`` is defined at
+    # the END of this file (the shared append anchor for the concurrent gen spokes).
+    gen_bridge_dsprites: "GenBridgeDspritesConfig" = field(
+        default_factory=lambda: GenBridgeDspritesConfig()
+    )
+    # --- END gen-bridge-dsprites ---
+    # --- BEGIN gen-encoder-unfreeze (additive; R29 pivot item 3) ---
+    # ⭐ Same lazy pattern, same reason: ``GenEncoderUnfreezeConfig`` is defined at
+    # the END of this file (the shared append anchor for the concurrent gen spokes).
+    gen_encoder_unfreeze: "GenEncoderUnfreezeConfig" = field(
+        default_factory=lambda: GenEncoderUnfreezeConfig()
+    )
+    # --- END gen-encoder-unfreeze ---
+    # --- BEGIN gen-encoder-pretrain (additive; R40.E) ---
+    # ⭐ Same lazy pattern, same reason: ``GenPretrainConfig`` is defined at the END
+    # of this file (the shared append anchor for the gen spokes).
+    gen_pretrain: "GenPretrainConfig" = field(
+        default_factory=lambda: GenPretrainConfig()
+    )
+    # --- END gen-encoder-pretrain ---
+    project: ProjectConfig = field(default_factory=ProjectConfig)
+
+
+def get_default_config() -> CHLUConfig:
+    """Get default configuration with all parameters set to their defaults."""
+    return CHLUConfig()
+
+
+def load_config(path: Path) -> CHLUConfig:
+    """
+    Load configuration from a YAML file.
+
+    Args:
+        path: Path to the YAML configuration file
+
+    Returns:
+        CHLUConfig object with values from file
+    """
+    with open(path, "r") as f:
+        data = yaml.safe_load(f)
+
+    def filter_valid_fields(config_class, data_dict):
+        """Filter dict to only include fields that exist in the dataclass."""
+        if not data_dict:
+            return {}
+        valid_fields = {f.name for f in config_class.__dataclass_fields__.values()}
+        filtered = {}
+        for k, v in data_dict.items():
+            if k in valid_fields:
+                # Convert string numbers (including scientific notation) to proper types
+                if isinstance(v, str):
+                    try:
+                        # Try int first (for whole numbers), then float
+                        if "." not in v and "e" not in v.lower():
+                            filtered[k] = int(v)
+                        else:
+                            filtered[k] = float(v)
+                    except (ValueError, TypeError):
+                        filtered[k] = v
+                else:
+                    filtered[k] = v
+        return filtered
+
+    # Reconstruct nested dataclasses with field filtering
+    config = CHLUConfig(
+        model=ModelConfig(**filter_valid_fields(ModelConfig, data.get("model", {}))),
+        training=TrainingConfig(
+            **filter_valid_fields(TrainingConfig, data.get("training", {}))
+        ),
+        experiment_a=ExperimentAConfig(
+            **filter_valid_fields(ExperimentAConfig, data.get("experiment_a", {}))
+        ),
+        experiment_b=ExperimentBConfig(
+            **filter_valid_fields(ExperimentBConfig, data.get("experiment_b", {}))
+        ),
+        experiment_c=ExperimentCConfig(
+            **filter_valid_fields(ExperimentCConfig, data.get("experiment_c", {}))
+        ),
+        experiment_d=ExperimentDConfig(
+            **filter_valid_fields(ExperimentDConfig, data.get("experiment_d", {}))
+        ),
+        experiment_v1_gate=ExperimentV1GateConfig(
+            **filter_valid_fields(
+                ExperimentV1GateConfig, data.get("experiment_v1_gate", {})
+            )
+        ),
+        experiment_v1_wormhole=ExperimentV1WormholeConfig(
+            **filter_valid_fields(
+                ExperimentV1WormholeConfig, data.get("experiment_v1_wormhole", {})
+            )
+        ),
+        experiment_lattice=ExperimentLatticeConfig(
+            **filter_valid_fields(
+                ExperimentLatticeConfig, data.get("experiment_lattice", {})
+            )
+        ),
+        experiment_s1=ExperimentS1Config(
+            **filter_valid_fields(ExperimentS1Config, data.get("experiment_s1", {}))
+        ),
+        experiment_paid_access=ExperimentPaidAccessConfig(
+            **filter_valid_fields(
+                ExperimentPaidAccessConfig, data.get("experiment_paid_access", {})
+            )
+        ),
+        experiment_minus_physics=ExperimentMinusPhysicsConfig(
+            **filter_valid_fields(
+                ExperimentMinusPhysicsConfig,
+                data.get("experiment_minus_physics", {}),
+            )
+        ),
+        experiment_kt=ExperimentKTConfig(
+            **filter_valid_fields(ExperimentKTConfig, data.get("experiment_kt", {}))
+        ),
+        experiment_retrieval=ExperimentRetrievalConfig(
+            **filter_valid_fields(
+                ExperimentRetrievalConfig, data.get("experiment_retrieval", {})
+            )
+        ),
+        experiment_dim_scaling=ExperimentDimScalingConfig(
+            **filter_valid_fields(
+                ExperimentDimScalingConfig, data.get("experiment_dim_scaling", {})
+            )
+        ),
+        experiment_learned_memory=ExperimentLearnedMemoryConfig(
+            **filter_valid_fields(
+                ExperimentLearnedMemoryConfig,
+                data.get("experiment_learned_memory", {}),
+            )
+        ),
+        experiment_potential_class=ExperimentPotentialClassConfig(
+            **filter_valid_fields(
+                ExperimentPotentialClassConfig,
+                data.get("experiment_potential_class", {}),
+            )
+        ),
+        experiment_designed_mechanism=ExperimentDesignedMechanismConfig(
+            **filter_valid_fields(
+                ExperimentDesignedMechanismConfig,
+                data.get("experiment_designed_mechanism", {}),
+            )
+        ),
+        experiment_primitive_harness=ExperimentPrimitiveHarnessConfig(
+            **filter_valid_fields(
+                ExperimentPrimitiveHarnessConfig,
+                data.get("experiment_primitive_harness", {}),
+            )
+        ),
+        experiment_sequential_write=ExperimentSequentialWriteConfig(
+            **filter_valid_fields(
+                ExperimentSequentialWriteConfig,
+                data.get("experiment_sequential_write", {}),
+            )
+        ),
+        experiment_hopfield_capacity=ExperimentHopfieldCapacityConfig(
+            **filter_valid_fields(
+                ExperimentHopfieldCapacityConfig,
+                data.get("experiment_hopfield_capacity", {}),
+            )
+        ),
+        experiment_phi_read_in=ExperimentPhiReadInConfig(
+            **filter_valid_fields(
+                ExperimentPhiReadInConfig,
+                data.get("experiment_phi_read_in", {}),
+            )
+        ),
+        experiment_retry_compute=ExperimentRetryComputeConfig(
+            **filter_valid_fields(
+                ExperimentRetryComputeConfig,
+                data.get("experiment_retry_compute", {}),
+            )
+        ),
+        experiment_controller_mvp=ExperimentControllerMvpConfig(
+            **filter_valid_fields(
+                ExperimentControllerMvpConfig,
+                data.get("experiment_controller_mvp", {}),
+            )
+        ),
+        experiment_write_ceiling=ExperimentWriteCeilingConfig(
+            **filter_valid_fields(
+                ExperimentWriteCeilingConfig,
+                data.get("experiment_write_ceiling", {}),
+            )
+        ),
+        experiment_phi_stream=ExperimentPhiStreamConfig(
+            **filter_valid_fields(
+                ExperimentPhiStreamConfig,
+                data.get("experiment_phi_stream", {}),
+            )
+        ),
+        experiment_cl_entry=ExperimentClEntryConfig(
+            **filter_valid_fields(
+                ExperimentClEntryConfig,
+                data.get("experiment_cl_entry", {}),
+            )
+        ),
+        experiment_sharded_store=ExperimentShardedStoreConfig(
+            **filter_valid_fields(
+                ExperimentShardedStoreConfig,
+                data.get("experiment_sharded_store", {}),
+            )
+        ),
+        experiment_well_lifecycle=ExperimentWellLifecycleConfig(
+            **filter_valid_fields(
+                ExperimentWellLifecycleConfig,
+                data.get("experiment_well_lifecycle", {}),
+            )
+        ),
+        # --- BEGIN c2w10-lifecycle (additive) ---
+        experiment_persistent_store=ExperimentPersistentStoreConfig(
+            **filter_valid_fields(
+                ExperimentPersistentStoreConfig,
+                data.get("experiment_persistent_store", {}),
+            )
+        ),
+        # --- END c2w10-lifecycle ---
+        # --- BEGIN c2w8p3-phi-geometry (additive) ---
+        experiment_phi_geometry=ExperimentPhiGeometryConfig(
+            **filter_valid_fields(
+                ExperimentPhiGeometryConfig,
+                data.get("experiment_phi_geometry", {}),
+            )
+        ),
+        # --- END c2w8p3-phi-geometry ---
+        # --- BEGIN c2w8p3-capture-strong-phi (additive) ---
+        experiment_capture_strong_phi=ExperimentCaptureStrongPhiConfig(
+            **filter_valid_fields(
+                ExperimentCaptureStrongPhiConfig,
+                data.get("experiment_capture_strong_phi", {}),
+            )
+        ),
+        # --- END c2w8p3-capture-strong-phi ---
+        experiment_capture_arm_a=ExperimentCaptureArmAConfig(
+            **filter_valid_fields(
+                ExperimentCaptureArmAConfig,
+                data.get("experiment_capture_arm_a", {}),
+            )
+        ),
+        experiment_capture_armb=ExperimentCaptureArmBConfig(
+            **filter_valid_fields(
+                ExperimentCaptureArmBConfig,
+                data.get("experiment_capture_armb", {}),
+            )
+        ),
+        data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
+        gen_data=GenDataConfig(
+            **filter_valid_fields(GenDataConfig, data.get("gen_data", {}))
+        ),
+        gen_bridge=GenBridgeConfig(
+            **filter_valid_fields(GenBridgeConfig, data.get("gen_bridge", {}))
+        ),
+        gen_store=GenStoreConfig(
+            **filter_valid_fields(GenStoreConfig, data.get("gen_store", {}))
+        ),
+        # --- gen-r0-wide-refit (additive; R24) ---
+        gen_r0_wide=GenR0WideConfig(
+            **filter_valid_fields(GenR0WideConfig, data.get("gen_r0_wide", {}))
+        ),
+        # --- gen-metric-invariance (additive; R26 ruling 2) ---
+        gen_metric_invariance=GenMetricInvarianceConfig(
+            **filter_valid_fields(
+                GenMetricInvarianceConfig, data.get("gen_metric_invariance", {})
+            )
+        ),
+        gen_dream=GenDreamConfig(
+            **filter_valid_fields(GenDreamConfig, data.get("gen_dream", {}))
+        ),
+        gen_certificate=GenCertificateConfig(
+            **filter_valid_fields(
+                GenCertificateConfig, data.get("gen_certificate", {})
+            )
+        ),
+        # --- BEGIN gen-baselines (additive) ---
+        gen_baselines=GenBaselinesConfig(
+            **filter_valid_fields(GenBaselinesConfig, data.get("gen_baselines", {}))
+        ),
+        # --- END gen-baselines ---
+        # --- BEGIN gen-read-compose (additive; R26 ruling 3) ---
+        gen_compose=GenComposeConfig(
+            **filter_valid_fields(GenComposeConfig, data.get("gen_compose", {}))
+        ),
+        # --- END gen-read-compose ---
+        # --- BEGIN gen-external-classifier (additive; R29 pivot item 2) ---
+        gen_classifier=GenClassifierConfig(
+            **filter_valid_fields(GenClassifierConfig, data.get("gen_classifier", {}))
+        ),
+        # --- END gen-external-classifier ---
+        # --- BEGIN gen-cell-harness (additive) ---
+        gen_cell=GenCellConfig(
+            **filter_valid_fields(GenCellConfig, data.get("gen_cell", {}))
+        ),
+        # --- END gen-cell-harness ---
+        # --- BEGIN gen-bridge-dsprites (additive; the SECOND dataset) ---
+        gen_bridge_dsprites=GenBridgeDspritesConfig(
+            **filter_valid_fields(
+                GenBridgeDspritesConfig, data.get("gen_bridge_dsprites", {})
+            )
+        ),
+        # --- END gen-bridge-dsprites ---
+        # --- BEGIN gen-encoder-unfreeze (additive; R29 pivot item 3) ---
+        gen_encoder_unfreeze=GenEncoderUnfreezeConfig(
+            **filter_valid_fields(
+                GenEncoderUnfreezeConfig, data.get("gen_encoder_unfreeze", {})
+            )
+        ),
+        # --- END gen-encoder-unfreeze ---
+        # --- BEGIN gen-encoder-pretrain (additive; R40.E) ---
+        gen_pretrain=GenPretrainConfig(
+            **filter_valid_fields(GenPretrainConfig, data.get("gen_pretrain", {}))
+        ),
+        # --- END gen-encoder-pretrain ---
+        project=ProjectConfig(
+            **filter_valid_fields(ProjectConfig, data.get("project", {}))
+        ),
+    )
+    return config
+
+
+@dataclass
+class GenBaselinesConfig:
+    """⭐ The two COMPETITOR arms: byte-matched kNN, and LACE.
+
+    Backs ``chlu exp-gen-baselines`` and ``chlu.experiments.exp_gen_baselines``.
+
+    ⛔ **No CLU number is produced here — this module IS the laundering control.**
+    The kNN arm is the comparator for two kill rules ((ii) on B and (iv) on C), so
+    a weak kNN would make both pass trivially and let a dead mechanism through.
+    Every default below is set to let the rivals win if they can.
+
+    ⛔ **The trap.** ``GenBridgeConfig.dec_recipe`` still defaults to ``"baseline"``
+    — the decoder that FAILED the gate (balanced accuracy 0.7191, 0/3 seeds
+    clear).  The winner is ``v1_capacity_schedule`` (0.9414, 3/3).  The default was
+    left alone deliberately so Montero's history reproduces, so this config selects
+    the winner explicitly through :attr:`decoder_source` and the run **asserts the
+    decoder parameter hash** before recording a number.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    #: Which arms run.  ``knn`` covers both byte-matched kNN-family members
+    #: (bottlenecked retrieval **and** the prototype-direct variant).
+    arms: List[str] = field(default_factory=lambda: ["knn", "lace"])
+
+    # --- frozen artifacts (⛔ every one of these is loaded, never fitted here) ---
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ``"decoder_lift_v1"`` (⭐ the winner, 0.9414) | ``"bridge"`` (⛔ the SUPERSEDED
+    #: baseline that failed the gate — kept only so a deliberate reproduction is possible).
+    decoder_source: str = "decoder_lift_v1"
+    #: ``None`` -> ``$CHLU_GEN_DECLIFT_DIR`` else ``<repo>/.claude/outputs/gen-decoder-lift/winner``.
+    decoder_lift_dir: Optional[str] = None
+    #: Assert the decoder parameter hash against the winner manifest before scoring.
+    #: ⛔ Never disable in a reported run: a run through the wrong decoder looks
+    #: entirely normal in the logs and is void.
+    assert_decoder_hash: bool = True
+    verify_cache_checksum: bool = True
+    #: Rows per on-the-fly encoding chunk when the frozen cache does not cover a row
+    #: (seeds 1/2 were written at ``scope="used"``, 9,288 rows).
+    encode_chunk: int = 16384
+
+    # --- the byte budget (⭐ shrink to match; ⛔ never grow, never hand-solved) ---
+    #: ``None`` -> read from ``store_bytes.json``; an int pins it.  The measured
+    #: Shapes3D/recon value is 524,288 B (``n_modes * D * 4 = 64 * 2048 * 4``).
+    store_bytes: Optional[int] = None
+    #: ⛔ **FLIPPED TO ``False`` BY R26 RULING 3** (2026-09-13).  Conditional dreaming
+    #: is dropped as the composition mechanism, so ``gen_dream.fit_code_coupling``'s
+    #: inter-well PMI field ``J[k, l][m, m']`` (``K(K-1)/2 * M^2 * 4 = 163,840 B`` at
+    #: the shipped cell) **leaves the deployed store** and the byte-match target
+    #: reverts ``688,128 -> 524,288 B``.  Hub-verified: ``coupling_bytes`` is
+    #: referenced only inside ``gen_dream``; ``gen_certificate`` never imports it.
+    #: ⚠ The historical ``gen-baselines`` run (2026-09-12, all 3 seeds) was fitted at
+    #: **688,128 B** — a declared ~31 % byte ADVANTAGE to the kNN arm, conservative in
+    #: direction but ⛔ never to be described as byte-matched.  ⭐ The flag is KEPT so
+    #: that run reproduces bit-identically (``--byte-budget historical``); ⛔ it is no
+    #: longer the default, because a future run would inherit the wrong budget
+    #: silently.  ⭐ The read channel is untouched at ``K*log2(M) = 30`` bits either
+    #: way — this is a CAPACITY knob, never a channel one.
+    include_coupling_bytes: bool = False
+    #: ⭐ The realised byte-match target is **asserted**, not merely logged: a budget
+    #: that silently reverts is exactly the defect R26.3 left behind.  ``None``
+    #: disables the assertion (used by ``--byte-budget historical``, which pins
+    #: 688,128 explicitly instead).
+    expect_byte_target_bytes: Optional[int] = 524288
+    #: ``None`` -> derived by ``K(K-1)/2 * M^2 * 4`` from ``store_plan.json``'s own
+    #: ``K`` and ``n_modes``.  ⛔ Never hand-typed; an int pins it.
+    coupling_bytes: Optional[int] = None
+    #: ``None`` -> ``$CHLU_GEN_STORE_RUNS`` else ``<repo>/.claude/outputs/gen-store-grouping/runs``.
+    store_runs_root: Optional[str] = None
+    #: ⭐ The declared STORE ceiling companion (R23.5): the in-corner store read,
+    #: 0.6866 balanced accuracy against the 0.9414 real-feature decoder ceiling.
+    #: Quoted from R22 with provenance; the decoder ceiling is re-measured in-run.
+    store_ceiling_balacc: float = 0.6866
+
+    # --- rows ---
+    #: Train rows the prototypes / kNN store / LACE classifier are fitted on.
+    #: ⭐ ``n_fit + n_val == gen_store.n_store_train`` (32,768) by construction, so
+    #: the matched-seen negatives are excluded by **exactly** the same row set
+    #: ``gen-store-grouping`` and ``gen-r0-rescore`` excluded and the realised
+    #: negative count reproduces theirs (198 / 199 / 199).
+    n_fit: int = 32256
+    #: Held-back TRAIN rows used to SELECT a tuning trial.  ⛔ Disjoint from A, B,
+    #: the matched-seen negatives and C; C never enters tuning.
+    n_val: int = 512
+    #: Requests per sampling batch.
+    eval_batch: int = 256
+
+    # --- kNN arm ---
+    knn_ks: List[int] = field(default_factory=lambda: [1, 3, 5])
+    knn_metrics: List[str] = field(default_factory=lambda: ["euclidean", "cosine"])
+    knn_normalisers: List[str] = field(default_factory=lambda: ["none", "zscore"])
+    #: ⛔ No dtype normalisation: bytes are counted **as deployed**, so a competitor
+    #: that quantises genuinely fits more entries into the same budget.
+    knn_deployments: List[str] = field(default_factory=lambda: ["fp32", "fp16", "int8"])
+    knn_store_method: str = "kmeans"
+    knn_kmeans_iters: int = 25
+    #: Distance reduction over the k neighbours for the refusal score.
+    knn_refusal_reduce: str = "min"
+
+    # --- LACE arm ---
+    lace_sigmas: List[float] = field(default_factory=lambda: [0.03, 0.1, 0.3, 1.0])
+    lace_forms: List[str] = field(default_factory=lambda: ["categorical", "continuous", "both"])
+    #: ``"ledoit_wolf"`` or a float intensity; parsed by ``fit_whitening``.
+    #: ⚠ **Corrected twice on TRAIN-ONLY diagnostics** (PREREG amendments A1, A2).
+    #: ``p0(u) = N(0, I)`` is the *only* thing licensing LACE's ODE drift to omit the
+    #: prior score (R9.1), so an intensity that breaks it is a **crippling, not a
+    #: tuning choice**.  MEASURED ``mean |diag(cov(u)) - 1|`` on the shipped cache:
+    #: ``1e-1`` -> **0.86** (dropped, A1); ``1e-3`` -> 0.24; Ledoit-Wolf (3.49e-4)
+    #: -> 0.15; ⭐ ``"none"`` + the relative eigenvalue floor -> **0.034**, which
+    #: trips only the 72 near-null directions left by the cache's dead coordinates.
+    #: ⭐ Shrinkage is itself the thing degrading the identity here, so ``"none"``
+    #: leads the grid.  The realised check ships per shrinkage in the manifest.
+    lace_shrinkages: List[str] = field(default_factory=lambda: ["none", "ledoit_wolf", "1e-3"])
+    #: ``OFFICIAL IMPLEMENTATION:`` run_clf.sh ``--n_epochs 50``. ⛔ NOT the appendix's
+    #: 100 and ⛔ NOT argparse's 200.
+    lace_n_epochs: int = 50
+    #: ``OFFICIAL IMPLEMENTATION:`` FFHQ batch 128. ⛔ NOT argparse's default 64.
+    lace_batch: int = 128
+    lace_lr: float = 1e-4
+    lace_warmup_iters: int = 1000
+    #: Shorter schedule used for the 36 tuning trials; the SELECTED configuration is
+    #: retrained at the full shipped ``lace_n_epochs`` before any reported number.
+    lace_tune_epochs: int = 6
+    #: Validation requests scored per tuning trial (the trial sampler is cheap LD).
+    lace_tune_n: int = 256
+    lace_tune_ld_steps: int = 30
+    #: ``OFFICIAL IMPLEMENTATION:`` ``--n_steps 100`` for ``sample_q_sgld``.
+    lace_ld_steps: int = 100
+    #: R9.4: every sampler is run and LACE's best is reported.
+    lace_samplers: List[str] = field(default_factory=lambda: ["ode", "ld_published", "ld_corrected"])
+    #: R9.3 concession, calibrated on validation as a declared SIDE diagnostic —
+    #: ⛔ not folded into the 36-trial budget, because no A/B/C request uses OR or NOT.
+    lace_tune_or_not: bool = True
+    lace_or_cofs: List[float] = field(default_factory=lambda: [5.0, 20.0, 80.0, 320.0])
+    lace_not_nums: List[float] = field(default_factory=lambda: [0.03, 0.1, 0.3, 1.0])
+
+    #: ⭐ **R27.3 — the whitening exactness GATE.**  ``p0(u) = N(0, I)`` is the only
+    #: thing licensing LACE's ODE drift to omit the prior score (R9.1), so
+    #: ``mean |diag(cov(u)) - 1|`` above this tolerance means the SELECTED
+    #: configuration is running an unlicensed sampler.  ⭐ 0.10, not 0.05, and the
+    #: reason is structural: 71 of 2,048 cache coordinates are dead (constant
+    #: post-ReLU), contributing an irreducible 71/2048 = 0.0347 before any real
+    #: violation.  MEASURED: ``none`` 0.051-0.057, ``ledoit_wolf`` 0.143-0.150,
+    #: ``1e-3`` 0.216-0.238 — the tolerance separates them correctly.
+    lace_whitening_exact_tol: float = 0.10
+    #: ⭐ **R27.3, binding**: *"a rival weakened by our own selection procedure is our
+    #: fault."*  If the pre-registered (validation-aggregate) selection lands on a
+    #: NON-exact whitening, additionally run the **nearest exact** configuration in
+    #: the same grid — same ``sigma`` and ``form`` where available, shrinkage swapped
+    #: to the exact one — and report **both**, quoting the stronger.  ⛔ The
+    #: pre-registered leg is never dropped, and ⛔ its RNG stream is untouched (the
+    #: fallback draws from its own key), so the pre-registered numbers stay
+    #: bit-identical to the historical run.
+    lace_whitening_exactness_fallback: bool = True
+
+    # --- refusal ---
+    #: Quantile of the VALID-data score distribution that sets the refusal
+    #: threshold.  ⛔ No C item and no held-out item participates.
+    refusal_valid_quantile: float = 0.95
+    #: ⭐ **A7 (R26.1 / R27.4).**  Score C against the VALID CONTROL each kind
+    #: declares in the on-disk ``query_sets.json`` registry, as well as against the
+    #: ordinary valid pool.  ``duplicate_factor``'s control is ``a7_redundant``
+    #: (same term count, same ordering, same repeated-factor pattern, still
+    #: satisfiable); ``out_of_range``'s control is ``base`` — i.e. the ordinary
+    #: 6-term pool — so ⭐ that kind is **A7-clean as shipped** and must reproduce
+    #: bit-identically.
+    score_registered_controls: bool = True
+    #: The registry file, read from ``<data_root>/<dataset>/``.  ⛔ Never a hardcoded
+    #: set list: the arms score whatever the registry declares.
+    query_set_registry_file: str = "query_sets.json"
+    #: ⛔ Fail loudly when the registry or a declared control file is missing.  A
+    #: silent skip here is "declared not-run reported as null" in code form (R26.7),
+    #: and it is exactly what made the first A7 re-score impossible.
+    require_registered_controls: bool = True
+    #: ⭐ Also score each kind against the control with its **repeated term removed**
+    #: (``A7D``).  R8's declared embedding composes *every* term, so an A7 request's
+    #: repeated factor enters twice — this isolates how much of the controlled number
+    #: is that doubling.  ⛔ A DECLARED SENSITIVITY, never a registered control and
+    #: never the quoted number.
+    control_dedup_sensitivity: bool = True
+    #: ⭐ Persist the **per-request** refusal score of every arm/variant to
+    #: ``refusal_scores.json`` beside the manifest.  ⛔ Their absence is what blocked
+    #: `gen-baselines-consolidate`: with only ``score_summary`` aggregates on disk, a
+    #: re-score needs a 3-seed re-run instead of a spreadsheet.
+    persist_per_request_refusal_scores: bool = True
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    make_plots: bool = True
+
+    # --- quick mode (plumbing smoke only; ⛔ never a reported number) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_fit: int = 2048
+    quick_n_val: int = 64
+    quick_n_eval_a: int = 64
+    quick_lace_n_epochs: int = 1
+    quick_lace_tune_epochs: int = 1
+    quick_lace_tune_n: int = 32
+    quick_lace_tune_ld_steps: int = 3
+    quick_lace_ld_steps: int = 5
+    quick_knn_kmeans_iters: int = 3
+    quick_knn_ks: List[int] = field(default_factory=lambda: [1, 3])
+    quick_lace_sigmas: List[float] = field(default_factory=lambda: [0.1])
+    quick_lace_shrinkages: List[str] = field(default_factory=lambda: ["none"])
+
+
+@dataclass
+class GenComposeConfig:
+    """⭐ Composition through the READ: ``request → code → frozen decoder → probe``.
+
+    Backs ``chlu exp-gen-compose`` and ``chlu.experiments.exp_gen_compose``.
+
+    ⭐ **R26 ruling 3.**  Conditional dreaming is **dropped** as the composition
+    mechanism (its falsifier fired; steering-attributable ``+0.0015 ± 0.0204``).
+    Composition is the **k-particle launch read** over the requested modes, then
+    decode.  ⛔ No landscape, no rollout, no clamp-and-relax, and the inter-well
+    coupling field is neither fitted nor deployed — so the deployed store is
+    **524,288 B**, ⛔ not ``gen-baselines``' 688,128 B (see
+    :attr:`expect_deployed_store_bytes`).
+
+    ⛔ **The standing trap.** :attr:`GenBridgeConfig.dec_recipe` still defaults to
+    ``"baseline"`` — the decoder that **FAILED** the gate (0.7191, 0/3 seeds).  The
+    winner is ``v1_capacity_schedule`` (0.9414, 3/3).  A run through the baseline
+    looks entirely normal in the logs and is **void**, so this config selects the
+    winner explicitly and the run asserts the decoder **parameter hash** and the
+    **recipe name** before recording a number.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    #: ⭐ Four arms (R27's amendment added ``clu_wide``): the 30-bit ``read``, the
+    #: composed-mode ``clu_wide``, and the two laundering controls ``store_removed``
+    #: (store ablated) and ``proto`` (no store at all).
+    arms: List[str] = field(
+        default_factory=lambda: ["read", "clu_wide", "store_removed", "proto"]
+    )
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- frozen artifacts (⛔ every one is LOADED here, never fitted) ---
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ``None`` -> ``$CHLU_CLAUDE_ROOT`` else ``<repo>/.claude``.
+    claude_root: Optional[str] = None
+    #: ``gen-store-grouping``'s pinned plan.  ⛔ ``K``/``n_modes``/``D``/``store_bytes``
+    #: are portable; the ``labels`` vector indexes ONE seed's encoder channels and is
+    #: re-derived per seed (R26.5).
+    store_plan: Optional[str] = None
+    #: ``"winner"`` (⭐ gen-decoder-lift's V1) | ``"bridge"`` (⛔ the SUPERSEDED baseline).
+    decoder_source: str = "winner"
+    #: ``None`` -> ``<claude_root>/outputs/gen-decoder-lift/winner``.
+    winner_root: Optional[str] = None
+    winner_decoder_pattern: str = "decoder_v1_s{seed}.pkl"
+    #: ⛔ Asserted, never assumed: a run decoded through ``"baseline"`` is void.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+    verify_cache_checksum: bool = True
+    #: Rows per on-the-fly encoding chunk when the frozen cache does not cover a row
+    #: (seeds 1/2 were written at ``scope="used"``, 9,288 rows, and contain **none**
+    #: of the matched-seen control rows).
+    encode_chunk: int = 16384
+
+    # --- the store (⭐ same procedure as gen-store-grouping / gen-dream-sampler) ---
+    #: ``"per_seed"`` re-derives the grouping on this seed's own channels at the
+    #: plan's ``K``; ⛔ ``"plan"`` applies the plan's label vector verbatim, which on
+    #: any seed but its own is a size-matched RANDOM partition (R26.5).
+    grouping_source: str = "per_seed"
+    use_store_checkpoint: bool = True
+    #: Laplace smoothing for the request-addressing head.
+    address_smoothing: float = 1.0
+    #: ``zero`` | ``mean`` | ``scramble``.  ⭐ ``mean`` is the fairest ablation: the
+    #: read stays on-manifold and correctly scaled while carrying zero information.
+    store_removed_delete_mode: str = "mean"
+
+    # --- evaluation ---
+    #: A-split requests scored per seed (B is the full 72-row held-out cell and the
+    #: matched-seen negatives are whatever the corner realises — ⛔ neither is capped).
+    n_eval_a: int = 512
+    eval_batch: int = 256
+    #: ⭐ R26 standing rule (third strike): the metric invariance check runs BEFORE
+    #: any arm is scored — same features, different partition, same value.
+    invariance_neg_repeats: int = 2
+    invariance_subsample_frac: float = 0.5
+    invariance_seed: int = 0
+
+    # --- declared reference rows (⛔ quoted with provenance, never re-measured) ---
+    #: R22/R23.5: the in-corner STORE ceiling, companion to the decoder ceiling.
+    store_ceiling_balacc: float = 0.6866
+    #: R27: the byte-matched prototype baseline kill rule (ii) reads.
+    knn_proto_reference_balacc: float = 0.8884
+    #: R27: the channel-matched kNN, near chance — the bits-efficiency companion.
+    knn_channel_matched_reference_balacc: float = 0.5206
+    #: ⭐ The deployed store, coupling EXCLUDED (R26).  ⛔ Do not inherit 688,128.
+    expect_deployed_store_bytes: Optional[int] = 524288
+
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_eval_a: int = 64
+    quick_n_store_train: int = 2048
+    quick_store_train_steps: int = 30
+    #: ⚠ ``"plan"`` in quick mode **on purpose**: the per-seed re-derivation is
+    #: asserted bit-identical to ``store_plan.json`` on the seed whose encoder wrote
+    #: it, and a 2,048-row smoke subsample cannot reproduce a grouping clustered on
+    #: 16,384 rows — the assertion would fire on plumbing, not on a defect.
+    #: ⛔ A quick run's numbers are never reported, so the verbatim labels are safe
+    #: here and ⛔ nowhere else (R26.5).
+    quick_grouping_source: str = "plan"
+    quick_arms: List[str] = field(
+        default_factory=lambda: ["read", "clu_wide", "store_removed", "proto"]
+    )
+
+
+@dataclass
+class GenClassifierConfig:
+    """⭐ The **external** factor classifier: ``image → factors``, decoder-independent.
+
+    Backs ``chlu.experiments.exp_gen_classifier``.
+
+    ⭐ **Why a second reader exists (R29 pivot item 2).**  Every composition number
+    in phase 1 is read by the bridge's own :class:`~chlu.core.gen_bridge.FactorProbe`,
+    which is fitted **in the same run, on the same 8,192 train rows, from the same
+    seed-derived key chain** as the shared decoder.  R29's headline table ends in an
+    **external** classifier, and ⛔ a probe of the decoder's own lineage cannot be
+    the instrument that scores the decoder's output.
+
+    ⛔ **The standing decoder trap.**  :attr:`GenBridgeConfig.dec_recipe` still
+    defaults to ``"baseline"`` — the decoder that **FAILED** the gate (0.7191, 0/3
+    seeds).  The winner is ``v1_capacity_schedule`` (0.9414, 3/3).  A run through
+    the baseline looks entirely normal in the logs and is **void**, so this config
+    selects the winner explicitly and the run asserts the decoder **parameter hash**
+    and the **recipe name** before recording a number.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- the instrument (⛔ deliberately unlike ``GenBridgeConfig.probe_*``) ---
+    #: Four stages against the probe's three.
+    clf_channels: List[int] = field(default_factory=lambda: [32, 64, 128, 128])
+    #: 5 against the probe's 4.
+    clf_kernel: int = 5
+    clf_stride: int = 2
+    clf_groups: int = 8
+    #: Hidden projection before the per-factor heads; the probe has none.
+    clf_hidden: int = 256
+    clf_steps: int = 1500
+    clf_batch: int = 128
+    clf_lr: float = 1e-3
+    #: ⭐ Checkpoint cadence in steps — the run is resumable and ⛔ never holds a
+    #: result to the end.
+    clf_checkpoint_every: int = 250
+    #: Train-split rows the classifier is fitted on.  ⭐ Matched to
+    #: ``GenBridgeConfig.n_train`` on purpose: same data budget, disjoint rows, so a
+    #: gap against the probe cannot be a sample-size artefact.
+    n_clf_train: int = 8192
+    #: ⛔ Never the bridge's ``seed * 10_007 + 20_260_910``.
+    row_seed_mult: int = 104_729
+    row_seed_offset: int = 20_260_913
+    #: Rows re-streamed from the HDF5 file and required bit-identical to the training
+    #: tensor — what turns "it never saw a render" into a measurement.
+    render_check_n: int = 64
+    #: ⭐ Also exclude the **wide** condition's held-out cells from the training
+    #: draw, so ONE fitted classifier serves both conditions with no leak either
+    #: way (it reads raw images, so it is encoder-independent and needs no refit).
+    exclude_wide_heldout: bool = True
+
+    # --- frozen artifacts (⛔ every one is LOADED here, never fitted) ---
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ``None`` -> ``$CHLU_CLAUDE_ROOT`` else ``<repo>/.claude``.
+    claude_root: Optional[str] = None
+    #: ``"winner"`` (⭐ gen-decoder-lift's V1) | ``"bridge"`` (⛔ the SUPERSEDED baseline).
+    decoder_source: str = "winner"
+    #: ``None`` -> ``<claude_root>/outputs/gen-decoder-lift/winner``.
+    winner_root: Optional[str] = None
+    winner_decoder_pattern: str = "decoder_v1_s{seed}.pkl"
+    #: ⛔ Asserted, never assumed: a run decoded through ``"baseline"`` is void.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+    verify_cache_checksum: bool = True
+    eval_batch: int = 256
+
+    # --- ⭐ the gate (leg 2): pre-registered, stop-and-return ---
+    #: ⛔ Only genuinely compositional Shapes3D factor (R16).
+    gate_factor: str = "shape"
+    #: R15: the shipped probe reads REAL images at 1.0000 and is saturated.
+    gate_floor: float = 0.95
+    #: ⛔ A balanced accuracy over a handful of negatives is not a measurement.
+    gate_min_negatives: int = 20
+
+    # --- ⭐⭐ leg 3: the gap, and what makes it material ---
+    #: R22, from disk: the probe's in-corner ``shape`` balanced accuracy on the V1
+    #: decoder's renders.  ⛔ Quoted with provenance and **recomputed** in-run.
+    probe_reference_balacc: float = 0.9414
+    #: ⛔ Full precision, transcribed from
+    #: ``gen-r0-rescore/rescore_seed_{0,1,2}.json: gate_real_features.v1_decoder.
+    #: balanced_accuracy`` — NOT from the 4-dp figures in the report, so an in-run
+    #: recomputation can be asserted bit-identical rather than "close".
+    probe_reference_per_seed: List[float] = field(
+        default_factory=lambda: [0.9223484848484849, 0.9364530988274706, 0.9652777777777778]
+    )
+    #: R23.3, the wide configuration's 11-cell pooled held-out ``shape``.  ⛔ A
+    #: DECLARED reference only — the wide comparison is its own condition.
+    wide_reference_balacc: float = 0.9894
+    #: |mean gap| must clear this absolutely …
+    gap_abs_threshold: float = 0.05
+    #: … and this multiple of the across-seed spread, to count as material.
+    gap_spread_mult: float = 2.0
+
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_clf_train: int = 512
+    quick_clf_steps: int = 20
+    quick_clf_checkpoint_every: int = 10
+    quick_render_check_n: int = 8
+    quick_verify_cache_checksum: bool = False
+
+
+@dataclass
+class GenCellConfig:
+    """⭐ **The generation harness, end to end, scored on IMAGES** (R29 pivot item 2).
+
+    Backs ``chlu.experiments.exp_gen_cell`` — the module the CSF3 launcher's
+    ``STAGE=cell`` has expected since ``gen-csf3-launcher`` and which did not exist.
+
+    One path, five arms, one decoder, one instrument::
+
+        request -> launch read -> codes -> THE frozen decoder -> image
+                -> THE external classifier
+
+    ⛔ **Three things this config exists to make impossible.**
+
+    1. **A second decoder.**  Every arm decodes through the ONE shared frozen
+       ``v1_capacity_schedule`` decoder and its **parameter hash is asserted per arm
+       per seed** (R9.2).  :attr:`GenBridgeConfig.dec_recipe` still defaults to
+       ``"baseline"`` — the recipe that FAILED the gate — so the winner is selected
+       explicitly and proven, never inherited.
+    2. **A second instrument.**  Every arm is read by the ONE external classifier
+       gated by ``gen-external-classifier`` (``classifier_gate.json: "gate": "PASS"``),
+       loaded from disk and hash-asserted.  ⛔ Nothing is re-fitted here.
+    3. **A feature tensor on the CLU path.**  ``gen_store.soft_read`` takes FEATURES
+       and using it would void the structural no-bypass guarantee; the harness calls
+       ``gen_compose.assert_request_only`` before it records a number.
+
+    ⚠ **The byte ledger is a TABLE COLUMN, never a footnote.**  Store **524,288 B**
+    (R26.3; ⛔ not the retired 688,128 B), addressing head **74,240 B**, prototype
+    table **475,136 B**.  ⚠ The shipped ``knn_proto`` numbers were selected at the
+    retired budget — a **~31 % advantage** — which is the **conservative** direction
+    and is **declared in the table, never silently dropped**.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    #: ⭐ Order is the order every table uses.  ``store_removed`` is the **laundering
+    #: control on every row**, ⛔ not a footnote: it is the row that says whether any
+    #: number came from the store.
+    arms: List[str] = field(
+        default_factory=lambda: ["clu", "store_removed", "knn_proto", "lace", "ebm_compose"]
+    )
+
+    # --- frozen artefacts: ⛔ every one is LOADED, none is fitted here ---
+    #: ``None`` -> ``$CHLU_CLAUDE_ROOT`` else ``<repo>/.claude``.
+    claude_root: Optional[str] = None
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<claude>/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ⭐ ``"winner"`` (gen-decoder-lift's V1) | ``"bridge"`` (⛔ the SUPERSEDED baseline).
+    decoder_source: str = "winner"
+    winner_root: Optional[str] = None
+    winner_decoder_pattern: str = "decoder_v1_s{seed}.pkl"
+    #: ⛔ Asserted, never assumed: a run decoded through ``"baseline"`` is void.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+    #: ``None`` -> ``<claude>/outputs/gen-external-classifier``.
+    classifier_root: Optional[str] = None
+    classifier_checkpoint_pattern: str = "seed_{seed}/external_classifier.pkl"
+    classifier_manifest_pattern: str = "seed_{seed}/classifier_manifest.json"
+    #: ⛔ **PRECONDITION, mechanical.**  The run refuses to start unless this file's
+    #: top-level ``"gate"`` is ``"PASS"``.
+    classifier_gate_file: str = "classifier_gate.json"
+    require_classifier_gate: bool = True
+    #: ⛔ **PRECONDITION, mechanical.**  ``refusal_scores.json``'s ``"status"`` must be
+    #: ``"complete"`` (R30 sequencing) — the rivals must have been re-scored under A7
+    #: before any of their numbers is quoted beside ours.
+    refusal_scores_file: Optional[str] = "gen-arms-a7-wiring/refusal_scores.json"
+    require_refusal_complete: bool = True
+    #: ``None`` -> ``<claude>/outputs/gen-store-grouping/runs/<ds>_<px>/store_plan.json``.
+    store_plan: Optional[str] = None
+    #: ⭐ Load the store the composition cell already fitted, so the CLU arm's
+    #: probe-space number is **bit-identical** to ``gen-read-compose``'s and the only
+    #: thing that changed between the two tables is the **instrument**.  ⛔ Falls back
+    #: to training only if :attr:`allow_store_training` — a silently re-trained store
+    #: would make the comparison meaningless.
+    store_checkpoint_root: Optional[str] = None
+    store_checkpoint_pattern: str = "runs/{dataset}_{pretext}/seed_{seed}/store_s{seed}.pkl"
+    allow_store_training: bool = True
+    grouping_source: str = "per_seed"
+    address_smoothing: float = 1.0
+    store_removed_delete_mode: str = "mean"
+    verify_cache_checksum: bool = True
+    encode_chunk: int = 2048
+    eval_batch: int = 256
+    #: A-set rows carried alongside B/MS.  ⚠ A is a **companion**; the gate statistic
+    #: is B-vs-MS in the corner.  0 disables it (the headline table does not need it).
+    n_eval_a: int = 0
+
+    # --- ⭐ the byte ledger: a TABLE COLUMN (R26.3) ---
+    #: ⛔ The run aborts on any other realised value.
+    expect_deployed_store_bytes: Optional[int] = 524_288
+    addressing_head_bytes_reference: int = 74_240
+    prototype_table_bytes_reference: int = 475_136
+    #: ⚠ The retired budget the shipped ``knn_proto`` selection was run at.
+    retired_byte_budget: int = 688_128
+
+    # --- ⭐ the tuning-trial budget, matched across arms and REPORTED ---
+    #: ⭐ The budget EVERY arm is entitled to.  ``clu``/``store_removed``/``knn_proto``
+    #: realise **0** of it (they have no tunable axis), which is an advantage handed
+    #: to the two energy-based rivals — the conservative direction, declared.
+    tuning_trial_budget: int = 36
+
+    # --- the LACE arm (⛔ constants live in chlu.eval.rivals.gen_lace) ---
+    #: ⭐ Inherit the per-seed SELECTED configuration from ``gen-arms-a7-wiring``'s
+    #: manifests rather than re-tuning: re-running the 36-trial selection on a new key
+    #: stream could land on a *different* configuration and **weaken the rival through
+    #: our own code** (R27.3).  ⛔ The inherited leg is the **pre-registered** one,
+    #: which is the stronger on composition on both gated seeds (R33 erratum).
+    lace_selection_source: Optional[str] = "gen-arms-a7-wiring/runs/historical_688128"
+    lace_selection_pattern: str = "seed_{seed}/baselines_manifest.json"
+    #: ⛔ ``ode`` is the published composition row (0.6797 ± 0.0207); the Langevin legs
+    #: run as LACE's declared best-of-family companion (R9.4).
+    lace_samplers: List[str] = field(
+        default_factory=lambda: ["ode", "ld_published", "ld_corrected"]
+    )
+    lace_primary_sampler: str = "ode"
+    #: ⛔ The shipped 50, ⛔ not the appendix's 100 and ⛔ not argparse's 200 (R9.6).
+    lace_n_epochs: int = 50
+    lace_batch: int = 128
+    lace_lr: float = 1e-4
+    lace_warmup_iters: int = 1000
+    lace_ld_steps: int = 100
+    #: ⛔ **32,256 / 512, because those are ``GenBaselinesConfig``'s** — the rivals'
+    #: prototype table, whitening and classifier are fitted on the **same rows** they
+    #: were fitted on when they published their numbers.  ⚠ A smaller fit set here
+    #: would **weaken every rival** (measured in the smoke: ``knn_proto`` fell from
+    #: 0.8763 to 0.8308 at 1,024 fit rows, and LACE's whitening went rank-deficient),
+    #: which is precisely the failure this spoke is told to avoid.
+    n_fit: int = 32_256
+    n_val: int = 512
+
+    # --- ⭐ the energy-based composition arm (Du et al. 2020), ⛔ NOT LACE ---
+    #: Independent per-factor energy experts, composed by SUM (product of experts =
+    #: AND), plus an isotropic Gaussian data prior, sampled by SGLD in the
+    #: **standardised feature space**.  ⛔ The structural differences from LACE are
+    #: the independence of the experts, the absence of a whitening transform, and the
+    #: prior score entering the sampler explicitly.
+    ebm_hidden: int = 256
+    ebm_depth: int = 2
+    ebm_epochs: int = 20
+    ebm_batch: int = 128
+    ebm_lr: float = 1e-3
+    #: The tuning axes — ``3 x 3 x 2 x 2 = 36``, matching :attr:`tuning_trial_budget`.
+    ebm_step_sizes: List[float] = field(default_factory=lambda: [3e-3, 1e-2, 3e-2])
+    ebm_prior_sigmas: List[float] = field(default_factory=lambda: [0.5, 1.0, 2.0])
+    ebm_steps_grid: List[int] = field(default_factory=lambda: [50, 200])
+    #: ⭐ Post-ReLU features are non-negative by construction; whether to project the
+    #: sample back onto that cone is a free choice the method does not fix, so **both**
+    #: are in the grid and validation picks — ⛔ never us.
+    ebm_clip_grid: List[bool] = field(default_factory=lambda: [True, False])
+    ebm_tune_n: int = 256
+
+    # --- ⭐ the sampler-noise floor (⛔ so 72 items cannot carry a confident claim) ---
+    #: Independent sampler keys re-run at a FIXED (seed, arm, configuration).  The sd
+    #: over these is the noise floor every arm difference is read against.
+    sampler_noise_repeats: int = 3
+    sampler_noise_arms: List[str] = field(default_factory=lambda: ["lace"])
+    sampler_noise_seed: int = 0
+
+    # --- regression guards against the published numbers (⛔ never-weaken-a-rival) ---
+    #: ⭐ **Transcribed from DISK, not from a report's 4-dp figures** —
+    #: ``gen-read-compose/runs/shapes3d_recon/seed_*/compose_manifest.json →
+    #: arms.read.in_corner_discrimination.balanced_accuracy``.  ⚠ My first version
+    #: guessed the last digits from the report's "0.6809 / 0.6858" and the measured
+    #: values then differed in the 4th decimal for a reason that was **mine, not the
+    #: run's** — the same class of error ``gen-external-classifier`` §11.4 flagged.
+    #: ⛔ Never derive a reference constant from a rendered table.
+    clu_probe_reference_per_seed: List[float] = field(
+        default_factory=lambda: [0.6609848484848484, 0.6809045226130653, 0.6858249581239531]
+    )
+    #: ``gen-arms-a7-wiring/runs/deployed_524288/seed_*/baselines_manifest.json →
+    #: arms.knn.variants.knn_proto`` — full precision from disk (byte-invariant, P5).
+    knn_proto_probe_reference_per_seed: List[float] = field(
+        default_factory=lambda: [0.8762626262626263, 0.8919597989949748, 0.8969849246231156]
+    )
+    #: ``gen-arms-a7-wiring/runs/historical_688128/seed_*/baselines_manifest.json →
+    #: arms.lace.samplers.ode`` — the published composition row, from disk.
+    lace_ode_probe_reference_per_seed: List[float] = field(
+        default_factory=lambda: [0.7077020202020202, 0.6731574539363484, 0.6582216638749302]
+    )
+    #: A rival landing more than this BELOW its published number is a regression and
+    #: is reported as one, ⛔ never quietly absorbed into "sampler noise".
+    rival_regression_tolerance: float = 0.05
+
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_arms: List[str] = field(
+        default_factory=lambda: ["clu", "store_removed", "knn_proto", "lace", "ebm_compose"]
+    )
+    quick_n_fit: int = 4096
+    quick_n_val: int = 256
+    quick_lace_n_epochs: int = 1
+    quick_lace_ld_steps: int = 5
+    quick_ebm_epochs: int = 1
+    quick_ebm_step_sizes: List[float] = field(default_factory=lambda: [1e-2])
+    quick_ebm_prior_sigmas: List[float] = field(default_factory=lambda: [1.0])
+    quick_ebm_steps_grid: List[int] = field(default_factory=lambda: [10])
+    quick_ebm_clip_grid: List[bool] = field(default_factory=lambda: [True])
+    quick_ebm_tune_n: int = 32
+    quick_sampler_noise_repeats: int = 2
+    quick_verify_cache_checksum: bool = False
+
+
+@dataclass
+class GenBridgeDspritesConfig:
+    """⭐ The dSprites profile for the bridge + the R3 decoder-ceiling gate on it.
+
+    Backs ``chlu.experiments.exp_gen_bridge --dataset dsprites`` and its
+    ``--stage discrimination``.  ⛔ **Nothing here is read on the Shapes3D path**:
+    :func:`chlu.experiments.exp_gen_bridge.apply_dsprites_profile` is called only
+    when ``dataset == "dsprites"``, and every Shapes3D default in
+    :class:`GenBridgeConfig` is left exactly as shipped.
+
+    ⚠ **Why a profile exists at all.** ``GenBridgeConfig.dec_recipe`` still
+    defaults to ``"baseline"`` — the recipe that **FAILED** the Shapes3D gate
+    (``shape`` 0.5926, ratio 0.653; R16) and was superseded by
+    ``"v1_capacity_schedule"`` (0.9398, ratio 0.966; R19.1/R20).  A dSprites run
+    that inherited the default would look entirely normal in the logs and be
+    **void**.  So the winning recipe is pinned here, applied explicitly, and
+    **asserted per seed against the frozen decoder's manifest**.
+    """
+
+    # --- the decoder recipe (⛔ asserted, never assumed) ---
+    #: ⭐ R19.1's winner.  ⛔ ``"baseline"`` is the recipe that failed the gate.
+    dec_recipe: str = "v1_capacity_schedule"
+    #: ⚠ Quick mode must NOT pull in the recipe's 1800-step schedule (a smoke run
+    #: that takes 1.5 h is not a smoke run).  A quick run is void either way.
+    quick_dec_recipe: str = "baseline"
+    #: Expected recipe name in ``bridge_manifest.json``; a mismatch raises.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+
+    # --- HDF5 read geometry ---
+    #: ⭐ The dSprites HDF5 ``imgs`` dataset is chunked ``(23040, 2, 4)`` — i.e.
+    #: every chunk spans 23,040 *images*.  Reading in 8,192-row blocks (the
+    #: Shapes3D default, whose chunks are ``(15000, 4, 4, 1)``) decompresses each
+    #: chunk up to three times.  ⛔ Read geometry only: the cached features are
+    #: bit-identical either way.
+    cache_block: int = 23040
+
+    # --- ⭐ the in-corner discrimination read (R20's metric, UNCHANGED) ---
+    #: The only genuinely compositional factor: the held-out cell pins it to one
+    #: value (``shape`` class 1 = ellipse), exactly as Montero's Shapes3D cell
+    #: pins ``shape == cylinder``.
+    gate_factor: str = "shape"
+    #: Cap on the held-out positives scored (``0``/``None`` -> all 6,292).
+    max_positives: int = 6292
+    #: Cap on the matched-seen negatives (realised corner holds 12,584: 6,292
+    #: squares + 6,292 hearts).  Seeded subsample; the realised count is reported.
+    max_negatives: int = 4096
+    #: Cap on the seen-normaliser positives (realised pool 22,748 before the
+    #: fitted rows are removed).
+    max_seen: int = 4096
+    #: ⛔ Below this many negatives a balanced accuracy is not a measurement.
+    min_negatives: int = 20
+    #: Floor on the ratio (held-out / seen normaliser) of the balanced metric.
+    disc_floor: float = 0.8
+    #: Absolute floor on the balanced metric itself (0.5 is chance).
+    disc_abs_floor: float = 0.75
+    #: Also probe the REAL images of every population — the instrument row.
+    #: ⛔ If the probe cannot read ``shape`` off real dSprites images, no decoded
+    #: number below it means anything.
+    real_instrument: bool = True
+    #: Batch for the frozen-encoder side buffer and for decode/probe.
+    eval_batch: int = 256
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_max_positives: int = 64
+    quick_max_negatives: int = 64
+    quick_max_seen: int = 64
+
+
+@dataclass
+class GenEncoderUnfreezeConfig:
+    """⭐ The encoder trained **with the store in the loop** — beside the frozen path.
+
+    Backs ``chlu.experiments.exp_gen_encoder`` (the module the CSF3 launcher's
+    ``STAGE=encoder`` already names).
+
+    ⛔ **THIS IS A NEW CONFIGURATION, NEVER A REPLACEMENT.**  R18: the store
+    trains on cached features from the **frozen** encoder and the decoder is
+    downstream of it, so *a changed encoder changes the feature cache and voids
+    every downstream number in this phase*.  Everything here therefore writes to
+    its **own** output root and ⛔ never re-fits, overwrites or invalidates an
+    existing bridge/store/decoder artefact.
+
+    ⛔ **The 30-bit channel is not touched.**  ``K·log2(M)`` is R20's declared
+    design constant; the joint loop routes the decoder's input through
+    :func:`chlu.core.gen_store.read_from_codes` unchanged and
+    :func:`chlu.core.gen_bridge.assert_no_feature_bypass` measures the realised
+    width on every run.  There is deliberately **no** ``bypass_alpha`` field: the
+    bypass hook exists only in the test harness, so a config file cannot express
+    one.
+
+    ⭐ **The matched-compute control is a field, not an afterthought.**  ``arms``
+    defaults to running *both* arms from the **same** warm-started
+    ``(encoder, store, decoder)`` triple, with the same key, the same batch and
+    the same ``joint_steps`` — the only difference is whether the encoder's
+    leaves are handed to Optax.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+
+    #: ⭐ Both arms, always, in this order.  ⛔ Reporting the unfrozen arm without
+    #: the frozen one at matched compute is reporting a compute win.
+    arms: List[str] = field(default_factory=lambda: ["frozen", "unfrozen"])
+    seeds: List[int] = field(default_factory=lambda: [0])
+
+    # --- stage 1: the shared warm start (identical for both arms) ---
+    #: Pretext steps for the shared encoder warm start.  ⭐ Both arms start from
+    #: the SAME encoder — bit-identical, asserted — so the comparison is about
+    #: stage 2 alone.
+    warmup_steps: int = 300
+    warmup_batch: int = 64
+    #: Train rows streamed for the whole run (⛔ never a held-out row).
+    n_train: int = 4096
+    #: Held-out (B) rows and matched-seen (MS) rows are read from the split;
+    #: this only caps the MS control, which is large.
+    max_matched_seen: int = 1024
+
+    # --- the grouping (a ladder constant; derived ONCE from the warm start) ---
+    #: ``K``.  ⛔ Fixed across arms and seeds: the ladder's logic is that only the
+    #: grouping changes, and here not even that.
+    k_wells: int = 5
+    n_modes: int = 64
+    grouping_method: str = "auto"
+    min_well_frac: float = 0.10
+
+    # --- stage 2: the joint loop ---
+    joint_steps: int = 600
+    joint_batch: int = 32
+    joint_lr: float = 1e-3
+    #: ``"straight_through"`` (VQ-VAE's estimator; the decoder's input VALUE is
+    #: bit-identical to the codebook gather) | ``"stop"`` (no surrogate at all —
+    #: the encoder gets gradient only through the commitment term).  ⭐ ``"stop"``
+    #: is the ablation of the surrogate itself.
+    code_grad: str = "straight_through"
+    #: ``|| gather - sg(z) ||^2`` — moves the STORE onto the data.
+    beta_codebook: float = 1.0
+    #: ``|| sg(gather) - z ||^2`` — moves the ENCODER onto the store.  ⛔ This is
+    #: the only term that touches the encoder when ``code_grad="stop"``.
+    beta_commitment: float = 0.25
+
+    # --- the decoder recipe (⛔ trap 1: the default upstream is the LOSER) ---
+    #: ⭐ R19.1/R20's winner.  ⛔ ``GenBridgeConfig.dec_recipe`` still defaults to
+    #: ``"baseline"``, the recipe that FAILED the gate (0.7191, 0/3 seeds); a run
+    #: that inherited it would look normal in the logs and be void.
+    dec_recipe: str = "v1_capacity_schedule"
+    #: Asserted into the manifest before any number is recorded.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+    #: ⚠ Quick mode must not pull in the recipe's capacity at smoke scale (the
+    #: ``gen-bridge-dsprites`` precedent: *a smoke run that takes 1.5 h is not a
+    #: smoke run*).  A quick run is VOID as a reported number either way, and the
+    #: manifest says so in the ``void`` field.
+    quick_dec_recipe: str = "v1_capacity_schedule"
+
+    # --- the address book (the request -> code head; R8, declared supervision) ---
+    book_smoothing: float = 1.0
+    #: ⭐ Rows used to FIT the address book.  ``None`` (default) = the fitting rows,
+    #: i.e. exactly the shipped behaviour.  ⚠ It exists because the request-side
+    #: distinct-code count is an estimate over ``n_factor_values x K x M`` counting
+    #: cells: at smoke scale those cells hold ~0 samples, the Dirichlet smoothing
+    #: dominates, every posterior goes near-uniform and the argmax degenerates —
+    #: which looks exactly like a commitment collapse but is an ESTIMATION
+    #: artefact.  Setting this larger than ``n_train`` separates the two.
+    #: ⛔ Train rows only; the book never sees a held-out row.
+    book_rows: Optional[int] = None
+
+    # --- output ---
+    #: ``None`` -> ``<repo>/.claude/outputs/gen-encoder-unfreeze/runs``.  ⛔ A FRESH
+    #: root: nothing this spoke writes may land in a bridge/store/cell path.
+    out_root: Optional[str] = None
+    #: Skip any (seed, arm) whose manifest already exists and is ``ok``.
+    skip_if_exists: bool = True
+    #: Persist the per-request code TUPLES for A/B/MS, not merely their count —
+    #: ⭐ R30's lesson: ``gen-read-compose`` stored only the count and the
+    #: "do the 9 codes coincide with SEEN configurations?" rider became a re-run.
+    persist_code_tuples: bool = True
+    make_plots: bool = False
+
+    # --- quick (⚠ plumbing smoke only — ⛔ a quick number is NEVER reported) ---
+    quick_warmup_steps: int = 40
+    quick_joint_steps: int = 60
+    quick_joint_batch: int = 16
+    quick_warmup_batch: int = 16
+    quick_n_train: int = 512
+    quick_k_wells: int = 5
+    #: ⭐ M is NOT reduced by --quick: ``K·log2(M) = 5·6 = 30 bits`` is R20's
+    #: declared design constant, so the smoke exercises the REAL channel width.
+    quick_n_modes: int = 64
+    quick_max_matched_seen: int = 256
+    quick_book_rows: Optional[int] = None
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+
+
+@dataclass
+class GenPretrainConfig:
+    """Arms, probe and bar for ``chlu.experiments.exp_gen_pretrain``.
+
+    ⭐ **Reduced scale is a declared axis, not a caveat.**  ``n_enc_train`` /
+    ``enc_steps`` here are deliberately below ``GenBridgeConfig``'s (8192 / 1500):
+    this is the local smoke that R40.A.4 made the acceptance test, and ⛔ a number
+    from it is never compared against a full-scale baseline without saying so.
+    """
+
+    dataset: str = "shapes3d"
+    #: ⛔ ``recon_control`` (laundering control) and ``recon_control_2x`` (COMPUTE
+    #: control) are not optional rows.  ⛔ No augmentation-contrastive arm exists,
+    #: by ruling: it trains invariance to exactly ``scale`` and ``orientation``.
+    variants: List[str] = field(
+        default_factory=lambda: [
+            "recon_control", "random_init", "ae_plain", "recon_control_2x",
+            "ae_deep", "mae", "ae_hires", "random_init_hires", "vae",
+        ]
+    )
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- rows (SEEN data only; the held-out cell is never probed here) ---
+    #: Rows the encoder is fitted on (drawn from ``split.train_rows``).
+    n_enc_train: int = 4096
+    #: Probe-fit rows, ⛔ disjoint from the encoder's and from the eval rows.
+    n_probe_train: int = 4096
+    #: Probe-eval rows on the SPREAD grid, ⛔ disjoint from both of the above.
+    n_probe_eval: int = 2048
+    #: Also probe the 216 matched-seen CORNER rows, reported **separately**.
+    #: ⚠ 3 realised ``scale`` and 3 realised ``orientation`` values there against 8
+    #: and 15 on the grid — the two columns are not comparable.
+    include_corner: bool = True
+
+    # --- the shared encoder trunk (identical for every arm unless named) ---
+    enc_channels: List[int] = field(default_factory=lambda: [32, 64, 128, 128])
+    #: ``ae_hires``: one fewer downsample, so the feature map stays 8x8 (D=8192,
+    #: still inside LACE's ``D ~ 2e4`` whitening budget).
+    hires_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
+    enc_kernel: int = 4
+    enc_stride: int = 2
+    enc_groups: int = 8
+    #: ⚠ REDUCED SCALE, and it is a declared axis: the shipped bridge uses 1500.
+    #: Measured on this machine at 0.6-3.2 s/step depending on the arm, so 400
+    #: steps x 8 arms x 3 seeds is the local ~2.5 h budget R40.A.4 allows.
+    enc_steps: int = 400
+    enc_batch: int = 128
+    enc_lr: float = 1e-3
+
+    # --- the THROWAWAY pretext decoder (discarded, exactly as on the shipped path) ---
+    dec_channels: List[int] = field(default_factory=lambda: [128, 64, 32])
+    dec_groups: int = 8
+    #: ``ae_deep`` only: channel multiplier and blocks per upsampling stage.
+    #: ⚠ 1.0 = depth-only pressure.  A wider decoder measured 3.2 s/step here
+    #: against 1.8, which at 3 seeds is an hour the local budget does not have.
+    deep_width_mult: float = 1.0
+    deep_blocks_per_stage: int = 2
+    #: ``mae`` only: patch side, masked fraction (Bernoulli, so it is the
+    #: *expected* fraction), and whether the loss sees only the masked pixels.
+    mae_mask_ratio: float = 0.5
+    mae_patch: int = 8
+    mae_loss_on_masked: bool = True
+    #: ``vae`` only: the KL weight of the declared comparison arm.
+    vae_beta: float = 0.05
+    #: ``recon_control_2x`` only: the COMPUTE control's step multiplier.
+    compute_control_mult: int = 2
+
+    # --- the probe (⭐ identical for every arm, every seed, every pool) ---
+    #: ``linear`` is the headline instrument; ``mlp`` is a capacity check reported
+    #: beside it.  ⛔ A linear FAIL with an MLP PASS does not clear the bar.
+    probe_kinds: List[str] = field(default_factory=lambda: ["linear", "mlp"])
+    probe_hidden: int = 256
+    probe_steps: int = 1500
+    probe_batch: int = 256
+    probe_lr: float = 1e-3
+
+    # --- the pre-registered bar (R40.E) ---
+    #: Every factor in ``bar_factors`` must reach this on the SPREAD grid, on SEEN
+    #: data, for a variant to clear.  ⛔ A corner-only pass is not a pass.
+    pass_bar: float = 0.90
+    bar_factors: List[str] = field(default_factory=lambda: ["scale", "orientation"])
+
+    # --- io ---
+    #: Contiguous rows per HDF5 read (the Shapes3D chunking; read geometry only).
+    cache_block: int = 8192
+    eval_batch: int = 256
+    #: ⭐ Per-(variant, seed) incremental writes with skip-if-exists, so a 16 GB
+    #: machine that dies three arms in still has three arms of results.
+    skip_if_exists: bool = True
+    #: ⛔ Never a path under ``runs/`` — this is a candidate, beside the frozen one.
+    out_dir: Optional[str] = None
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_variants: List[str] = field(
+        default_factory=lambda: [
+            "recon_control", "random_init", "ae_plain", "ae_deep", "mae",
+            "ae_hires", "random_init_hires", "vae",
+        ]
+    )
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_enc_steps: int = 12
+    quick_probe_steps: int = 12
+    quick_n_enc_train: int = 128
+    quick_n_probe_train: int = 128
+    quick_n_probe_eval: int = 64
+
+
+@dataclass
+class GenDynamicalReadConfig:
+    """⭐ Knobs for ``exp_gen_dynamical_read`` — ``request -> clamp + request ENERGY
+    -> launch -> settle over the stored ATOMS -> decode the settled state``.
+
+    ⛔ **Atoms are stored TRAIN DATA POINTS, never the ``k``-means centres**
+    (Advisor, 2026-09-14): a landscape whose minima *are* the 64 centres can only
+    settle onto them, so a continuous read over discrete minima is still a discrete
+    read.  :func:`chlu.core.gen_landscape.assert_atoms_are_train_rows` proves this
+    bit-for-bit and there is deliberately no knob that turns it off.
+
+    ⭐ **Two budgets, declared BEFORE the run** (this spoke's ``PREREG.md`` §3):
+    ``A`` matched (64 atoms/well, rank 16) and ``B`` declared-larger (512 atoms/well,
+    rank 128).  D3's rule *"store + coupling ≤ 2× budget"* binds **exactly** at those
+    ranks, and :meth:`byte_ledger_expectations` is asserted against the ledger the
+    code computes — a silent drift in ``d_k`` would otherwise move the rank.
+
+    ⚠ **The decoder trap, again.**  :attr:`GenBridgeConfig.dec_recipe` still defaults
+    to ``"baseline"`` — the recipe that FAILED the gate (0.7191 balanced accuracy,
+    0/3 seeds).  This block pins :attr:`dec_recipe` to ``gen-decoder-lift``'s winner
+    and the experiment asserts the winner's per-seed ``param_hash`` before anything
+    is rendered.
+
+    ⛔ **The declared channel is the store's FULL WIDTH IN FLOATS** (``knn_proto``
+    parity).  ⛔ Nothing here is expressed in ``K·log₂M = 30 bits``.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- ⛔ frozen artifacts (every one is LOADED, never fitted here) ---------
+    #: ``gen-commitment-collapse``'s per-seed cache, for its ``labels_vec`` — the
+    #: partition `gen-loss-attribution` EXONERATED.  ⛔ Never re-derived here.
+    commit_cache_pattern: str = (
+        "outputs/gen-commitment-collapse/runs/{dataset}_{pretext}/seed_{seed}"
+    )
+    #: ``gen-read-compose``'s per-seed store — the codebook this arm is measured
+    #: against, and the source of the well channels and ``feat_shape``.
+    store_checkpoint_source: str = (
+        "outputs/gen-read-compose/runs/{dataset}_{pretext}/seed_{seed}/store_s{seed}.pkl"
+    )
+    assert_store_hash: bool = True
+    #: sha256 the feature cache before reading it (off = faster re-runs).
+    verify_cache_checksum: bool = True
+    #: ⚠ Feature caches are NON-UNIFORM: seed 0 wrote ``scope="full"`` (480,000 rows),
+    #: seeds 1-2 wrote ``scope="used"`` (9,288 rows).  Rows outside a ``used`` cache
+    #: are re-encoded through the **frozen** encoder this many at a time (16 GB box).
+    encode_chunk: int = 8192
+    #: ⭐ ``gen-decoder-lift``'s WINNER.  ⛔ ``dec_recipe`` must never be "baseline".
+    winner_decoder_pattern: str = "outputs/gen-decoder-lift/winner/decoder_v1_s{seed}.pkl"
+    winner_hashes_path: str = "outputs/gen-decoder-lift/winner/winner_hashes.json"
+    dec_recipe: str = "v1_capacity_schedule"
+    #: Assert the decoder's parameter hash against the winner manifest.
+    assert_decoder_hash: bool = True
+
+    # --- ⭐ the two DECLARED budgets (PREREG §3) -----------------------------
+    budgets: List[str] = field(default_factory=lambda: ["A", "B"])
+    #: ``A`` — MATCHED: 64 atoms/well = 524,288 B, exactly the codebook's budget.
+    budget_a_atoms: int = 64
+    budget_a_rank: int = 16
+    budget_a_budget_bytes: int = 524_288
+    #: ``B`` — DECLARED LARGER: 512 atoms/well = 4,194,304 B = 8x.
+    budget_b_atoms: int = 512
+    budget_b_rank: int = 128
+    budget_b_budget_bytes: int = 4_194_304
+    #: ⛔ Stop the run if the computed ledger does not match PREREG §3 exactly.
+    assert_byte_ledger: bool = True
+
+    # --- the landscape ------------------------------------------------------
+    #: ⛔ Both options select ROWS; neither ever averages (that would be a centre).
+    atom_selection: str = "kmeanspp"
+    #: ``sigma_k = bandwidth_frac * <rule>`` on the atoms' own geometry.  ⚠ This is
+    #: THE interpolation knob: too small and the minima ARE the atoms (the Advisor's
+    #: constraint re-entering by the back door); too large and the well is one blob.
+    bandwidth_frac: float = 1.0
+    bandwidth_rule: str = "nn_median"
+    #: Laplace smoothing for the atom address book.
+    address_smoothing: float = 1.0
+    #: ⭐ THE DECLARED STRENGTH of the request energy.  ``0.0`` is the request-off
+    #: control and it runs on the SAME chain.
+    request_strength: float = 1.0
+    #: ⭐ The declared strength of the low-rank coupling.  ``0.0`` is coupling-off.
+    coupling_strength: float = 1.0
+    #: Divide each pair's coupling by its own leading singular value, so the strength
+    #: is dimensionless and one wide well cannot silently own the whole term.
+    coupling_normalise: bool = True
+    #: ⛔⭐ A bilinear coupling is an INDEFINITE quadratic form and an unbounded-below
+    #: landscape does not settle, it DIVERGES — measured at ``E = -1.6e28`` with a
+    #: per-step displacement of ``8e11`` on this spoke's first smoke.  With this on,
+    #: the strength actually used is ``min(coupling_strength,
+    #: coupling_safety_frac x λ*)`` where ``λ*`` is
+    #: :func:`chlu.core.gen_landscape.coupling_stability`'s closed-form coercivity
+    #: bound, computed from the ATOMS.  ⛔ The clip is always reported, never silent.
+    enforce_coupling_certificate: bool = True
+    coupling_safety_frac: float = 0.9
+    #: A settled state further than this many atom-radii from the atom centre is
+    #: reported DIVERGED.  ⛔ A diverged chain's energy trace measures nothing.
+    divergence_radius_mult: float = 50.0
+    #: Rows the coupling is fitted on.  ⛔ TRAIN features only, label-free.
+    n_coupling_fit: int = 8192
+    launch_mode: str = "clamp_atom"
+    clamp_threshold: float = 0.5
+    #: ``state`` = PREREG §1's literal wording; ``atom_mixture`` = the softmax
+    #: generalisation of ``read_from_codes``' argmax gather.
+    read_mode: str = "state"
+
+    # --- ⛔ settling: 1000 steps (R40.C), and the binding audit trail --------
+    steps: int = 1000
+    step_size: float = 0.2
+    sigma_scale_start: float = 4.0
+    sigma_scale_end: float = 1.0
+    #: ``0.0`` = pure settling (the proposal is a gradient step and MH degenerates to
+    #: "accept iff the energy fell").  ⚠ Any non-zero temperature is in the
+    #: landscape's own energy units.
+    temp_start: float = 0.0
+    temp_end: float = 0.0
+    metropolis: bool = True
+    #: ⭐ PREREG §6: a chain still descending at the final step is NOT CONVERGED.
+    descent_window: int = 100
+    descent_tol: float = 1e-3
+    #: ⚠ ``request_experts`` is ``(F, n, K, N)`` float32 — 251 MB at 4,096 requests
+    #: and ``N = 512``.  The path is run in chunks of this many requests.
+    request_chunk: int = 256
+
+    #: ⭐ ``request_off`` and ``coupling_off`` are MANDATORY; ``zero_step`` decodes
+    #: the launch itself (the control that took ALL of dreaming's apparent gain).
+    arms: List[str] = field(default_factory=lambda: [
+        "full", "request_off", "request_off_launch", "coupling_off", "zero_step"])
+
+    # --- rows ---------------------------------------------------------------
+    #: The pool the atoms are drawn from and the address book is fitted on.
+    n_store_train: int = 32_768
+    #: Requests taken from the SPREAD row set (``0`` -> none).  ⭐ CORNER_B's 72
+    #: held-out requests are ALWAYS run: they are the "seventy-two questions".
+    n_spread_requests: int = 512
+    row_seed_mult: int = 7_919
+    row_seed_offset: int = 20_260_914
+
+    # --- decode -------------------------------------------------------------
+    decode_reads: bool = True
+    decode_rows: int = 72
+    decode_batch: int = 64
+    #: ⛔ Demonstrate the bypass assertion FAILING at every stage.  A guard never
+    #: seen to fail is decoration.
+    demonstrate_bypass_failure: bool = True
+    bypass_alpha: float = 1e-2
+
+    make_plots: bool = True
+    skip_if_exists: bool = True
+    out_root: Optional[str] = None
+    claude_root: Optional[str] = None
+
+    # --- quick (⚠ plumbing smoke only — ⛔ a quick number is NEVER reported) --
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_budgets: List[str] = field(default_factory=lambda: ["A"])
+    quick_n_store_train: int = 2048
+    quick_n_coupling_fit: int = 1024
+    #: ⭐ Deliberately larger than ``quick_request_chunk`` so the smoke exercises
+    #: the CHUNKED path (``request_experts`` is ``(F, n, K, N)`` float32 and is
+    #: 251 MB at 4,096 requests with ``N = 512`` — the chunking is not optional
+    #: on a 16 GB box, so it must not be smoke-tested away).
+    quick_n_spread_requests: int = 128
+    quick_steps: int = 25
+    quick_descent_window: int = 10
+    quick_decode_rows: int = 16
+    quick_request_chunk: int = 72
+    quick_verify_cache_checksum: bool = False
+    #: ⛔ ``N`` and ``r`` are NOT reduced by ``--quick``: the byte ledger is a
+    #: PRE-REGISTERED number and a smoke that shrinks it proves nothing about it.
+    quick_assert_byte_ledger: bool = True
+
+    def budget_spec(self, label: str) -> dict:
+        """``"A"``/``"B"`` -> ``{n_atoms, rank, budget_bytes}``.  ⛔ Declared, not
+        discovered: both budgets are named in ``PREREG.md`` §3 before the run."""
+        lab = str(label).upper()
+        if lab == "A":
+            return {"label": "A", "role": "MATCHED",
+                    "n_atoms": int(self.budget_a_atoms), "rank": int(self.budget_a_rank),
+                    "budget_bytes": int(self.budget_a_budget_bytes)}
+        if lab == "B":
+            return {"label": "B", "role": "DECLARED LARGER",
+                    "n_atoms": int(self.budget_b_atoms), "rank": int(self.budget_b_rank),
+                    "budget_bytes": int(self.budget_b_budget_bytes)}
+        raise ValueError(f"unknown budget {label!r} — PREREG §3 declares A and B only")
+
+    def byte_ledger_expectations(self, label: str) -> dict:
+        """⭐ The PRE-REGISTERED byte ledger for a budget, to assert the code against.
+
+        ``PREREG.md`` §3 verbatim: store 524,288 / 4,194,304 B, coupling 524,288 /
+        4,194,304 B, total **2.00x** that budget in both cases.
+        """
+        spec = self.budget_spec(label)
+        b = int(spec["budget_bytes"])
+        return {"store_bytes": b, "coupling_bytes": b, "total_bytes": 2 * b,
+                "multiple_of_budget": 2.0}
+
+
+def gen_dynamical_read_config(
+    config: Optional["CHLUConfig"] = None, **overrides
+) -> GenDynamicalReadConfig:
+    """Return (and memoise on ``config``) the dynamical-read block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_variance_eq_config` and :func:`gen_attribution_config` are not: the
+    merge rule for this file's tail is "take the peer's whole file and re-apply your
+    block by its BEGIN/END markers", which only holds if the block is one contiguous
+    region with **zero** house wiring sites.
+    """
+    cfg = getattr(config, "gen_dynamical_read", None) if config is not None else None
+    if cfg is None:
+        cfg = GenDynamicalReadConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_dynamical_read", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+
+
+@dataclass
+class GenRowSplitConfig:
+    """⭐ How ``fit`` and ``val`` are cut out of the store's training pool.
+
+    ⛔ **The default is ``"stratified"``, and that is a deliberate default CHANGE.**
+    The shipped construction was ``fit = pool[:n_fit]`` / ``val = pool[n_fit:]`` of a
+    **sorted** row-index array, i.e. ``val`` was a contiguous corner of the factor grid:
+    at production scale it realised **1** ``floor_hue`` value and **2** ``wall_hue``
+    values against ``fit``'s 10 and 10, at 0.0924 feature variance vs 0.2229, and the
+    two halves of it disagreed about the winning tuning trial in **5 of 6** cells
+    (``gen-atom-mean-control`` §7).  Preserving that as the default would preserve a
+    coin flip at the centre of every tuned configuration in the phase.
+
+    ⛔ ``mode="head_tail"`` still reproduces it bit-for-bit, must be asked for by name,
+    and shouts in the log.  ⭐ Every arm — ours, ``knn``/``knn_proto`` and LACE — reads
+    **this one block**, so a repair cannot reach our split without reaching theirs.
+    """
+
+    #: ``"stratified"`` (proportional marginal stratification) | ``"head_tail"`` (⛔ broken).
+    mode: str = "stratified"
+    #: ⭐ Randomises the deficit-priority walk among candidates whose total bucket
+    #: deficit differs by less than this.  **1.0 = one row's worth**, measured: it
+    #: leaves the realised balance untouched (max per-value count ratio 1.091 on all
+    #: three seeds, identical to a 1e-3 jitter) while giving the split genuine seed
+    #: dependence (512-row val overlap between seeds 0 and 1: 21/512, vs 158/512 at
+    #: 1e-3 — at 1e-3 the walk is effectively deterministic given the pool).
+    tiebreak_jitter: float = 1.0
+    #: ⚠ NumPy ``default_rng(seed*seed_mult + seed_offset)``.  ⛔ Deliberately NOT a
+    #: lengthened ``jax.random.split``: ``split(key, n)`` is prefix-stable here.
+    seed_mult: int = 6_637
+    seed_offset: int = 20_260_914
+
+    # --- the gate (⛔ capable of failing; run it on head_tail and it raises) ---
+    assert_balanced: bool = True
+    #: ``val`` must realise **every** value of **every** factor, not just the hues.
+    require_all_values: bool = True
+    #: Per-value count max/min inside ``val``.  ⭐ This is the clause that checks
+    #: ``scale`` and ``orientation``, which the broken split already realised in full.
+    max_count_ratio: float = 1.25
+    #: Record the realised balance table in every manifest that cuts a split.
+    record_balance: bool = True
+
+
+def gen_row_split_config(
+    config: Optional["CHLUConfig"] = None, **overrides
+) -> GenRowSplitConfig:
+    """Return (and memoise on ``config``) the row-split block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_atom_mean_config` and :func:`gen_codebook_alloc_config` are not: the
+    merge rule for this file's tail is "take the peer's whole file and re-apply your
+    block by its BEGIN/END markers", which only holds if the block is one contiguous
+    region with **zero** house wiring sites.
+    """
+    cfg = getattr(config, "gen_row_split", None) if config is not None else None
+    if cfg is None:
+        cfg = GenRowSplitConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_row_split", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+
+

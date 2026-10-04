@@ -1,0 +1,53 @@
+  judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+val requests (1728, 6)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+span_head                  novel/corner=25.458+-14.987 judge=0.3536 all6=0.3536 floo=1.000 wall=1.000 obje=1.000 scal=0.576 shap=1.000 orie=0.578  [41s]
+corr_linear                novel/corner=20.167+-14.141 judge=0.2801 all6=0.2801 floo=1.000 wall=1.000 obje=1.000 scal=0.532 shap=1.000 orie=0.519  [39s]
+oracle_span                novel/corner=34.542+-11.275 judge=0.4797 all6=0.4797 floo=1.000 wall=1.000 obje=0.999 scal=0.844 shap=1.000 orie=0.550  [35s]
+  fit R128_lam0.01_sw40_x 397s tr=0.00851 va=0.00856 bytes=195,584
+tensor_R128_lam0.01_sw40_x novel/corner=32.083+-11.717 judge=0.4456 all6=0.4456 floo=1.000 wall=1.000 obje=1.000 scal=0.751 shap=1.000 orie=0.573  [33s]
+  fit R64_lam0.01_sw40_x 240s tr=0.01808 va=0.01818 bytes=99,072
+tensor_R64_lam0.01_sw40_x  novel/corner=22.375+-8.622 judge=0.3108 all6=0.3108 floo=1.000 wall=1.000 obje=1.000 scal=0.674 shap=1.000 orie=0.463  [38s]
+  fit R256_lam0.01_sw40_x 786s tr=0.00401 va=0.00406 bytes=388,608
+tensor_R256_lam0.01_sw40_x novel/corner=31.167+-11.032 judge=0.4329 all6=0.4329 floo=1.000 wall=1.000 obje=1.000 scal=0.795 shap=1.000 orie=0.532  [47s]

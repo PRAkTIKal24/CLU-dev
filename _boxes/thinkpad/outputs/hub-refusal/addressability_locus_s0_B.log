@@ -1,0 +1,224 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+    [B] ⚠ coupling strength CAPPED BY THE CERTIFICATE: declared 1 -> used 0.04922 (lambda* = 0.05469)
+    [B] N=512 r=128 store=4,194,304 B coupling=4,194,304 B total=8,388,608 B = 2.00x budget (PREREG §3 match: True)
+    [B] sigma per well = 3.2317 3.7288 7.1006 5.1012 3.8283
+  1. assignment effective atoms per well: 159.96 147.92 410.36 378.13 99.85
+  3. well 0: total var/row 66.76  fisher 0.0621 2.7985 0.0196 0.0104 0.0093 0.0683
+  3. well 1: total var/row 85.55  fisher 0.0778 2.6679 0.0277 0.0067 0.0065 0.0741
+  3. well 2: total var/row 109.75  fisher 0.0392 0.6935 0.1894 0.0153 0.0278 0.0813
+  3. well 3: total var/row 52.37  fisher 0.0669 0.0653 0.8021 0.0489 0.0713 0.0242
+  3. well 4: total var/row 47.71  fisher 0.7595 0.1413 0.1824 0.0731 0.0512 0.0301
+  2. rho=1.0     buys 0.6235 nats  expH=269.15  oor=0.6119 dup=0.4704
+  2. rho=0.5     buys 2.2422 nats  expH= 51.69  oor=0.6806 dup=0.2919
+  2. rho=0.25    buys 3.5215 nats  expH= 13.80  oor=0.6020 dup=0.2862
+  2. rho=0.125   buys 3.6807 nats  expH= 11.65  oor=0.5854 dup=0.2854
+  2. rho=0.0625  buys 3.6995 nats  expH= 11.42  oor=0.5831 dup=0.2866
+
+{
+ "schema": "hub-refusal-2/addressability-locus/1",
+ "DECLARED": "MECHANISM ONLY, fit rows + val + the inherited synthetic analogue. NOT scored, NOT adopted. NO POINT ON THE BANDWIDTH LADDER IS ADOPTED: rho = 1 is the shipped book.",
+ "seed": 0,
+ "budget": "B",
+ "n_atoms": 512,
+ "n_wells": 5,
+ "log_N_nats": 6.238324625039508,
+ "sigma_per_well": [
+  3.2317,
+  3.7288,
+  7.1006,
+  5.1012,
+  3.8283
+ ],
+ "assignment_sharpness": {
+  "n_train_rows_sampled": 4096,
+  "log_N_nats": 6.238324625039508,
+  "mean_entropy_nats_per_well": [
+   5.028083628066496,
+   4.986110276845908,
+   6.014046308435713,
+   5.932409104960263,
+   4.5954198012432785
+  ],
+  "mean_effective_atoms_per_well": [
+   159.95714035973165,
+   147.9174632365043,
+   410.3577737310618,
+   378.13158223238025,
+   99.84582850680945
+  ],
+  "mean_max_responsibility_per_well": [
+   0.03650871600357809,
+   0.03372824478598267,
+   0.010404322191162137,
+   0.011564214514841808,
+   0.04769587417564469
+  ],
+  "reading": "entropy ~ 0 and effective atoms ~ 1 means the shipped assignment is ALREADY essentially nearest-atom, so hypothesis (A) 'the bandwidth smears the conditionals' is dead and the deficit is upstream."
+ },
+ "feature_space_ceiling_fisher_ratio": {
+  "n_rows": 8192,
+  "names": [
+   "floor_hue",
+   "wall_hue",
+   "object_hue",
+   "scale",
+   "shape",
+   "orientation"
+  ],
+  "between_over_within_by_well_factor": [
+   [
+    0.06207,
+    2.7985,
+    0.01958,
+    0.01036,
+    0.00929,
+    0.06833
+   ],
+   [
+    0.07779,
+    2.66788,
+    0.02774,
+    0.00666,
+    0.00653,
+    0.07415
+   ],
+   [
+    0.03917,
+    0.69355,
+    0.18935,
+    0.0153,
+    0.0278,
+    0.08129
+   ],
+   [
+    0.06686,
+    0.06531,
+    0.80214,
+    0.0489,
+    0.0713,
+    0.0242
+   ],
+   [
+    0.75949,
+    0.14133,
+    0.18244,
+    0.07313,
+    0.05121,
+    0.03008
+   ]
+  ],
+  "max_over_wells_by_factor": {
+   "floor_hue": 0.75949,
+   "wall_hue": 2.7985,
+   "object_hue": 0.80214,
+   "scale": 0.07313,
+   "shape": 0.0713,
+   "orientation": 0.08129
+  },
+  "reading": "a property of the FROZEN ENCODER and the well partition alone -- no atoms, no book, no read. A factor with a ratio near 0 is not present in the well's features and cannot be addressed however the book is fit."
+ },
+ "atom_coverage_ceiling": {
+  "n_atoms": 512,
+  "per_factor": {
+   "floor_hue": {
+    "values_realised_by_atoms": 10,
+    "cardinality": 10,
+    "fraction": 1.0
+   },
+   "wall_hue": {
+    "values_realised_by_atoms": 10,
+    "cardinality": 10,
+    "fraction": 1.0
+   },
+   "object_hue": {
+    "values_realised_by_atoms": 10,
+    "cardinality": 10,
+    "fraction": 1.0
+   },
+   "scale": {
+    "values_realised_by_atoms": 8,
+    "cardinality": 8,
+    "fraction": 1.0
+   },
+   "shape": {
+    "values_realised_by_atoms": 4,
+    "cardinality": 4,
+    "fraction": 1.0
+   },
+   "orientation": {
+    "values_realised_by_atoms": 15,
+    "cardinality": 15,
+    "fraction": 1.0
+   }
+  },
+  "n_distinct_full_tuples": 512,
+  "reading": "a factor whose stored atoms realise only a few of its values cannot be addressed however the book is fitted."
+ },
+ "bandwidth_dose_response_NOT_ADOPTED": {
+  "shipped_H_prior_nats": 6.218801299433366,
+  "ladder": [
+   {
+    "rho": 1.0,
+    "is_shipped": true,
+    "H_prior_nats": 6.218801299433366,
+    "H_posterior_val_nats": 5.595259662659652,
+    "nats_the_request_buys": 0.6235416367737141,
+    "effective_atoms_val": 269.1475285825671,
+    "AUROC_oor_pooled": 0.6119105021158854,
+    "AUROC_dup_vs_a7": 0.4704437255859375,
+    "min_of_the_two": 0.4704437255859375
+   },
+   {
+    "rho": 0.5,
+    "is_shipped": false,
+    "H_prior_nats": 6.187361798987615,
+    "H_posterior_val_nats": 3.9451786389092725,
+    "nats_the_request_buys": 2.2421831600783424,
+    "effective_atoms_val": 51.68557034137571,
+    "AUROC_oor_pooled": 0.680633544921875,
+    "AUROC_dup_vs_a7": 0.2918701171875,
+    "min_of_the_two": 0.2918701171875
+   },
+   {
+    "rho": 0.25,
+    "is_shipped": false,
+    "H_prior_nats": 6.146362529153057,
+    "H_posterior_val_nats": 2.6248926501366916,
+    "nats_the_request_buys": 3.5214698790163657,
+    "effective_atoms_val": 13.803092346454253,
+    "AUROC_oor_pooled": 0.6020050048828125,
+    "AUROC_dup_vs_a7": 0.286224365234375,
+    "min_of_the_two": 0.286224365234375
+   },
+   {
+    "rho": 0.125,
+    "is_shipped": false,
+    "H_prior_nats": 6.135930011748867,
+    "H_posterior_val_nats": 2.455240493474173,
+    "nats_the_request_buys": 3.680689518274694,
+    "effective_atoms_val": 11.649234776970399,
+    "AUROC_oor_pooled": 0.5854237874348959,
+    "AUROC_dup_vs_a7": 0.285430908203125,
+    "min_of_the_two": 0.285430908203125
+   },
+   {
+    "rho": 0.0625,
+    "is_shipped": false,
+    "H_prior_nats": 6.134903907008704,
+    "H_posterior_val_nats": 2.435446755801929,
+    "nats_the_request_buys": 3.6994571512067753,
+    "effective_atoms_val": 11.420919936026468,
+    "AUROC_oor_pooled": 0.5830790201822916,
+    "AUROC_dup_vs_a7": 0.2866363525390625,
+    "min_of_the_two": 0.2866363525390625
+   }
+  ],
+  "reading": "if tightening the assignment bandwidth restores the nats AND the AUROCs, the deficit is the BOOK's fit (A) and is cheap to fix; if the nats move and the AUROCs do not, the read is the problem; if neither moves, the ENCODER is the problem (B)."
+ }
+}
+wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-refusal\ADDRESSABILITY_LOCUS_seed0_B.json

@@ -1,0 +1,197 @@
+@@@ 992 994
+Appendix-maximalism applies: every row, corollary, negative and control of the study that is
+not in the main text appears here, and nothing is omitted. Results from different
+environments, budgets or recipes never share a table.
+@@@ 1000 1003
+\paragraph{Provenance.} In the source of this paper, every number carries a comment naming the
+artefact from which it was read. Numbers are quoted as the artefact prints them, and none is
+re-derived. Where two artefacts print the same quantity at different precision, the artefact
+cited is the one from which the number was taken.
+@@@ 1005 1017
+\paragraph{Two byte conventions, and which object carries which.} The statistic of every
+main-text object is priced on the symmetric-triangle float64 convention,
+$\sum_k d_k(d_k+1)/2\times8$ B plus means and counts; on it, the covariance of the $\Kstar$
+object is 549,120 B, which closes to the byte. % SRC: w13-seeds-and-tables/TABLES.md; w13-referee-2/REFEREE-v1.md
+One object is priced on the full-square convention, $8\sum_k d_k^2$: the ladder's $K=5$ store,
+on the label-derived partition. We name the two $K=5$ objects apart everywhere. The first is
+\emph{$K=5$ (MI partition, full square)}, the ladder's store, with well widths 777 / 936 / 216 / 60 /
+59 on seed 0 and a statistic of 12,284,920 B; the second is \emph{$K=5$ (ward, triangle)}, the
+crossover and bridge store, with five wells of width 409--410 and a statistic of 3,391,552 B.
+They differ in partition and in convention; the convention alone accounts for a factor of about two.
+% SRC: w13-referee-2/REFEREE-v1.md; w12b-nr6-and-kstar/FINDINGS.md; w13-seeds-and-tables/TABLES.md
+The ladder's ledger file carries three parts; its coupling table is a declared absence, not a
+zero. % SRC: w13-seeds-and-tables/TABLES.md
+@@@ 1019 1021
+\paragraph{Seeds and configurations.} Seed count and configuration count are separate fields. The
+phrase ``nine seeds'' never applies: wherever nine legs appear, they are three configurations
+times three seeds inside one implementation (Appendix~\ref{app:impl}).
+@@@ 1026 1037
+This appendix states what Table~\ref{tab:t7} does and does not claim. The rivals are matched on
+the read path, at 130,514 (MLP), 130,721 (LSTM), 130,433 (transformer) and 131,891 (continuous MLP)
+parameters on seed 0; the two refit token families were refit at the same pins, width 45 / 130,433 and
+width 51 / 130,721, on the same 16,384 fit rows. % SRC: w13-seeds-and-tables/TABLES.md; w12b-nr6-and-kstar/FINDINGS.md
+The deletable object itself is larger than its read path: its four-part ledger, printed in
+Table~\ref{tab:ledger-kstar}, is memory, not a matched quantity. The continuous-input MLP
+scores at the floor (0.000 / 0.061 on seed 0); this is a fact about that rival's fit on this
+population, and we do not lean on it. % SRC: w13-seeds-and-tables/TABLES.md
+Appendix~\ref{app:kcurve} gives the per-seed geometry and the selection rule's val/test check.
+A rival matched to the object's own four-part total would carry about 4.09 times the
+read-path parameters and would be stronger; the only such evidence at $\Kstar$ is the
+replication of Appendix~\ref{app:1x}, which is not a scored row. % SRC: w13-seeds-and-tables/TABLES.md
+@@@ 1044 1047
+The ladder was first run at $K=5$ (MI partition, full square), before $\Kstar$ existed. Under
+the one-$K$ ruling it is the endpoint of the sweep, and its sign is a property of $K=5$, not of
+the store. Table~\ref{tab:k5} reports the store against the read-path rivals, whose rows are
+those of Table~\ref{tab:ladder}.
+@@@ 1071 1081
+\noindent Nothing deteriorates as $n$ grows: ceiling-normalised, the store runs from 0.8483 to
+0.8966, and for $n\ge3$ that rise may be a held-out-fraction trend rather than a depth trend. No
+arm has a breaking point. We use the strong \texttt{random\_atoms} control here (address book
+refit against random atoms); it reads 0.25 novel tuples at $n=2$ seed 0, not zero, so the paired
+delta is printed rather than ``the arm's entire score''. % SRC: w13-seeds-and-tables/TABLES.md; w13-referee-2/REFEREE-v1.md
+On every seed, the rung $n=2$ and the 49-corner prefix of $n=6$ reproduce the shipped rows 3 and
+4 within each arm's across-corner spread (max abs difference 1.0833 and 0.5306 for the store,
+0.0000 for all five rivals). % SRC: w12-composition-ladder/FINDINGS.md
+The store and \texttt{pca\_tensor} span the same per-well subspace to \sci{1}{-8} on the three
+wide wells (1,929 of 2,048 channels). On the two narrow wells their ranks differ sharply (15 vs 60,
+41 vs 59), yet not one of the 2,160 judged requests changes. % SRC: w12-composition-ladder/HEAD-RULING-K.md
+@@@ 1083 1099
+\paragraph{The $K=5$ ledger on the paper's convention.} On its own full-square convention, the
+$K=5$ (MI partition) object is 23.886 to 24.875 times the reference over 18 legs, and
+\texttt{pca\_tensor} is 1.358 to 1.372 times. % SRC: w13-seeds-and-tables/TABLES.md
+Re-priced on the symmetric-triangle float64 convention used in the rest of the paper (arithmetic
+on the recorded well widths, seed 0), its four-part total is 6,841,296 / 6,806,400 / 6,876,992 / 6,832,008
+/ 6,835,248 B on $n=2..6$, i.e.\ 13.049 / 12.982 / 13.117 / 13.031 / 13.037 times the reference, and its
+$1\times$-matched opponent would carry 1,710,324 / 1,701,600 / 1,719,248 / 1,708,002 / 1,708,812
+parameters. % SRC: w13-referee-2/REFEREE-v1.md
+The honest bracket for that opponent is 938,413 (float32 triangle) to 1,710,324 (float64
+triangle) parameters. The opponent that the ladder actually fitted carried 3,131,564 to 3,260,030
+parameters, 1.9 to 3.5 times outside the bracket; we do not print its rows.
+% SRC: w13-referee-2/REFEREE-v1.md; w12b-nr6-and-kstar/FINDINGS.md
+An opponent inside the bracket was fitted: the bridge leg's 1,029,776-parameter learner, on the
+identical corner set, seed, cache, fit rows and schedule. Against it, the $K=5$ store's margin is
+$-1.2333$ / $+10.6583$ / $-0.3917$ / $-0.1250$ / $-0.5833$ on $n=2..6$ (seed 0; one seed;
+replication; not scored). The store therefore fails the every-seed bar at four rungs by at most
+1.3 tuples per corner, not by 2 to 6. % SRC: w13-referee-2/REFEREE-v1.md
+@@@ 1105 1111
+The paper matches rivals on the read path. As a stress test only, the $\Kstar$ replication pairs
+the store with an MLP matched to the object's own four-part total (symmetric-triangle
+convention): 536,270 to 536,972 parameters, fitted from the same 32,768 fit rows as the store's
+content. % SRC: w12b-nr6-and-kstar/KSTAR-LADDER.md; w13-referee-2/REFEREE-v1.md
+Under the ladder's own pre-declared bar, \emph{beat the opponent by 1.0 tuple per corner on every
+seed}, the store clears at all five rungs; all 15 per-seed margins are positive, and the smallest
+is $+3.117$. % SRC: w12b-nr6-and-kstar/FINDINGS.md
+@@@ 1133 1150
+\paragraph{What moved between $K=5$ and $\Kstar$, and how much of it is the opponent.} Moving
+from the ladder's $K=5$ store to $\Kstar$ changes both the well count and the construction
+(partition rule, store class and covariance convention together). A bridge arm holds the
+$\Kstar$ construction and sets $K=5$ (seed 0 only): the margin moves $-4.567\to-0.250\to+6.667$
+at $n=2$ and $-5.775\to-2.550\to+9.375$ at $n=6$, and the bridge still loses at four of five
+rungs. % SRC: w12b-nr6-and-kstar/KSTAR-LADDER.md
+Both steps are cuts of the opponent budget, because the opponent is defined as the object's own
+total: at $n=2$ the opponent falls 3,241,076 $\to$ 1,029,776 $\to$ 534,866 parameters. Across the
+construction step, the store's own score falls at four of five rungs ($+0.98$, $-2.23$, $-0.63$,
+$-0.39$, $-1.97$); end to end, 71.8\% to 84.2\% of the swing is the opponent falling and 15.8\%
+to 28.2\% is the store reading better. % SRC: w13-referee-2/REFEREE-v1.md
+The store's own score does rise at every rung, by $+1.86$ to $+3.38$ tuples per corner (3-seed
+means). % SRC: w12b-nr6-and-kstar/FINDINGS.md
+The control gate at $\Kstar$ uses the weaker post-fit form of \texttt{random\_atoms} (atoms
+randomised, address book not refit); the refit form is a declared not-run at $\Kstar$ and reads
+0.25, not 0.0000, at $K=5$. % SRC: w13-referee-2/REFEREE-v1.md
+The flip is present, seed-matched, at both ends of the only genuine depth contrast: $n=2$
+($-2.783\to+4.356$) and $n=6$ ($-4.061\to+7.978$). % SRC: w12b-nr6-and-kstar/FINDINGS.md
+@@@ 1156 1164
+The geometry of the object varies with the seed more than the first seed showed:
+rank/width at $\Kstar$ is 0.9688--0.9844 on seed 0, 0.5938--0.9844 on seed 1 and
+0.4375--0.9844 on seed 2. At the maximum it exceeds the 0.938 at which a maze store was
+decorative, yet the controls still collapse; rank/width is therefore a warning, and only the
+control decides. % SRC: w12b-nr6-and-kstar/FINDINGS.md; w13-seeds-and-tables/TABLES.md
+The third pre-declared falsification of the frozen selection rule, a val/test gap, does not fire.
+The drop from $K=5$ to $\Kstar$ is $-0.03376$ on validation (three seeds) and $-0.07276$ on
+TEST (paired, seed 0), negative on both, so $\Kstar$ is better than $K=5$ on held-out corners
+by a wider margin than on the selection set. % SRC: w12b-nr6-and-kstar/FINDINGS.md
+@@@ 1194 1202
+\noindent The atoms occupy 524,288 B at every $K$ except $\Kstar$ (516,096 B, where the rank cap
+binds), and the coupling table occupies 6,610 B throughout. The address book grows 5.4 times, and
+at the fine end it grows faster than the covariance falls; the mechanism sentence ``the
+covariance shrinks faster than the address book grows'' is thus true from $K=5$ to $K=24$ and
+false from $K=24$ to $K=32$. The crossover threshold of 0.10 is never reached; the largest drop
+anywhere is $+0.012731$ at $K=10$. The $\Kstar$ total here (4.0877 times, 2,143,138 B) is the
+\emph{validation} pin leg, distinct from the three TEST totals of Table~\ref{tab:ledger-kstar}. % SRC: w13-seeds-and-tables/TABLES.md; w13-referee-2/REFEREE-v1.md
+On validation, the control gate at $\Kstar$ reads 0.0000 on all four controls on all three seeds.
+% SRC: w13-seeds-and-tables/TABLES.md
+@@@ 1234 1253
+\paragraph{Implementation 2 in full.} The worst maximum absolute deviation over the pinned
+11,024-row deletion and a random 64-row deletion is \sci{4.5475}{-13} / \sci{1.1255}{-09} /
+\sci{2.8422}{-14}, against that leg's own reproducibility floor (the same rows downdated in two
+orders) of \sci{2.1268}{-13} / \sci{4.2817}{-09} / \sci{5.6843}{-14}. On two of three legs the
+residual lies below its own floor and is not resolvable at all, which is the best available outcome
+for an exactness claim. Over the pinned deletion only, the narrower field is \sci{2.365}{-14} /
+\sci{1.126}{-09} / \sci{7.105}{-15}; the negative control fired on every seed; and the artefact's
+own worst-over-seeds figure is 0.009442 float32 ulp at unit scale. % SRC: w13-seeds-and-tables/TABLES.md
+This leg is an assertion battery on the object at 0 scored runs, and its artefact reads ``no
+scored run and no claim''. The gate file it cites records two caveats. First, the variance-share
+admission cut is marginal on all three seeds. Second, the separate subspace-level assertion on the
+pre-cut store fails on seed 2 at 60.36282 ulp, below its own 66.11072-ulp floor; that failure is
+therefore a property of the content, not of the downdate, and the top-level ``all assertions
+passed'' excludes it. % SRC: w13-seeds-and-tables/TABLES.md
+Its four-part ledger comprises atoms of 524,288 B; covariance of 12,310,672 / 11,941,360 /
+11,850,912 B (full square, this implementation's own convention) plus means and counts of 16,424
+B; a request count table of 11,488 B; and coupling of 5,288 B plus 1,322 B of holes. The honest
+total is 12,869,482 / 12,500,170 / 12,409,722 B, i.e.\ 24.5466 / 23.8422 / 23.6697 times the pin,
+and the statistic alone is 23.5117 times; a residual of exactly 16,384 B between the serialised
+object and the honest total is declared, not netted. % SRC: w13-seeds-and-tables/TABLES.md; w13-referee-2/REFEREE-v1.md
+@@@ 1255 1269
+\paragraph{The failure agreement.} The exactness assertion first failed on TEST seed 2, on the
+coarse, imbalanced 5-well, 64-atom partition. Two implementations, with different code, different
+authors and different sign conventions, reproduced the same failure on the same seed in the same
+well: in the first, 32.90 (and 35.46) ulp at atom level and 60.36282 ulp at subspace level against
+a 66.11072-ulp floor; in the second, 14.377 ulp at atom level and 14.4518 ulp at subspace level
+against a 36.9305-ulp floor. There, both implementations' floors exceed their observed deviations,
+so both conclude that seed 2's content is not a function of its data by any method: a statement
+about content well-posedness. The failure was closed by a variance-share admission cut with no
+free parameter, $\tau=4.941056\times10^{-16}/1.1920929\times10^{-7}=4.144858\times10^{-9}$,
+declared before the re-run and not moved; its numerator is the failing leg's own worst.
+% SRC: w13-seeds-and-tables/TABLES.md; w13-draft-revise/DRAFT-v1.md
+The cut dropped 3 / 1 / 4 / 5 directions on the validation and three TEST legs, lost a variance
+share of at most \sci{8.94}{-09}, and shrank the deployed span in one well of TEST seed 2 by a
+fifth (rank over width 0.31 to 0.21). It is the only place where the exactness claim costs content.
+% SRC: w13-draft-revise/DRAFT-v1.md
+@@@ 1307 1321
+The composition-only store's own scored cell (TEST, 3 seeds) pins the store at 524,288 B at
+tolerance 0 and declares the address book beside it (189,344 / 195,064 / 195,064 B). The total
+deployed is 713,632 / 719,352 / 719,352 B against the rival's 715,808 B (99.70\% / 100.50\% /
+100.50\%), and the parameters are 178,408 / 179,838 / 179,838 against 178,952. % SRC: w13-seeds-and-tables/TABLES.md
+Against that rival, the mean paired $\Delta$ on row 4 is $+10.143$ / $+8.673$ / $+7.796$ (bootstrap
+2.5\% quantile $+6.632$ / $+5.816$ / $+5.082$) and on row 3 $+4.033$ / $+2.483$ / $+2.417$
+($+2.117$ / $+1.033$ / $+1.200$). The bar of $\Delta\ge+1.0$, with the lower bound above $+1.0$ on
+every seed, passes on both rows, with row 3 seed 1 clearing by 0.033.
+% SRC: w13-draft-revise/DRAFT-v1.md; w5-advisor-report.md
+The informative floor is 64 whole written rows at the same pin read by an oracle, at 32.3878 /
+39.1224 / 41.7755 on row 4. The arm beats it by $+31.2245$ / $+25.2041$ / $+25.8776$, although the
+oracle is handed the true feature and the arm is not. % SRC: w13-seeds-and-tables/TABLES.md
+Two ceiling rungs (\texttt{oracle\_span} and \texttt{span\_head}) carry an address book of 1,766,400
+B, 9.3 times the arm's own and 3.4 times the store pin, whereas every other rung carries 0.
+% SRC: w13-seeds-and-tables/TABLES.md
+@@@ 1329 1334
+\paragraph{A sphere hazard, measured.} A damaged render could be judged a sphere for rendering
+reasons and so score spuriously on the deleted conjunction. On this instrument, however, a
+degraded render is judged a cube, the held-out shape, so the judged-sphere excess is negative for
+both maximally degraded arms ($-0.3291$ for \texttt{landscape\_removed}, $-0.3078$ for
+\texttt{random\_atoms}) against $+0.0074$ after the red-sphere deletion.
+% SRC: w13-seeds-and-tables/TABLES.md
+@@@ 1360 1363
+All rows are measured on the fit pool of the value hold-out condition (16,384 rows); no held-out corner % SRC: w12-deletion-baselines/FINDINGS.md
+and no scored request was read. Forget minus retain is the feature-MSE gap of the deleted region
+over the survivors (3-seed mean); a higher value means more forgetting. Approximate unlearning of a
+rival's head, dropped from paper rows by ruling, is printed here.
+@@@ 1392 1400
+\noindent On the value scope, NegGrad+ over-forgets by 9.4 (continuous MLP) to 20.8 (transformer)
+times the exact reference, while fine-tuning under-forgets on three arms of four (0.20, 1.00, 0.23
+and 0.29 of the exact answer); both miss, in opposite directions, on every seed, at matched gradient
+row-visits (296,960). On the item scope, the exact reference and the as-trained arm agree within
+0.000354 over all arms and seeds, yet NegGrad+ still destroys the deleted region for a deletion
+that the exact answer says costs nothing. The exact reference reads 15,032 / 15,717 / 16,220 rows
+(value / conjunction / item) and rewrites about 522 kB of parameters, taking 8.5 to 39.7 s per
+arm. No learned comparator here adapts after deletion while reading zero rows of data.
+% SRC: w12-deletion-baselines/FINDINGS.md

@@ -1,0 +1,125 @@
+@@@ 2 2
+% DRAFT-v2-style.tex  --  w17 spoke/style-paraphrase: DRAFT-v2.tex (w17 spoke/draft-v2)
+% paraphrased sentence by sentence under the style rules of PJ_Writing_Style_Context.pdf
+% (ABT openings, macro-to-micro, objective tone, signposting, scoping bullets, "we" for our
+% actions, LaTeX symbols, bold only for new core concepts). NO scientific content added,
+% removed or reordered; every number, \PLACEHOLDER, \TODO and SRC comment is conserved
+% (proof: STYLE-DIFF-CHECK.md). Tables, figure slots and their captions are verbatim.
+% ICLR 2027 template, ANONYMISED.
+@@@ 34 34
+% COMPILE:  pdflatex DRAFT-v2-style.tex (from ~/clu/outputs/w17-paper/, template in ./iclr2027/)
+@@@ 87 116
+A world model trusted with requests it has never seen needs three things at once: its outputs are \emph{valid} under an exact judge, it \emph{composes}
+held-out combinations of factors from factors it has seen, and it can \emph{forget} specific
+training rows exactly. Compositional generation is extensively studied and exact unlearning established; their intersection, however, is empty: a mechanical
+screen of approximately 4,050 works finds no generative model that deletes training rows
+exactly. % SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
+We therefore study the simplest object with all three properties, the \emph{Naive CLU}: a
+label-free store of per-well principal subspaces, computed on the latents of a frozen
+encoder, read through a request-indexed address book and rendered by a frozen decoder; its
+content is derived from a retained sufficient statistic. Deletion downdates the statistic, not the truncated factors, so the store after deletion equals the store fitted without those rows.
+On a Shapes3D value hold-out, with the partition selected on validation ($\Kstar=32$ wells),
+the store composes held-out pairs at 32.350~$\pm$~0.815 and held-out six-factor corners at
+67.177~$\pm$~1.320 distinct valid novel tuples per corner over three seeds. It beats every
+read-path-matched learned rival on 109 of 109 corners on every seed, and all four landscape
+controls collapse to exactly 0.0000. % SRC: w12b-nr6-and-kstar/NR6-T7.md
+Deletion is exact and store-scoped, but not free: across the three seeds, the object
+that forgets is 4.0768 to 4.0897 times the 524,288-byte reference in its four-part ledger. We show that on this object deletion changes what the store holds but not what it answers.
+% SRC: w13-referee-2/REFEREE-v1.md; w13-seeds-and-tables/TABLES.md
+On a colour maze with an exact integer judge, deletion transfers
+(relative residual \sci{7.522}{-16} to \sci{8.826}{-16}, projector residual 0.000), % SRC: w13-seeds-and-tables/TABLES.md
+whereas composition does not transfer through the store: moving the composition verb from
+latent space to plan space lifts held-out validity by $+0.4422$ to $+0.5354$, but it lifts a matched-bytes lookup floor more, so the composition operator belongs to the interface.
+% SRC: w14-read-verb/FINAL-REPORT.md
+We conclude with what the naive unit cannot do and with the one measured clue toward a
+dynamical successor: the store is exactly the zero-dynamics limit of a settling unit, its zero-step arm bit-identical to the static read. % SRC: w12-clue-theorist/CLUE.md
+@@@ 127 170
+Generating held-out combinations of factors is a long-standing and active problem. The multilinear line (Tenenbaum and Freeman, 2000; TensorFaces,
+Vasilescu and Terzopoulos, 2002; Vlasic et al., 2005; MLC-VAE, 2020) factorises a data tensor
+indexed by every label combination and renders linearly. The frozen-generator line (GANSpace,
+2020; TCA, 2021; PandA, 2023, and its 2024 journal version) identifies editable directions in a
+pretrained generator, without labels and without an address book. We claim neither half.
+Specifically, we do not claim multilinear or bilinear factored generation, a request-indexed
+tensor head, tensor-product label conditioning, or the downdate primitive; the latter follows
+in one line from the summation form of Cao and Yang (2015), since a covariance is a summation.
+
+Exact unlearning is likewise established: for $k$-means (Ginart et al., 2019), for bilinear
+matrix completion, and for ridge heads on frozen backbones, where the most recent work
+explicitly restricts itself to ridge regression and excludes principal-component,
+eigendecomposition and generative models. The closest generative attempts are approximate.
+Feature unlearning for pretrained GANs and VAEs unlearns a feature rather than rows and
+fine-tunes the generator; data redaction from pretrained GANs is stated to be a task different
+from deletion; and GAN unlearning by substitution is approximate by construction.
+
+However, on a systematic screen the intersection of the two literatures is empty. A
+forward-citation crawl over every title and abstract citing the canonical works of either side
+screened approximately 4,050 unique works: 3,038 citing the generation-side anchors, 759 citing
+the deletion-side anchors, 254 from 21 orthogonal queries that cite neither, and about 100 from
+a final targeted sweep. % SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
+Of the 3,038 generation-side works, deletion language appears in 10 (0.3\%), seven of them
+false positives and none exact; no work among the 3,038 combines frozen-decoder, tensor-head
+and label-index language (0 of 3,038); no single work reaches more than 4 of the 6 claim atoms;
+and none of the 759 deletion-side works combines principal-subspace, generative and
+frozen-model language. % SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
+The orthogonal query that poses the question directly, \emph{compositional} $\wedge$
+\emph{generative} $\wedge$ \emph{exact deletion}, returns zero works.
+% SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
+We therefore state the position only in the form that the screen supports: \emph{the
+intersection of compositional generation with exact deletion is empty} in the works we could
+screen. The residual risk is real, and \S\ref{sec:limits} states it: abstract-level screening
+cannot see a match buried in a method section, and the indexing of preprints younger than about
+three months is incomplete.
+
+One distinction within this intersection is ours and merits a sentence. The decremental-PCA
+line (Hall, Marshall and Martin, 2002, and successors) subtracts \emph{deflated} eigenspaces;
+its authors describe the result as an approximation to the refit, report that the subtraction
+tends to instability, and give no rigorous error analysis. Our route is exact for the opposite
+reason: \emph{downdate the statistic, not the truncated factors}. We downdate the full,
+untruncated second-moment statistic by subtraction and re-eigendecompose the content
+afterwards, so truncation error never enters the subtraction.
+@@@ 175 186
+A world model is useful to the extent that it can be queried for states and transitions it has
+not seen, and its answers trusted. We name three properties and use them throughout:
+\begin{itemize}[leftmargin=*,nosep]
+\item \textbf{Rule validity}: an output is valid if an \emph{exact} judge, integer arithmetic
+  with no tolerance, accepts it; approximate similarity to a training item does not count.
+\item \textbf{Composition}: the model produces valid outputs for held-out combinations of
+  factor values that it has seen only separately.
+\item \textbf{Exact deletion}: after a set of training rows is deleted, the deletable object
+  equals, to floating-point roundoff, the object fitted without those rows.
+\end{itemize}
+However, the three pull against each other: a lookup table deletes exactly but
+composes nothing it has not stored; a learned generator composes but can delete only by
+retraining; and approximate unlearning misses the exact answer in either direction
+(\S\ref{sec:del-comparators}). The object we study therefore makes them properties of one store, and we measure, row by row, where each holds and where it does not.
+@@@ 191 222
+\begin{enumerate}[leftmargin=*,itemsep=2pt]
+\item \emph{Composition at a stated partition, against read-path-matched rivals.} On a
+  Shapes3D value hold-out at $\Kstar=32$ wells and three scored seeds, the store beats every % SRC: w12b-nr6-and-kstar/NR6-T7.md
+  learned rival matched on read-path parameters, on both composition rows and on 109 of 109 % SRC: w12b-nr6-and-kstar/NR6-T7.md
+  corners per seed, while every charter control collapses
+  (\S\ref{sec:shapes-t7}). The same holds on every rung of an $n$-way ladder
+  (\S\ref{sec:ladder}), read with the inference note that, for $n\ge3$, the rungs form a
+  training-data axis and not a depth axis.
+\item \emph{Exact, store-scoped deletion, with its cost and its bound printed.} Value, conjunction and item deletion are light and data-free for the store and cost the rivals a full retrain. The four-part byte ledger is printed beside every row, and a probe exposes the
+  limit of the claim: at $\Kstar$ the store forgets the deleted value but the object still
+  answers it, because the value identity resides in the address book (\S\ref{sec:shapes-del}).
+  Refusal after deletion is a separate, structural mechanism: a hole in a coupling table
+  (\S\ref{sec:hole}).
+\item \emph{The same properties on a maze, where only deletion transfers through the
+  store.} Deletion transfers exactly. Composition on routes is recovered by a plan-space verb,
+  which we report as an \emph{interface} result because it lifts a matched-bytes lookup
+  floor more than it lifts the store (\S\ref{sec:maze}).
+\item \emph{Two ablations and a leaving note.} A composition-only store composes but cannot
+  forget, while an item store forgets but cannot compose (\S\ref{sec:ablations}). The
+  limitations of the naive unit, its measured zero-dynamics identity and the theory we carry
+  close the paper (\S\ref{sec:limits}--\S\ref{sec:followup}).
+\end{enumerate}
+
+\noindent\emph{Thickness, stated in the introduction.} The positive composition claim rests
+on a single environment (Shapes3D) at three scored seeds. No row in this study can exceed three
+seeds: seeds 3 and 4 have verified caches but neither a frozen decoder nor an external
+classifier, so none of their corners can be judged. % SRC: w12b-nr6-and-kstar/FINDINGS.md
+The one environment with an exact route judge and three scored seeds returns a negative for
+the store and a positive for the interface. Several rows await a later wave; each is a
+marked placeholder whose text names the row and states that it may land as a negative.

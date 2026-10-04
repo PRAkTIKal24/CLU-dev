@@ -1,0 +1,255 @@
+{
+ "_doc": "Part C panel sets (CMAZE-T, words-plus-observation (BOTH) TEST, persisted w19 objects). One entry in panel_sets = one figure; one entry in arms = one column. A second pass (improved CLU config) adds its arm column(s) here and its per-item re-read beside cmazet_items.json; no code change. The 10x-read-floats diagnostic is not a matched rival (never a bar) and is not drawn.",
+ "window_cells": 5,
+ "families_order": [
+  "interaction",
+  "rule_b",
+  "rule_a",
+  "open_door_tint",
+  "free"
+ ],
+ "groups": [
+  "",
+  "matched rivals, 8,000 steps",
+  "matched rivals, 80,000 steps",
+  "controls",
+  "blind arms"
+ ],
+ "arms": [
+  {
+   "key": "CLU",
+   "header": "CLU",
+   "group": "",
+   "arm_style": "clu",
+   "name": "CLU"
+  },
+  {
+   "key": "rival: mlp",
+   "header": "MLP",
+   "group": "matched rivals, 8,000 steps",
+   "arm_style": "mlp",
+   "name": "MLP, 8,000 steps"
+  },
+  {
+   "key": "rival: lstm",
+   "header": "LSTM",
+   "group": "matched rivals, 8,000 steps",
+   "arm_style": "lstm",
+   "name": "LSTM, 8,000 steps"
+  },
+  {
+   "key": "rival: transformer",
+   "header": "Transf.",
+   "group": "matched rivals, 8,000 steps",
+   "arm_style": "transformer",
+   "name": "Transformer, 8,000 steps"
+  },
+  {
+   "key": "rival@10x-steps: mlp",
+   "header": "MLP",
+   "group": "matched rivals, 80,000 steps",
+   "arm_style": "mlp",
+   "name": "MLP, 80,000 steps"
+  },
+  {
+   "key": "rival@10x-steps: lstm",
+   "header": "LSTM",
+   "group": "matched rivals, 80,000 steps",
+   "arm_style": "lstm",
+   "name": "LSTM, 80,000 steps"
+  },
+  {
+   "key": "rival@10x-steps: transformer",
+   "header": "Transf.",
+   "group": "matched rivals, 80,000 steps",
+   "arm_style": "transformer",
+   "name": "Transformer, 80,000 steps"
+  },
+  {
+   "key": "control: landscape_removed",
+   "header": "landscape\nremoved",
+   "group": "controls",
+   "name": "control: landscape removed"
+  },
+  {
+   "key": "control: landscape_shuffled",
+   "header": "landscape\nshuffled",
+   "group": "controls",
+   "name": "control: landscape shuffled"
+  },
+  {
+   "key": "control: landscape_shuffled_across_wells",
+   "header": "across\nwells",
+   "group": "controls",
+   "name": "control: across wells"
+  },
+  {
+   "key": "control: random_atoms",
+   "header": "random\natoms",
+   "group": "controls",
+   "name": "control: random atoms"
+  },
+  {
+   "key": "arm: BLIND-COLOUR (learned: colour identity removed from the request)",
+   "header": "blind\ncolour",
+   "group": "blind arms",
+   "name": "blind colour"
+  },
+  {
+   "key": "arm: BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)",
+   "header": "blind\nsequential",
+   "group": "blind arms",
+   "name": "blind sequential"
+  }
+ ],
+ "panel_sets": [
+  {
+   "stem": "fig_cmazet_families",
+   "status": "landed",
+   "select": "first_per_family",
+   "seed_order": [
+    0,
+    1,
+    2
+   ],
+   "panel_in": 0.37,
+   "left_in": 1.3,
+   "notes": "One held-out TEST n-way transition per rule family: the first in the scorer's capped order at seed 0, else at the first seed that has one. Columns: s_t with the action, the engine's s_{t+1}, then each arm's generated s_{t+1} (apply_outcome of its own emission) with the exact judge's mark."
+  },
+  {
+   "stem": "fig_cmazet_door_then_tint",
+   "status": "landed",
+   "select": "interaction_per_direction",
+   "seed_order": [
+    0
+   ],
+   "panel_in": 0.37,
+   "left_in": 1.3,
+   "notes": "Door-then-tint (interaction family): the first seed-0 TEST n-way row per move direction present. Same columns as fig_cmazet_families."
+  },
+  {
+   "stem": "fig_cmazet_per_arm",
+   "status": "landed",
+   "select": "success_failure_per_arm",
+   "seed_order": [
+    0
+   ],
+   "rng_seed": 21,
+   "panel_in": 0.34,
+   "left_in": 1.15,
+   "notes": "For every arm, one seed-0 TEST n-way transition on which it is right and one on which it is wrong, each a uniform draw (numpy default_rng(21), arms in manifest order) among the qualifying rows; an arm with no qualifying row gets no row (recorded in selection).",
+   "blocks": 3
+  },
+  {
+   "stem": "fig_cmazet_deletion",
+   "status": "landed",
+   "select": "deletion_first_per_family",
+   "seed_order": [
+    0
+   ],
+   "scope": "value",
+   "panel_in": 0.42,
+   "left_in": 1.3,
+   "columns": [
+    {
+     "key": "CLU before deletion",
+     "header": "before",
+     "arm_style": "clu"
+    },
+    {
+     "key": "CLU after deletion (downdate)",
+     "header": "after\ndowndate",
+     "arm_style": "clu"
+    },
+    {
+     "key": "CLU fitted WITHOUT the rows",
+     "header": "fitted\nwithout",
+     "arm_style": "clu"
+    },
+    {
+     "key": "rival mlp as-trained",
+     "header": "as\ntrained",
+     "arm_style": "mlp"
+    },
+    {
+     "key": "rival mlp retrain-without",
+     "header": "retrained\nwithout",
+     "arm_style": "mlp"
+    }
+   ],
+   "groups": [
+    {
+     "label": "CLU",
+     "from": 2,
+     "to": 4
+    },
+    {
+     "label": "MLP rival",
+     "from": 5,
+     "to": 6
+    }
+   ],
+   "notes": "Value deletion of colour 1 (the deleted colour recorded in the artefact), seed 0: on surviving-colour TEST n-way rows (the rows the deletion rows score), the first per rule family. Columns: the CLU before deletion, after the downdate, and fitted without the rows (the deletion pair; equal emissions on every surviving row, recorded), and the matched MLP as trained and retrained without."
+  },
+  {
+   "stem": "fig_cmazet_rel_per_arm",
+   "status": "landed",
+   "config": "CLU-REL-A10",
+   "select": "success_failure_per_arm",
+   "seed_order": [
+    0
+   ],
+   "rng_seed": 21,
+   "panel_in": 0.34,
+   "left_in": 1.15,
+   "blocks": 3,
+   "extra_arms": [
+    {
+     "key": "diagnostic+rel@8k: mlp +rel",
+     "header": "MLP +rel",
+     "group": "+rel diagnostic",
+     "name": "MLP +rel, 8k steps"
+    },
+    {
+     "key": "diagnostic+rel@8k: lstm +rel",
+     "header": "LSTM +rel",
+     "group": "+rel diagnostic",
+     "name": "LSTM +rel, 8k steps"
+    },
+    {
+     "key": "diagnostic+rel@8k: transformer +rel",
+     "header": "Transformer +rel",
+     "group": "+rel diagnostic",
+     "name": "Transformer +rel, 8k steps"
+    },
+    {
+     "key": "diagnostic+rel@80k: mlp +rel",
+     "header": "MLP +rel",
+     "group": "+rel diagnostic",
+     "name": "MLP +rel, 80k steps"
+    },
+    {
+     "key": "diagnostic+rel@80k: lstm +rel",
+     "header": "LSTM +rel",
+     "group": "+rel diagnostic",
+     "name": "LSTM +rel, 80k steps"
+    },
+    {
+     "key": "diagnostic+rel@80k: transformer +rel",
+     "header": "Transformer +rel",
+     "group": "+rel diagnostic",
+     "name": "Transformer +rel, 80k steps"
+    }
+   ],
+   "stage_roots": [
+    "/Users/batmac/clu/stage/rel-persist/w21-maze-t-clu-improve",
+    "/Users/batmac/clu/stage/rel-persist/w21-rel-newseeds"
+   ],
+   "gate1": "PASSED 192/192 (w22 HASH-VERIFY-REL-seeds012.json, -seeds345.json)",
+   "notes": "CLU-REL-A10 (the improved CLU config). For every arm, including the six '+rel' diagnostic rivals (rivals given the CLU's relational request columns; not matched rivals), one seed-0 TEST n-way transition on which it is right and one on which it is wrong, each a uniform draw (numpy default_rng(21), arms in manifest order) among the qualifying rows; an arm with no qualifying row gets no row (recorded in selection). Same rows and rule as fig_cmazet_per_arm.",
+   "items": "cmazet_items_rel.json",
+   "gate2": "PASSED 132/132 arms float== the scored run JSONs, seeds 0-5; 144 objects hash-checked before and after load (w21_figures/cmazet_extract_rel.py; data/cmazet_items_rel.REPRO.json)",
+   "gate_note": "per-item re-read of the persisted CLU-REL-A10 BOTH TEST objects (hash-verified; every arm's n-way score equals the scored run JSON, float ==, asserted in cmazet_extract_rel.py, seeds 0-5);"
+  }
+ ]
+}

@@ -1,0 +1,88 @@
+[14:46:56] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[14:46:56]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[14:46:56]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[14:46:59] [c0] sigma_a: mean 0.3897 max 2.1148; |a_target| mean 0.3278
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:47:01] [c0] COEF β=0 T=0      tuples_valid_novel=  0.00 (draws [0])  distinct= 72.0   <- CONTROL A (the launch itself)
+[14:47:04] [c0] COEF β=0 T=0.005  tuples_valid_novel=  0.00 (draws [0, 0, 0])  distinct= 72.0
+[14:47:08] [c0] COEF β=0 T=0.05   tuples_valid_novel=  0.00 (draws [0, 0, 0])  distinct= 72.0
+[14:47:11] [c0] COEF β=0 T=0.5    tuples_valid_novel=  0.00 (draws [0, 0, 0])  distinct= 72.0
+[14:47:12] [c0] COEF β=1 T=0      tuples_valid_novel= 38.00 (draws [38])  distinct= 61.0   <- CONTROL A (the launch itself)
+[14:47:15] [c0] COEF β=1 T=0.005  tuples_valid_novel= 35.00 (draws [34, 34, 37])  distinct= 59.7
+[14:47:19] [c0] COEF β=1 T=0.05   tuples_valid_novel= 34.67 (draws [35, 38, 31])  distinct= 61.0
+[14:47:22] [c0] COEF β=1 T=0.5    tuples_valid_novel=  0.67 (draws [1, 1, 0])  distinct= 69.0
+[14:48:37] [c0] T=0 STATE β=0 correct=True  LINEAR=  0 (distinct  70)  ARGMAX=  0  |Δx|/|x|=0.00000
+[14:49:18] [c0] T=0 STATE β=0 correct=False  LINEAR=  0 (distinct  70)  ARGMAX=  0  |Δx|/|x|=0.12136
+[14:49:26] [c0] T=0 STATE β=1 correct=True  LINEAR=  0 (distinct  15)  ARGMAX=  0  |Δx|/|x|=0.00000
+[14:49:33] [c0] T=0 STATE β=1 correct=False  LINEAR=  0 (distinct  12)  ARGMAX=  1  |Δx|/|x|=0.11259
+[14:49:33] [c0] done in 154.7s -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-composition\iter2r\dev\c05b_coef_dream_seed0.json
+[14:49:34] [c2] sigma_a: mean 0.3731 max 2.0406; |a_target| mean 0.2995
+[14:49:35] [c2] COEF β=0 T=0      tuples_valid_novel=  0.00 (draws [0])  distinct= 72.0   <- CONTROL A (the launch itself)
+[14:49:39] [c2] COEF β=0 T=0.005  tuples_valid_novel=  0.00 (draws [0, 0, 0])  distinct= 72.0
+[14:49:43] [c2] COEF β=0 T=0.05   tuples_valid_novel=  0.00 (draws [0, 0, 0])  distinct= 72.0
+[14:49:49] [c2] COEF β=0 T=0.5    tuples_valid_novel=  0.00 (draws [0, 0, 0])  distinct= 72.0
+[14:49:51] [c2] COEF β=1 T=0      tuples_valid_novel= 35.00 (draws [35])  distinct= 61.0   <- CONTROL A (the launch itself)
+[14:49:56] [c2] COEF β=1 T=0.005  tuples_valid_novel= 33.67 (draws [32, 34, 35])  distinct= 59.3
+[14:50:02] [c2] COEF β=1 T=0.05   tuples_valid_novel= 28.67 (draws [30, 28, 28])  distinct= 60.3
+[14:50:05] [c2] COEF β=1 T=0.5    tuples_valid_novel=  0.67 (draws [1, 0, 1])  distinct= 71.3
+[14:51:34] [c2] T=0 STATE β=0 correct=True  LINEAR=  0 (distinct  70)  ARGMAX=  0  |Δx|/|x|=0.00000
+[14:52:03] [c2] T=0 STATE β=0 correct=False  LINEAR=  0 (distinct  69)  ARGMAX=  0  |Δx|/|x|=0.12361
+[14:52:10] [c2] T=0 STATE β=1 correct=True  LINEAR=  0 (distinct   9)  ARGMAX=  0  |Δx|/|x|=0.00000
+[14:52:16] [c2] T=0 STATE β=1 correct=False  LINEAR=  0 (distinct  13)  ARGMAX=  0  |Δx|/|x|=0.12044
+[14:52:16] [c2] done in 163.4s -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-composition\iter2r\dev\c05b_coef_dream_seed0.json
+[14:52:17] [c4] sigma_a: mean 0.4153 max 3.7850; |a_target| mean 0.3624
+[14:52:18] [c4] COEF β=0 T=0      tuples_valid_novel=  0.00 (draws [0])  distinct= 72.0   <- CONTROL A (the launch itself)
+[14:52:23] [c4] COEF β=0 T=0.005  tuples_valid_novel=  0.00 (draws [0, 0, 0])  distinct= 72.0
+[14:52:27] [c4] COEF β=0 T=0.05   tuples_valid_novel=  0.00 (draws [0, 0, 0])  distinct= 72.0
+[14:52:31] [c4] COEF β=0 T=0.5    tuples_valid_novel=  0.00 (draws [0, 0, 0])  distinct= 72.0
+[14:52:32] [c4] COEF β=1 T=0      tuples_valid_novel= 35.00 (draws [35])  distinct= 59.0   <- CONTROL A (the launch itself)
+[14:52:37] [c4] COEF β=1 T=0.005  tuples_valid_novel= 33.00 (draws [33, 31, 35])  distinct= 59.3
+[14:52:41] [c4] COEF β=1 T=0.05   tuples_valid_novel= 24.00 (draws [20, 24, 28])  distinct= 59.0
+[14:52:45] [c4] COEF β=1 T=0.5    tuples_valid_novel=  0.00 (draws [0, 0, 0])  distinct= 70.7
+[14:54:19] [c4] T=0 STATE β=0 correct=True  LINEAR=  0 (distinct  72)  ARGMAX=  0  |Δx|/|x|=0.00000
+[14:54:49] [c4] T=0 STATE β=0 correct=False  LINEAR=  0 (distinct  71)  ARGMAX=  0  |Δx|/|x|=0.12358
+[14:54:56] [c4] T=0 STATE β=1 correct=True  LINEAR=  0 (distinct  10)  ARGMAX=  0  |Δx|/|x|=0.00000
+[14:55:02] [c4] T=0 STATE β=1 correct=False  LINEAR=  0 (distinct   5)  ARGMAX=  0  |Δx|/|x|=0.12085
+[14:55:02] [c4] done in 166.2s -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-composition\iter2r\dev\c05b_coef_dream_seed0.json
+[14:55:02] C05b done in 493.8s

@@ -1,0 +1,43 @@
+# LOG — w15/lace-poe-rows
+- 2026-09-23T07:07:51Z START. Env: env_w3.sh + PYTHONPATH fix (Git-Bash PWD 'C:/..' broke ':'->';' conversion; equinox not importable). Wrapper: /c/chlu/outputs/w15-lace-poe-rows/env.sh. Assert OK: chlu.__file__ in worktree; jax 0.9.0 numpy 2.4.1 eqx 0.13.4.
+- 2026-09-23T07:13:46Z DEV smoke: exp_gen_cell seed0 arm knn_proto -> dev/cell_smoke (pid 189101)
+- 2026-09-23T07:17:44Z DEV smoke relaunched via scripts/w15_lace_poe_gencell.py (no-extension launcher), arms knn_proto + kstar VAL-ONLY, seed 0
+- 2026-09-23T07:22:48Z DECISIONS (recorded, pre-authorised):
+  - D1 "generation-table harness" = chlu.experiments.exp_gen_cell (recomb2element cell, B=72, frozen gen-1 bridge, 3 seeds). K* registered as arm `kstar` (NOT on ARMS, x0/dynread precedent); construction in new module chlu/experiments/exp_gen_cell_kstar.py; exp_gen_cell edits = 2 add-only elif branches.
+  - D2 Box re-encode gate: enforced gate aborts here (known, REENCODE-VERDICT-iter2.md). Launcher scripts/w15_lace_poe_gencell.py applies the no-extension ruling: measure n_shortfall per seed, STOP if >0, else gate with will_extend=False+reason. No shared code edited.
+  - D3 K* = 32 NOT re-selected; built on the cell's own store pool (same rule). Four-part ledger.
+  - D4 LACE/PoE ladder rows: fitted per (rung, seed) on the rung's own ladder pool (first 32,768 rows = learned_1x's N_FIT_ROWS), shipped budgets, selection via judge on val (never-weaken direction). "CLU" on rows 3-4/rungs = K* single design artefacts (w12 crossover + w12b).
+  - D5 Beat rule for headline negative: mean paired delta >= +1.0 novel/corner on every seed (the ladder's own margin).
+- 2026-09-23T07:22:48Z DEV: knn_proto seed0 reproduces Mac cell exactly (0.8588 / 0.9198 / 57) -> dev/cell_smoke/seed_0/cell_manifest.json
+- 2026-09-23T07:22:48Z PREREG-w15-lace-poe-rows-1.md written + timestamped (before any K*/LACE/PoE number).
+- 2026-09-23T07:22:56Z launched ladder leg rung2 seed0 (lace,poe) -> ladder/2_seed0
+- 2026-09-23T07:25:03Z DEV VAL seed0 kstar: arm 0.9212, controls removed 0.1234 / shuffled 0.1553 / across_wells 0.1230 / random_atoms 0.1084 -> VB1+VB2 PASS (dev/cell_smoke/seed_0/cell_manifest.json:kstar_val). Ledger four-part 2,145,738 B = 4.0927x ref; A=63, wells 64, rank/width 0.9688-0.9844. Launched val-only seeds 1,2.
+- 2026-09-23T07:35:56Z BLOCKER FOUND+RESOLVED: gen-1 bridge seeds 1,2 are scope 'used' (9,288 rows) -> shortfall 32,395 -> launcher STOPPED (nothing encoded; logs/dev_kstar_val_s12.log). Gen-2 tree (spoke-a-rivals/cache_generation2) holds the SAME encoder.pkl (sha256 + param hash identical per seed) at scope 'full' for seeds 0,1,2. DECISION D6: the scored cell runs on GEN-2 via CHLU_GEN_BRIDGE_ROOT (env_cell.sh) -- also what env_w4 mandates for scored runs. PREREG AMENDMENT 1 to record it before the scored run. Val-only relaunched on gen-2 seeds 0,1,2.
+- 2026-09-23T07:38:59Z launched ladder chains A(shipped:0,3:0..6:0) B(shipped:1,2:1..6:1) C(shipped:2,2:2..6:2); leg 2:0 running standalone. LACE selection on 2:0 took 811s (selected sigma 0.03 form both shrink 1e-3, val agg 0.3066).
+- 2026-09-23T08:28:28Z VAL gen-2 seed0 kstar: arm 0.9212; controls removed 0.1234 / shuffled 0.1549 / across_wells 0.1217 / random_atoms 0.1084 -> PASS (dev/kstar_val_gen2/seed_0/cell_manifest.json:kstar_val). Address fit 1040s under contention.
+- 2026-09-23T08:28:28Z Ladder LACE selections done: 2:0 (s0.03 both 1e-3, val .3066), shipped:0 (s0.03 both none, .2858), shipped:1 (s0.1 both LW, .3021), shipped:2 (s0.03 both 1e-3, .3151). Legs ~2h each under load.
+- 2026-09-23T09:14:17Z LEDGER ROW WRITTEN: generation-table 3/3 -> /c/chlu/SCORED-LEDGER.md. VAL gates PASS s0 0.9212 / s1 0.9720 / s2 0.9186 (dev/kstar_val_gen2/seed_*/cell_manifest.json:kstar_val).
+- 2026-09-23T09:14:37Z SCORED RUN 3/3 LAUNCHED: scored/cell seeds 0,1,2 (3 procs), arms clu store_removed knn_proto lace ebm_compose kstar; env_cell.sh (gen-2), CHLU_KSTAR_VAL_ONLY unset.
+- 2026-09-23T09:35:04Z RE-PLAN: CPU load only ~11% (samplers dispatch-bound, 1 core each). Killed MY chain shells A/B/C (190517-9; their running legs continue). 4 lock-based queue workers (scripts/w15_lace_poe_queue.sh) take the remaining 14 legs; running legs pre-claimed.
+- 2026-09-23T09:55:08Z LEG DONE ladder/2_seed0: LACE novel 0.0734 judge_acc 0.0013; PoE novel 0.0000 judge_acc 0.0000 (ladder/2_seed0/rows_{lace,poe}.json). PoE 3,556,665 params (27.1x ref).
+- 2026-09-23T10:25:14Z LEG DONE ladder/shipped_seed0: LACE 0.0667 / PoE 0.0167 novel/corner. shipped_seed1 LACE 0.2294.
+- 2026-09-23T11:16:42Z SCORED RUN 3/3 COMPLETE all 3 seeds, NOT_RUN empty. aggregate -> scored/cell/cell_results.json
+- 2026-09-23T11:18:02Z CORRECTION: earlier LOG attributions of ladder leg numbers came from an unordered multi-file grep and are WRONG; authoritative values are the per-leg rows_*.json files (e.g. shipped: LACE s0 0.1651 / s1 0.0734 / s2 0.2294; k=2 s0 per ladder/2_seed0).
+- 2026-09-23T11:18:51Z added queue workers W5-W9 (CPU 36%, 28GB free) for the 10 unclaimed legs.
+- 2026-09-23T11:29:36Z ROWS 3-4 COMPLETE (3 seeds): K* 47.495/47.404/49.119; LACE 0.165/0.073/0.229; PoE 0.009/0.000/0.000 novel/corner; paired LACE-K* -47.33/-47.33/-48.89, PoE-K* -47.49/-47.40/-49.12; K* wins 109/109 corners vs both on every seed -> NOT a headline negative (GENTABLE-KSTAR.json:PART_B_rows_3_4). Learned columns intact beside them (mlp 5.19/3.24/8.17 etc).
+- 2026-09-23T11:29:36Z SANITY: the shipped exp_gen_cell LACE/ebm_compose rows also have exact_match 0.0 on cell B for every seed (scored/cell/seed_*/cell_manifest.json) -> near-zero full-tuple validity of LACE/PoE on corners is the rivals, not my driver. SECONDARY (not a pre-declared bar): kstar exact_match 0.50/0.986/0.50 vs knn_proto 0.167/0.139/0.292.
+- 2026-09-23T12:10:11Z alive: 9 ladder legs running (3:0-2, 4:0-2, 5:0-2); 6:x and 2:1/2:2 queued.
+- 2026-09-23T12:47:26Z progress: 11 row files on disk (ladder/*/rows_*.json); rung LACE rows landing (e.g. 3_seed1 LACE 0.1250).
+- 2026-09-23T13:28:02Z alive, 12 row files
+- 2026-09-23T13:47:49Z 16 row files; queue: 6:1 (W3), 6:2 (W7) claimed; 12 claims so far
+- 2026-09-23T13:59:02Z FINDINGS.md drafted (Part A + rows 3-4 final; ladder section pending legs).
+- 2026-09-23T14:21:39Z alive; 17 row files; W1 claimed 2:1
+- 2026-09-23T15:01:25Z alive; 19/36 row files
+- 2026-09-23T15:22:19Z alive; 22/36 row files, no FAILED
+- 2026-09-23T15:50:34Z 25/36 row files
+- 2026-09-23T16:12:43Z 28/36 row files; remaining 2:1/2:2 PoE and rung 6 x3 (LACE+PoE)
+- 2026-09-23T16:36:30Z 30/36
+- 2026-09-23T16:50:47Z 33/36; only rung-6 PoE x3 remaining
+- 2026-09-23T17:02:48Z ALL LADDER LEGS DONE: 18 legs x {LACE, PoE} = 36 row files, 0 FAILED, 9 queue workers DONE, no process of mine running. K* store wins every corner vs LACE and vs PoE at every rung (rows 3-4, k=2..6) on every seed -> PREREG 2a: CLU ahead everywhere; no headline negative.
+- 2026-09-23T17:02:48Z GENTABLE-KSTAR.json + GENTABLE-KSTAR.md built (scripts/w15_lace_poe_table.py); FINDINGS.md completed.
+- 2026-09-23T17:03:00Z END. Branch committed (70885c0) + bundled + verified. FINDINGS.md final.

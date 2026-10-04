@@ -1,0 +1,1491 @@
+{
+  "schema": "chlu-w13-encoder-adapt-crossarm/1",
+  "hub": "w13-encoder-adapt",
+  "condition": "test",
+  "K_star": 32,
+  "seed_count": 3,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "configuration_count": 3,
+  "arm_runs": 9,
+  "counting_note": "SEED COUNT and CONFIGURATION COUNT are separate numbers. 3 seeds x 3 arms = 9 arm-runs. That is 3 SEEDS, never '9 seeds'.",
+  "per_seed": {
+    "0": {
+      "frozen": {
+        "arm.json": "ok",
+        "probe.json": "ok",
+        "rivals.json": "ok",
+        "score.json": "ok",
+        "compute": {
+          "gradient_steps": 400,
+          "images_seen": 25600,
+          "train_seconds": 2297.3014109134674,
+          "seconds_per_step": 5.7432535272836684,
+          "n_params_optimised": 1647299,
+          "n_encoder_params_optimised": 0,
+          "encoder_changed": false,
+          "base_encoder_changed": false,
+          "beta_swap": 0.003476167443275355,
+          "anchor_lambda": 0.0,
+          "swap_identity_abs_delta": 0.0
+        },
+        "displacement": {
+          "feature_relative_l2_squared": 0.0,
+          "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+          "weight_relative_l2_squared": 0.0
+        },
+        "adapter": null,
+        "probe_margin_over_random_init": {
+          "aggregate": 8.138020833337034e-05,
+          "exact_match": -0.00341796875,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.0,
+            -0.027099609375,
+            0.027099609375,
+            0.00048828125
+          ]
+        },
+        "probe_absolute_NOT_A_CLAIM": {
+          "arm": 0.9735921223958334,
+          "random_init_floor": 0.9735107421875,
+          "note": "an absolute probe number says how easy Shapes3D is under a linear readout; only the margin says anything about the arm"
+        },
+        "MARGIN": {
+          "metric": "distinct_valid_novel_tuples (PRIMARY), per corner, paired by corner",
+          "metric_key": "novel_per_corner_mean",
+          "primary_degenerate": false,
+          "primary_degenerate_note": "the primary metric separates the arms and is the one used",
+          "best_learned_baseline": "mlp_180k",
+          "best_chosen_by": "highest mean novel-per-corner among THIS ARM's own refit baselines -- chosen per arm, so the bar is always the strongest available competitor on that arm's features",
+          "learned_baselines_scored": [
+            "mlp",
+            "mlp_180k",
+            "cont_mlp",
+            "transformer",
+            "lstm"
+          ],
+          "single_design_mean": 23.31192660550459,
+          "best_learned_mean": 22.743119266055047,
+          "MARGIN_all_corners": 0.5688073394495419,
+          "MARGIN_novel_all_corners": 0.5688073394495419,
+          "MARGIN_distinct_valid_all_corners": 0.5688073394495419,
+          "single_design_judge_accuracy": 0.43781855249745155,
+          "best_learned_judge_accuracy": 0.43348623853211016,
+          "controls_must_be_zero": {
+            "landscape_removed": 0.0,
+            "landscape_shuffled": 0.0,
+            "landscape_shuffled_across_wells": 0.0,
+            "random_atoms": 0.0
+          },
+          "MARGIN_row3_pair": -0.4666666666666668,
+          "MARGIN_row4_nway": 1.8367346938775526,
+          "paired_vs_best_learned": {
+            "metric": "distinct_valid_novel_tuples",
+            "arm": "cov_tensor",
+            "control": "mlp_180k",
+            "n_corners": 109,
+            "arm_mean": 23.31192660550459,
+            "control_mean": 22.743119266055047,
+            "mean_paired_delta": 0.5688073394495413,
+            "median_paired_delta": 0.0,
+            "bootstrap_ci95": [
+              -0.7431192660550459,
+              1.9174311926605505
+            ],
+            "corners_arm_wins": 50,
+            "corners_tied": 9,
+            "corners_control_wins": 50,
+            "sign_test_p_two_sided": 1.0,
+            "margin_declared_in_advance": 1.0,
+            "beats_beyond_margin": false,
+            "note": "the unit is the CORNER, paired; the verdict is this estimand and never a single cell (w3-hub-common section 3: the corner explains 90.9% of the paired variance)"
+          },
+          "per_baseline_margin": {
+            "mlp": 4.871559633027523,
+            "mlp_180k": 0.5688073394495419,
+            "cont_mlp": 12.26605504587156,
+            "transformer": 5.064220183486238,
+            "lstm": 2.5137614678899105
+          },
+          "how_to_read": "wave 12 measured this NEGATIVE. The bar is whether it GROWS from `frozen` to an adapted arm. A margin that grows and stays negative is a real and reportable result."
+        },
+        "single_design_novel_per_corner": 23.31192660550459,
+        "controls": {
+          "landscape_removed": 0.0,
+          "landscape_shuffled": 0.0,
+          "landscape_shuffled_across_wells": 0.0,
+          "random_atoms": 0.0
+        },
+        "rank_over_width_max": 0.9844,
+        "ledger_four_part": {
+          "p1_atom_bytes": 516096,
+          "p2_covariance_plus_count_bytes": 560608,
+          "p2_covariance_bytes": 549120,
+          "p2_count_bytes": 11488,
+          "p3_address_book_bytes": 1063984,
+          "p4_coupling_hole_table_bytes": 6610,
+          "honest_total_bytes": 2147298,
+          "reference_pin_bytes": 524288,
+          "times_reference_pin": 4.0956,
+          "netted": false,
+          "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this wave -- the single design is 1x its own total"
+        }
+      },
+      "adapter": {
+        "arm.json": "ok",
+        "probe.json": "ok",
+        "rivals.json": "ok",
+        "score.json": "ok",
+        "compute": {
+          "gradient_steps": 400,
+          "images_seen": 25600,
+          "train_seconds": 2368.3490374088287,
+          "seconds_per_step": 5.920872593522072,
+          "n_params_optimised": 1778371,
+          "n_encoder_params_optimised": 131072,
+          "encoder_changed": true,
+          "base_encoder_changed": false,
+          "beta_swap": 0.003476167443275355,
+          "anchor_lambda": 0.0,
+          "swap_identity_abs_delta": 0.0
+        },
+        "displacement": {
+          "feature_relative_l2_squared": 0.15758125483989716,
+          "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+          "weight_relative_l2_squared": 0.12695613503456116
+        },
+        "adapter": {
+          "D": 2048,
+          "bit_identical_to_frozen_at_step_0": true,
+          "bytes_float32": 524288,
+          "checked_on_images": 8,
+          "note": "2 * D * rank float32 = the programme's own 524,288 B reference pin, a PINNED size and not a tuned one",
+          "param_count": 131072,
+          "rank": 32,
+          "reference_pin_bytes": 524288,
+          "up_init": "zeros"
+        },
+        "probe_margin_over_random_init": {
+          "aggregate": 0.000732421875,
+          "exact_match": -0.00244140625,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.0,
+            -0.023193359375,
+            0.0283203125,
+            -0.000732421875
+          ]
+        },
+        "probe_absolute_NOT_A_CLAIM": {
+          "arm": 0.9742431640625,
+          "random_init_floor": 0.9735107421875,
+          "note": "an absolute probe number says how easy Shapes3D is under a linear readout; only the margin says anything about the arm"
+        },
+        "MARGIN": {
+          "metric": "distinct_valid_novel_tuples (PRIMARY), per corner, paired by corner",
+          "metric_key": "novel_per_corner_mean",
+          "primary_degenerate": false,
+          "primary_degenerate_note": "the primary metric separates the arms and is the one used",
+          "best_learned_baseline": "mlp_180k",
+          "best_chosen_by": "highest mean novel-per-corner among THIS ARM's own refit baselines -- chosen per arm, so the bar is always the strongest available competitor on that arm's features",
+          "learned_baselines_scored": [
+            "mlp",
+            "mlp_180k",
+            "cont_mlp",
+            "transformer",
+            "lstm"
+          ],
+          "single_design_mean": 22.06422018348624,
+          "best_learned_mean": 20.440366972477065,
+          "MARGIN_all_corners": 1.6238532110091732,
+          "MARGIN_novel_all_corners": 1.6238532110091732,
+          "MARGIN_distinct_valid_all_corners": 1.6238532110091732,
+          "single_design_judge_accuracy": 0.40647298674821614,
+          "best_learned_judge_accuracy": 0.3804791029561671,
+          "controls_must_be_zero": {
+            "landscape_removed": 0.0,
+            "landscape_shuffled": 0.0,
+            "landscape_shuffled_across_wells": 0.0,
+            "random_atoms": 0.0
+          },
+          "MARGIN_row3_pair": 0.45000000000000107,
+          "MARGIN_row4_nway": 3.0612244897959187,
+          "paired_vs_best_learned": {
+            "metric": "distinct_valid_novel_tuples",
+            "arm": "cov_tensor",
+            "control": "mlp_180k",
+            "n_corners": 109,
+            "arm_mean": 22.06422018348624,
+            "control_mean": 20.440366972477065,
+            "mean_paired_delta": 1.6238532110091743,
+            "median_paired_delta": 1.0,
+            "bootstrap_ci95": [
+              0.6605504587155964,
+              2.6055045871559632
+            ],
+            "corners_arm_wins": 63,
+            "corners_tied": 9,
+            "corners_control_wins": 37,
+            "sign_test_p_two_sided": 0.012032975725363477,
+            "margin_declared_in_advance": 1.0,
+            "beats_beyond_margin": false,
+            "note": "the unit is the CORNER, paired; the verdict is this estimand and never a single cell (w3-hub-common section 3: the corner explains 90.9% of the paired variance)"
+          },
+          "per_baseline_margin": {
+            "mlp": 5.412844036697248,
+            "mlp_180k": 1.6238532110091732,
+            "cont_mlp": 12.36697247706422,
+            "transformer": 6.321100917431192,
+            "lstm": 5.394495412844037
+          },
+          "how_to_read": "wave 12 measured this NEGATIVE. The bar is whether it GROWS from `frozen` to an adapted arm. A margin that grows and stays negative is a real and reportable result."
+        },
+        "single_design_novel_per_corner": 22.06422018348624,
+        "controls": {
+          "landscape_removed": 0.0,
+          "landscape_shuffled": 0.0,
+          "landscape_shuffled_across_wells": 0.0,
+          "random_atoms": 0.0
+        },
+        "rank_over_width_max": 0.9844,
+        "ledger_four_part": {
+          "p1_atom_bytes": 516096,
+          "p2_covariance_plus_count_bytes": 560608,
+          "p2_covariance_bytes": 549120,
+          "p2_count_bytes": 11488,
+          "p3_address_book_bytes": 1077504,
+          "p4_coupling_hole_table_bytes": 6610,
+          "honest_total_bytes": 2160818,
+          "reference_pin_bytes": 524288,
+          "times_reference_pin": 4.1214,
+          "netted": false,
+          "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this wave -- the single design is 1x its own total"
+        }
+      },
+      "anchor": {
+        "arm.json": "ok",
+        "probe.json": "ok",
+        "rivals.json": "ok",
+        "score.json": "ok",
+        "compute": {
+          "gradient_steps": 400,
+          "images_seen": 25600,
+          "train_seconds": 2523.4327783584595,
+          "seconds_per_step": 6.308581945896148,
+          "n_params_optimised": 2075875,
+          "n_encoder_params_optimised": 428576,
+          "encoder_changed": true,
+          "base_encoder_changed": true,
+          "beta_swap": 0.003476167443275355,
+          "anchor_lambda": 2.0279483869671817,
+          "swap_identity_abs_delta": 0.0
+        },
+        "displacement": {
+          "feature_relative_l2_squared": 0.002146448940038681,
+          "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+          "weight_relative_l2_squared": 0.0003244956023991108
+        },
+        "adapter": null,
+        "probe_margin_over_random_init": {
+          "aggregate": -0.0015869140625,
+          "exact_match": -0.017822265625,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.0,
+            -0.038330078125,
+            0.0341796875,
+            -0.00537109375
+          ]
+        },
+        "probe_absolute_NOT_A_CLAIM": {
+          "arm": 0.971923828125,
+          "random_init_floor": 0.9735107421875,
+          "note": "an absolute probe number says how easy Shapes3D is under a linear readout; only the margin says anything about the arm"
+        },
+        "MARGIN": {
+          "metric": "distinct_valid_novel_tuples (PRIMARY), per corner, paired by corner",
+          "metric_key": "novel_per_corner_mean",
+          "primary_degenerate": false,
+          "primary_degenerate_note": "the primary metric separates the arms and is the one used",
+          "best_learned_baseline": "mlp_180k",
+          "best_chosen_by": "highest mean novel-per-corner among THIS ARM's own refit baselines -- chosen per arm, so the bar is always the strongest available competitor on that arm's features",
+          "learned_baselines_scored": [
+            "mlp",
+            "mlp_180k",
+            "cont_mlp",
+            "transformer",
+            "lstm"
+          ],
+          "single_design_mean": 25.568807339449542,
+          "best_learned_mean": 24.238532110091743,
+          "MARGIN_all_corners": 1.3302752293577988,
+          "MARGIN_novel_all_corners": 1.3302752293577988,
+          "MARGIN_distinct_valid_all_corners": 1.3302752293577988,
+          "single_design_judge_accuracy": 0.47782874617737,
+          "best_learned_judge_accuracy": 0.4517074413863405,
+          "controls_must_be_zero": {
+            "landscape_removed": 0.0,
+            "landscape_shuffled": 0.0,
+            "landscape_shuffled_across_wells": 0.0,
+            "random_atoms": 0.0
+          },
+          "MARGIN_row3_pair": 1.0,
+          "MARGIN_row4_nway": 1.7346938775510168,
+          "paired_vs_best_learned": {
+            "metric": "distinct_valid_novel_tuples",
+            "arm": "cov_tensor",
+            "control": "mlp_180k",
+            "n_corners": 109,
+            "arm_mean": 25.568807339449542,
+            "control_mean": 24.238532110091743,
+            "mean_paired_delta": 1.3302752293577982,
+            "median_paired_delta": 1.0,
+            "bootstrap_ci95": [
+              -0.009174311926605505,
+              2.7247706422018347
+            ],
+            "corners_arm_wins": 55,
+            "corners_tied": 13,
+            "corners_control_wins": 41,
+            "sign_test_p_two_sided": 0.18428587288036472,
+            "margin_declared_in_advance": 1.0,
+            "beats_beyond_margin": false,
+            "note": "the unit is the CORNER, paired; the verdict is this estimand and never a single cell (w3-hub-common section 3: the corner explains 90.9% of the paired variance)"
+          },
+          "per_baseline_margin": {
+            "mlp": 5.587155963302752,
+            "mlp_180k": 1.3302752293577988,
+            "cont_mlp": 13.201834862385322,
+            "transformer": 6.697247706422019,
+            "lstm": 3.7339449541284395
+          },
+          "how_to_read": "wave 12 measured this NEGATIVE. The bar is whether it GROWS from `frozen` to an adapted arm. A margin that grows and stays negative is a real and reportable result."
+        },
+        "single_design_novel_per_corner": 25.568807339449542,
+        "controls": {
+          "landscape_removed": 0.0,
+          "landscape_shuffled": 0.0,
+          "landscape_shuffled_across_wells": 0.0,
+          "random_atoms": 0.0
+        },
+        "rank_over_width_max": 0.9844,
+        "ledger_four_part": {
+          "p1_atom_bytes": 516096,
+          "p2_covariance_plus_count_bytes": 560608,
+          "p2_covariance_bytes": 549120,
+          "p2_count_bytes": 11488,
+          "p3_address_book_bytes": 1061904,
+          "p4_coupling_hole_table_bytes": 6610,
+          "honest_total_bytes": 2145218,
+          "reference_pin_bytes": 524288,
+          "times_reference_pin": 4.0917,
+          "netted": false,
+          "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this wave -- the single design is 1x its own total"
+        }
+      }
+    },
+    "1": {
+      "frozen": {
+        "arm.json": "ok",
+        "probe.json": "ok",
+        "rivals.json": "ok",
+        "score.json": "ok",
+        "compute": {
+          "gradient_steps": 400,
+          "images_seen": 25600,
+          "train_seconds": 2291.18585896492,
+          "seconds_per_step": 5.7279646474123,
+          "n_params_optimised": 1647299,
+          "n_encoder_params_optimised": 0,
+          "encoder_changed": false,
+          "base_encoder_changed": false,
+          "beta_swap": 0.003907650173339923,
+          "anchor_lambda": 0.0,
+          "swap_identity_abs_delta": 0.0
+        },
+        "displacement": {
+          "feature_relative_l2_squared": 0.0,
+          "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+          "weight_relative_l2_squared": 0.0
+        },
+        "adapter": null,
+        "probe_margin_over_random_init": {
+          "aggregate": -0.0159912109375,
+          "exact_match": -0.100341796875,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.000244140625,
+            -0.12646484375,
+            0.027099609375,
+            0.003173828125
+          ]
+        },
+        "probe_absolute_NOT_A_CLAIM": {
+          "arm": 0.9495442708333334,
+          "random_init_floor": 0.9655354817708334,
+          "note": "an absolute probe number says how easy Shapes3D is under a linear readout; only the margin says anything about the arm"
+        },
+        "MARGIN": {
+          "metric": "distinct_valid_novel_tuples (PRIMARY), per corner, paired by corner",
+          "metric_key": "novel_per_corner_mean",
+          "primary_degenerate": false,
+          "primary_degenerate_note": "the primary metric separates the arms and is the one used",
+          "best_learned_baseline": "mlp_180k",
+          "best_chosen_by": "highest mean novel-per-corner among THIS ARM's own refit baselines -- chosen per arm, so the bar is always the strongest available competitor on that arm's features",
+          "learned_baselines_scored": [
+            "mlp",
+            "mlp_180k",
+            "cont_mlp",
+            "transformer",
+            "lstm"
+          ],
+          "single_design_mean": 11.20183486238532,
+          "best_learned_mean": 11.229357798165138,
+          "MARGIN_all_corners": -0.02752293577981746,
+          "MARGIN_novel_all_corners": -0.02752293577981746,
+          "MARGIN_distinct_valid_all_corners": -0.02752293577981746,
+          "single_design_judge_accuracy": 0.21343017329255862,
+          "best_learned_judge_accuracy": 0.20948012232415902,
+          "controls_must_be_zero": {
+            "landscape_removed": 0.0,
+            "landscape_shuffled": 0.0,
+            "landscape_shuffled_across_wells": 0.0,
+            "random_atoms": 0.0
+          },
+          "MARGIN_row3_pair": 0.5666666666666664,
+          "MARGIN_row4_nway": -0.7551020408163254,
+          "paired_vs_best_learned": {
+            "metric": "distinct_valid_novel_tuples",
+            "arm": "cov_tensor",
+            "control": "mlp_180k",
+            "n_corners": 109,
+            "arm_mean": 11.20183486238532,
+            "control_mean": 11.229357798165138,
+            "mean_paired_delta": -0.027522935779816515,
+            "median_paired_delta": 0.0,
+            "bootstrap_ci95": [
+              -0.8073394495412844,
+              0.7522935779816514
+            ],
+            "corners_arm_wins": 45,
+            "corners_tied": 19,
+            "corners_control_wins": 45,
+            "sign_test_p_two_sided": 1.0,
+            "margin_declared_in_advance": 1.0,
+            "beats_beyond_margin": false,
+            "note": "the unit is the CORNER, paired; the verdict is this estimand and never a single cell (w3-hub-common section 3: the corner explains 90.9% of the paired variance)"
+          },
+          "per_baseline_margin": {
+            "mlp": 3.412844036697247,
+            "mlp_180k": -0.02752293577981746,
+            "cont_mlp": 6.9724770642201825,
+            "transformer": 2.3394495412844023,
+            "lstm": 1.4311926605504581
+          },
+          "how_to_read": "wave 12 measured this NEGATIVE. The bar is whether it GROWS from `frozen` to an adapted arm. A margin that grows and stays negative is a real and reportable result."
+        },
+        "single_design_novel_per_corner": 11.20183486238532,
+        "controls": {
+          "landscape_removed": 0.0,
+          "landscape_shuffled": 0.0,
+          "landscape_shuffled_across_wells": 0.0,
+          "random_atoms": 0.0
+        },
+        "rank_over_width_max": 0.9688,
+        "ledger_four_part": {
+          "p1_atom_bytes": 516096,
+          "p2_covariance_plus_count_bytes": 560608,
+          "p2_covariance_bytes": 549120,
+          "p2_count_bytes": 11488,
+          "p3_address_book_bytes": 1044224,
+          "p4_coupling_hole_table_bytes": 6610,
+          "honest_total_bytes": 2127538,
+          "reference_pin_bytes": 524288,
+          "times_reference_pin": 4.058,
+          "netted": false,
+          "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this wave -- the single design is 1x its own total"
+        }
+      },
+      "adapter": {
+        "arm.json": "ok",
+        "probe.json": "ok",
+        "rivals.json": "ok",
+        "score.json": "ok",
+        "compute": {
+          "gradient_steps": 400,
+          "images_seen": 25600,
+          "train_seconds": 2307.851689338684,
+          "seconds_per_step": 5.76962922334671,
+          "n_params_optimised": 1778371,
+          "n_encoder_params_optimised": 131072,
+          "encoder_changed": true,
+          "base_encoder_changed": false,
+          "beta_swap": 0.003907650173339923,
+          "anchor_lambda": 0.0,
+          "swap_identity_abs_delta": 0.0
+        },
+        "displacement": {
+          "feature_relative_l2_squared": 0.11149850487709045,
+          "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+          "weight_relative_l2_squared": 0.1048329621553421
+        },
+        "adapter": {
+          "D": 2048,
+          "bit_identical_to_frozen_at_step_0": true,
+          "bytes_float32": 524288,
+          "checked_on_images": 8,
+          "note": "2 * D * rank float32 = the programme's own 524,288 B reference pin, a PINNED size and not a tuned one",
+          "param_count": 131072,
+          "rank": 32,
+          "reference_pin_bytes": 524288,
+          "up_init": "zeros"
+        },
+        "probe_margin_over_random_init": {
+          "aggregate": -0.006388346354166741,
+          "exact_match": -0.044921875,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.000244140625,
+            -0.072998046875,
+            0.0224609375,
+            0.011962890625
+          ]
+        },
+        "probe_absolute_NOT_A_CLAIM": {
+          "arm": 0.9591471354166666,
+          "random_init_floor": 0.9655354817708334,
+          "note": "an absolute probe number says how easy Shapes3D is under a linear readout; only the margin says anything about the arm"
+        },
+        "MARGIN": {
+          "metric": "distinct_valid_novel_tuples (PRIMARY), per corner, paired by corner",
+          "metric_key": "novel_per_corner_mean",
+          "primary_degenerate": false,
+          "primary_degenerate_note": "the primary metric separates the arms and is the one used",
+          "best_learned_baseline": "mlp_180k",
+          "best_chosen_by": "highest mean novel-per-corner among THIS ARM's own refit baselines -- chosen per arm, so the bar is always the strongest available competitor on that arm's features",
+          "learned_baselines_scored": [
+            "mlp",
+            "mlp_180k",
+            "cont_mlp",
+            "transformer",
+            "lstm"
+          ],
+          "single_design_mean": 13.34862385321101,
+          "best_learned_mean": 12.98165137614679,
+          "MARGIN_all_corners": 0.36697247706421976,
+          "MARGIN_novel_all_corners": 0.36697247706421976,
+          "MARGIN_distinct_valid_all_corners": 0.36697247706421976,
+          "single_design_judge_accuracy": 0.24617737003058107,
+          "best_learned_judge_accuracy": 0.25063710499490316,
+          "controls_must_be_zero": {
+            "landscape_removed": 0.0,
+            "landscape_shuffled": 0.0,
+            "landscape_shuffled_across_wells": 0.0,
+            "random_atoms": 0.0
+          },
+          "MARGIN_row3_pair": -1.2499999999999991,
+          "MARGIN_row4_nway": 2.3469387755102034,
+          "paired_vs_best_learned": {
+            "metric": "distinct_valid_novel_tuples",
+            "arm": "cov_tensor",
+            "control": "mlp_180k",
+            "n_corners": 109,
+            "arm_mean": 13.34862385321101,
+            "control_mean": 12.98165137614679,
+            "mean_paired_delta": 0.3669724770642202,
+            "median_paired_delta": 0.0,
+            "bootstrap_ci95": [
+              -0.5873853211009172,
+              1.3944954128440368
+            ],
+            "corners_arm_wins": 47,
+            "corners_tied": 15,
+            "corners_control_wins": 47,
+            "sign_test_p_two_sided": 1.0,
+            "margin_declared_in_advance": 1.0,
+            "beats_beyond_margin": false,
+            "note": "the unit is the CORNER, paired; the verdict is this estimand and never a single cell (w3-hub-common section 3: the corner explains 90.9% of the paired variance)"
+          },
+          "per_baseline_margin": {
+            "mlp": 3.0366972477064227,
+            "mlp_180k": 0.36697247706421976,
+            "cont_mlp": 9.568807339449542,
+            "transformer": 3.6513761467889907,
+            "lstm": 2.4495412844036704
+          },
+          "how_to_read": "wave 12 measured this NEGATIVE. The bar is whether it GROWS from `frozen` to an adapted arm. A margin that grows and stays negative is a real and reportable result."
+        },
+        "single_design_novel_per_corner": 13.34862385321101,
+        "controls": {
+          "landscape_removed": 0.0,
+          "landscape_shuffled": 0.0,
+          "landscape_shuffled_across_wells": 0.0,
+          "random_atoms": 0.0
+        },
+        "rank_over_width_max": 0.9844,
+        "ledger_four_part": {
+          "p1_atom_bytes": 516096,
+          "p2_covariance_plus_count_bytes": 560608,
+          "p2_covariance_bytes": 549120,
+          "p2_count_bytes": 11488,
+          "p3_address_book_bytes": 1077504,
+          "p4_coupling_hole_table_bytes": 6610,
+          "honest_total_bytes": 2160818,
+          "reference_pin_bytes": 524288,
+          "times_reference_pin": 4.1214,
+          "netted": false,
+          "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this wave -- the single design is 1x its own total"
+        }
+      },
+      "anchor": {
+        "arm.json": "ok",
+        "probe.json": "ok",
+        "rivals.json": "ok",
+        "score.json": "ok",
+        "compute": {
+          "gradient_steps": 400,
+          "images_seen": 25600,
+          "train_seconds": 2308.9585127830505,
+          "seconds_per_step": 5.772396281957627,
+          "n_params_optimised": 2075875,
+          "n_encoder_params_optimised": 428576,
+          "encoder_changed": true,
+          "base_encoder_changed": true,
+          "beta_swap": 0.003907650173339923,
+          "anchor_lambda": 1.8942721188068385,
+          "swap_identity_abs_delta": 0.0
+        },
+        "displacement": {
+          "feature_relative_l2_squared": 0.002392713911831379,
+          "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+          "weight_relative_l2_squared": 0.00024709958233870566
+        },
+        "adapter": null,
+        "probe_margin_over_random_init": {
+          "aggregate": -0.00590006510416663,
+          "exact_match": -0.037109375,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.0,
+            -0.052490234375,
+            0.0244140625,
+            -0.00732421875
+          ]
+        },
+        "probe_absolute_NOT_A_CLAIM": {
+          "arm": 0.9601643880208334,
+          "random_init_floor": 0.966064453125,
+          "note": "an absolute probe number says how easy Shapes3D is under a linear readout; only the margin says anything about the arm"
+        },
+        "MARGIN": {
+          "metric": "distinct_valid_novel_tuples (PRIMARY), per corner, paired by corner",
+          "metric_key": "novel_per_corner_mean",
+          "primary_degenerate": false,
+          "primary_degenerate_note": "the primary metric separates the arms and is the one used",
+          "best_learned_baseline": "mlp_180k",
+          "best_chosen_by": "highest mean novel-per-corner among THIS ARM's own refit baselines -- chosen per arm, so the bar is always the strongest available competitor on that arm's features",
+          "learned_baselines_scored": [
+            "mlp",
+            "mlp_180k",
+            "cont_mlp",
+            "transformer",
+            "lstm"
+          ],
+          "single_design_mean": 11.155963302752294,
+          "best_learned_mean": 11.1651376146789,
+          "MARGIN_all_corners": -0.009174311926605228,
+          "MARGIN_novel_all_corners": -0.009174311926605228,
+          "MARGIN_distinct_valid_all_corners": -0.009174311926605228,
+          "single_design_judge_accuracy": 0.2130479102956167,
+          "best_learned_judge_accuracy": 0.21202854230377166,
+          "controls_must_be_zero": {
+            "landscape_removed": 0.0,
+            "landscape_shuffled": 0.0,
+            "landscape_shuffled_across_wells": 0.0,
+            "random_atoms": 0.0
+          },
+          "MARGIN_row3_pair": 0.14999999999999947,
+          "MARGIN_row4_nway": -0.204081632653061,
+          "paired_vs_best_learned": {
+            "metric": "distinct_valid_novel_tuples",
+            "arm": "cov_tensor",
+            "control": "mlp_180k",
+            "n_corners": 109,
+            "arm_mean": 11.155963302752294,
+            "control_mean": 11.1651376146789,
+            "mean_paired_delta": -0.009174311926605505,
+            "median_paired_delta": 0.0,
+            "bootstrap_ci95": [
+              -0.7522935779816514,
+              0.7798165137614679
+            ],
+            "corners_arm_wins": 41,
+            "corners_tied": 30,
+            "corners_control_wins": 38,
+            "sign_test_p_two_sided": 0.8221442424521855,
+            "margin_declared_in_advance": 1.0,
+            "beats_beyond_margin": false,
+            "note": "the unit is the CORNER, paired; the verdict is this estimand and never a single cell (w3-hub-common section 3: the corner explains 90.9% of the paired variance)"
+          },
+          "per_baseline_margin": {
+            "mlp": 3.238532110091744,
+            "mlp_180k": -0.009174311926605228,
+            "cont_mlp": 7.330275229357799,
+            "transformer": 3.3577981651376154,
+            "lstm": 2.954128440366974
+          },
+          "how_to_read": "wave 12 measured this NEGATIVE. The bar is whether it GROWS from `frozen` to an adapted arm. A margin that grows and stays negative is a real and reportable result."
+        },
+        "single_design_novel_per_corner": 11.155963302752294,
+        "controls": {
+          "landscape_removed": 0.0,
+          "landscape_shuffled": 0.0,
+          "landscape_shuffled_across_wells": 0.0,
+          "random_atoms": 0.0
+        },
+        "rank_over_width_max": 0.9844,
+        "ledger_four_part": {
+          "p1_atom_bytes": 516096,
+          "p2_covariance_plus_count_bytes": 560608,
+          "p2_covariance_bytes": 549120,
+          "p2_count_bytes": 11488,
+          "p3_address_book_bytes": 1040584,
+          "p4_coupling_hole_table_bytes": 6610,
+          "honest_total_bytes": 2123898,
+          "reference_pin_bytes": 524288,
+          "times_reference_pin": 4.051,
+          "netted": false,
+          "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this wave -- the single design is 1x its own total"
+        }
+      }
+    },
+    "2": {
+      "frozen": {
+        "arm.json": "ok",
+        "probe.json": "ok",
+        "rivals.json": "ok",
+        "score.json": "ok",
+        "compute": {
+          "gradient_steps": 400,
+          "images_seen": 25600,
+          "train_seconds": 2211.033937215805,
+          "seconds_per_step": 5.527584843039513,
+          "n_params_optimised": 1647299,
+          "n_encoder_params_optimised": 0,
+          "encoder_changed": false,
+          "base_encoder_changed": false,
+          "beta_swap": 0.0031143433732039295,
+          "anchor_lambda": 0.0,
+          "swap_identity_abs_delta": 0.0
+        },
+        "displacement": {
+          "feature_relative_l2_squared": 0.0,
+          "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+          "weight_relative_l2_squared": 0.0
+        },
+        "adapter": null,
+        "probe_margin_over_random_init": {
+          "aggregate": 0.009521484375,
+          "exact_match": 0.043212890625,
+          "per_factor": [
+            0.000244140625,
+            0.0,
+            0.0,
+            0.005615234375,
+            0.03369140625,
+            0.017578125
+          ]
+        },
+        "probe_absolute_NOT_A_CLAIM": {
+          "arm": 0.970458984375,
+          "random_init_floor": 0.9609375,
+          "note": "an absolute probe number says how easy Shapes3D is under a linear readout; only the margin says anything about the arm"
+        },
+        "MARGIN": {
+          "metric": "distinct_valid_novel_tuples (PRIMARY), per corner, paired by corner",
+          "metric_key": "novel_per_corner_mean",
+          "primary_degenerate": false,
+          "primary_degenerate_note": "the primary metric separates the arms and is the one used",
+          "best_learned_baseline": "mlp_180k",
+          "best_chosen_by": "highest mean novel-per-corner among THIS ARM's own refit baselines -- chosen per arm, so the bar is always the strongest available competitor on that arm's features",
+          "learned_baselines_scored": [
+            "mlp",
+            "mlp_180k",
+            "cont_mlp",
+            "transformer",
+            "lstm"
+          ],
+          "single_design_mean": 20.293577981651374,
+          "best_learned_mean": 19.192660550458715,
+          "MARGIN_all_corners": 1.1009174311926593,
+          "MARGIN_novel_all_corners": 1.1009174311926593,
+          "MARGIN_distinct_valid_all_corners": 1.1009174311926593,
+          "single_design_judge_accuracy": 0.3888888888888888,
+          "best_learned_judge_accuracy": 0.3646788990825688,
+          "controls_must_be_zero": {
+            "landscape_removed": 0.0,
+            "landscape_shuffled": 0.0,
+            "landscape_shuffled_across_wells": 0.0,
+            "random_atoms": 0.0
+          },
+          "MARGIN_row3_pair": 1.166666666666666,
+          "MARGIN_row4_nway": 1.020408163265305,
+          "paired_vs_best_learned": {
+            "metric": "distinct_valid_novel_tuples",
+            "arm": "cov_tensor",
+            "control": "mlp_180k",
+            "n_corners": 109,
+            "arm_mean": 20.293577981651374,
+            "control_mean": 19.192660550458715,
+            "mean_paired_delta": 1.1009174311926606,
+            "median_paired_delta": 1.0,
+            "bootstrap_ci95": [
+              -0.1559633027522936,
+              2.302752293577982
+            ],
+            "corners_arm_wins": 68,
+            "corners_tied": 5,
+            "corners_control_wins": 36,
+            "sign_test_p_two_sided": 0.0022094328919877613,
+            "margin_declared_in_advance": 1.0,
+            "beats_beyond_margin": false,
+            "note": "the unit is the CORNER, paired; the verdict is this estimand and never a single cell (w3-hub-common section 3: the corner explains 90.9% of the paired variance)"
+          },
+          "per_baseline_margin": {
+            "mlp": 3.660550458715594,
+            "mlp_180k": 1.1009174311926593,
+            "cont_mlp": 12.899082568807337,
+            "transformer": 4.999999999999998,
+            "lstm": 3.6513761467889907
+          },
+          "how_to_read": "wave 12 measured this NEGATIVE. The bar is whether it GROWS from `frozen` to an adapted arm. A margin that grows and stays negative is a real and reportable result."
+        },
+        "single_design_novel_per_corner": 20.293577981651374,
+        "controls": {
+          "landscape_removed": 0.0,
+          "landscape_shuffled": 0.0,
+          "landscape_shuffled_across_wells": 0.0,
+          "random_atoms": 0.0
+        },
+        "rank_over_width_max": 0.9844,
+        "ledger_four_part": {
+          "p1_atom_bytes": 516096,
+          "p2_covariance_plus_count_bytes": 560608,
+          "p2_covariance_bytes": 549120,
+          "p2_count_bytes": 11488,
+          "p3_address_book_bytes": 1054104,
+          "p4_coupling_hole_table_bytes": 6610,
+          "honest_total_bytes": 2137418,
+          "reference_pin_bytes": 524288,
+          "times_reference_pin": 4.0768,
+          "netted": false,
+          "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this wave -- the single design is 1x its own total"
+        }
+      },
+      "adapter": {
+        "arm.json": "ok",
+        "probe.json": "ok",
+        "rivals.json": "ok",
+        "score.json": "ok",
+        "compute": {
+          "gradient_steps": 400,
+          "images_seen": 25600,
+          "train_seconds": 2046.9983267784119,
+          "seconds_per_step": 5.11749581694603,
+          "n_params_optimised": 1778371,
+          "n_encoder_params_optimised": 131072,
+          "encoder_changed": true,
+          "base_encoder_changed": false,
+          "beta_swap": 0.0031143433732039295,
+          "anchor_lambda": 0.0,
+          "swap_identity_abs_delta": 0.0
+        },
+        "displacement": {
+          "feature_relative_l2_squared": 0.13701418042182922,
+          "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+          "weight_relative_l2_squared": 0.11553430557250977
+        },
+        "adapter": {
+          "D": 2048,
+          "bit_identical_to_frozen_at_step_0": true,
+          "bytes_float32": 524288,
+          "checked_on_images": 8,
+          "note": "2 * D * rank float32 = the programme's own 524,288 B reference pin, a PINNED size and not a tuned one",
+          "param_count": 131072,
+          "rank": 32,
+          "reference_pin_bytes": 524288,
+          "up_init": "zeros"
+        },
+        "probe_margin_over_random_init": {
+          "aggregate": 0.0076904296875,
+          "exact_match": 0.03076171875,
+          "per_factor": [
+            0.000244140625,
+            0.0,
+            -0.000244140625,
+            -0.02197265625,
+            0.033935546875,
+            0.0341796875
+          ]
+        },
+        "probe_absolute_NOT_A_CLAIM": {
+          "arm": 0.9686279296875,
+          "random_init_floor": 0.9609375,
+          "note": "an absolute probe number says how easy Shapes3D is under a linear readout; only the margin says anything about the arm"
+        },
+        "MARGIN": {
+          "metric": "distinct_valid_novel_tuples (PRIMARY), per corner, paired by corner",
+          "metric_key": "novel_per_corner_mean",
+          "primary_degenerate": false,
+          "primary_degenerate_note": "the primary metric separates the arms and is the one used",
+          "best_learned_baseline": "mlp_180k",
+          "best_chosen_by": "highest mean novel-per-corner among THIS ARM's own refit baselines -- chosen per arm, so the bar is always the strongest available competitor on that arm's features",
+          "learned_baselines_scored": [
+            "mlp",
+            "mlp_180k",
+            "cont_mlp",
+            "transformer",
+            "lstm"
+          ],
+          "single_design_mean": 18.28440366972477,
+          "best_learned_mean": 17.98165137614679,
+          "MARGIN_all_corners": 0.3027522935779814,
+          "MARGIN_novel_all_corners": 0.3027522935779814,
+          "MARGIN_distinct_valid_all_corners": 0.3027522935779814,
+          "single_design_judge_accuracy": 0.343144750254842,
+          "best_learned_judge_accuracy": 0.3361365953109072,
+          "controls_must_be_zero": {
+            "landscape_removed": 0.0,
+            "landscape_shuffled": 0.0,
+            "landscape_shuffled_across_wells": 0.0,
+            "random_atoms": 0.0
+          },
+          "MARGIN_row3_pair": 0.36666666666666536,
+          "MARGIN_row4_nway": 0.2244897959183696,
+          "paired_vs_best_learned": {
+            "metric": "distinct_valid_novel_tuples",
+            "arm": "cov_tensor",
+            "control": "mlp_180k",
+            "n_corners": 109,
+            "arm_mean": 18.28440366972477,
+            "control_mean": 17.98165137614679,
+            "mean_paired_delta": 0.30275229357798167,
+            "median_paired_delta": 1.0,
+            "bootstrap_ci95": [
+              -0.8532110091743119,
+              1.3947247706421986
+            ],
+            "corners_arm_wins": 55,
+            "corners_tied": 12,
+            "corners_control_wins": 42,
+            "sign_test_p_two_sided": 0.22287765458337627,
+            "margin_declared_in_advance": 1.0,
+            "beats_beyond_margin": false,
+            "note": "the unit is the CORNER, paired; the verdict is this estimand and never a single cell (w3-hub-common section 3: the corner explains 90.9% of the paired variance)"
+          },
+          "per_baseline_margin": {
+            "mlp": 5.155963302752294,
+            "mlp_180k": 0.3027522935779814,
+            "cont_mlp": 11.403669724770642,
+            "transformer": 6.229357798165138,
+            "lstm": 3.1651376146788994
+          },
+          "how_to_read": "wave 12 measured this NEGATIVE. The bar is whether it GROWS from `frozen` to an adapted arm. A margin that grows and stays negative is a real and reportable result."
+        },
+        "single_design_novel_per_corner": 18.28440366972477,
+        "controls": {
+          "landscape_removed": 0.0,
+          "landscape_shuffled": 0.0,
+          "landscape_shuffled_across_wells": 0.0,
+          "random_atoms": 0.0
+        },
+        "rank_over_width_max": 0.9844,
+        "ledger_four_part": {
+          "p1_atom_bytes": 516096,
+          "p2_covariance_plus_count_bytes": 560608,
+          "p2_covariance_bytes": 549120,
+          "p2_count_bytes": 11488,
+          "p3_address_book_bytes": 1077504,
+          "p4_coupling_hole_table_bytes": 6610,
+          "honest_total_bytes": 2160818,
+          "reference_pin_bytes": 524288,
+          "times_reference_pin": 4.1214,
+          "netted": false,
+          "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this wave -- the single design is 1x its own total"
+        }
+      },
+      "anchor": {
+        "arm.json": "ok",
+        "probe.json": "ok",
+        "rivals.json": "ok",
+        "score.json": "ok",
+        "compute": {
+          "gradient_steps": 400,
+          "images_seen": 25600,
+          "train_seconds": 1639.98521566391,
+          "seconds_per_step": 4.099963039159775,
+          "n_params_optimised": 2075875,
+          "n_encoder_params_optimised": 428576,
+          "encoder_changed": true,
+          "base_encoder_changed": true,
+          "beta_swap": 0.0031143433732039295,
+          "anchor_lambda": 1.8860688433051105,
+          "swap_identity_abs_delta": 0.0
+        },
+        "displacement": {
+          "feature_relative_l2_squared": 0.0017106134910136461,
+          "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+          "weight_relative_l2_squared": 0.0003236146876588464
+        },
+        "adapter": null,
+        "probe_margin_over_random_init": {
+          "aggregate": 0.00882975260416663,
+          "exact_match": 0.0380859375,
+          "per_factor": [
+            0.000244140625,
+            0.0,
+            0.0,
+            -0.003662109375,
+            0.034912109375,
+            0.021484375
+          ]
+        },
+        "probe_absolute_NOT_A_CLAIM": {
+          "arm": 0.9697672526041666,
+          "random_init_floor": 0.9609375,
+          "note": "an absolute probe number says how easy Shapes3D is under a linear readout; only the margin says anything about the arm"
+        },
+        "MARGIN": {
+          "metric": "distinct_valid_novel_tuples (PRIMARY), per corner, paired by corner",
+          "metric_key": "novel_per_corner_mean",
+          "primary_degenerate": false,
+          "primary_degenerate_note": "the primary metric separates the arms and is the one used",
+          "best_learned_baseline": "mlp_180k",
+          "best_chosen_by": "highest mean novel-per-corner among THIS ARM's own refit baselines -- chosen per arm, so the bar is always the strongest available competitor on that arm's features",
+          "learned_baselines_scored": [
+            "mlp",
+            "mlp_180k",
+            "cont_mlp",
+            "transformer",
+            "lstm"
+          ],
+          "single_design_mean": 20.81651376146789,
+          "best_learned_mean": 19.513761467889907,
+          "MARGIN_all_corners": 1.3027522935779814,
+          "MARGIN_novel_all_corners": 1.3027522935779814,
+          "MARGIN_distinct_valid_all_corners": 1.3027522935779814,
+          "single_design_judge_accuracy": 0.39806320081549446,
+          "best_learned_judge_accuracy": 0.3707951070336391,
+          "controls_must_be_zero": {
+            "landscape_removed": 0.0,
+            "landscape_shuffled": 0.0,
+            "landscape_shuffled_across_wells": 0.0,
+            "random_atoms": 0.0
+          },
+          "MARGIN_row3_pair": 1.1999999999999993,
+          "MARGIN_row4_nway": 1.4285714285714306,
+          "paired_vs_best_learned": {
+            "metric": "distinct_valid_novel_tuples",
+            "arm": "cov_tensor",
+            "control": "mlp_180k",
+            "n_corners": 109,
+            "arm_mean": 20.81651376146789,
+            "control_mean": 19.513761467889907,
+            "mean_paired_delta": 1.3027522935779816,
+            "median_paired_delta": 1.0,
+            "bootstrap_ci95": [
+              0.1651376146788991,
+              2.4220183486238533
+            ],
+            "corners_arm_wins": 56,
+            "corners_tied": 10,
+            "corners_control_wins": 43,
+            "sign_test_p_two_sided": 0.22762615711004705,
+            "margin_declared_in_advance": 1.0,
+            "beats_beyond_margin": false,
+            "note": "the unit is the CORNER, paired; the verdict is this estimand and never a single cell (w3-hub-common section 3: the corner explains 90.9% of the paired variance)"
+          },
+          "per_baseline_margin": {
+            "mlp": 3.899082568807337,
+            "mlp_180k": 1.3027522935779814,
+            "cont_mlp": 14.944954128440365,
+            "transformer": 5.7339449541284395,
+            "lstm": 2.8715596330275197
+          },
+          "how_to_read": "wave 12 measured this NEGATIVE. The bar is whether it GROWS from `frozen` to an adapted arm. A margin that grows and stays negative is a real and reportable result."
+        },
+        "single_design_novel_per_corner": 20.81651376146789,
+        "controls": {
+          "landscape_removed": 0.0,
+          "landscape_shuffled": 0.0,
+          "landscape_shuffled_across_wells": 0.0,
+          "random_atoms": 0.0
+        },
+        "rank_over_width_max": 0.9844,
+        "ledger_four_part": {
+          "p1_atom_bytes": 516096,
+          "p2_covariance_plus_count_bytes": 560608,
+          "p2_covariance_bytes": 549120,
+          "p2_count_bytes": 11488,
+          "p3_address_book_bytes": 1051504,
+          "p4_coupling_hole_table_bytes": 6610,
+          "honest_total_bytes": 2134818,
+          "reference_pin_bytes": 524288,
+          "times_reference_pin": 4.0718,
+          "netted": false,
+          "note": "four parts summed, never netted; the 524,288 B column is a REFERENCE only this wave -- the single design is 1x its own total"
+        }
+      }
+    }
+  },
+  "compute_match": {
+    "0": {
+      "frozen": {
+        "gradient_steps": 400,
+        "images_seen": 25600,
+        "train_seconds": 2297.3014109134674,
+        "seconds_per_step": 5.7432535272836684,
+        "n_params_optimised": 1647299,
+        "n_encoder_params_optimised": 0,
+        "encoder_changed": false,
+        "base_encoder_changed": false,
+        "beta_swap": 0.003476167443275355,
+        "anchor_lambda": 0.0,
+        "swap_identity_abs_delta": 0.0
+      },
+      "adapter": {
+        "gradient_steps": 400,
+        "images_seen": 25600,
+        "train_seconds": 2368.3490374088287,
+        "seconds_per_step": 5.920872593522072,
+        "n_params_optimised": 1778371,
+        "n_encoder_params_optimised": 131072,
+        "encoder_changed": true,
+        "base_encoder_changed": false,
+        "beta_swap": 0.003476167443275355,
+        "anchor_lambda": 0.0,
+        "swap_identity_abs_delta": 0.0
+      },
+      "anchor": {
+        "gradient_steps": 400,
+        "images_seen": 25600,
+        "train_seconds": 2523.4327783584595,
+        "seconds_per_step": 6.308581945896148,
+        "n_params_optimised": 2075875,
+        "n_encoder_params_optimised": 428576,
+        "encoder_changed": true,
+        "base_encoder_changed": true,
+        "beta_swap": 0.003476167443275355,
+        "anchor_lambda": 2.0279483869671817,
+        "swap_identity_abs_delta": 0.0
+      }
+    },
+    "1": {
+      "frozen": {
+        "gradient_steps": 400,
+        "images_seen": 25600,
+        "train_seconds": 2291.18585896492,
+        "seconds_per_step": 5.7279646474123,
+        "n_params_optimised": 1647299,
+        "n_encoder_params_optimised": 0,
+        "encoder_changed": false,
+        "base_encoder_changed": false,
+        "beta_swap": 0.003907650173339923,
+        "anchor_lambda": 0.0,
+        "swap_identity_abs_delta": 0.0
+      },
+      "adapter": {
+        "gradient_steps": 400,
+        "images_seen": 25600,
+        "train_seconds": 2307.851689338684,
+        "seconds_per_step": 5.76962922334671,
+        "n_params_optimised": 1778371,
+        "n_encoder_params_optimised": 131072,
+        "encoder_changed": true,
+        "base_encoder_changed": false,
+        "beta_swap": 0.003907650173339923,
+        "anchor_lambda": 0.0,
+        "swap_identity_abs_delta": 0.0
+      },
+      "anchor": {
+        "gradient_steps": 400,
+        "images_seen": 25600,
+        "train_seconds": 2308.9585127830505,
+        "seconds_per_step": 5.772396281957627,
+        "n_params_optimised": 2075875,
+        "n_encoder_params_optimised": 428576,
+        "encoder_changed": true,
+        "base_encoder_changed": true,
+        "beta_swap": 0.003907650173339923,
+        "anchor_lambda": 1.8942721188068385,
+        "swap_identity_abs_delta": 0.0
+      }
+    },
+    "2": {
+      "frozen": {
+        "gradient_steps": 400,
+        "images_seen": 25600,
+        "train_seconds": 2211.033937215805,
+        "seconds_per_step": 5.527584843039513,
+        "n_params_optimised": 1647299,
+        "n_encoder_params_optimised": 0,
+        "encoder_changed": false,
+        "base_encoder_changed": false,
+        "beta_swap": 0.0031143433732039295,
+        "anchor_lambda": 0.0,
+        "swap_identity_abs_delta": 0.0
+      },
+      "adapter": {
+        "gradient_steps": 400,
+        "images_seen": 25600,
+        "train_seconds": 2046.9983267784119,
+        "seconds_per_step": 5.11749581694603,
+        "n_params_optimised": 1778371,
+        "n_encoder_params_optimised": 131072,
+        "encoder_changed": true,
+        "base_encoder_changed": false,
+        "beta_swap": 0.0031143433732039295,
+        "anchor_lambda": 0.0,
+        "swap_identity_abs_delta": 0.0
+      },
+      "anchor": {
+        "gradient_steps": 400,
+        "images_seen": 25600,
+        "train_seconds": 1639.98521566391,
+        "seconds_per_step": 4.099963039159775,
+        "n_params_optimised": 2075875,
+        "n_encoder_params_optimised": 428576,
+        "encoder_changed": true,
+        "base_encoder_changed": true,
+        "beta_swap": 0.0031143433732039295,
+        "anchor_lambda": 1.8860688433051105,
+        "swap_identity_abs_delta": 0.0
+      }
+    }
+  },
+  "displacement": {},
+  "probe_margin": {},
+  "MARGIN": {
+    "adapter": {
+      "per_seed": {
+        "0": {
+          "margin_frozen": 0.5688073394495419,
+          "margin_adapter": 1.6238532110091732,
+          "delta": 1.0550458715596314,
+          "grew": true,
+          "both_still_negative": false
+        },
+        "1": {
+          "margin_frozen": -0.02752293577981746,
+          "margin_adapter": 0.36697247706421976,
+          "delta": 0.3944954128440372,
+          "grew": true,
+          "both_still_negative": false
+        },
+        "2": {
+          "margin_frozen": 1.1009174311926593,
+          "margin_adapter": 0.3027522935779814,
+          "delta": -0.7981651376146779,
+          "grew": false,
+          "both_still_negative": false
+        }
+      },
+      "n_seeds_with_both_margins": 3,
+      "n_seeds_margin_grew": 2,
+      "BAR_margin_grows_on_at_least_2_of_3": true
+    },
+    "anchor": {
+      "per_seed": {
+        "0": {
+          "margin_frozen": 0.5688073394495419,
+          "margin_anchor": 1.3302752293577988,
+          "delta": 0.761467889908257,
+          "grew": true,
+          "both_still_negative": false
+        },
+        "1": {
+          "margin_frozen": -0.02752293577981746,
+          "margin_anchor": -0.009174311926605228,
+          "delta": 0.01834862385321223,
+          "grew": true,
+          "both_still_negative": true
+        },
+        "2": {
+          "margin_frozen": 1.1009174311926593,
+          "margin_anchor": 1.3027522935779814,
+          "delta": 0.2018348623853221,
+          "grew": true,
+          "both_still_negative": false
+        }
+      },
+      "n_seeds_with_both_margins": 3,
+      "n_seeds_margin_grew": 3,
+      "BAR_margin_grows_on_at_least_2_of_3": true
+    }
+  },
+  "VERDICT": {
+    "arm_level_composition": {
+      "single_design_novel_per_corner_per_seed": {
+        "frozen": [
+          23.31192660550459,
+          11.20183486238532,
+          20.293577981651374
+        ],
+        "adapter": [
+          22.06422018348624,
+          13.34862385321101,
+          18.28440366972477
+        ],
+        "anchor": [
+          25.568807339449542,
+          11.155963302752294,
+          20.81651376146789
+        ]
+      },
+      "how_to_read": "if EVERY arm's level moves together while the MARGIN does not, the gain is in the ENCODER's features, which every baseline also gets -- it is NOT a store result and is reported as such"
+    },
+    "displacement_anchor": {
+      "0": {
+        "feature_relative_l2_squared": 0.002146448940038681,
+        "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+        "weight_relative_l2_squared": 0.0003244956023991108
+      },
+      "1": {
+        "feature_relative_l2_squared": 0.002392713911831379,
+        "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+        "weight_relative_l2_squared": 0.00024709958233870566
+      },
+      "2": {
+        "feature_relative_l2_squared": 0.0017106134910136461,
+        "how_to_read": "these are ||.||^2 RELATIVE, so the reference displacement rho = 0.10 corresponds to 0.01 here. REPORTED, never tuned against.",
+        "weight_relative_l2_squared": 0.0003236146876588464
+      }
+    },
+    "probe_is_per_seed_never_pooled": {
+      "frozen": {
+        "0": {
+          "aggregate": 8.138020833337034e-05,
+          "exact_match": -0.00341796875,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.0,
+            -0.027099609375,
+            0.027099609375,
+            0.00048828125
+          ]
+        },
+        "1": {
+          "aggregate": -0.0159912109375,
+          "exact_match": -0.100341796875,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.000244140625,
+            -0.12646484375,
+            0.027099609375,
+            0.003173828125
+          ]
+        },
+        "2": {
+          "aggregate": 0.009521484375,
+          "exact_match": 0.043212890625,
+          "per_factor": [
+            0.000244140625,
+            0.0,
+            0.0,
+            0.005615234375,
+            0.03369140625,
+            0.017578125
+          ]
+        }
+      },
+      "adapter": {
+        "0": {
+          "aggregate": 0.000732421875,
+          "exact_match": -0.00244140625,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.0,
+            -0.023193359375,
+            0.0283203125,
+            -0.000732421875
+          ]
+        },
+        "1": {
+          "aggregate": -0.006388346354166741,
+          "exact_match": -0.044921875,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.000244140625,
+            -0.072998046875,
+            0.0224609375,
+            0.011962890625
+          ]
+        },
+        "2": {
+          "aggregate": 0.0076904296875,
+          "exact_match": 0.03076171875,
+          "per_factor": [
+            0.000244140625,
+            0.0,
+            -0.000244140625,
+            -0.02197265625,
+            0.033935546875,
+            0.0341796875
+          ]
+        }
+      },
+      "anchor": {
+        "0": {
+          "aggregate": -0.0015869140625,
+          "exact_match": -0.017822265625,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.0,
+            -0.038330078125,
+            0.0341796875,
+            -0.00537109375
+          ]
+        },
+        "1": {
+          "aggregate": -0.00590006510416663,
+          "exact_match": -0.037109375,
+          "per_factor": [
+            0.0,
+            0.0,
+            0.0,
+            -0.052490234375,
+            0.0244140625,
+            -0.00732421875
+          ]
+        },
+        "2": {
+          "aggregate": 0.00882975260416663,
+          "exact_match": 0.0380859375,
+          "per_factor": [
+            0.000244140625,
+            0.0,
+            0.0,
+            -0.003662109375,
+            0.034912109375,
+            0.021484375
+          ]
+        }
+      }
+    }
+  }
+}

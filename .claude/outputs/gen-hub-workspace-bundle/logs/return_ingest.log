@@ -1,0 +1,27 @@
+=== INGEST #1 (clean landing) ===
+[ingest] audit ok: 4 file(s), 272 bytes, hub=hub-smoke-bundle
+[bundle] ingested -> /Users/user/Desktop/CHLU/.claude/outputs/gen-hub-workspace-bundle/return-demo/hub-smoke-bundle
+
+--- landed ---
+<dest>/hub-smoke-bundle.md
+<dest>/hub-smoke-bundle/RETURN_MANIFEST.json
+<dest>/hub-smoke-bundle/LOG.md
+<dest>/hub-smoke-bundle/PREREG-hub-smoke-bundle-1.md
+<dest>/hub-smoke-bundle/runs/results.csv
+
+=== INGEST #2 (the SAME tar again — the overwrite hazard) ===
+[ingest] audit ok: 4 file(s), 272 bytes, hub=hub-smoke-bundle
+[bundle] ⚠ /Users/user/Desktop/CHLU/.claude/outputs/gen-hub-workspace-bundle/return-demo/hub-smoke-bundle already exists — ⛔ NOT overwriting.
+[bundle]    diverting the whole return to /Users/user/Desktop/CHLU/.claude/outputs/gen-hub-workspace-bundle/return-demo/hub-smoke-bundle.returned-20260916T111753Z (and hub-smoke-bundle.returned-20260916T111753Z.md)
+[bundle] ingested -> /Users/user/Desktop/CHLU/.claude/outputs/gen-hub-workspace-bundle/return-demo/hub-smoke-bundle.returned-20260916T111753Z
+[bundle] ⭐ DIVERTED: the pre-existing /Users/user/Desktop/CHLU/.claude/outputs/gen-hub-workspace-bundle/return-demo/hub-smoke-bundle was left untouched. Reconcile by hand.
+
+--- after ---
+<dest>
+<dest>/hub-smoke-bundle
+<dest>/hub-smoke-bundle.md
+<dest>/hub-smoke-bundle.returned-20260916T111753Z
+<dest>/hub-smoke-bundle.returned-20260916T111753Z.md
+
+--- the FIRST result is byte-identical still? ---
+2cf4dde5151a74a701e380d156184103355d9e38381eaaade056a704cd27d216  /Users/user/Desktop/CHLU/.claude/outputs/gen-hub-workspace-bundle/return-demo/hub-smoke-bundle/LOG.md

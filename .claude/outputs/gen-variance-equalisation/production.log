@@ -1,0 +1,240 @@
+  seed 0: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0 · cache scope='full' rows=480000
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    gathering SPREAD_train: 12288 rows
+    gathering SPREAD: 4096 rows
+    gathering CORNER_B: 72 rows
+    gathering CORNER_MS: 198 rows
+  ⭐ store store_s0.pkl hash=3e3424a1ea40017e… K=5 M=64 30 bits/read (hash + channels asserted)
+  ⭐ grouping ORDER asserted: UNWHITENED features (asserted channel-for-channel) · well sizes [303, 305, 573, 501, 366]
+    [leg1]    floor_hue well4 VE=0.7849 rank_frac_median=0.0027 top10%=0.999 n_val=10
+    [leg1]     wall_hue well1 VE=0.6911 rank_frac_median=0.0033 top10%=0.997 n_val=10
+    [leg1]   object_hue well3 VE=0.3128 rank_frac_median=0.0040 top10%=0.996 n_val=10
+    [leg1]        scale well3 VE=0.0207 rank_frac_median=0.0200 top10%=0.976 n_val=8
+    [leg1]        shape well3 VE=0.0409 rank_frac_median=0.0100 top10%=0.992 n_val=4
+    [leg1]  orientation well2 VE=0.0618 rank_frac_median=0.0105 top10%=0.981 n_val=15
+  ⭐ LEG 1 PREMISE: HOLDS (direction True, share True)
+      [    encoder] d=2048 loss 2.361->0.007 train_agg=0.9998 SPREAD=0.9860 CORNER_B=0.9236 CORNER_MS=0.9655
+  arm identity
+    [identity] round-trip max|Δ| 0.000e+00 (rel 0.000e+00) · deployed 0 B (0.00× the store budget) · fit-time-only 0 B
+    [identity] codebook re-fitted: 1200 steps, loss 47.49073 -> 31.64705
+    [identity] distinct-of-72 on CORNER_B (request side) = 9 · distinct codes on SPREAD = 3598
+  arm pca_whiten
+    [pca_whiten] round-trip max|Δ| 2.384e-07 (rel 4.066e-08) · deployed 3,600,672 B (6.87× the store budget) · fit-time-only 0 B
+    [pca_whiten] codebook re-fitted: 1200 steps, loss 354.76822 -> 242.49673
+    [pca_whiten] distinct-of-72 on CORNER_B (request side) = 5 · distinct codes on SPREAD = 803
+  arm diag_std
+    [diag_std] round-trip max|Δ| 2.384e-07 (rel 4.066e-08) · deployed 16,384 B (0.03× the store budget) · fit-time-only 0 B
+    [diag_std] codebook re-fitted: 1200 steps, loss 136.43044 -> 86.10249
+    [diag_std] distinct-of-72 on CORNER_B (request side) = 18 · distinct codes on SPREAD = 3406
+      [code/shipped] d= 320 loss 2.311->0.655 train_agg=0.7115 SPREAD=0.6559 CORNER_B=0.5486 CORNER_MS=0.6843
+      [code/identity] d= 320 loss 2.311->0.655 train_agg=0.7115 SPREAD=0.6559 CORNER_B=0.5486 CORNER_MS=0.6843
+      [code/pca_whiten] d= 320 loss 2.315->1.683 train_agg=0.3268 SPREAD=0.3043 CORNER_B=0.3935 CORNER_MS=0.3796
+      [code/diag_std] d= 320 loss 2.315->0.733 train_agg=0.6744 SPREAD=0.6185 CORNER_B=0.5208 CORNER_MS=0.6490
+      [code_random] d= 320 loss 2.315->2.083 train_agg=0.2131 SPREAD=0.1202 CORNER_B=0.1250 CORNER_MS=0.1347
+    [decoded/shipped] aggregate=0.6102 floor_hue=0.996 wall_hue=0.985 object_hue=0.713 scale=0.199 shape=0.570 orientation=0.197
+    [decoded/identity] aggregate=0.6102 floor_hue=0.996 wall_hue=0.985 object_hue=0.713 scale=0.199 shape=0.570 orientation=0.197
+    [decoded/pca_whiten] aggregate=0.2368 floor_hue=0.386 wall_hue=0.209 object_hue=0.265 scale=0.131 shape=0.344 orientation=0.087
+    [decoded/diag_std] aggregate=0.5625 floor_hue=0.991 wall_hue=0.983 object_hue=0.548 scale=0.209 shape=0.435 orientation=0.209
+  ⭐ knn_proto laundering control: BIT-IDENTICAL (max |Δ| = 0.0)
+  seed 1: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1 · cache scope='used' rows=9288
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32199 row(s) encoded through the frozen encoder
+    gathering SPREAD_train: 12288 rows
+    extending cache coverage: 12048 row(s) encoded through the frozen encoder
+    gathering SPREAD: 4096 rows
+    extending cache coverage: 4002 row(s) encoded through the frozen encoder
+    gathering CORNER_B: 72 rows
+    gathering CORNER_MS: 199 rows
+    extending cache coverage: 196 row(s) encoded through the frozen encoder
+  ⭐ store store_s1.pkl hash=76827ad534ee7e6a… K=5 M=64 30 bits/read (hash + channels asserted)
+  ⭐ grouping ORDER asserted: UNWHITENED features (asserted channel-for-channel) · well sizes [397, 300, 307, 300, 744]
+    [leg1]    floor_hue well3 VE=0.7979 rank_frac_median=0.0033 top10%=0.998 n_val=10
+    [leg1]     wall_hue well2 VE=0.6459 rank_frac_median=0.0033 top10%=0.997 n_val=10
+    [leg1]   object_hue well4 VE=0.2969 rank_frac_median=0.0027 top10%=0.998 n_val=10
+    [leg1]        scale well4 VE=0.0232 rank_frac_median=0.0094 top10%=0.990 n_val=8
+    [leg1]        shape well4 VE=0.0443 rank_frac_median=0.0067 top10%=0.997 n_val=4
+    [leg1]  orientation well2 VE=0.0809 rank_frac_median=0.0098 top10%=0.977 n_val=15
+  ⭐ LEG 1 PREMISE: HOLDS (direction True, share True)
+      [    encoder] d=2048 loss 2.321->0.007 train_agg=0.9999 SPREAD=0.9871 CORNER_B=0.9838 CORNER_MS=0.9832
+  arm identity
+    [identity] round-trip max|Δ| 0.000e+00 (rel 0.000e+00) · deployed 0 B (0.00× the store budget) · fit-time-only 0 B
+    [identity] codebook re-fitted: 1200 steps, loss 45.03409 -> 29.74180
+    [identity] distinct-of-72 on CORNER_B (request side) = 8 · distinct codes on SPREAD = 3594
+  arm pca_whiten
+    [pca_whiten] round-trip max|Δ| 2.384e-07 (rel 3.915e-08) · deployed 3,949,768 B (7.53× the store budget) · fit-time-only 0 B
+    [pca_whiten] codebook re-fitted: 1200 steps, loss 334.89005 -> 244.83304
+    [pca_whiten] distinct-of-72 on CORNER_B (request side) = 7 · distinct codes on SPREAD = 516
+  arm diag_std
+    [diag_std] round-trip max|Δ| 2.384e-07 (rel 3.915e-08) · deployed 16,384 B (0.03× the store budget) · fit-time-only 0 B
+    [diag_std] codebook re-fitted: 1200 steps, loss 132.02074 -> 95.63431
+    [diag_std] distinct-of-72 on CORNER_B (request side) = 16 · distinct codes on SPREAD = 3380
+      [code/shipped] d= 320 loss 2.304->0.658 train_agg=0.7038 SPREAD=0.6473 CORNER_B=0.5833 CORNER_MS=0.7102
+      [code/identity] d= 320 loss 2.304->0.658 train_agg=0.7038 SPREAD=0.6473 CORNER_B=0.5833 CORNER_MS=0.7102
+      [code/pca_whiten] d= 320 loss 2.309->1.758 train_agg=0.2986 SPREAD=0.2785 CORNER_B=0.3380 CORNER_MS=0.3685
+      [code/diag_std] d= 320 loss 2.314->0.754 train_agg=0.6656 SPREAD=0.6115 CORNER_B=0.6019 CORNER_MS=0.6382
+      [code_random] d= 320 loss 2.328->2.099 train_agg=0.2121 SPREAD=0.1238 CORNER_B=0.1181 CORNER_MS=0.1348
+    [decoded/shipped] aggregate=0.6178 floor_hue=1.000 wall_hue=0.985 object_hue=0.645 scale=0.229 shape=0.590 orientation=0.258
+    [decoded/identity] aggregate=0.6178 floor_hue=1.000 wall_hue=0.985 object_hue=0.645 scale=0.229 shape=0.590 orientation=0.258
+    [decoded/pca_whiten] aggregate=0.1595 floor_hue=0.088 wall_hue=0.190 object_hue=0.158 scale=0.129 shape=0.301 orientation=0.091
+    [decoded/diag_std] aggregate=0.5667 floor_hue=0.998 wall_hue=0.970 object_hue=0.396 scale=0.227 shape=0.512 orientation=0.299
+  ⭐ knn_proto laundering control: BIT-IDENTICAL (max |Δ| = 0.0)
+  seed 2: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2 · cache scope='used' rows=9288
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32241 row(s) encoded through the frozen encoder
+    gathering SPREAD_train: 12288 rows
+    extending cache coverage: 12059 row(s) encoded through the frozen encoder
+    gathering SPREAD: 4096 rows
+    extending cache coverage: 4007 row(s) encoded through the frozen encoder
+    gathering CORNER_B: 72 rows
+    gathering CORNER_MS: 199 rows
+    extending cache coverage: 196 row(s) encoded through the frozen encoder
+  ⭐ store store_s2.pkl hash=8449e6057dacafb8… K=5 M=64 30 bits/read (hash + channels asserted)
+  ⭐ grouping ORDER asserted: UNWHITENED features (asserted channel-for-channel) · well sizes [283, 283, 390, 616, 476]
+    [leg1]    floor_hue well4 VE=0.6671 rank_frac_median=0.0042 top10%=1.000 n_val=10
+    [leg1]     wall_hue well0 VE=0.7042 rank_frac_median=0.0035 top10%=0.997 n_val=10
+    [leg1]   object_hue well3 VE=0.3186 rank_frac_median=0.0032 top10%=0.997 n_val=10
+    [leg1]        scale well3 VE=0.0269 rank_frac_median=0.0114 top10%=0.988 n_val=8
+    [leg1]        shape well3 VE=0.0657 rank_frac_median=0.0065 top10%=0.996 n_val=4
+    [leg1]  orientation well2 VE=0.1558 rank_frac_median=0.0051 top10%=0.984 n_val=15
+  ⭐ LEG 1 PREMISE: DEAD (direction False, share True)
+  ⛔ ⛔ PREMISE DEAD (PREREG §3): scale/orientation do NOT sit in low-variance directions. The variance hypothesis is REFUTED at Leg 1 and nothing was whitened — ⛔ deliberately, rather than whitening anyway to see what happens.
+⭐ LEG 1 premise: HOLDS / HOLDS / DEAD
+  seed 0: artefact HIT veq_s0.json — skipped
+  seed 1: artefact HIT veq_s1.json — skipped
+  seed 2: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2 · cache scope='used' rows=9288
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32241 row(s) encoded through the frozen encoder
+    gathering SPREAD_train: 12288 rows
+    extending cache coverage: 12059 row(s) encoded through the frozen encoder
+    gathering SPREAD: 4096 rows
+    extending cache coverage: 4007 row(s) encoded through the frozen encoder
+    gathering CORNER_B: 72 rows
+    gathering CORNER_MS: 199 rows
+    extending cache coverage: 196 row(s) encoded through the frozen encoder
+  ⭐ store store_s2.pkl hash=8449e6057dacafb8… K=5 M=64 30 bits/read (hash + channels asserted)
+  ⭐ grouping ORDER asserted: UNWHITENED features (asserted channel-for-channel) · well sizes [283, 283, 390, 616, 476]
+    [leg1]    floor_hue well4 VE=0.6671 rank_frac_median=0.0042 top10%=1.000 n_val=10
+    [leg1]     wall_hue well0 VE=0.7042 rank_frac_median=0.0035 top10%=0.997 n_val=10
+    [leg1]   object_hue well3 VE=0.3186 rank_frac_median=0.0032 top10%=0.997 n_val=10
+    [leg1]        scale well3 VE=0.0269 rank_frac_median=0.0114 top10%=0.988 n_val=8
+    [leg1]        shape well3 VE=0.0657 rank_frac_median=0.0065 top10%=0.996 n_val=4
+    [leg1]  orientation well2 VE=0.1558 rank_frac_median=0.0051 top10%=0.984 n_val=15
+  ⭐ LEG 1 PREMISE: DEAD (direction False, share True)
+      [    encoder] d=2048 loss 2.364->0.005 train_agg=1.0000 SPREAD=0.9874 CORNER_B=0.9398 CORNER_MS=0.9690
+  arm identity
+    [identity] round-trip max|Δ| 0.000e+00 (rel 0.000e+00) · deployed 0 B (0.00× the store budget) · fit-time-only 0 B
+    [identity] codebook re-fitted: 1200 steps, loss 51.45226 -> 34.35460
+    [identity] distinct-of-72 on CORNER_B (request side) = 10 · distinct codes on SPREAD = 3723
+  arm pca_whiten
+    [pca_whiten] round-trip max|Δ| 2.384e-07 (rel 3.893e-08) · deployed 3,681,432 B (7.02× the store budget) · fit-time-only 0 B
+    [pca_whiten] codebook re-fitted: 1200 steps, loss 367.65170 -> 262.05283
+    [pca_whiten] distinct-of-72 on CORNER_B (request side) = 5 · distinct codes on SPREAD = 559
+  arm diag_std
+    [diag_std] round-trip max|Δ| 2.384e-07 (rel 3.893e-08) · deployed 16,384 B (0.03× the store budget) · fit-time-only 0 B
+    [diag_std] codebook re-fitted: 1200 steps, loss 149.39673 -> 101.95394
+    [diag_std] distinct-of-72 on CORNER_B (request side) = 11 · distinct codes on SPREAD = 3450
+      [code/shipped] d= 320 loss 2.338->0.606 train_agg=0.7253 SPREAD=0.6723 CORNER_B=0.5856 CORNER_MS=0.6198
+      [code/identity] d= 320 loss 2.338->0.606 train_agg=0.7253 SPREAD=0.6723 CORNER_B=0.5856 CORNER_MS=0.6198
+      [code/pca_whiten] d= 320 loss 2.290->1.692 train_agg=0.3187 SPREAD=0.2968 CORNER_B=0.3681 CORNER_MS=0.2856
+      [code/diag_std] d= 320 loss 2.314->0.741 train_agg=0.6805 SPREAD=0.6239 CORNER_B=0.6458 CORNER_MS=0.6030
+      [code_random] d= 320 loss 2.342->2.083 train_agg=0.2120 SPREAD=0.1225 CORNER_B=0.1042 CORNER_MS=0.1173
+    [decoded/shipped] aggregate=0.6395 floor_hue=0.999 wall_hue=0.996 object_hue=0.700 scale=0.196 shape=0.637 orientation=0.309
+    [decoded/identity] aggregate=0.6395 floor_hue=0.999 wall_hue=0.996 object_hue=0.700 scale=0.196 shape=0.637 orientation=0.309
+    [decoded/pca_whiten] aggregate=0.1893 floor_hue=0.170 wall_hue=0.203 object_hue=0.201 scale=0.131 shape=0.302 orientation=0.129
+    [decoded/diag_std] aggregate=0.5635 floor_hue=0.988 wall_hue=0.980 object_hue=0.479 scale=0.172 shape=0.481 orientation=0.280
+  ⭐ knn_proto laundering control: BIT-IDENTICAL (max |Δ| = 0.0)
+⭐ LEG 1 premise: HOLDS / HOLDS / DEAD
+⭐ falsifier (a) probe rises: NO · (b) distinct rises: NO · pre-registered pass: NO
+⭐ NOT the flat-total case — the total moved beyond seed spread, so the metric changed how much is retained overall, not merely its distribution.

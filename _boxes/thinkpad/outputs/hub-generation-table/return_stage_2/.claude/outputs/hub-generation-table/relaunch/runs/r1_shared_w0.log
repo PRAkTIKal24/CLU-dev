@@ -1,0 +1,83 @@
+[14:16:18] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[14:16:18]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[14:16:18]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[14:16:19] table=shared nvariants=8 corners[0:3] set=select
+[14:16:19]   SH_P2_K32          K= 32 A=  928 rank=   0 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=463872
+[14:16:19]   SH_P3_K32          K= 32 A=  896 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=461504
+[14:16:19]   SH_ADD_K32         K= 32 A= 1024 rank=   0 n_add=52 n_pair=0 method=kmeans       alloc=uniform   bytes_pred=475136
+[14:16:19]   SH_P2_K64          K= 64 A= 1280 rank=   0 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=463360
+[14:16:19]   SH_P3_K64          K= 64 A= 1216 rank=   0 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=454336
+[14:16:19]   SH_ADD_K64         K= 64 A= 1408 rank=   0 n_add=52 n_pair=0 method=kmeans       alloc=uniform   bytes_pred=473088
+[14:16:19]   SH_P2_K32_A832     K= 32 A=  832 rank=   0 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=419328
+[14:16:19]   SH_P2_K64_A832     K= 64 A=  832 rank=   0 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=312832
+[14:16:20] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:16:56] [c0 c6221b30a0] SH_P2_K32          agg=0.8333 tup=49 B=463872 r=52 [33.8s]
+[14:17:27] [c0 c6221b30a0] SH_P3_K32          agg=0.8449 tup=49 B=461504 r=52 [31.4s]
+[14:18:00] [c0 c6221b30a0] SH_ADD_K32         agg=0.7731 tup=50 B=475136 r=0 [33.5s]
+[14:18:32] [c0 c6221b30a0] SH_P2_K64          agg=0.8727 tup=58 B=463360 r=52 [31.0s]
+[14:19:02] [c0 c6221b30a0] SH_P3_K64          agg=0.8403 tup=54 B=454336 r=52 [29.2s]
+[14:19:35] [c0 c6221b30a0] SH_ADD_K64         agg=0.7708 tup=52 B=473088 r=0 [33.2s]
+[14:20:15] [c0 c6221b30a0] SH_P2_K32_A832     agg=0.8148 tup=45 B=419328 r=52 [39.9s]
+[14:20:43] [c0 c6221b30a0] SH_P2_K64_A832     agg=0.7569 tup=45 B=312832 r=52 [28.1s]
+[14:20:43] [c0] corner done in 262.4s
+[14:21:26] [c4 f3ca5a14c3] SH_P2_K32          agg=0.8773 tup=46 B=463872 r=52 [42.1s]
+[14:22:04] [c4 f3ca5a14c3] SH_P3_K32          agg=0.8727 tup=49 B=461504 r=52 [37.7s]
+[14:22:46] [c4 f3ca5a14c3] SH_ADD_K32         agg=0.8773 tup=49 B=475136 r=0 [41.9s]
+[14:23:25] [c4 f3ca5a14c3] SH_P2_K64          agg=0.8819 tup=51 B=463360 r=52 [37.5s]
+[14:24:02] [c4 f3ca5a14c3] SH_P3_K64          agg=0.8704 tup=51 B=454336 r=52 [37.4s]
+[14:24:42] [c4 f3ca5a14c3] SH_ADD_K64         agg=0.8704 tup=54 B=473088 r=0 [39.7s]
+[14:25:25] [c4 f3ca5a14c3] SH_P2_K32_A832     agg=0.8727 tup=49 B=419328 r=52 [42.6s]
+[14:25:51] [c4 f3ca5a14c3] SH_P2_K64_A832     agg=0.8472 tup=47 B=312832 r=52 [26.1s]
+[14:25:51] [c4] corner done in 307.9s
+[14:26:31] [c5 e085c74688] SH_P2_K32          agg=0.6991 tup=52 B=463872 r=52 [38.0s]
+[14:27:15] [c5 e085c74688] SH_P3_K32          agg=0.7014 tup=51 B=461504 r=52 [44.7s]
+[14:28:00] [c5 e085c74688] SH_ADD_K32         agg=0.7338 tup=41 B=475136 r=0 [44.6s]
+[14:28:45] [c5 e085c74688] SH_P2_K64          agg=0.7500 tup=61 B=463360 r=52 [43.8s]
+[14:29:24] [c5 e085c74688] SH_P3_K64          agg=0.7292 tup=60 B=454336 r=52 [38.9s]
+[14:30:09] [c5 e085c74688] SH_ADD_K64         agg=0.7940 tup=49 B=473088 r=0 [44.3s]
+[14:30:46] [c5 e085c74688] SH_P2_K32_A832     agg=0.6921 tup=50 B=419328 r=52 [37.3s]
+[14:31:10] [c5 e085c74688] SH_P2_K64_A832     agg=0.6852 tup=41 B=312832 r=52 [24.5s]
+[14:31:10] [c5] corner done in 319.8s
+[14:31:10] r1 shared done in 892.9s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table/relaunch\runs\r1_ledger_w0.jsonl

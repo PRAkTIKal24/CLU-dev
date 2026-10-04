@@ -1,0 +1,58 @@
+
+==============================================================================
+w9 HARNESS  seed=0  scale=smoke
+==============================================================================
+instances: 60 train / 40 eval  (CMAZE-1 adopted defaults)  [5.5s]
+  eval opt_len mean 44.6 max 150 ; budget mean 49.5 max 165
+
+JUDGE AUDIT  (8 instances, 80 judged routes)
+  A source   : no float machinery in judge/_pocket ....... PASS
+  B types    : integer-only comparisons under tracing .... PASS
+  C redundant: judge == independently written replay ..... PASS (0/80 disagree)
+  D oracle   : optimum / truncation / budget / mutants ... PASS (0 bad)
+  verdict classes exercised: {'pickup-on-empty-cell': 28, 'into-wall': 36, 'goal': 8, 'over-budget': 5, 'no-goal': 2, 'locked-door-c1': 1}
+  JUDGE EXACT: True    tolerance used: None
+STEPPER AUDIT: 80 routes, 0 disagreements with the exact judge -> PASS
+
+ENCODER (reconstruction only): 60 imgs, 15912 params, BCE 0.04090 -> pixel acc 0.98742, on-pixel recall 0.7309  [11.1s]
+  shared observation: 429 dims (200 local patch + 200 global pool + 29 agent state), rollout horizon 166
+  supervision: 2543 of 2698 train steps kept (horizon 64; 11 of 60 routes run past it), 1632 eval steps  [0.0s]
+
+MATCHED PARAMETERS (target 20000, obs_dim 429, n_out 5)
+  mlp          width  39  params   19775  (-1.125% of target)
+
+TRAINING (behaviour cloning on exact oracle routes)
+  TRAIN mlp          params   19775  loss 1.0995  val-acc 0.4583  [1.8s]
+  shared action head: identical shape across arms = True (HEAD_KEY (single PRNGKey, used by every arm))
+
+EVALUATION -- exact judge, 40 instances
+  arm                                validity    score   top failure modes
+  MLP (matched, 19775 params)              0.0000   0.0000  0.0000  0.4250   into-wall x20, no-goal x15, locked-door-c1 x2
+  TABLE FLOOR (raw state, 2464 keys)       0.0000   0.0000  0.0000  0.1204   into-wall x38, no-goal x2
+  TABLE-ENC (encoder bits, 2028 keys)      0.0000   0.0000  0.0000  0.1220   into-wall x32, pickup-on-empty-cell x5, no-goal x3
+
+REPORTED COLUMNS (never abort conditions)
+  column                             validity    score   note
+  oracle (full composition)                1.0000   1.0000  1.0000  1.0000   
+  blind-A (rule B dropped)                 0.1000   0.1000  0.1000  0.3542   forbidden-tint-c2 x11, forbidden-tint-c1 x10, forbidden-tint-c4 x8
+  blind-B (rule A dropped)                 0.0000   0.0000  0.0000  0.2297   locked-door-c4 x14, locked-door-c2 x10, locked-door-c3 x10
+  blind-colour (colours collapsed)         0.1000   0.1000  0.1250  0.2921   no-goal x19, locked-door-c4 x5, locked-door-c2 x4
+  blind-factor (A x B local only)          0.2000   0.2000  0.2000  0.4478   forbidden-tint-c2 x9, forbidden-tint-c1 x8, forbidden-tint-c4 x8
+  blind-sequential (key order from A)      0.5500   0.5500  0.5500  0.5500   no-goal x18
+  fragment-lookup r=1                      0.0000   0.0000  0.0000  0.1425   into-wall x35, no-goal x4, locked-door-c4 x1
+       2132 signatures, train coverage 1.0000
+  fragment-lookup r=2                      0.0000   0.0000  0.0000  0.0325   into-wall x40
+       2683 signatures, train coverage 1.0000
+   * goal  = reached the goal legally with the budget lifted (exact judge, declared variant);  legal = mean legal prefix / optimal length.  Both are DIAGNOSTICS -- the scored column is validity.
+
+SUPERVISED REFUSER (the ONLY comparator for DISPLAY rows)
+  impossible set: 30 train / 30 eval, certification failures 0, families {'legality': 20, 'budget': 40}  [6.0s]
+  no impossible example in any non-refuser arm's data: True
+  refuser: transformer width 18, 19796 params (matched to the same target)
+  TRAIN refuser      params   19796  loss 0.9978  [9.0s]
+                                         validity  refusal   note
+  REFUSER on POSSIBLE                      0.0000   0.5250   false refusals on solvable mazes
+  REFUSER on IMPOSSIBLE                    0.0000   0.3667   correct refusals (the DISPLAY comparator)
+  MLP on IMPOSSIBLE (cannot refuse)        0.0000        -   no refuse token by construction
+
+seed 0 done in 465.2s

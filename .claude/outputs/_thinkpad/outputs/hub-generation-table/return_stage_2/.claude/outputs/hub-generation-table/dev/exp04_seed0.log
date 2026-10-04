@@ -1,0 +1,54 @@
+[22:46:09] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[22:46:09]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[22:46:09]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[22:46:11]   channel geometry loaded from chan_geom_s0_pool32766.npz
+[22:47:10]     [decoder_sensitivity] 58.5s
+[22:47:10] sensitivity report: {"D": 2048, "w_min": 0.01525, "w_max": 0.72737, "w_mean": 0.1142, "w_median": 0.0903, "dynamic_range": 47.71131, "frac_mass_in_top_10pct": 0.26288, "corr_log_w_log_var": 0.15955}
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[22:50:14]   [K=32 unweighted] mse=0.0446 ref=0.7014(30) nb=0.6898(24) disc=0.6806(31) sr=0.1389
+[22:52:54]   [K=32 decoder_weighted] mse=0.0462 ref=0.7014(33) nb=0.6829(38) disc=0.6875(34) sr=0.1944
+[22:57:45]   [K=64 unweighted] mse=0.0381 ref=0.7130(38) nb=0.6713(36) disc=0.6574(28) sr=0.0556
+[23:03:50]   [K=64 decoder_weighted] mse=0.0405 ref=0.7523(42) nb=0.6667(37) disc=0.6852(43) sr=0.0556
+[23:03:50] done in 1068.4s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table\dev\exp04_seed0.json
+exit=0

@@ -1,0 +1,44 @@
+{
+  "arms": {
+    "det_B": {
+      "along_axis_component_SIGNED": 0.7835061111045432,
+      "along_axis_component_abs": 1.0336967113281905,
+      "axis_norm_u": 5.079051921156254,
+      "closest_of_three_chance_level": 0.3333333333333333,
+      "frac_emitted_closer_to_deleted_value_than_either_neighbour": 0.52734375,
+      "hue_axis_projection_frac_above_half": 0.0390625,
+      "hue_axis_projection_mean": 0.14793183173562055,
+      "hue_axis_projection_median": 0.1556145856295711,
+      "mean_dist_to_deleted_value": 11.48447743881092,
+      "mean_dist_to_neighbour_4": 11.859407352957389,
+      "mean_dist_to_neighbour_6": 12.453125383205695,
+      "mean_margin_deleted_minus_best_neighbour": -0.031121882995130693,
+      "n": 1024,
+      "n_live": 32768,
+      "perpendicular_residual": 10.601226272618224,
+      "projection_max": 0.8412958215041435,
+      "projection_min": -0.5637976711329772,
+      "projection_negative_fraction": 0.20703125
+    }
+  },
+  "data_geometry_no_store": {
+    "dist_4_5": 7.234103267929368,
+    "dist_4_6": 11.593235558263938,
+    "dist_5_6": 8.145420713274824,
+    "note": "triangle_ratio > 1 means the deleted value sits OFF the chord joining its neighbours: the hue manifold is curved, so the neighbour mid-point is not a neutral origin.",
+    "triangle_ratio": 1.3265946252805407
+  },
+  "deleted_value": 5,
+  "factor": "object_hue",
+  "neighbours": [
+    4,
+    6
+  ],
+  "primary_statistic": "frac_emitted_closer_to_deleted_value_than_either_neighbour - parameter-free, no origin, robust to manifold curvature. The projection is SECONDARY and must be read WITH the perpendicular residual.",
+  "reading": "det_B is the pre-deletion reference and plc_f2v5 the churn floor. A del_f2v5 value near det_B's = the store still emits the deleted value's content (re-composition by interpolation, NOT a retained route, since A3.8 proves the conditional is exactly uniform). A value near chance = the emitted feature is no longer that value's.",
+  "schema": "chlu-hub-deletion/feature-probe/1",
+  "target_set": "tgt_f2v5",
+  "utc": "2026-09-17T11:38:34Z",
+  "wall_s": 3.123723599999721,
+  "what": "\u2b50 geometric, not probe-based: is the feature the store EMITS for a request naming the deleted value closer to REAL cached features of that value than to its neighbours, in the frozen encoder's own space? \u26d4 No encoder, no decoder, no probe is constructed here."
+}

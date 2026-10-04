@@ -1,0 +1,190 @@
+[13:10:04] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[13:10:04]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[13:10:04]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[13:10:05] table=levers nvariants=8 corners[0:3] set=select
+[13:10:05]   base               K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473472
+[13:10:05]   reduced            K= 32 A=  832 rank=  22 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473344
+[13:10:05]   metric             K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473472
+[13:10:05]   ridgepair          K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473472
+[13:10:05]   nmf                K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=nmf          alloc=uniform   bytes_pred=473472
+[13:10:05]   all3               K= 32 A=  832 rank=  22 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473344
+[13:10:05]   all3_nmf           K= 32 A=  832 rank=  22 n_add=52 n_pair=160 method=nmf          alloc=uniform   bytes_pred=473344
+[13:10:05]   all3_p3            K= 32 A=  832 rank=  21 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474416
+[13:10:06] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:10:49] [c0 c6221b30a0] metric             agg=0.8218 tup=48 B=473472 r=17 [40.8s]
+[13:11:33] [c0 c6221b30a0] ridgepair          agg=0.8426 tup=49 B=473472 r=17 [44.3s]
+[13:14:47] [c0 c6221b30a0] nmf                agg=0.8241 tup=52 B=473472 r=17 [193.6s]
+[13:15:32] [c0 c6221b30a0] all3               agg=0.8310 tup=48 B=473344 r=22 [44.6s]
+[13:19:11] [c0 c6221b30a0] all3_nmf           agg=0.8634 tup=57 B=473344 r=22 [219.5s]
+[13:20:05] [c0 c6221b30a0] all3_p3            agg=0.8403 tup=49 B=474416 r=21 [53.9s]
+[13:20:05] [c0] corner done in 598.7s
+[13:20:08] [c4 f3ca5a14c3] knn_proto        agg=0.8727 tup=55 B=475136
+[13:21:02] [c4 f3ca5a14c3] base               agg=0.8935 tup=53 B=473472 r=17 [51.3s]
+[13:21:55] [c4 f3ca5a14c3] reduced            agg=0.9167 tup=56 B=473344 r=22 [53.7s]
+[13:22:48] [c4 f3ca5a14c3] metric             agg=0.8750 tup=50 B=473472 r=17 [52.9s]
+[13:23:41] [c4 f3ca5a14c3] ridgepair          agg=0.8773 tup=46 B=473472 r=17 [53.4s]
+[13:28:22] [c4 f3ca5a14c3] nmf                agg=0.8403 tup=53 B=473472 r=17 [280.3s]
+160 method=kmeans       alloc=uniform   bytes_pred=473344
+[13:19:18]   metric             K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473472
+[13:19:18]   ridgepair          K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473472
+[13:19:18]   nmf                K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=nmf          alloc=uniform   bytes_pred=473472
+[13:19:18]   all3               K= 32 A=  832 rank=  22 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473344
+[13:19:18]   all3_p3            K= 32 A=  832 rank=  21 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474416
+[13:19:21] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+[13:19:21] [c0 c6221b30a0] all 7 variants already in the ledger
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:20:19] [c4 f3ca5a14c3] reduced            agg=0.9167 tup=56 B=473344 r=22 [55.5s]
+[13:21:15] [c4 f3ca5a14c3] metric             agg=0.8750 tup=50 B=473472 r=17 [55.5s]
+[13:22:12] [c4 f3ca5a14c3] ridgepair          agg=0.8773 tup=46 B=473472 r=17 [57.3s]
+[13:26:38] [c4 f3ca5a14c3] nmf                agg=0.8403 tup=53 B=473472 r=17 [265.9s]
+[13:27:52] [c4 f3ca5a14c3] all3               agg=0.8773 tup=48 B=473344 r=22 [73.5s]
+[13:29:01] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[13:29:01]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[13:29:01]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[13:29:02] table=levers nvariants=7 corners[0:3] set=select
+[13:29:02]   base               K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473472
+[13:29:02]   reduced            K= 32 A=  832 rank=  22 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473344
+[13:29:02]   metric             K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473472
+[13:29:02]   ridgepair          K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473472
+[13:29:02]   nmf                K= 32 A=  832 rank=  17 n_add=58 n_pair=160 method=nmf          alloc=uniform   bytes_pred=473472
+[13:29:02]   all3               K= 32 A=  832 rank=  22 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=473344
+[13:29:02]   all3_p3            K= 32 A=  832 rank=  21 n_add=52 n_pair=220 method=kmeans       alloc=uniform   bytes_pred=474416
+[13:29:04] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+[13:29:04] [c0 c6221b30a0] all 7 variants already in the ledger
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[13:29:50] [c4 f3ca5a14c3] all3_p3            agg=0.8634 tup=46 B=474416 r=21 [42.9s]
+[13:29:50] [c4] corner done in 45.4s
+[13:29:53] [c5 e085c74688] knn_proto        agg=0.8356 tup=59 B=475136
+[13:30:42] [c5 e085c74688] base               agg=0.7106 tup=54 B=473472 r=17 [42.3s]
+[13:31:22] [c5 e085c74688] reduced            agg=0.7037 tup=52 B=473344 r=22 [40.1s]
+[13:32:04] [c5 e085c74688] metric             agg=0.6944 tup=49 B=473472 r=17 [41.2s]
+[13:32:44] [c5 e085c74688] ridgepair          agg=0.6944 tup=54 B=473472 r=17 [40.5s]
+[13:35:44] [c5 e085c74688] nmf                agg=0.7569 tup=58 B=473472 r=17 [179.6s]
+[13:36:24] [c5 e085c74688] all3               agg=0.6921 tup=51 B=473344 r=22 [40.0s]
+[13:37:04] [c5 e085c74688] all3_p3            agg=0.6968 tup=51 B=474416 r=21 [40.2s]
+[13:37:04] [c5] corner done in 434.3s
+[13:37:04] r1 levers done in 482.9s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table/relaunch\runs\r1_ledger_w0.jsonl

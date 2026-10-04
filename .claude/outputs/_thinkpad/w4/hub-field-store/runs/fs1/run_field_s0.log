@@ -1,0 +1,54 @@
+[    0.2s]   partitions: already on disk, skipping
+[   14.9s]   field(seed 0): pool 131072 rows, hosts [[0], [1, 3], [2], [4], [5]]
+[   27.9s]   term->coordinate map: 57 terms, 2 never held by the pool; marginal count table
+[   67.8s]   kernel width per well (median within-value spread): w0=6.173, w1=9.599, w2=5.616, w3=0.780, w4=1.662
+[   67.8s]   basin gap / width per well (THE NUMBER REFUSAL READS): w0=1.340, w1=0.807, w2=0.748, w3=0.711, w4=0.404
+[  109.9s]   coupling: 1322 term pairs; 105 the pool NEVER held -- their evidence weight is exactly 0, so they back off to INDEPENDENCE (no correction, gain 1) and stay ANSWERABLE; they are NOT holes. 40 scalar entries survive the 2.0-sigma shrink; |pmi| max=1.0899. Coordinate correction rank 8, 1,025,344 B; holes=0
+[  150.7s]   atom selection: greedy span over 8192 candidates against a rank-128 sketch of the address manifold
+[  150.8s]   atoms: 64 training items written into every well (64 x 2048 x 4 = 524,288 B); atoms per term min=0 max=22
+[  150.8s]   WARNING: a term has no atom -- its basin is empty at build time
+[  151.8s]   field(seed 0): built in 144.0s; atoms 524,288 B + interface 1,527,526 B (image 2,054,866 B)
+[  152.4s]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[  544.7s]   field(seed 0): 85 corners in 356.3s

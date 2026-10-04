@@ -1,0 +1,54 @@
+[20:22:09] === exp_w4_rivals stages=['rescore'] seeds=[0, 1, 2] ===
+[20:22:09]   chlu package: C:\chlu\worktrees\CHLU-w4-spoke-a\chlu
+[20:22:09]   data_root=None
+[20:22:09]   gen2 root=C:\chlu\outputs\spoke-a-rivals\cache_generation2\shapes3d_recon
+[20:22:09] --- stage rescore ---
+[20:22:09]   bridge_root -> C:\chlu\outputs\spoke-a-rivals\cache_generation2 (GENERATION 2)
+[20:22:09]   arms: ['clu', 'store_removed', 'knn_proto', 'lace', 'ebm_compose', 'dynread']
+[20:22:09]   ⭐ PRECONDITION 1/2: classifier_gate.json gate=PASS (floor 0.95, 3 seeds)
+[20:22:09]   ⭐ PRECONDITION 2/2: refusal_scores.json status=complete (not_run=[])
+[20:22:09]   --- re-scoring every arm on generation 2, seed 0 ---
+[20:22:09] [     0.0s] seed 0 · condition=recomb2element · frozen bridge C:\chlu\outputs\spoke-a-rivals\cache_generation2\shapes3d_recon\seed_0
+[20:22:09] [     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[20:22:09] [     0.1s]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[20:22:13] [     3.8s]   ⭐ row split: mode=stratified — val realises floor_hue 10/10 · wall_hue 10/10 · object_hue 10/10 · scale 8/8 · shape 4/4 · orientation 15/15 · max per-value count ratio 1.091
+[20:22:13] [     4.0s] rows: store_train=32768 B=72 MS=198 fit=32256 val=512
+[20:22:22] [    12.4s]   ⭐ cache re-encode check: 64 rows, 1/131072 elements differ (0.001%), max |delta| = 9.53674e-07 = 1.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+[20:22:22] [    12.4s]   ⭐ ENFORCED (enforced=true): no caller opinion — the strict default applies
+[20:22:22] [    12.4s] cache 480000 rows (scope=full), D=2048; re-encode check within 1 ULP of the cache dtype on 64 rows
+[20:22:38] [    29.1s]   ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+[20:22:39] [    29.1s]   ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+[20:22:44] [    34.9s] ⭐ byte ledger: store 524288 B + addressing head 74240 B (⛔ coupling 163840 B EXCLUDED; ⛔ not 688128)
+[20:22:50] [    40.9s] ⭐ no-bypass: pure codebook gather, 30 bits/read (R20's declared design constant) · ⭐ request-only path asserted on all four legs (⛔ no feature argument on ANY CLU call; gen_store.soft_read NOT imported)
+[20:23:06] [    56.7s] ⭐ DECODER ceiling on IMAGES: external in-corner balacc=0.9085 · probe=0.9223
+[20:23:24] [    74.6s]   ⭐ [clu] IMAGE-space in-corner shape balacc=0.6540 (AUROC 0.7809, TPR 0.500 / TNR 0.808) · distinct on B: 9 vectors / 9 factor-tuples of 72 · probe companion 0.6610
+[20:23:40] [    90.1s]   ⭐ [store_removed] IMAGE-space in-corner shape balacc=0.5000 (AUROC 0.5208, TPR 0.000 / TNR 1.000) · distinct on B: 1 vectors / 1 factor-tuples of 72 · probe companion 0.5000
+[20:23:53] [   103.6s]   ⭐ [knn_proto] IMAGE-space in-corner shape balacc=0.9198 (AUROC 0.9783, TPR 0.986 / TNR 0.854) · distinct on B: 72 vectors / 57 factor-tuples of 72 · probe companion 0.8788
+[20:23:53] [   103.6s]   ⭐ [lace] inheriting the SELECTED configuration from disk: sigma=0.1 form=both shrinkage=1e-3 (gate fired=True, 36 trials inherited, ⛔ not re-selected)
+[20:24:19] [   129.8s]   [lace] whitening shrinkage=1e-3: |diag-1|=0.236 |offdiag|=0.006079
+[20:38:59] [  1009.2s]   [lace] classifier: 12600 steps, loss 2.3734 -> 0.0010; its own val per-factor mean 0.9915
+[20:39:44] [  1054.3s]   ⭐ [lace] IMAGE-space in-corner shape balacc=0.6143 (AUROC 0.7339, TPR 0.319 / TNR 0.909) · distinct on B: 72 vectors / 71 factor-tuples of 72 · probe companion 0.6313
+[20:39:53] [  1063.9s]   ⭐ [lace/ld_published] IMAGE-space in-corner shape balacc=0.6477 (AUROC 0.7781, TPR 0.361 / TNR 0.934) · distinct on B: 72 vectors / 58 factor-tuples of 72 · probe companion 0.7601
+[20:40:05] [  1075.1s]   ⭐ [lace/ld_corrected] IMAGE-space in-corner shape balacc=0.6553 (AUROC 0.7454, TPR 0.417 / TNR 0.894) · distinct on B: 72 vectors / 71 factor-tuples of 72 · probe companion 0.6301
+[20:47:52] [  1542.9s]   [ebm] 6 independent experts trained; their OWN val accuracy per factor [1.0, 1.0, 1.0, 0.998, 0.9941, 0.998] (mean 0.9984)
+[20:47:52] [  1542.9s]   [ebm] tuning budget: 36 trials (⭐ the SAME budget every arm is entitled to: 36)
+[20:48:00] [  1550.2s]   [ebm] trial 1/36 {'step_size': 0.003, 'prior_sigma': 0.5, 'n_steps': 50, 'clip': True}: val agg=0.1302
+[20:48:30] [  1580.8s]   [ebm] trial 6/36 {'step_size': 0.003, 'prior_sigma': 1.0, 'n_steps': 50, 'clip': False}: val agg=0.1471
+[20:49:10] [  1620.2s]   [ebm] trial 12/36 {'step_size': 0.003, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': False}: val agg=0.1576
+[20:49:45] [  1655.2s]   [ebm] trial 18/36 {'step_size': 0.01, 'prior_sigma': 1.0, 'n_steps': 50, 'clip': False}: val agg=0.1589
+[20:50:29] [  1699.3s]   [ebm] trial 24/36 {'step_size': 0.01, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': False}: val agg=0.1745
+[20:51:06] [  1737.1s]   [ebm] trial 30/36 {'step_size': 0.03, 'prior_sigma': 1.0, 'n_steps': 50, 'clip': False}: val agg=0.1771
+[20:51:59] [  1789.7s]   [ebm] trial 36/36 {'step_size': 0.03, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': False}: val agg=0.1868
+[20:51:59] [  1789.7s]   ⭐ [ebm] SELECTED (validation aggregate, ⛔ C never enters): {'step_size': 0.03, 'prior_sigma': 2.0, 'n_steps': 200, 'clip': True, 'val_aggregate': 0.1953125, 'val_compositional': 0.34765625}
+[20:52:17] [  1807.4s]   ⭐ [ebm_compose] IMAGE-space in-corner shape balacc=0.5417 (AUROC 0.5883, TPR 0.194 / TNR 0.889) · distinct on B: 72 vectors / 72 factor-tuples of 72 · probe companion 0.5069
+[20:53:18] [  1869.1s]   ⭐ sampler-noise floor [lace]: sd=0.0284 over 3 independent keys (values [0.6042, 0.661, 0.5979])
+[20:53:18] [  1869.1s]   ⛔ REGRESSION on lace: measured 0.6313 vs published 0.7077 (Δ -0.0764) — reported, ⛔ not absorbed
+[20:53:18] [  1869.1s] seed 0 done in 1869s
+[20:53:19]   --- re-scoring every arm on generation 2, seed 1 ---
+[20:53:19] [     0.0s] seed 1 · condition=recomb2element · frozen bridge C:\chlu\outputs\spoke-a-rivals\cache_generation2\shapes3d_recon\seed_1
+[20:53:19] [     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (hash + recipe asserted)
+[20:53:19] [     0.0s]   ⭐ external classifier aa69b436989b2de5… (978873 params) — THE instrument, identical across every arm in this seed
+[20:53:21] [     2.0s]   ⭐ row split: mode=stratified — val realises floor_hue 10/10 · wall_hue 10/10 · object_hue 10/10 · scale 8/8 · shape 4/4 · orientation 15/15 · max per-value count ratio 1.061
+[20:53:21] [     2.1s] rows: store_train=32768 B=72 MS=199 fit=32256 val=512
+[20:53:25] [     6.6s]   ⭐ cache re-encode check: 64 rows, 3/131072 elements differ (0.002%), max |delta| = 0.000244141 = 3.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+[20:53:25] [     6.6s]   ⭐ ENFORCED (enforced=true): no caller opinion — the strict default applies

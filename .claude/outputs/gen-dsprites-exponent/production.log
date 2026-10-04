@@ -1,0 +1,213 @@
+  shapes3d seed 0: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0 · cache scope='full' rows=480000
+  ⭐ realised split shapes3d: total=480,000 test=72 train=479,928
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    gathering SPREAD: 4096 rows
+  ⭐ partition: well sizes [303, 305, 573, 501, 366] · in-block |corr|^2 = 0.4692 · 71 dead channels
+  ⭐ shipped-partition check: bit_identical=True (commit_cache_s0.npz)
+  ⭐ label-free PR = [3.117, 3.463, 12.545, 10.498, 4.067] · d_k = [303, 305, 573, 501, 366]
+    M=   4 · eps(var-weighted)=0.5567 · per-well [0.4326, 0.4452, 0.7637, 0.711, 0.408] · used 20/20 modes · 675s
+    M=   8 · eps(var-weighted)=0.4405 · per-well [0.3652, 0.3365, 0.6605, 0.5961, 0.2422] · used 40/40 modes · 777s
+    M=  16 · eps(var-weighted)=0.3800 · per-well [0.2856, 0.2748, 0.6028, 0.5282, 0.1955] · used 80/80 modes · 817s
+    M=  32 · eps(var-weighted)=0.3211 · per-well [0.2304, 0.2194, 0.5265, 0.448, 0.1626] · used 160/160 modes · 729s
+    M=  64 · eps(var-weighted)=0.2784 · per-well [0.1892, 0.1827, 0.4664, 0.3915, 0.1409] · used 320/320 modes · 780s
+    M= 128 · eps(var-weighted)=0.2383 · per-well [0.1575, 0.1557, 0.4087, 0.3284, 0.1179] · used 640/640 modes · 667s
+    M= 186 · eps(var-weighted)=0.2163 · per-well [0.141, 0.1404, 0.3704, 0.3032, 0.1066] · used 929/930 modes · 747s
+  ⭐⭐ shapes3d seed 0: exponent = -0.2616 (per-well [-0.296, -0.294, -0.183, -0.219, -0.316])
+  shapes3d seed 1: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1 · cache scope='used' rows=9288
+  ⭐ realised split shapes3d: total=480,000 test=72 train=479,928
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32199 row(s) encoded through the frozen encoder
+    gathering SPREAD: 4096 rows
+    extending cache coverage: 4002 row(s) encoded through the frozen encoder
+  ⭐ partition: well sizes [397, 300, 307, 300, 744] · in-block |corr|^2 = 0.4735 · 59 dead channels
+  ⭐ shipped-partition check: bit_identical=True (commit_cache_s1.npz)
+  ⭐ label-free PR = [5.619, 4.007, 3.371, 3.856, 11.998] · d_k = [397, 300, 307, 300, 744]
+    M=   4 · eps(var-weighted)=0.5400 · per-well [0.5722, 0.4863, 0.4675, 0.4013, 0.736] · used 20/20 modes · 853s
+    M=   8 · eps(var-weighted)=0.4433 · per-well [0.4854, 0.4209, 0.399, 0.2614, 0.6281] · used 40/40 modes · 865s
+    M=  16 · eps(var-weighted)=0.3676 · per-well [0.4066, 0.3613, 0.3091, 0.1863, 0.5548] · used 80/80 modes · 981s
+    M=  32 · eps(var-weighted)=0.3143 · per-well [0.3541, 0.303, 0.2474, 0.1591, 0.485] · used 160/160 modes · 993s
+    M=  64 · eps(var-weighted)=0.2704 · per-well [0.3073, 0.2613, 0.2099, 0.1366, 0.417] · used 320/320 modes · 1072s
+    M= 128 · eps(var-weighted)=0.2329 · per-well [0.266, 0.2258, 0.1771, 0.1168, 0.3611] · used 640/640 modes · 1054s
+    M= 186 · eps(var-weighted)=0.2146 · per-well [0.2449, 0.2111, 0.1615, 0.1054, 0.3345] · used 930/930 modes · 910s
+  ⭐⭐ shapes3d seed 1: exponent = -0.2498 (per-well [-0.219, -0.221, -0.282, -0.323, -0.204])
+  shapes3d seed 2: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_2 · cache scope='used' rows=9288
+  ⭐ realised split shapes3d: total=480,000 test=72 train=479,928
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32241 row(s) encoded through the frozen encoder
+    gathering SPREAD: 4096 rows
+    extending cache coverage: 4007 row(s) encoded through the frozen encoder
+  ⭐ partition: well sizes [283, 283, 390, 616, 476] · in-block |corr|^2 = 0.4935 · 58 dead channels
+  ⭐ shipped-partition check: bit_identical=True (commit_cache_s2.npz)
+  ⭐ label-free PR = [3.461, 3.852, 8.453, 13.635, 5.639] · d_k = [283, 283, 390, 616, 476]
+    M=   4 · eps(var-weighted)=0.5533 · per-well [0.4244, 0.4946, 0.6589, 0.7426, 0.4846] · used 20/20 modes · 1079s
+    M=   8 · eps(var-weighted)=0.4556 · per-well [0.3355, 0.3887, 0.5738, 0.6475, 0.3782] · used 40/40 modes · 1136s
+    M=  16 · eps(var-weighted)=0.3858 · per-well [0.2533, 0.3411, 0.4895, 0.5733, 0.3155] · used 80/80 modes · 740s
+    M=  32 · eps(var-weighted)=0.3333 · per-well [0.2066, 0.2771, 0.4232, 0.4934, 0.2858] · used 160/160 modes · 954s
+    M=  64 · eps(var-weighted)=0.2861 · per-well [0.1752, 0.2371, 0.3602, 0.426, 0.2466] · used 320/320 modes · 988s
+    M= 128 · eps(var-weighted)=0.2457 · per-well [0.146, 0.2022, 0.3113, 0.3725, 0.2099] · used 640/640 modes · 684s
+    M= 186 · eps(var-weighted)=0.2268 · per-well [0.1349, 0.1857, 0.2885, 0.3414, 0.1948] · used 930/930 modes · 1161s
+  ⭐⭐ shapes3d seed 2: exponent = -0.2386 (per-well [-0.298, -0.25, -0.217, -0.202, -0.226])
+  dsprites seed 0: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-bridge-dsprites/runs/dsprites_recon/seed_0 · cache scope='used' rows=15508
+  ⭐ realised split dsprites: total=737,280 test=6,292 train=730,988
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32387 row(s) encoded through the frozen encoder
+    gathering SPREAD: 4096 rows
+    extending cache coverage: 4051 row(s) encoded through the frozen encoder
+  ⭐ partition: well sizes [237, 237, 341, 236, 997] · in-block |corr|^2 = 0.5889 · 125 dead channels
+  ⭐ label-free PR = [3.217, 3.336, 5.182, 4.848, 12.481] · d_k = [237, 237, 341, 236, 997]
+    M=   4 · eps(var-weighted)=0.6624 · per-well [0.4649, 0.4352, 0.5347, 0.5736, 0.777] · used 20/20 modes · 654s
+    M=   8 · eps(var-weighted)=0.5294 · per-well [0.3248, 0.336, 0.4512, 0.4207, 0.6243] · used 40/40 modes · 692s
+    M=  16 · eps(var-weighted)=0.4089 · per-well [0.2626, 0.2751, 0.3484, 0.3397, 0.4772] · used 80/80 modes · 1333s
+    M=  32 · eps(var-weighted)=0.3524 · per-well [0.2135, 0.2212, 0.2864, 0.2514, 0.4207] · used 159/160 modes · 699s
+    M=  64 · eps(var-weighted)=0.2966 · per-well [0.1753, 0.1878, 0.2383, 0.2078, 0.3551] · used 312/320 modes · 1499s
+    M= 128 · eps(var-weighted)=0.2510 · per-well [0.1459, 0.1532, 0.2, 0.1727, 0.3027] · used 613/640 modes · 717s
+    M= 186 · eps(var-weighted)=0.2303 · per-well [0.129, 0.1376, 0.1796, 0.1551, 0.2802] · used 885/930 modes · 1820s
+  ⭐⭐ dsprites seed 0: exponent = -0.2991 (per-well [-0.318, -0.293, -0.286, -0.337, -0.261])
+  dsprites seed 1: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-bridge-dsprites/runs/dsprites_recon/seed_1 · cache scope='used' rows=15508
+  ⭐ realised split dsprites: total=737,280 test=6,292 train=730,988
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32359 row(s) encoded through the frozen encoder
+    gathering SPREAD: 4096 rows
+    extending cache coverage: 4034 row(s) encoded through the frozen encoder
+  ⭐ partition: well sizes [393, 218, 627, 339, 471] · in-block |corr|^2 = 0.5095 · 7 dead channels
+  ⭐ label-free PR = [6.934, 7.937, 12.663, 5.972, 7.931] · d_k = [393, 218, 627, 339, 471]
+    M=   4 · eps(var-weighted)=0.6560 · per-well [0.6296, 0.6462, 0.709, 0.5599, 0.6584] · used 20/20 modes · 729s
+    M=   8 · eps(var-weighted)=0.5407 · per-well [0.4985, 0.5712, 0.6003, 0.4302, 0.5538] · used 40/40 modes · 753s
+    M=  16 · eps(var-weighted)=0.4569 · per-well [0.4097, 0.4636, 0.5254, 0.3744, 0.437] · used 80/80 modes · 2134s
+    M=  32 · eps(var-weighted)=0.3692 · per-well [0.3431, 0.393, 0.4207, 0.2953, 0.3556] · used 160/160 modes · 761s
+    M=  64 · eps(var-weighted)=0.3112 · per-well [0.2801, 0.3408, 0.3593, 0.2423, 0.3035] · used 319/320 modes · 816s
+    M= 128 · eps(var-weighted)=0.2660 · per-well [0.2353, 0.2891, 0.3122, 0.2036, 0.2568] · used 636/640 modes · 2498s
+    M= 186 · eps(var-weighted)=0.2464 · per-well [0.2151, 0.2641, 0.2911, 0.1872, 0.2379] · used 921/930 modes · 812s
+  ⭐⭐ dsprites seed 1: exponent = -0.2605 (per-well [-0.277, -0.236, -0.237, -0.283, -0.269])
+  dsprites seed 2: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-bridge-dsprites/runs/dsprites_recon/seed_2 · cache scope='used' rows=15508
+  ⭐ realised split dsprites: total=737,280 test=6,292 train=730,988
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32416 row(s) encoded through the frozen encoder
+  shapes3d seed 0: artefact HIT exponent_shapes3d_s0.json — skipped
+  shapes3d seed 1: artefact HIT exponent_shapes3d_s1.json — skipped
+  shapes3d seed 2: artefact HIT exponent_shapes3d_s2.json — skipped
+  dsprites seed 0: artefact HIT exponent_dsprites_s0.json — skipped
+  dsprites seed 1: artefact HIT exponent_dsprites_s1.json — skipped
+  dsprites seed 2: running
+  bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-bridge-dsprites/runs/dsprites_recon/seed_2 · cache scope='used' rows=15508
+  ⭐ realised split dsprites: total=737,280 test=6,292 train=730,988
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    gathering store_train: 32768 rows
+    extending cache coverage: 32416 row(s) encoded through the frozen encoder
+    gathering SPREAD: 4096 rows
+    extending cache coverage: 4036 row(s) encoded through the frozen encoder
+  ⭐ partition: well sizes [267, 154, 727, 274, 626] · in-block |corr|^2 = 0.4275 · 1 dead channels
+  ⭐ label-free PR = [4.884, 3.405, 16.061, 4.727, 9.552] · d_k = [267, 154, 727, 274, 626]
+    M=   4 · eps(var-weighted)=0.6254 · per-well [0.5129, 0.4407, 0.7943, 0.5296, 0.6655] · used 20/20 modes · 344s
+    M=   8 · eps(var-weighted)=0.5233 · per-well [0.3981, 0.394, 0.6847, 0.4027, 0.5679] · used 40/40 modes · 424s
+    M=  16 · eps(var-weighted)=0.4187 · per-well [0.3246, 0.275, 0.5653, 0.3529, 0.4405] · used 80/80 modes · 472s
+    M=  32 · eps(var-weighted)=0.3421 · per-well [0.2578, 0.2228, 0.466, 0.2733, 0.3672] · used 160/160 modes · 470s
+    M=  64 · eps(var-weighted)=0.2892 · per-well [0.2166, 0.1882, 0.4011, 0.2291, 0.3075] · used 320/320 modes · 491s
+    M= 128 · eps(var-weighted)=0.2442 · per-well [0.1788, 0.1552, 0.3386, 0.1945, 0.2622] · used 639/640 modes · 492s
+    M= 186 · eps(var-weighted)=0.2237 · per-well [0.1606, 0.1388, 0.3169, 0.1734, 0.2406] · used 926/930 modes · 550s
+  ⭐⭐ dsprites seed 2: exponent = -0.2812 (per-well [-0.298, -0.31, -0.245, -0.284, -0.269])
+/Users/user/Desktop/CHLU-gen-dspexp/chlu/experiments/exp_gen_codebook_exponent.py:641: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-dspexp/chlu/experiments/exp_gen_codebook_exponent.py:643: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=130)
+⭐ shapes3d (6 factors): exponent = -0.2500 ± 0.0094 (per seed [-0.2616, -0.2498, -0.2386], 95% CI [-0.2785, -0.2214])
+⭐ dsprites (5 factors): exponent = -0.2803 ± 0.0158 (per seed [-0.2991, -0.2605, -0.2812], 95% CI [-0.3283, -0.2323])
+⭐⭐ STEEPER, non-overlapping across 3 seeds? NO
+   ⛔ NO — the dsprites exponent is NOT steeper (non-overlapping) than shapes3d's. ⭐ By §11b's own words the FACTOR-MANIFOLD ACCOUNT IS REFUTED and −0.26's universality needs a different explanation. ⭐ This is a result, not a failure.
+   closer companion: carried_offset (⛔ a distance, NOT 'the prediction')

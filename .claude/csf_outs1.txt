@@ -1,0 +1,337 @@
+ x10719pj@login1  ~/scratch/CHLU   main ●  cat slurm-177102*
+[env.sh] repo=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/CHLU python=Python 3.11.12 venv=/net/scratch/x10719pj/CHLU/.venv
+[env.sh] MPLBACKEND=Agg JAX_COMPILATION_CACHE_DIR=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/.jax_cache
+=== node/GPU provenance ===
+node861.csf3.man.alces.network
+Mon Jul 20 00:57:38 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   28C    P0             58W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+SLURM_GPUS=1 CUDA_VISIBLE_DEVICES=0
+=== JAX GPU preflight (fail fast rather than score on CPU) ===
+jax 0.9.0 backend: gpu devices: [CudaDevice(id=0)]
+=== run: chlu eval --dataset voraus --score-mode default --seed 42 --out /mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_s42 --download --lattice --lattice-layout literal --lattice-topology ring --window 100 --train-stride 10 --stride 5 --metrics-mode fast --max-train-windows 100000 ===
+chlu eval dataset=voraus modes=('energy', 'residual', 'predict') window=100
+seed=42
+downloading https://media.vorausrobotik.com/voraus-ad-dataset-100hz.parquet -> /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet
+Unexpected error: sha256 mismatch for
+/mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-d
+ataset-100hz.parquet.part
+Traceback (most recent call last):
+  File "/net/scratch/x10719pj/CHLU/chlu/chlu.py", line 71, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/cli/eval_cmd.py", line 217, in cmd_eval
+    dataset = _make_dataset(args)
+              ^^^^^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/cli/eval_cmd.py", line 127, in _make_dataset
+    return cls(**kwargs)
+           ^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/voraus_ad.py", line 104, in __init__
+    super().__init__(root=root, download=download)
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 93, in __init__
+    self.fetch()
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/voraus_ad.py", line 115, in fetch
+    download_file(
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 182, in download_file
+    _verify(part)
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 170, in _verify
+    raise IOError(f"sha256 mismatch for {p}")
+OSError: sha256 mismatch for /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet.part
+[env.sh] repo=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/CHLU python=Python 3.11.12 venv=/net/scratch/x10719pj/CHLU/.venv
+[env.sh] MPLBACKEND=Agg JAX_COMPILATION_CACHE_DIR=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/.jax_cache
+=== node/GPU provenance ===
+node863.csf3.man.alces.network
+Mon Jul 20 00:57:37 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:41:00.0 Off |                    0 |
+| N/A   26C    P0             59W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+SLURM_GPUS=1 CUDA_VISIBLE_DEVICES=0
+=== JAX GPU preflight (fail fast rather than score on CPU) ===
+jax 0.9.0 backend: gpu devices: [CudaDevice(id=0)]
+=== run: chlu eval --dataset voraus --score-mode default --seed 43 --out /mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_s43 --download --lattice --lattice-layout literal --lattice-topology ring --window 100 --train-stride 10 --stride 5 --metrics-mode fast --max-train-windows 100000 ===
+chlu eval dataset=voraus modes=('energy', 'residual', 'predict') window=100
+seed=43
+downloading https://media.vorausrobotik.com/voraus-ad-dataset-100hz.parquet -> /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet
+Unexpected error: sha256 mismatch for
+/mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-d
+ataset-100hz.parquet.part
+Traceback (most recent call last):
+  File "/net/scratch/x10719pj/CHLU/chlu/chlu.py", line 71, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/cli/eval_cmd.py", line 217, in cmd_eval
+    dataset = _make_dataset(args)
+              ^^^^^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/cli/eval_cmd.py", line 127, in _make_dataset
+    return cls(**kwargs)
+           ^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/voraus_ad.py", line 104, in __init__
+    super().__init__(root=root, download=download)
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 93, in __init__
+    self.fetch()
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/voraus_ad.py", line 115, in fetch
+    download_file(
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 182, in download_file
+    _verify(part)
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 170, in _verify
+    raise IOError(f"sha256 mismatch for {p}")
+OSError: sha256 mismatch for /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet.part
+[env.sh] repo=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/CHLU python=Python 3.11.12 venv=/net/scratch/x10719pj/CHLU/.venv
+[env.sh] MPLBACKEND=Agg JAX_COMPILATION_CACHE_DIR=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/.jax_cache
+=== node/GPU provenance ===
+node865.csf3.man.alces.network
+Mon Jul 20 00:57:36 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.71.05              Driver Version: 595.71.05      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   27C    P0             59W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+SLURM_GPUS=1 CUDA_VISIBLE_DEVICES=0
+=== JAX GPU preflight (fail fast rather than score on CPU) ===
+jax 0.9.0 backend: gpu devices: [CudaDevice(id=0)]
+=== run: chlu eval --dataset voraus --score-mode default --seed 44 --out /mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_s44 --download --lattice --lattice-layout literal --lattice-topology ring --window 100 --train-stride 10 --stride 5 --metrics-mode fast --max-train-windows 100000 ===
+chlu eval dataset=voraus modes=('energy', 'residual', 'predict') window=100
+seed=44
+downloading https://media.vorausrobotik.com/voraus-ad-dataset-100hz.parquet -> /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet
+Unexpected error: sha256 mismatch for
+/mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-d
+ataset-100hz.parquet.part
+Traceback (most recent call last):
+  File "/net/scratch/x10719pj/CHLU/chlu/chlu.py", line 71, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/cli/eval_cmd.py", line 217, in cmd_eval
+    dataset = _make_dataset(args)
+              ^^^^^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/cli/eval_cmd.py", line 127, in _make_dataset
+    return cls(**kwargs)
+           ^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/voraus_ad.py", line 104, in __init__
+    super().__init__(root=root, download=download)
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 93, in __init__
+    self.fetch()
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/voraus_ad.py", line 115, in fetch
+    download_file(
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 182, in download_file
+    _verify(part)
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 170, in _verify
+    raise IOError(f"sha256 mismatch for {p}")
+OSError: sha256 mismatch for /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet.part
+[env.sh] repo=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/CHLU python=Python 3.11.12 venv=/net/scratch/x10719pj/CHLU/.venv
+[env.sh] MPLBACKEND=Agg JAX_COMPILATION_CACHE_DIR=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/.jax_cache
+=== node/GPU provenance ===
+node863.csf3.man.alces.network
+Mon Jul 20 01:01:40 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:41:00.0 Off |                    0 |
+| N/A   26C    P0             59W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+SLURM_GPUS=1 CUDA_VISIBLE_DEVICES=0
+=== JAX GPU preflight (fail fast rather than score on CPU) ===
+jax 0.9.0 backend: gpu devices: [CudaDevice(id=0)]
+=== run: chlu eval --dataset voraus --score-mode default --seed 42 --out /mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_shuf_s42 --download --lattice --lattice-layout literal --lattice-topology ring --lattice-shuffle-angles --lattice-shuffle-seed 42 --window 100 --train-stride 10 --stride 5 --metrics-mode fast --max-train-windows 100000 ===
+chlu eval dataset=voraus modes=('energy', 'residual', 'predict') window=100
+seed=42
+downloading https://media.vorausrobotik.com/voraus-ad-dataset-100hz.parquet -> /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet
+literal torus map: 6 joint-angle so2 cosets, topology=ring, shuffle=True
+[harness] voraus_ad: 94272 train windows (size=100, train_stride=10)
+[harness] wrote /mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_shuf_s42/eval_voraus_ad.npz
+
+== summary ==
+  pca_recon      AUC-ROC=0.7115  AUROC=0.7115
+  iforest        AUC-ROC=0.5662  AUROC=0.5662
+  lof            AUC-ROC=0.8081  AUROC=0.8081
+  knn            AUC-ROC=0.7493  AUROC=0.7493
+  clu_energy     AUC-ROC=0.5893  AUROC=0.5893
+  clu_residual   AUC-ROC=0.6154  AUROC=0.6154
+  clu_predict    AUC-ROC=0.5088  AUROC=0.5088
+
+wrote
+/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_shuf_s42/eva
+l_voraus_ad.md and eval_voraus_ad[_raw|_roc].npz under
+/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_shuf_s42
+=== artifacts ===
+/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_shuf_s42:
+eval_voraus_ad.md
+eval_voraus_ad.npz
+eval_voraus_ad_raw.npz
+eval_voraus_ad_roc.npz
+Pull to laptop with: rsync -avz csf3:/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_shuf_s42/ ./eval_voraus_s42/
+[env.sh] repo=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/CHLU python=Python 3.11.12 venv=/net/scratch/x10719pj/CHLU/.venv
+[env.sh] MPLBACKEND=Agg JAX_COMPILATION_CACHE_DIR=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/.jax_cache
+=== node/GPU provenance ===
+node865.csf3.man.alces.network
+Mon Jul 20 01:02:41 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.71.05              Driver Version: 595.71.05      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   27C    P0             59W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+SLURM_GPUS=1 CUDA_VISIBLE_DEVICES=0
+=== JAX GPU preflight (fail fast rather than score on CPU) ===
+jax 0.9.0 backend: gpu devices: [CudaDevice(id=0)]
+=== run: chlu eval --dataset voraus --score-mode default --seed 43 --out /mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_shuf_s43 --download --lattice --lattice-layout literal --lattice-topology ring --lattice-shuffle-angles --lattice-shuffle-seed 43 --window 100 --train-stride 10 --stride 5 --metrics-mode fast --max-train-windows 100000 ===
+chlu eval dataset=voraus modes=('energy', 'residual', 'predict') window=100
+seed=43
+downloading https://media.vorausrobotik.com/voraus-ad-dataset-100hz.parquet -> /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet
+Unexpected error: [Errno 2] No such file or directory:
+'/mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-
+dataset-100hz.parquet.part'
+Traceback (most recent call last):
+  File "/net/scratch/x10719pj/CHLU/chlu/chlu.py", line 71, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/cli/eval_cmd.py", line 217, in cmd_eval
+    dataset = _make_dataset(args)
+              ^^^^^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/cli/eval_cmd.py", line 127, in _make_dataset
+    return cls(**kwargs)
+           ^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/voraus_ad.py", line 104, in __init__
+    super().__init__(root=root, download=download)
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 93, in __init__
+    self.fetch()
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/voraus_ad.py", line 115, in fetch
+    download_file(
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 182, in download_file
+    _verify(part)
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 169, in _verify
+    if sha256 and file_digest(p, "sha256") != sha256:
+                  ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 145, in file_digest
+    with open(path, "rb") as f:
+         ^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet.part'
+[env.sh] repo=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/CHLU python=Python 3.11.12 venv=/net/scratch/x10719pj/CHLU/.venv
+[env.sh] MPLBACKEND=Agg JAX_COMPILATION_CACHE_DIR=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/.jax_cache
+=== node/GPU provenance ===
+node861.csf3.man.alces.network
+Mon Jul 20 01:03:12 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   30C    P0             78W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+SLURM_GPUS=1 CUDA_VISIBLE_DEVICES=0
+=== JAX GPU preflight (fail fast rather than score on CPU) ===
+jax 0.9.0 backend: gpu devices: [CudaDevice(id=0)]
+=== run: chlu eval --dataset voraus --score-mode default --seed 44 --out /mnt/iusers01/fatpou01/phy01/x10719pj/scratch/clu_eval/voraus_torus_shuf_s44 --download --lattice --lattice-layout literal --lattice-topology ring --lattice-shuffle-angles --lattice-shuffle-seed 44 --window 100 --train-stride 10 --stride 5 --metrics-mode fast --max-train-windows 100000 ===
+chlu eval dataset=voraus modes=('energy', 'residual', 'predict') window=100
+seed=44
+downloading https://media.vorausrobotik.com/voraus-ad-dataset-100hz.parquet -> /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet
+Unexpected error: [Errno 2] No such file or directory:
+'/mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-
+dataset-100hz.parquet.part' ->
+'/mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-
+dataset-100hz.parquet'
+Traceback (most recent call last):
+  File "/net/scratch/x10719pj/CHLU/chlu/chlu.py", line 71, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/cli/eval_cmd.py", line 217, in cmd_eval
+    dataset = _make_dataset(args)
+              ^^^^^^^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/cli/eval_cmd.py", line 127, in _make_dataset
+    return cls(**kwargs)
+           ^^^^^^^^^^^^^
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/voraus_ad.py", line 104, in __init__
+    super().__init__(root=root, download=download)
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 93, in __init__
+    self.fetch()
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/voraus_ad.py", line 115, in fetch
+    download_file(
+  File "/net/scratch/x10719pj/CHLU/chlu/data/industrial/base.py", line 183, in download_file
+    part.rename(dest)
+  File "/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/.uv_pythons/cpython-3.11.12-linux-x86_64-gnu/lib/python3.11/pathlib.py", line 1175, in rename
+    os.rename(self, target)
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet.part' -> '/mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/voraus_ad/voraus-ad-dataset-100hz.parquet'

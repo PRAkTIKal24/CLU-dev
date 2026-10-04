@@ -1,0 +1,253 @@
+[     0.0s] rung=6 seed=0 cache gen 2 scope full n_rows 480000 root C:/chlu/outputs/spoke-a-rivals/cache_generation2
+[     0.0s] chlu.__file__ = C:\chlu\worktrees\CHLU-w12-composition-ladder\chlu\__init__.py
+[     3.6s] corners: {'n_corners': 120, 'n_rows': 8640, 'pairwise_disjoint': True, 'all_rows_held_out': True, 'rows_per_corner': [72]}
+[     3.9s]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+[     7.0s]   dead channels: 66
+[     0.0s] rung=6 seed=0 cache gen 2 scope full n_rows 480000 root C:/chlu/outputs/spoke-a-rivals/cache_generation2
+[     0.0s] chlu.__file__ = C:\chlu\worktrees\CHLU-w12-composition-ladder\chlu\__init__.py
+[     4.1s] corners: {'n_corners': 120, 'n_rows': 8640, 'pairwise_disjoint': True, 'all_rows_held_out': True, 'rows_per_corner': [72]}
+[     4.3s]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+[     7.3s]   dead channels: 66
+[    51.0s]   channel-factor relevance: (2048, 6) in 43.6s; mean top-factor MI 0.5468 bits
+[    64.1s]   partitions written -> C:\chlu\outputs\w12-composition-ladder\runs\6_seed0\partitions.json
+[    64.3s]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[    70.8s] FastJudge positive control: True (256 requests, 1536 elements) in 6.4s
+[    70.8s] ---- single_design_K5 ----
+[    70.8s]   partitions: already on disk, skipping
+[    93.2s]   store: 64 atoms x 2048 f32 = 524,288 B on 131,072 rows; ranks [63, 63, 63, 12, 41] rank/d [0.0816, 0.0671, 0.289, 0.2, 0.6949]
+[   105.9s]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 13) (131072, 41)
+[   122.0s]     als 1/40 train_mse=0.05634 val_mse=0.05655
+[   138.3s]     als 2/40 train_mse=0.02495 val_mse=0.02505
+[   150.5s]     als 3/40 train_mse=0.01859 val_mse=0.01868
+[   160.9s]     als 4/40 train_mse=0.01602 val_mse=0.01609
+[   171.3s]     als 5/40 train_mse=0.01456 val_mse=0.01463
+[   181.9s]     als 6/40 train_mse=0.01359 val_mse=0.01365
+[   192.4s]     als 7/40 train_mse=0.01288 val_mse=0.01294
+[   202.7s]     als 8/40 train_mse=0.01233 val_mse=0.01238
+[   213.3s]     als 9/40 train_mse=0.01189 val_mse=0.01194
+[   224.0s]     als 10/40 train_mse=0.01152 val_mse=0.01157
+[   234.6s]     als 11/40 train_mse=0.01121 val_mse=0.01126
+[   245.1s]     als 12/40 train_mse=0.01094 val_mse=0.01099
+[   255.5s]     als 13/40 train_mse=0.01071 val_mse=0.01075
+[   265.9s]     als 14/40 train_mse=0.01050 val_mse=0.01054
+[   276.5s]     als 15/40 train_mse=0.01031 val_mse=0.01035
+[   286.7s]     als 16/40 train_mse=0.01015 val_mse=0.01019
+[   297.4s]     als 17/40 train_mse=0.00999 val_mse=0.01003
+[   307.9s]     als 18/40 train_mse=0.00986 val_mse=0.00989
+[   318.3s]     als 19/40 train_mse=0.00973 val_mse=0.00977
+[   328.6s]     als 20/40 train_mse=0.00961 val_mse=0.00965
+[   339.3s]     als 21/40 train_mse=0.00950 val_mse=0.00954
+[   349.8s]     als 22/40 train_mse=0.00940 val_mse=0.00944
+[   360.2s]     als 23/40 train_mse=0.00931 val_mse=0.00935
+[   370.8s]     als 24/40 train_mse=0.00922 val_mse=0.00926
+[   381.3s]     als 25/40 train_mse=0.00914 val_mse=0.00917
+[   391.8s]     als 26/40 train_mse=0.00906 val_mse=0.00909
+[   402.5s]     als 27/40 train_mse=0.00898 val_mse=0.00902
+[   413.1s]     als 28/40 train_mse=0.00891 val_mse=0.00895
+[   423.4s]     als 29/40 train_mse=0.00884 val_mse=0.00888
+[   433.8s]     als 30/40 train_mse=0.00878 val_mse=0.00881
+[   443.8s]     als 31/40 train_mse=0.00872 val_mse=0.00875
+[   454.2s]     als 32/40 train_mse=0.00866 val_mse=0.00869
+[   465.1s]     als 33/40 train_mse=0.00860 val_mse=0.00864
+[   475.5s]     als 34/40 train_mse=0.00855 val_mse=0.00858
+[   486.0s]     als 35/40 train_mse=0.00849 val_mse=0.00853
+[   496.0s]     als 36/40 train_mse=0.00844 val_mse=0.00848
+[   506.0s]     als 37/40 train_mse=0.00840 val_mse=0.00843
+[   515.6s]     als 38/40 train_mse=0.00835 val_mse=0.00838
+[   525.5s]     als 39/40 train_mse=0.00830 val_mse=0.00834
+[   534.8s]     als 40/40 train_mse=0.00826 val_mse=0.00829
+[   534.8s]     address book single_design_K5: fitted in 441.6s
+[   590.0s]   single_design_K5: novel 62.6917 +- 10.1649  judge_acc 0.8707  in 519.3s
+[   590.0s] ---- pca_tensor ----
+[   590.0s]   partitions: already on disk, skipping
+[   748.2s]   principal content: 64 atoms x 2048 float32 = 524,288 B, wells [772, 939, 218, 60, 59], variance explained [0.9736, 0.9575, 0.9603, 1.0, 1.0]
+[   762.1s]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 60) (131072, 59)
+[   776.8s]     als 1/40 train_mse=0.05628 val_mse=0.05650
+[   790.3s]     als 2/40 train_mse=0.02493 val_mse=0.02502
+[   804.7s]     als 3/40 train_mse=0.01858 val_mse=0.01866
+[   820.2s]     als 4/40 train_mse=0.01600 val_mse=0.01608
+[   835.9s]     als 5/40 train_mse=0.01455 val_mse=0.01462
+[   853.9s]     als 6/40 train_mse=0.01358 val_mse=0.01364
+[   870.2s]     als 7/40 train_mse=0.01287 val_mse=0.01293
+[   889.8s]     als 8/40 train_mse=0.01232 val_mse=0.01237
+[   908.5s]     als 9/40 train_mse=0.01188 val_mse=0.01193
+[   928.7s]     als 10/40 train_mse=0.01151 val_mse=0.01156
+[   947.4s]     als 11/40 train_mse=0.01120 val_mse=0.01124
+[   966.6s]     als 12/40 train_mse=0.01093 val_mse=0.01097
+[   984.9s]     als 13/40 train_mse=0.01070 val_mse=0.01074
+[   997.9s]     als 14/40 train_mse=0.01049 val_mse=0.01053
+[  1011.0s]     als 15/40 train_mse=0.01030 val_mse=0.01034
+[  1024.2s]     als 16/40 train_mse=0.01014 val_mse=0.01018
+[  1038.3s]     als 17/40 train_mse=0.00998 val_mse=0.01002
+[  1055.1s]     als 18/40 train_mse=0.00985 val_mse=0.00988
+[  1071.3s]     als 19/40 train_mse=0.00972 val_mse=0.00976
+[  1090.5s]     als 20/40 train_mse=0.00960 val_mse=0.00964
+[  1115.7s]     als 21/40 train_mse=0.00949 val_mse=0.00953
+[  1134.1s]     als 22/40 train_mse=0.00939 val_mse=0.00943
+[  1158.0s]     als 23/40 train_mse=0.00930 val_mse=0.00934
+[  1182.8s]     als 24/40 train_mse=0.00921 val_mse=0.00925
+[  1208.7s]     als 25/40 train_mse=0.00913 val_mse=0.00916
+[  1233.2s]     als 26/40 train_mse=0.00905 val_mse=0.00909
+[  1257.9s]     als 27/40 train_mse=0.00897 val_mse=0.00901
+[  1280.6s]     als 28/40 train_mse=0.00890 val_mse=0.00894
+[  1296.2s]     als 29/40 train_mse=0.00883 val_mse=0.00887
+[  1309.7s]     als 30/40 train_mse=0.00877 val_mse=0.00881
+[  1323.0s]     als 31/40 train_mse=0.00871 val_mse=0.00874
+[  1336.1s]     als 32/40 train_mse=0.00865 val_mse=0.00868
+[  1349.2s]     als 33/40 train_mse=0.00859 val_mse=0.00863
+[  1362.8s]     als 34/40 train_mse=0.00854 val_mse=0.00857
+[  1376.0s]     als 35/40 train_mse=0.00849 val_mse=0.00852
+[  1389.2s]     als 36/40 train_mse=0.00844 val_mse=0.00847
+[  1403.3s]     als 37/40 train_mse=0.00839 val_mse=0.00842
+[  1416.4s]     als 38/40 train_mse=0.00834 val_mse=0.00837
+[  1430.2s]     als 39/40 train_mse=0.00829 val_mse=0.00833
+[  1443.2s]     als 40/40 train_mse=0.00825 val_mse=0.00828
+[  1443.3s]     address book pca_tensor: fitted in 695.1s
+[  1518.6s]   pca_tensor: novel 62.6917 +- 10.1649  judge_acc 0.8707  in 928.5s
+[  1518.6s] ---- single_design_K5__landscape_shuffled ----
+[  1518.6s]     address book: reused address_single_design_K5_R128_sw40.pkl
+[  1612.7s]   single_design_K5__landscape_shuffled: novel 0.0000 +- 0.0000  judge_acc 0.0000  in 94.2s
+[  1612.7s] ---- single_design_K5__random_atoms ----
+[  1639.4s]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 60) (131072, 59)
+[  1665.3s]     als 1/40 train_mse=0.07232 val_mse=0.07259
+[  1679.0s]     als 2/40 train_mse=0.03889 val_mse=0.03899
+[  1691.9s]     als 3/40 train_mse=0.03200 val_mse=0.03206
+[  1705.9s]     als 4/40 train_mse=0.02919 val_mse=0.02923
+[  1720.0s]     als 5/40 train_mse=0.02758 val_mse=0.02763
+[  1733.4s]     als 6/40 train_mse=0.02650 val_mse=0.02655
+[  1747.1s]     als 7/40 train_mse=0.02571 val_mse=0.02575
+[  1761.0s]     als 8/40 train_mse=0.02508 val_mse=0.02512
+[  1775.0s]     als 9/40 train_mse=0.02457 val_mse=0.02462
+[  1789.4s]     als 10/40 train_mse=0.02415 val_mse=0.02419
+[  1803.6s]     als 11/40 train_mse=0.02379 val_mse=0.02383
+[  1816.8s]     als 12/40 train_mse=0.02348 val_mse=0.02352
+[  1830.4s]     als 13/40 train_mse=0.02320 val_mse=0.02325
+[  1844.1s]     als 14/40 train_mse=0.02296 val_mse=0.02301
+[  1857.8s]     als 15/40 train_mse=0.02274 val_mse=0.02279
+[  1871.4s]     als 16/40 train_mse=0.02254 val_mse=0.02259
+[  1885.6s]     als 17/40 train_mse=0.02235 val_mse=0.02241
+[  1900.9s]     als 18/40 train_mse=0.02219 val_mse=0.02224
+[  1916.4s]     als 19/40 train_mse=0.02203 val_mse=0.02209
+[  1932.2s]     als 20/40 train_mse=0.02189 val_mse=0.02194
+[  1948.2s]     als 21/40 train_mse=0.02176 val_mse=0.02181
+[  1964.5s]     als 22/40 train_mse=0.02163 val_mse=0.02169
+[  1980.2s]     als 23/40 train_mse=0.02151 val_mse=0.02157
+[  1995.9s]     als 24/40 train_mse=0.02140 val_mse=0.02146
+[  2011.5s]     als 25/40 train_mse=0.02130 val_mse=0.02136
+[  2028.0s]     als 26/40 train_mse=0.02120 val_mse=0.02126
+[  2044.8s]     als 27/40 train_mse=0.02111 val_mse=0.02116
+[  2060.9s]     als 28/40 train_mse=0.02102 val_mse=0.02107
+[  2077.7s]     als 29/40 train_mse=0.02094 val_mse=0.02099
+[  2094.7s]     als 30/40 train_mse=0.02086 val_mse=0.02091
+[  2108.6s]     als 31/40 train_mse=0.02078 val_mse=0.02083
+[  2121.0s]     als 32/40 train_mse=0.02070 val_mse=0.02075
+[  2133.7s]     als 33/40 train_mse=0.02063 val_mse=0.02068
+[  2147.1s]     als 34/40 train_mse=0.02056 val_mse=0.02061
+[  2160.8s]     als 35/40 train_mse=0.02050 val_mse=0.02054
+[  2174.6s]     als 36/40 train_mse=0.02043 val_mse=0.02048
+[  2188.6s]     als 37/40 train_mse=0.02037 val_mse=0.02042
+[  2203.0s]     als 38/40 train_mse=0.02031 val_mse=0.02036
+[  2217.1s]     als 39/40 train_mse=0.02025 val_mse=0.02030
+[  2231.3s]     als 40/40 train_mse=0.02019 val_mse=0.02024
+[  2231.4s]     address book single_design_K5_random_atoms: fitted in 618.5s
+[  2307.3s]   single_design_K5__random_atoms: novel 0.2583 +- 1.0083  judge_acc 0.0036  in 694.6s
+[  2307.3s] ---- pca_tensor__landscape_shuffled ----
+[  2307.4s]     address book: reused address_pca_tensor_R128_sw40.pkl
+[  2390.8s]   pca_tensor__landscape_shuffled: novel 0.0000 +- 0.0000  judge_acc 0.0000  in 83.4s
+[  2390.8s] ---- pca_tensor__random_atoms ----
+[  2410.3s]   span targets: 131072 rows -> (131072, 64) (131072, 64) (131072, 64) (131072, 60) (131072, 59)
+[  2428.5s]     als 1/40 train_mse=0.07232 val_mse=0.07259
+[  2442.3s]     als 2/40 train_mse=0.03889 val_mse=0.03899
+[  2456.0s]     als 3/40 train_mse=0.03200 val_mse=0.03206
+[  2469.3s]     als 4/40 train_mse=0.02919 val_mse=0.02923
+[  2488.0s]     als 5/40 train_mse=0.02758 val_mse=0.02763
+[  2506.8s]     als 6/40 train_mse=0.02650 val_mse=0.02655
+[  2525.2s]     als 7/40 train_mse=0.02571 val_mse=0.02575
+[  2542.9s]     als 8/40 train_mse=0.02508 val_mse=0.02512
+[  2561.3s]     als 9/40 train_mse=0.02457 val_mse=0.02462
+[  2579.8s]     als 10/40 train_mse=0.02415 val_mse=0.02419
+[  2597.1s]     als 11/40 train_mse=0.02379 val_mse=0.02383
+[  2610.7s]     als 12/40 train_mse=0.02348 val_mse=0.02352
+[  2624.4s]     als 13/40 train_mse=0.02320 val_mse=0.02325
+[  2637.6s]     als 14/40 train_mse=0.02296 val_mse=0.02301
+[  2650.9s]     als 15/40 train_mse=0.02274 val_mse=0.02279
+[  2665.1s]     als 16/40 train_mse=0.02254 val_mse=0.02259
+[  2678.8s]     als 17/40 train_mse=0.02235 val_mse=0.02241
+[  2692.2s]     als 18/40 train_mse=0.02219 val_mse=0.02224
+[  2705.4s]     als 19/40 train_mse=0.02203 val_mse=0.02209
+[  2718.5s]     als 20/40 train_mse=0.02189 val_mse=0.02194
+[  2733.5s]     als 21/40 train_mse=0.02176 val_mse=0.02181
+[  2748.7s]     als 22/40 train_mse=0.02163 val_mse=0.02169
+[  2763.7s]     als 23/40 train_mse=0.02151 val_mse=0.02157
+[  2779.1s]     als 24/40 train_mse=0.02140 val_mse=0.02146
+[  2795.0s]     als 25/40 train_mse=0.02130 val_mse=0.02136
+[  2810.4s]     als 26/40 train_mse=0.02120 val_mse=0.02126
+[  2825.6s]     als 27/40 train_mse=0.02111 val_mse=0.02116
+[  2841.1s]     als 28/40 train_mse=0.02102 val_mse=0.02107
+[  2857.3s]     als 29/40 train_mse=0.02094 val_mse=0.02099
+[  2872.6s]     als 30/40 train_mse=0.02086 val_mse=0.02091
+[  2887.3s]     als 31/40 train_mse=0.02078 val_mse=0.02083
+[  2901.9s]     als 32/40 train_mse=0.02070 val_mse=0.02075
+[  2916.4s]     als 33/40 train_mse=0.02063 val_mse=0.02068
+[  2931.0s]     als 34/40 train_mse=0.02056 val_mse=0.02061
+[  2945.9s]     als 35/40 train_mse=0.02050 val_mse=0.02054
+[  2958.4s]     als 36/40 train_mse=0.02043 val_mse=0.02048
+[  2972.2s]     als 37/40 train_mse=0.02037 val_mse=0.02042
+[  2983.3s]     als 38/40 train_mse=0.02031 val_mse=0.02036
+[  2994.1s]     als 39/40 train_mse=0.02025 val_mse=0.02030
+[  3005.0s]     als 40/40 train_mse=0.02019 val_mse=0.02024
+[  3005.1s]     address book pca_tensor_random_atoms: fitted in 614.2s
+[  3067.2s]   pca_tensor__random_atoms: novel 0.2583 +- 1.0083  judge_acc 0.0036  in 676.4s
+[  3067.2s] ---- rival_mlp ----
+[  3143.2s]   rival_mlp: novel 35.2083 +- 18.0046  judge_acc 0.4890  in 76.1s
+[  3143.2s] ---- rival_lstm ----
+[  3219.4s]   rival_lstm: novel 44.4333 +- 20.4770  judge_acc 0.6171  in 76.1s
+[  3219.4s] ---- rival_transformer ----
+[  3311.9s]   rival_transformer: novel 28.8000 +- 14.4952  judge_acc 0.4000  in 92.5s
+[  3311.9s] ---- rival_cont_mlp ----
+[  3408.8s]   rival_cont_mlp: novel 6.3333 +- 5.6201  judge_acc 0.0880  in 96.9s
+[  3408.8s] ---- rival_table ----
+[  3488.0s]   rival_table: novel 8.4333 +- 9.6369  judge_acc 0.1171  in 79.2s
+[  3488.0s] leg done -> C:\chlu\outputs\w12-composition-ladder\runs\6_seed0  failed=[]

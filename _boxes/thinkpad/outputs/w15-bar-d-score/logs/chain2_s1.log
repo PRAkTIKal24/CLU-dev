@@ -1,0 +1,39 @@
+[chain2 s1 09:30:29Z] rivals(alone) done -> rivals(loop_swap)
+[11:31:16] stage=rivals seed=1 arm=loop_swap out=C:\chlu\outputs\w15-bar-d-score\gpu-run quick=False
+[11:31:16] chlu package: C:\chlu\worktrees\CHLU-w15-bar-d-score\chlu
+[11:31:16] jax devices: [CpuDevice(id=0)]
+[11:31:16]   COMPUTE OVERRIDES (equal for every arm in this launch): {'joint_steps': {'from': 400, 'to': 4000}, 'dec_refit_steps': {'from': 400, 'to': 1800}, 'warm_steps': {'from': 1500, 'to': 4000}, 'n_train': {'from': 8192, 'to': 32768}}
+[11:31:33]   rival pool: 131072 rows from THIS ARM's cache (fit 130560 / val 512), D=2048
+[11:32:52]     [mlp_180k] matched width 84 -> 178952 params vs target 179968 (-0.56%)
+[11:35:04]     [mlp_180k] short trial 1/6 lr=0.0003 wd=0: val mse 0.01039
+[11:37:23]     [mlp_180k] short trial 2/6 lr=0.0003 wd=0.0001: val mse 0.01039
+[11:39:51]     [mlp_180k] short trial 3/6 lr=0.001 wd=0: val mse 0.00652
+[11:42:26]     [mlp_180k] short trial 4/6 lr=0.001 wd=0.0001: val mse 0.00656
+[11:45:06]     [mlp_180k] short trial 5/6 lr=0.003 wd=0: val mse 0.00432
+[11:47:28]     [mlp_180k] short trial 6/6 lr=0.003 wd=0.0001: val mse 0.00433
+[11:53:06]     [mlp_180k] full trial epochs=20: val mse 0.00345
+[12:05:02]     [mlp_180k] full trial epochs=40: val mse 0.00316
+[12:05:02]     [mlp_180k] SELECTED lr=0.003 wd=0 epochs=40 (validation MSE on cached features)
+[12:05:05] done in 2029.2s
+[score] cond=val seed=1 encoder-arm=loop_swap
+[score]   features  -> C:/chlu/outputs/w15-bar-d-score/gpu-run/seed_1/loop_swap/cache
+[score]   decoder   -> C:/chlu/outputs/w15-bar-d-score/gpu-run/seed_1/loop_swap/declift   (this arm's own refit; NOT the gated winner)
+[score]   rivals    -> C:/chlu/outputs/w15-bar-d-score/gpu-run/seed_1/loop_swap/rivals       (refit on THIS arm's features)
+[score]   judge     -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier   *** INVARIANT, does not move ***
+[leg] classifier root -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[leg] cache root -> C:/chlu/outputs/w15-bar-d-score/gpu-run/seed_1/loop_swap/cache (generation 2)
+[leg] condition=val seed=1 leg=C:/chlu/outputs/w15-bar-d-score/score/loop_swap/val_seed1 arms=pca_tensor rival_mlp_180k pca_landscape_removed
+  "pre_existing_unchanged": true
+ }
+}
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[12:07:06] stage=prepare arm=None out=C:\chlu\outputs\w15-bar-d-score\score\loop_swap\val_seed1 seed=1 cond=val install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[12:07:19]   fit pool 131072 rows; disjoint from the hold-out: 0 shared
+[12:07:50]   dead channels: 184
+[12:10:46]   channel-factor relevance: (2048, 6) in 176.2s; mean top-factor MI 0.6784 bits
+[12:11:22]   partitions written -> C:\chlu\outputs\w15-bar-d-score\score\loop_swap\val_seed1\partitions.json
+[12:11:23] {"well_sizes": [410, 410, 410, 409, 409]}
+[leg] ---- pca_tensor ----
+  instrument: classifier root rebound to C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-external-classifier
+[12:12:16] stage=fit arm=pca_tensor out=C:\chlu\outputs\w15-bar-d-score\score\loop_swap\val_seed1 seed=1 cond=val install={'added': ['oracle_span_field', 'field_lookup_argmax', 'oracle_content_pool', 'oracle_content_oracle', 'oracle_content_fine', 'oracle_true_feature', 'oracle_content_items', 'pca_tensor', 'pca_tensor_sum', 'pca_landscape_removed', 'pca_landscape_shuffled', 'pca_random_refit', 'pca_span_rotated', 'pca_lookup_argmax', 'pca_lookup_convex'], 'n_arms': 37, 'pre_existing_unchanged': True}
+[12:12:16]   partitions: already on disk, skipping

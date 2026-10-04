@@ -1,0 +1,105 @@
+######## G1  -c 96 (over the 84 cap) ########
+FATAL[job_cpu_gen]: -c 96 exceeds the per-user CPU cap on account 'fatpou01': MaxTRESPU cpu=84.
+       A job over that cap PENDS FOREVER on AssocGrpCpuLimit — it is not a slow job, it is a
+       stuck one.  Resubmit with -c <= 84 (the group cap is GrpTRES cpu=1500, but the
+       PER-USER limit is what binds you).
+rc=2
+
+######## G1b -c 84 (AT the cap: must pass) ########
+  seed_2 -> /Users/user/Desktop/CHLU-cpujobs/artefacts/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_2/atom_manifest.json
+      python3 -u -m chlu.experiments.exp_gen_atom_mean --dataset shapes3d --pretext recon --stage atoms --seed 2 --out /Users/user/Desktop/CHLU-cpujobs/artefacts/outputs/gen-atom-mean-control/runs/shapes3d_recon
+aggregate:
+      python3 -u -m chlu.experiments.exp_gen_atom_mean --dataset shapes3d --pretext recon --stage aggregate --out /Users/user/Desktop/CHLU-cpujobs/artefacts/outputs/gen-atom-mean-control/runs/shapes3d_recon
+submit:
+  sbatch -c 84 -t <WALLCLOCK, max 7-0> --export="ALL,EXP=atom_mean,DATASET=shapes3d,PRETEXT=recon,SEEDS=0 1 2,GEN_GIT_COMMIT=$GEN_GIT_COMMIT" scripts/csf3/job_cpu_gen.sh
+resume (identical line — RESUME=1 is the default):
+  sbatch -c 84 -t <WALLCLOCK> --export="ALL,EXP=atom_mean,DATASET=shapes3d,PRETEXT=recon,SEEDS=0 1 2,RESUME=1,GEN_GIT_COMMIT=$GEN_GIT_COMMIT" scripts/csf3/job_cpu_gen.sh
+rc=0
+
+######## G1c -c 0 ########
+FATAL[job_cpu_gen]: core count '0' must be >= 1
+rc=2
+
+######## G1d -c notanumber ########
+FATAL[job_cpu_gen]: core count 'eighty' is not a positive integer (-c N / CORES=N)
+rc=2
+
+######## G2  account=gpu-free ########
+FATAL[job_cpu_gen]: this job is running under account 'gpu-free', not 'fatpou01'.
+       ⛔ 'gpu-free' is the GPU association and carries NO CPU grant — under it this job is
+       rejected or scavenges, and the whole point (an uncontended CPU entitlement) is lost.
+       Resubmit WITHOUT overriding -A, or with -A fatpou01.
+rc=2
+
+######## G2b account=fatpou01 (must pass) ########
+  seed_2 -> /Users/user/Desktop/CHLU-cpujobs/artefacts/outputs/gen-atom-mean-control/runs/shapes3d_recon/seed_2/atom_manifest.json
+      python3 -u -m chlu.experiments.exp_gen_atom_mean --dataset shapes3d --pretext recon --stage atoms --seed 2 --out /Users/user/Desktop/CHLU-cpujobs/artefacts/outputs/gen-atom-mean-control/runs/shapes3d_recon
+aggregate:
+      python3 -u -m chlu.experiments.exp_gen_atom_mean --dataset shapes3d --pretext recon --stage aggregate --out /Users/user/Desktop/CHLU-cpujobs/artefacts/outputs/gen-atom-mean-control/runs/shapes3d_recon
+submit:
+  sbatch -c 16 -t <WALLCLOCK, max 7-0> --export="ALL,EXP=atom_mean,DATASET=shapes3d,PRETEXT=recon,SEEDS=0 1 2,GEN_GIT_COMMIT=$GEN_GIT_COMMIT" scripts/csf3/job_cpu_gen.sh
+resume (identical line — RESUME=1 is the default):
+  sbatch -c 16 -t <WALLCLOCK> --export="ALL,EXP=atom_mean,DATASET=shapes3d,PRETEXT=recon,SEEDS=0 1 2,RESUME=1,GEN_GIT_COMMIT=$GEN_GIT_COMMIT" scripts/csf3/job_cpu_gen.sh
+rc=0
+
+######## G3  partition=serial ########
+FATAL[job_cpu_gen]: partition 'serial' is a ONE-CORE partition — multi-core work here is
+       silently serialised.  Resubmit with -p multicore.
+rc=2
+
+######## G4  EXP unset ########
+FATAL[job_cpu_gen]: EXP is unset. No default: set EXP=atom_mean|baselines
+rc=2
+
+######## G4b EXP=nonesuch ########
+FATAL[job_cpu_gen]: EXP='nonesuch' is not one of: atom_mean baselines.  ⛔ Do not build a second
+       launcher — add the module here, with its unit stage and its manifest name.
+rc=2
+
+######## G4c DATASET unset ########
+FATAL[job_cpu_gen]: DATASET is unset. No default: set DATASET=shapes3d|dsprites
+rc=2
+
+######## G4d PRETEXT=bogus ########
+FATAL[job_cpu_gen]: PRETEXT='bogus' is not one of: recon cls
+rc=2
+
+######## G4e ARM=bogus ########
+FATAL[job_cpu_gen]: ARM='bogus' is not one of: knn lace all
+rc=2
+
+######## G4f SEED non-integer ########
+FATAL[job_cpu_gen]: SEED 'x' is not a non-negative integer
+rc=2
+
+######## G5 missing artefact root (named) ########
+FATAL[job_cpu_gen]: gen artefact root(s) MISSING, by name:
+    CHLU_CLAUDE_ROOT -> /tmp/cpugen-no-artefacts/artefacts
+    CHLU_GEN_DATA_ROOT -> /tmp/cpugen-no-artefacts/artefacts/data/gen
+    CHLU_GEN_BRIDGE_ROOT -> /tmp/cpugen-no-artefacts/artefacts/outputs/gen-feature-bridge/runs
+    CHLU_GEN_STORE_RUNS -> /tmp/cpugen-no-artefacts/artefacts/outputs/gen-store-grouping/runs
+    CHLU_GEN_DECLIFT_DIR -> /tmp/cpugen-no-artefacts/artefacts/outputs/gen-decoder-lift/winner
+       Stage them with scripts/csf3/stage_artefacts.sh (⛔ do not improvise a
+       staging path), or set CHLU_SKIP_ARTEFACT_CHECK=1 if this run needs none.
+rc=0
+
+######## G5b roots present except ONE (named) ########
+[cpu-gen] GEN_LOCAL=1 — skipping module purge / env.sh / JAX preflight (plumbing only)
+FATAL[job_cpu_gen]: gen artefact root(s) MISSING, by name:
+    CHLU_GEN_DECLIFT_DIR -> /var/folders/js/5q63gdq11c7f7s9b7l2_lhk00000gp/T/tmp.tYYflrmgDY/art/outputs/gen-decoder-lift/winner
+       Stage them with scripts/csf3/stage_artefacts.sh (⛔ do not improvise a
+       staging path), or set CHLU_SKIP_ARTEFACT_CHECK=1 if this run needs none.
+rc=0
+
+######## G6 CKPT_DIR under $TMPDIR ########
+[cpu-gen] GEN_LOCAL=1 — skipping module purge / env.sh / JAX preflight (plumbing only)
+[cpu-gen] ⚠ CHLU_SKIP_ARTEFACT_CHECK=1 — artefact roots NOT asserted
+FATAL[job_cpu_gen]: CKPT_DIR='/tmp/xyz/ckpt' is under $TMPDIR, which is WIPED AT JOB END.
+rc=0
+
+######## G6b CKPT_DIR under $HOME (not ~/scratch) ########
+[cpu-gen] ⚠ CHLU_SKIP_ARTEFACT_CHECK=1 — artefact roots NOT asserted
+FATAL[job_cpu_gen]: CKPT_DIR='/Users/user/ckpt' is under $HOME (quota'd, backed up).
+       Put it under ~/scratch.
+rc=0
+

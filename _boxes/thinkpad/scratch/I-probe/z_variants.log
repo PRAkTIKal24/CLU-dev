@@ -1,0 +1,33 @@
+enc_hash: 7dcf753fe48ce80fd2416150b316017afbd4a681950fa2d1b821212eefe7e693 (matches Mac: True )
+
+-- vmap (what the test does)
+   Z sha            : 229afaf066055add0d5e98cd1ebb5846dbcecc2f2cde5e06d7f4eef056241cc6
+   bits differ vs 1st: 0/8192  max|d|=0.000e+00  max ULP=0
+   labels identical : True
+   well_sizes       : [8, 23, 225]   codes_sum: 84
+   store_hash       : 6ac774f838beb5ea5b33507c91b39019da3b3223470a428390e8b58cf562ac6d
+   == Mac a2a916f4  : False
+
+-- python loop, one image
+   Z sha            : 7cc7f0ea863ff025617014f4f1cfc0b333579bf418f74750daa4506e5272a727
+   bits differ vs 1st: 96/8192  max|d|=3.576e-07  max ULP=1487
+   labels identical : True
+   well_sizes       : [8, 23, 225]   codes_sum: 84
+   store_hash       : a8e190b81ef0be778271367e02566ae143aa8ed60eaf16b8ec6f4c8e0d50e463
+   == Mac a2a916f4  : False
+
+-- jit(vmap)
+   Z sha            : 229afaf066055add0d5e98cd1ebb5846dbcecc2f2cde5e06d7f4eef056241cc6
+   bits differ vs 1st: 0/8192  max|d|=0.000e+00  max ULP=0
+   labels identical : True
+   well_sizes       : [8, 23, 225]   codes_sum: 84
+   store_hash       : 6ac774f838beb5ea5b33507c91b39019da3b3223470a428390e8b58cf562ac6d
+   == Mac a2a916f4  : False
+
+-- vmap on 2 half-batches
+   Z sha            : 7cc7f0ea863ff025617014f4f1cfc0b333579bf418f74750daa4506e5272a727
+   bits differ vs 1st: 96/8192  max|d|=3.576e-07  max ULP=1487
+   labels identical : True
+   well_sizes       : [8, 23, 225]   codes_sum: 84
+   store_hash       : a8e190b81ef0be778271367e02566ae143aa8ed60eaf16b8ec6f4c8e0d50e463
+   == Mac a2a916f4  : False

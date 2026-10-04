@@ -1,0 +1,124 @@
+[gen-navigate] dataset=shapes3d pretext=recon seeds=[0, 1, 2] steps=8 pools=['CORNER', 'GRID'] -> /Users/user/Desktop/CHLU/.claude/outputs/gen-navigation/runs/shapes3d_recon
+[     0.6s]   commit cache HIT commit_cache_s0.npz (⭐ no feature gather, no grouping re-derive)
+[     0.7s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_0/store_s0.pkl (hash 3e3424a1ea40017e…, K=5, M=64, 30 bits/read)
+[     0.7s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[     0.7s]   ⭐ external classifier: gate=PASS hash=c8741ac417d88ebf… (⛔ not the probe — the probe shares the decoder's lineage)
+[     0.7s] ⭐ pools: CORNER=72 held-out requests · GRID anchors=512 of 512 (0 dropped as in-corner)
+[     1.9s] ⭐ endpoint path asserted request-only (no feature argument on ANY arm)
+[     3.1s] ⭐ traversal path asserted feature-free (4 checks) · endpoints exact=True · 30 bits/read
+[     3.1s]   channel [store_snap]: 30.0 bits at EVERY intermediate point (design constant 30) ⭐ within
+[     3.1s]   channel [linear]: 65536.0 bits at EVERY intermediate point (design constant 30) ⛔ EXCEEDS
+[     3.1s]   channel [deleted_mean]: 30.0 bits at EVERY intermediate point (design constant 30) ⭐ within
+[     3.1s]   channel [deleted_scramble]: 30.0 bits at EVERY intermediate point (design constant 30) ⭐ within
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     7.3s]   ⚠ CORNER/floor_hue (n_values_realised=2, n_values_realised < 3 ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=1.00 linear=1.00 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.00
+[    11.0s]   ⚠ CORNER/wall_hue (n_values_realised=2, n_values_realised < 3 ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=1.00 linear=1.00 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.00
+[    14.9s]   ⚠ CORNER/object_hue (n_values_realised=2, n_values_realised < 3 ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=1.00 linear=1.00 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.00
+[    18.7s]   ⭐ CORNER/scale (n_values_realised=3, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.75
+[    18.7s]   ⛔ CORNER/shape: NOT APPLICABLE — n_values_realised=1, 0 single-factor pairs exist (⛔ reported as NOT RUN, never as a zero)
+[    22.5s]   ⭐ CORNER/orientation (n_values_realised=3, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=1.00
+[    26.3s]   ⭐ GRID/floor_hue (n_values_realised=10, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    29.8s]   ⭐ GRID/wall_hue (n_values_realised=10, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    33.3s]   ⭐ GRID/object_hue (n_values_realised=10, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    36.8s]   ⭐ GRID/scale (n_values_realised=8, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.12
+[    40.3s]   ⚠ GRID/shape (n_values_realised=4, CATEGORICAL ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=0.12 linear=0.12 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.12
+[    43.8s]   ⭐ GRID/orientation (n_values_realised=15, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.12
+[    43.8s] seed 0 done: 88 pairs, NAV=0.0000 ⇒ ⛔ NEITHER ARM TRAVERSES — no navigable structure found (store 0.000, linear 0.000)
+[     0.2s]   commit cache HIT commit_cache_s1.npz (⭐ no feature gather, no grouping re-derive)
+[     0.2s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_1/store_s1.pkl (hash 76827ad534ee7e6a…, K=5, M=64, 30 bits/read)
+[     0.2s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (hash + recipe asserted)
+[     0.3s]   ⭐ external classifier: gate=PASS hash=aa69b436989b2de5… (⛔ not the probe — the probe shares the decoder's lineage)
+[     0.3s] ⭐ pools: CORNER=72 held-out requests · GRID anchors=512 of 512 (0 dropped as in-corner)
+[     1.0s] ⭐ endpoint path asserted request-only (no feature argument on ANY arm)
+[     1.9s] ⭐ traversal path asserted feature-free (4 checks) · endpoints exact=True · 30 bits/read
+[     1.9s]   channel [store_snap]: 30.0 bits at EVERY intermediate point (design constant 30) ⭐ within
+[     1.9s]   channel [linear]: 65536.0 bits at EVERY intermediate point (design constant 30) ⛔ EXCEEDS
+[     1.9s]   channel [deleted_mean]: 30.0 bits at EVERY intermediate point (design constant 30) ⭐ within
+[     1.9s]   channel [deleted_scramble]: 30.0 bits at EVERY intermediate point (design constant 30) ⭐ within
+[     5.3s]   ⚠ CORNER/floor_hue (n_values_realised=2, n_values_realised < 3 ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=1.00 linear=1.00 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.00
+[     8.7s]   ⚠ CORNER/wall_hue (n_values_realised=2, n_values_realised < 3 ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=1.00 linear=1.00 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.00
+[    12.2s]   ⚠ CORNER/object_hue (n_values_realised=2, n_values_realised < 3 ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.75
+[    15.6s]   ⭐ CORNER/scale (n_values_realised=3, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.75
+[    15.7s]   ⛔ CORNER/shape: NOT APPLICABLE — n_values_realised=1, 0 single-factor pairs exist (⛔ reported as NOT RUN, never as a zero)
+[    19.1s]   ⭐ CORNER/orientation (n_values_realised=3, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.38
+[    22.7s]   ⭐ GRID/floor_hue (n_values_realised=10, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    26.2s]   ⭐ GRID/wall_hue (n_values_realised=10, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    29.7s]   ⭐ GRID/object_hue (n_values_realised=10, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    33.2s]   ⭐ GRID/scale (n_values_realised=8, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    36.7s]   ⚠ GRID/shape (n_values_realised=4, CATEGORICAL ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=0.25 linear=0.25 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.00
+[    40.1s]   ⭐ GRID/orientation (n_values_realised=15, |Δ|≥2, 8 pairs): traverse store_snap=0.12 linear=0.12 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    40.2s] seed 1 done: 88 pairs, NAV=0.0000 ⇒ ⛔ THE STORE'S LANDSCAPE ADDS NOTHING OVER INTERPOLATION
+[     0.2s]   commit cache HIT commit_cache_s2.npz (⭐ no feature gather, no grouping re-derive)
+[     0.2s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_2/store_s2.pkl (hash 8449e6057dacafb8…, K=5, M=64, 30 bits/read)
+[     0.2s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=2d7eea75add77044… (hash + recipe asserted)
+[     0.2s]   ⭐ external classifier: gate=PASS hash=ad16c4e532731958… (⛔ not the probe — the probe shares the decoder's lineage)
+[     0.2s] ⭐ pools: CORNER=72 held-out requests · GRID anchors=512 of 512 (0 dropped as in-corner)
+[     1.2s] ⭐ endpoint path asserted request-only (no feature argument on ANY arm)
+[     1.9s] ⭐ traversal path asserted feature-free (4 checks) · endpoints exact=True · 30 bits/read
+[     1.9s]   channel [store_snap]: 30.0 bits at EVERY intermediate point (design constant 30) ⭐ within
+[     1.9s]   channel [linear]: 65536.0 bits at EVERY intermediate point (design constant 30) ⛔ EXCEEDS
+[     1.9s]   channel [deleted_mean]: 30.0 bits at EVERY intermediate point (design constant 30) ⭐ within
+[     1.9s]   channel [deleted_scramble]: 30.0 bits at EVERY intermediate point (design constant 30) ⭐ within
+[     5.3s]   ⚠ CORNER/floor_hue (n_values_realised=2, n_values_realised < 3 ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=1.00 linear=1.00 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.00
+[     8.7s]   ⚠ CORNER/wall_hue (n_values_realised=2, n_values_realised < 3 ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=1.00 linear=1.00 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.00
+[    12.1s]   ⚠ CORNER/object_hue (n_values_realised=2, n_values_realised < 3 ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.62
+[    15.5s]   ⭐ CORNER/scale (n_values_realised=3, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.75
+[    15.5s]   ⛔ CORNER/shape: NOT APPLICABLE — n_values_realised=1, 0 single-factor pairs exist (⛔ reported as NOT RUN, never as a zero)
+[    18.9s]   ⭐ CORNER/orientation (n_values_realised=3, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=1.00
+[    22.4s]   ⭐ GRID/floor_hue (n_values_realised=10, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    26.0s]   ⭐ GRID/wall_hue (n_values_realised=10, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    29.5s]   ⭐ GRID/object_hue (n_values_realised=10, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    32.9s]   ⭐ GRID/scale (n_values_realised=8, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    36.4s]   ⚠ GRID/shape (n_values_realised=4, CATEGORICAL ⇒ SWITCH-ONLY, ⛔ excluded from the headline; 8 pairs): clean-switch store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · identical endpoint codes=0.00
+[    40.0s]   ⭐ GRID/orientation (n_values_realised=15, |Δ|≥2, 8 pairs): traverse store_snap=0.00 linear=0.00 deleted_mean=0.00 deleted_scramble=0.00 · NAV=0.000 · identical endpoint codes=0.00
+[    40.0s] seed 2 done: 88 pairs, NAV=0.0000 ⇒ ⛔ NEITHER ARM TRAVERSES — no navigable structure found (store 0.000, linear 0.000)
+⭐ summary: seeds=[0, 1, 2] not_run=[] ⇒ ⛔ THE STORE'S LANDSCAPE ADDS NOTHING OVER INTERPOLATION (GRID: linear 0.008 >= store 0.008)
+/Users/user/Desktop/CHLU-gen-nav/chlu/experiments/exp_gen_navigate.py:645: UserWarning: Glyph 11088 (\N{WHITE MEDIUM STAR}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-nav/chlu/experiments/exp_gen_navigate.py:645: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-nav/chlu/experiments/exp_gen_navigate.py:646: UserWarning: Glyph 11088 (\N{WHITE MEDIUM STAR}) missing from font(s) DejaVu Sans.
+  fig.savefig(Path(out_dir) / "navigation.png", dpi=140)
+/Users/user/Desktop/CHLU-gen-nav/chlu/experiments/exp_gen_navigate.py:646: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(Path(out_dir) / "navigation.png", dpi=140)

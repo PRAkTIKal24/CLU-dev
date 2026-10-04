@@ -1,0 +1,78 @@
+[supervisor 2026-09-15T20:06:31Z] job=pilot1 card=l4 spot rate=$0.343/h
+[supervisor 2026-09-15T20:06:31Z] caps: <= 30 attempts AND <= $3.00 estimated. Sentinel: gs://chlu-cloud-forgisprova/jobs/pilot1/out/result.json
+[supervisor 2026-09-15T20:06:35Z] === attempt 1/30 (spent so far $0 of $3.00)
+[supervisor] {"attempts_used": 1, "card": "l4", "job": "pilot1", "max_attempts": 30, "max_usd": 3.0, "note": "attempt 1 starting", "preemptions_or_failures": 0, "spot": true, "status": "running", "stockouts": 0, "updated_at": "2026-09-15T20:06:35Z", "usd_estimated": 0.0, "usd_per_hour": 0.343}
+== preflight: l4 x1 spot in us-central1
+[quota] us-central1 l4 x1 (spot) OK
+metric                                   need    limit     used     free  ok
+PREEMPTIBLE_NVIDIA_L4_GPUS                  1        8        0        8  yes
+CPUS                                        8      200        4      196  yes
+== plan
+   job           pilot1          vm chlu-pilot1
+   card          l4 (nvidia-l4) x1 on g2-standard-8 [8 vCPU]
+   provisioning  SPOT -- expect pre-emption; the job resumes
+   zone          us-central1-a preferred; falls back across us-central1 on a stockout
+   boot image    common-cu129-ubuntu-2204-nvidia-580-v20260909 (deeplearning-platform-release)
+   run image     us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:010435659b510551b64d2008361ac5c906bf127246d0d4fc678b8c204385c44c
+   experiment    cluformer -> chlu.experiments.exp_cluformer_pilot (out_mode sweep, artefacts 0)
+   units         0 1 2
+   exp args      --stage s1 --scale toy
+   artefacts     <none needed>   dec_recipe v1_capacity_schedule
+   payload       --steps 400 --size 4096 --seed 0 --ckpt-every-s 20 --step-sleep-s 0   (smoke only)
+   checkpoints   gs://chlu-cloud-forgisprova/jobs/pilot1/ckpt   every 20s
+   sync-back     gs://chlu-cloud-forgisprova/jobs/pilot1/out    every 15s (DURING the run, not only at exit)
+   determinism   default (XLA may autotune; last-bit variation expected across VMs)
+   watchdog      1 h, then the VM deletes itself
+   est. cost     $0.343/h x 1 h ceiling = $0.34
+                 (2026-09-15 (public list price, us-central1; estimate, not an invoice))
+   candidate zones for g2-standard-8: us-central1-a
+== created chlu-pilot1 in us-central1-a. Follow it with:
+   scripts/cloud/status.sh pilot1          # progress + cost so far
+   gcloud compute instances get-serial-port-output chlu-pilot1 --zone=us-central1-a --project=forgisprova
+== waiting...................... vm gone
+== COST
+   job pilot1: l4 (spot)  0.246 h @ $0.343/h  =  $0.08
+   basis: launcher wall clock (VM already deleted); list price as of 2026-09-15 (public list price, us-central1; estimate, not an invoice)
+[supervisor 2026-09-15T20:21:26Z] attempt 1 ended WITHOUT result.json (launcher rc=0, 890s, ~$0.0848).
+[supervisor 2026-09-15T20:21:26Z]    Pre-emption or a failed unit. Completed units are banked in the journal;
+[supervisor 2026-09-15T20:21:26Z]    the next attempt resumes and re-runs only the unit that was in flight.
+[supervisor] {"attempts_used": 1, "card": "l4", "job": "pilot1", "max_attempts": 30, "max_usd": 3.0, "note": "attempt 1 incomplete; relaunching", "preemptions_or_failures": 1, "spot": true, "status": "relaunching", "stockouts": 0, "updated_at": "2026-09-15T20:21:26Z", "usd_estimated": 0.0848, "usd_per_hour": 0.343}
+[supervisor 2026-09-15T20:21:28Z] === attempt 2/30 (spent so far $0.0848 of $3.00)
+[supervisor] {"attempts_used": 2, "card": "l4", "job": "pilot1", "max_attempts": 30, "max_usd": 3.0, "note": "attempt 2 starting", "preemptions_or_failures": 1, "spot": true, "status": "running", "stockouts": 0, "updated_at": "2026-09-15T20:21:28Z", "usd_estimated": 0.0848, "usd_per_hour": 0.343}
+== preflight: l4 x1 spot in us-central1
+[quota] us-central1 l4 x1 (spot) OK
+metric                                   need    limit     used     free  ok
+PREEMPTIBLE_NVIDIA_L4_GPUS                  1        8        0        8  yes
+CPUS                                        8      200        0      200  yes
+== plan
+   job           pilot1          vm chlu-pilot1
+   card          l4 (nvidia-l4) x1 on g2-standard-8 [8 vCPU]
+   provisioning  SPOT -- expect pre-emption; the job resumes
+   zone          us-central1-a preferred; falls back across us-central1 on a stockout
+   boot image    common-cu129-ubuntu-2204-nvidia-580-v20260909 (deeplearning-platform-release)
+   run image     us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:010435659b510551b64d2008361ac5c906bf127246d0d4fc678b8c204385c44c
+   experiment    cluformer -> chlu.experiments.exp_cluformer_pilot (out_mode sweep, artefacts 0)
+   units         0 1 2
+   exp args      --stage s1 --scale toy
+   artefacts     <none needed>   dec_recipe v1_capacity_schedule
+   payload       --steps 400 --size 4096 --seed 0 --ckpt-every-s 20 --step-sleep-s 0   (smoke only)
+   checkpoints   gs://chlu-cloud-forgisprova/jobs/pilot1/ckpt   every 20s
+   sync-back     gs://chlu-cloud-forgisprova/jobs/pilot1/out    every 15s (DURING the run, not only at exit)
+   determinism   default (XLA may autotune; last-bit variation expected across VMs)
+   watchdog      1 h, then the VM deletes itself
+   est. cost     $0.343/h x 1 h ceiling = $0.34
+                 (2026-09-15 (public list price, us-central1; estimate, not an invoice))
+   candidate zones for g2-standard-8: us-central1-a us-central1-b us-central1-c
+== created chlu-pilot1 in us-central1-a. Follow it with:
+   scripts/cloud/status.sh pilot1          # progress + cost so far
+   gcloud compute instances get-serial-port-output chlu-pilot1 --zone=us-central1-a --project=forgisprova
+== waiting....................... COMPLETE (result.json present)
+== COST
+   job pilot1: l4 (spot)  0.164 h @ $0.343/h  =  $0.06
+   basis: live VM uptime; list price as of 2026-09-15 (public list price, us-central1; estimate, not an invoice)
+[supervisor 2026-09-15T20:32:15Z] ✅ attempt 2: result.json present. 645s, ~$0.0615.
+[supervisor] {"attempts_used": 2, "card": "l4", "job": "pilot1", "max_attempts": 30, "max_usd": 3.0, "note": "attempts=2 stockouts=0 incomplete_attempts=1", "preemptions_or_failures": 1, "spot": true, "status": "done", "stockouts": 0, "updated_at": "2026-09-15T20:32:15Z", "usd_estimated": 0.1463, "usd_per_hour": 0.343}
+[supervisor 2026-09-15T20:32:15Z] === SUPERVISOR FINISHED: done
+[supervisor 2026-09-15T20:32:15Z]     attempts used: 2 of 30   (stockouts 0, incomplete 1)
+[supervisor 2026-09-15T20:32:15Z]     estimated spend: $0.1463 of $3.00   (2026-09-15 (public list price, us-central1; estimate, not an invoice))
+[supervisor 2026-09-15T20:32:15Z]     state: /Users/user/Desktop/CHLU-runner/scripts/cloud/../../.claude/outputs/gen-cloud-runner/supervisor/pilot1.json

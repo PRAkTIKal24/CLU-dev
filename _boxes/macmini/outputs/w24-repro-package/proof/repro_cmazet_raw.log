@@ -1,0 +1,59 @@
+=== PROOF A (CMAZE-T) start 2026-09-25T22:07:15Z copy=/private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofA_20260926T000715/pkg
+Activate with: source /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofA_20260926T000715/venv/bin/activate
+ + typing-extensions==4.15.0
+ + wadler-lindig==0.1.7
+nclu.__file__ /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w24-repro-package/4e0fc624-c0dd-433b-9798-3964c39d68c1/scratchpad/proofA_20260926T000715/pkg/nclu/__init__.py
+PYTHONPATH=<unset>
+d2ddc9686c60cc0ede7a01cb92b63366fdcaf9608a5e29caa65d62a311940ee5  scripts/cmazet_symmetric.py
+a9279b7c114f77f08e88320656a375baa5d7fd59423473326fc292872cd5b143  scripts/cmazet_lib.py
+eddcd2781b96080155d066818961fc9901d9dcbb17145724846b72e3958d246e  scripts/cmazet_asymmetric.py
+4a2fed11b882fe0e08a46e94f9cee6526e9d409513cfbb7de47fdbcb586d4bc5  scripts/cmazet_relational_nclu.py
+01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b  nclu/cmaze/__init__.py
+923f3cabda44f78affd4acac5ec5fda8e574bc4912a2866fda044e7c29e3ac84  nclu/cmaze/arms.py
+a669a5c3759bb89ceb955c67b336e8f4edfefb62d682e13aa259c618707c3280  nclu/cmaze/maze_colour.py
+6ea4e76853351de9d71c72dbda234762f4861764f99ec0a07c30a3d81a8ebd3a  nclu/cmaze/screen.py
+816791ec05d66caf68197b6f9b00ff389a35661396634002e901a7321558389a  nclu/cmaze/task.py
+9f56e761d79bfdb34304a012586cb04d16b435ef6130091a97702e559260a2f2  nclu/cmaze/harness/__init__.py
+ba6c99e5c59cb4cb42aab4fa50728487901eb10ccadf37be148430d7daf8b397  nclu/cmaze/harness/arms.py
+6204e4054787b4e2849874e8dbf799078d4ace81122334d3651c4d507fcae0e8  nclu/cmaze/harness/dynamics.py
+4e7642675f049d5aac95e6d52ead6593807467db73fd20950a1c26bed1a0a6bd  nclu/cmaze/harness/encoder.py
+1f517146344014541f05c98d450d166bd91a8e77e3f7c3fd5bbceb2063d11933  nclu/cmaze/harness/features.py
+2c112834c2df52b30b4f0688e0732508500294d38369879c3e28af6abd06d58b  nclu/cmaze/harness/judge_maze.py
+4b42b5706d248dd71ec89d0eafe68d7e45ad54d9dd163a71ebca138e97992f6f  nclu/cmaze/harness/render.py
+4e2c2a4c221540dfe131be2a6bcb94f28c94630e90b1d4347cff85042cc35edd  nclu/core/gen_request_head.py
+6bf0fd7c72afc7ab011e7b9fc29056b2de07af3c7ec0b892554d0ad2f56d465a  nclu/experiments/covariance_store.py
+CMD: python scripts/cmazet_symmetric.py 0 runs/cmaze_t/symmetric/test --cond BOTH --leg test
+[BOTH_test seed 0] config {'latent': 128, 'K': 2, 'n_atoms': 6, 'ridge': 1.0} rival_steps 8000 / 80000
+  CODEC latent 128  loss 0.00023  [1.7s]
+  across-wells derangement [1, 0] (no fixed point: asserted)
+  MATCHED PARAMETERS (target 4584 = CLU read floats, obs 954, out 21)
+    mlp          width   4  params    4693  (+2.38%)
+    lstm         width   4  params    4817  (+5.08%)
+    transformer  width   4  params    4869  (+6.22%)  n_layers=1 heads=2
+  MATCHED PARAMETERS (target 45840 = CLU read floats, obs 954, out 21)
+    mlp          width  44  params   46133  (+0.64%)
+    lstm         width  35  params   45210  (-1.37%)
+    transformer  width  30  params   45455  (-0.84%)  n_layers=2 heads=2
+    TRAIN rival: mlp   params    4693  loss 0.0023  [3.9s]
+    TRAIN rival@10x-steps: mlp params    4693  loss 0.0000  [34.2s]
+    TRAIN diagnostic@10x-read-floats: mlp params   46133  loss 0.0000  [5.1s]
+    TRAIN rival: lstm  params    4817  loss 0.3071  [4.0s]
+    TRAIN rival@10x-steps: lstm params    4817  loss 2.4107  [39.1s]
+    TRAIN diagnostic@10x-read-floats: lstm params   45210  loss 0.0000  [8.5s]
+    TRAIN rival: transformer params    4869  loss 0.0003  [8.1s]
+    TRAIN rival@10x-steps: transformer params    4869  loss 0.0000  [56.6s]
+    TRAIN diagnostic@10x-read-floats: transformer params   45455  loss 0.0000  [19.2s]
+  row seen  n=4000  CLU 0.9673 best-rival8k 0.9965 best-rival80k 1.0000 worst-ctl 0.5827 bseq 0.8935 bcol 0.5122
+  row pair  n=869   CLU 0.2140 best-rival8k 0.2532 best-rival80k 0.2209 worst-ctl 0.4074 bseq 0.5673 bcol 0.0909
+  row nway  n=761   CLU 0.8003 best-rival8k 0.6781 best-rival80k 0.8003 worst-ctl 0.4152 bseq 0.2392 bcol 0.0000
+  row value n=4000  CLU 0.4325 best-rival8k 0.3932 best-rival80k 0.4565 worst-ctl 0.2697 bseq 0.4698 bcol 0.2455
+  rollout CLU validity 0.0000 per-step 0.9303
+    TRAIN mlp retrain-without params    4693  loss 0.0131  [4.3s]
+    TRAIN mlp as-trained params    4693  loss 0.0023  [4.0s]
+    TRAIN mlp retrain-without params    4693  loss 0.0006  [3.8s]
+    TRAIN mlp as-trained params    4693  loss 0.0023  [3.1s]
+[BOTH_test seed 0] wrote runs/cmaze_t/symmetric/test/BOTH_test_seed0.json [289.6s]
+RC=0 runtime_s=298 end 2026-09-25T22:12:14Z
+ROWS.nway.CLU 0.8002628120893561
+ROWS.nway best matched (rival: / rival@10x-steps:) 0.8002628120893561
+seconds_total 289.55042791366577

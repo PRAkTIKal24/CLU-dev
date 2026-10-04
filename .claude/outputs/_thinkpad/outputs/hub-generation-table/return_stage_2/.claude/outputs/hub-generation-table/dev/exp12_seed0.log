@@ -1,0 +1,56 @@
+[23:25:52] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[23:25:52]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[23:25:53]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[23:25:55]   [additive_ridge1e-3] agg=0.7755 (52/72) cols=58 ridge=0.001 bytes=475136 [1.5s]
+[23:25:58]   [pairwise_ridge1] agg=0.9815 (69/72) cols=1380 ridge=1 bytes=11304960 [2.6s]
+[23:26:00]   [pairwise_ridge10] agg=0.9838 (70/72) cols=1380 ridge=10 bytes=11304960 [2.7s]
+[23:26:03]   [pairwise_ridge100] agg=0.9884 (72/72) cols=1380 ridge=100 bytes=11304960 [2.6s]
+[23:26:06]   [pairwise_ridge1000] agg=0.9028 (65/72) cols=1380 ridge=1000 bytes=11304960 [2.7s]
+[23:26:07]   [knn_factor k=1] agg=0.6319 (26/72)
+[23:26:08]   [knn_factor k=5] agg=0.6991 (58/72)
+[23:26:09]   [knn_factor k=20] agg=0.7292 (47/72)
+[23:26:10]   [oracle_additive_on_corner] agg=0.9699 (72/72)  ⛔ cheat
+[23:26:10] done in 19.6s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table\dev\exp12_seed0.json
+exit=0

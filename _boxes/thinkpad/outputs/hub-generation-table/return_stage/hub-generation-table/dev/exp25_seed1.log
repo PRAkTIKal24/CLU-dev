@@ -1,0 +1,21 @@
+[01:41:56] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_1
+[01:41:56]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (hash + recipe asserted)
+[01:41:56]   ⭐ external classifier aa69b436989b2de5… (978873 params) — THE instrument, identical across every arm in this seed
+[01:41:56] gathering 32768 pool rows for seed 1 (cache_scope='used' seeds pay an encode here — the SHIPPED path)
+[01:41:57]     ⭐ cache extension requested — re-encode check runs ENFORCED here
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+[01:41:57]   ⭐ cache re-encode check: 64 rows, 640/131072 elements differ (0.488%), max |delta| = 0.00195312 = 81.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+[01:41:57]   ⭐ ENFORCED (enforced=true): gather_features is about to EXTEND the cache (point of extension)
+Traceback (most recent call last):
+  File "C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-generation-table\dev\exp25_seeds.py", line 66, in <module>
+    Xpool = np.asarray(c["gather"](pool_full), np.float32).reshape((-1, D))
+                       ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-generation-table\dev\ctx.py", line 84, in gather
+    return gather_features(dataset, cfg, encoder, crows, feats_cache, cman,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PratikJawahar\chlu\CHLU-hub-generation-table\chlu\experiments\exp_gen_store.py", line 284, in gather_features
+    _assert_cache_reencodes(
+  File "C:\Users\PratikJawahar\chlu\CHLU-hub-generation-table\chlu\experiments\exp_gen_store.py", line 497, in _assert_cache_reencodes
+    raise AssertionError(verdicts[0][1])
+AssertionError: re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 81.000 ULP of the cache dtype (bound 1); 640/131072 elements (0.488%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 81.0, 'n_differing': 640, 'frac_differing': 0.0048828125, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': True, 'enforced_reason': 'gather_features is about to EXTEND the cache (point of extension)'}
+exit=1

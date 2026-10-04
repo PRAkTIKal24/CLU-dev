@@ -1,0 +1,39 @@
+% pw1-plot-maze TEXT-INSERTS.tex (PW-1 items 16.1, 1.5, 8). Not installed; a later spoke places these.
+
+% ---------------------------------------------------------------- (a) the panel figures, read once (item 16.1)
+% Place in the paragraph of Sec. sec:maze-wm that introduces Figs. fig:cmazet-families -- fig:cmazet-door-tint.
+% Replaces the paragraph that was printed under every panel image (cmazet_panels.KEY_LINE, no longer drawn).
+% SRC: w21_figures/cmazet_panels.py (draw_state, fact_strip, facts_shown); chlu/exp_w15_cmaze_t.py (outcome code).
+\paragraph{Reading the CMAZE-T panel figures.} Each panel is a $5\times5$ crop of the maze centred on
+the agent's cell at $s_t$. Walls are dark, tinted cells pale in their colour, doors framed in their
+colour with a bar across while closed, untaken keys are diamonds, the goal a cross, and the agent a
+black disc whose centre shows the colour of the key in its pocket (white when the pocket is empty).
+The first column is $s_t$ with the action (an arrow, or a ring for pick-up), the second the engine's
+$s_{t+1}$, and each further column the $s_{t+1}$ that a model's emitted outcome produces. The engine's
+judge does not score the picture: it scores four emitted facts, legality, the move, the key event and
+the pocket after the move, and a picture need not show all four. So a strip under every $s_{t+1}$
+prints the emitted facts (under the engine's column, the true ones). Its first line reads legal or
+illegal. Its second line shows the move ($\uparrow$ $\rightarrow$ $\downarrow$ $\leftarrow$, or a dot
+for staying), the key event ($+$ and a colour for a key picked up, $-$ and a colour for a key used at a
+door, blank for none) and the pocket after the move (the disc; white is empty). An illegal emission
+leaves the agent in place and is scored on its pocket alone, so only the pocket is shown. The tick or
+cross on a panel is the judge's verdict on all four facts, so two panels that show the same picture
+and the same strip never carry opposite marks.
+
+% the one sentence each panel caption uses to point here (already in CAPTIONS.tex):
+%   The strip under each $s_{t+1}$ is read as described in Sec.~\ref{sec:maze-wm}.
+
+% ---------------------------------------------------------------- (b) the hold-out mechanism (items 1.5, 8)
+% Replaces the task-section paragraph on hard seeds and the per-seed ceiling (DRAFT-v2.tex 1138-1150,
+% "The measured per-seed ceiling, ..."). No seed is labelled; no ceiling number.
+% SRC: w21-maze-t-seed4/FINDINGS.md (mechanism: same-colour pocket/tint rows removed by the draw; identity vs
+% relation); chlu/exp_w15_cmaze_t.py (RULE B: pocket colour equal to tint colour makes the move illegal).
+\paragraph{Why a hold-out draw can remove a whole colour relation.} The hold-out removes word
+combinations from training at random. On some draws, for some colour, it removes every training
+transition in which the pocket and the target tint share that colour, the combination that decides
+whether a move is legal. A model that codes colour by identity then has no training evidence for the
+held-out transitions of that colour and cannot answer them, however it is trained. A model that is
+also given the relation ``pocket colour equals tint colour'' can: the relation is learned from the
+other colours, where it is seen, and applies unchanged to the colour whose rows were removed. This is
+what the relational columns add (Fig.~\ref{fig:maze-wm}(c)), and it is why every seed is reported
+separately.

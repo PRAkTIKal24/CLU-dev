@@ -1,0 +1,53 @@
+[01:30:22] 512 ground-truth midpoints built
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:30:23] 
+[01:30:23] readout     oracle HUEMAE  lookup HUEMAE    span  SNAPFRAC   mean t
+[01:30:23] circ               0.3130         0.5000  0.1870    0.6680   0.5092
+[01:30:23] lin                0.3088         0.5000  0.1911    0.6602   0.5102
+[01:30:23] argmax             0.5000         0.5000  0.0000    1.0000   0.5195
+[01:30:23] bracket            0.3090         0.5000  0.1909    0.6582   0.5088
+[01:30:23] 
+[01:30:23] mass the judge puts on the two bracket classes at the oracle: 0.9995
+[01:30:23] the widest usable span is 0.1911 D (lin); the declared margin was 0.2 D
+[01:30:23] wrote runs/j7_readouts.json

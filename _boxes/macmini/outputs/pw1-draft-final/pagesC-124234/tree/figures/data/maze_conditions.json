@@ -1,0 +1,45 @@
+{
+ "_doc": "Rows of fig_maze_conditions panel (a), top to bottom (PW-1 item 1, Head-ruled 2026-09-25). One entry = one row. schema 'w19' = a 3-seed BARS artefact, rows.nway.per_seed[arm]; the comparator is the matched baseline with the highest mean over the row's seeds (every kind, both step limits). schema 'six' = the six-seed words-plus-observation TEST read of maze_six.py (per-seed run JSONs, asserted float-equal to REL-NEWSEEDS.json); 'comparator' = 'best_matched' (the matched baseline with the highest six-seed mean) or 'transformer_rel' (the Transformer given the relational columns, the step limit with the higher six-seed mean); 'check_source' = a 3-seed BARS artefact whose seeds 0-2 must equal the six-seed read. No claim label, no ceiling, no hard/easy class anywhere. Panels (b), (c) are the six-seed read of the two 'six' rows.",
+ "primary_row": "nway",
+ "rows": [
+  {
+   "id": "words_full",
+   "status": "landed",
+   "label": "Words, full design",
+   "leg": "TEST",
+   "source": "w21-words-full-test/test/BARS-WORDS-FULL-test.json",
+   "schema": "w19"
+  },
+  {
+   "id": "observation",
+   "status": "landed",
+   "label": "Observation",
+   "leg": "VAL",
+   "source": "w19-maze-t-symmetric/val/BARS-OBS-val.json",
+   "schema": "w19"
+  },
+  {
+   "id": "words_plus_observation",
+   "status": "landed",
+   "label": "Words + observation (n-CLU)",
+   "leg": "TEST",
+   "schema": "six",
+   "config": "A1",
+   "comparator": "best_matched",
+   "check_source": "w19-maze-t-symmetric/test/BARS-BOTH-test.json"
+  },
+  {
+   "id": "words_plus_observation_rel",
+   "status": "landed",
+   "label": "Words + observation (n-CLU-REL)",
+   "leg": "TEST",
+   "schema": "six",
+   "config": "REL",
+   "comparator": "transformer_rel"
+  }
+ ],
+ "retired_rows": {
+  "pixel_rivals": "PW-1 item 1.1: the asymmetric (w16) observation row is removed",
+  "words_main": "PW-1 item 1.1: the 'words, main effects' row is removed"
+ }
+}

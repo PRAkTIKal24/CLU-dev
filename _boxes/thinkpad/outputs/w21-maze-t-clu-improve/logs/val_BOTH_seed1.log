@@ -1,0 +1,45 @@
+w21 CLU cfg C:/chlu/outputs/w21-maze-t-clu-improve/prereg/CLU-REL-A10.json sha256 0d4ec5b9fba55bd6f943a91fc8afa20027d79c5edea3531a47117c86f08ee5c6
+[BOTH_val seed 1] config {'latent': 128, 'K': 2, 'n_atoms': 6, 'ridge': 1.0} rival_steps 8000 / 80000
+  CODEC latent 128  loss 0.00005  [69.3s]
+  across-wells derangement [1, 0] (no fixed point: asserted)
+  MATCHED PARAMETERS (target 9200 = CLU read floats, obs 954, out 21)
+    mlp          width   9  params    9698  (+5.41%)
+    lstm         width   8  params    9165  (-0.38%)
+    transformer  width   8  params    9269  (+0.75%)  n_layers=1 heads=2
+  MATCHED PARAMETERS (target 92000 = CLU read floats, obs 954, out 21)
+    mlp          width  85  params   91930  (-0.08%)
+    lstm         width  62  params   92919  (+1.00%)
+    transformer  width  50  params   91275  (-0.79%)  n_layers=2 heads=2
+    TRAIN rival: mlp   params    9698  loss 0.0001  [274.2s]
+    TRAIN rival@10x-steps: mlp params    9698  loss 0.0000  [2290.4s]
+    TRAIN diagnostic@10x-read-floats: mlp params   91930  loss 0.0000  [239.0s]
+    TRAIN rival: lstm  params    9165  loss 0.0012  [200.4s]
+    TRAIN rival@10x-steps: lstm params    9165  loss 0.0000  [1996.0s]
+    TRAIN diagnostic@10x-read-floats: lstm params   92919  loss 0.0000  [258.6s]
+    TRAIN rival: transformer params    9269  loss 0.0002  [285.2s]
+    TRAIN rival@10x-steps: transformer params    9269  loss 0.0000  [2111.3s]
+    TRAIN diagnostic@10x-read-floats: transformer params   91275  loss 0.0000  [271.2s]
+  MATCHED PARAMETERS (target 9200 = CLU read floats, obs 1032, out 21)
+    mlp          width   8  params    9317  (+1.27%)
+    lstm         width   8  params    9789  (+6.40%)
+    transformer  width   8  params    9893  (+7.53%)  n_layers=1 heads=2
+  MATCHED PARAMETERS (target 92000 = CLU read floats, obs 1032, out 21)
+    mlp          width  80  params   92405  (+0.44%)
+    lstm         width  59  params   91644  (-0.39%)
+    transformer  width  58  params   90393  (-1.75%)  n_layers=1 heads=2
+    TRAIN diagnostic+rel@8k: mlp +rel params    9317  loss 0.1464  [145.5s]
+    TRAIN diagnostic+rel@80k: mlp +rel params    9317  loss 0.0483  [1366.0s]
+    TRAIN diagnostic+rel@8k: lstm +rel params    9789  loss 0.0101  [150.8s]
+    TRAIN diagnostic+rel@80k: lstm +rel params    9789  loss 0.0000  [1427.5s]
+    TRAIN diagnostic+rel@8k: transformer +rel params    9893  loss 0.0000  [175.4s]
+    TRAIN diagnostic+rel@80k: transformer +rel params    9893  loss 0.0000  [1624.2s]
+  row seen  diag+rel best 1.0000 (never a bar)
+  row seen  n=4000  CLU 1.0000 best-rival8k 1.0000 best-rival80k 1.0000 worst-ctl 0.8363 bseq 0.9493 bcol 0.5785
+  row pair  diag+rel best 0.5682 (never a bar)
+  row pair  n=1121  CLU 0.8198 best-rival8k 0.4505 best-rival80k 0.4505 worst-ctl 0.7235 bseq 0.4505 bcol 0.0187
+  row nway  diag+rel best 0.8904 (never a bar)
+  row nway  n=675   CLU 0.9141 best-rival8k 0.5689 best-rival80k 0.5689 worst-ctl 0.5896 bseq 0.3156 bcol 0.1007
+  row value diag+rel best 0.9115 (never a bar)
+  row value n=4000  CLU 0.4617 best-rival8k 0.7702 best-rival80k 0.8588 worst-ctl 0.4457 bseq 0.4530 bcol 0.2442
+  rollout CLU validity 0.0000 per-step 0.9569
+[BOTH_val seed 1] wrote C:/chlu/outputs/w21-maze-t-clu-improve/val_full\BOTH_val_seed1.json [16060.4s]

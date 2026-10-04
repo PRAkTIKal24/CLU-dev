@@ -1,0 +1,75 @@
+condition=test seed=0 K=32 corners=109 stage=rivals cache={'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+
+===== RIVAL COLUMN, SCOPE VALUE (89 survivor corners) =====
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    mlp__retrain_without__value-object_hue-0 89 corners in 176s
+    mlp__retrain_without__value-object_hue-0             novel/corner    4.022
+    lstm__retrain_without__value-object_hue-0 89 corners in 253s
+    lstm__retrain_without__value-object_hue-0            novel/corner    3.708
+    transformer__retrain_without__value-object_hue-0 89 corners in 277s
+    transformer__retrain_without__value-object_hue-0     novel/corner    0.865
+    cont_mlp__retrain_without__value-object_hue-0 89 corners in 261s
+    cont_mlp__retrain_without__value-object_hue-0        novel/corner    0.067
+
+===== RIVAL COLUMN, SCOPE CONJUNCTION_LIVE (109 survivor corners) =====
+    mlp__retrain_without__conj-object_hue0-shape2 109 corners in 328s
+    mlp__retrain_without__conj-object_hue0-shape2        novel/corner    4.413
+    lstm__retrain_without__conj-object_hue0-shape2 109 corners in 332s
+    lstm__retrain_without__conj-object_hue0-shape2       novel/corner    4.055
+    transformer__retrain_without__conj-object_hue0-shape2 109 corners in 390s
+    transformer__retrain_without__conj-object_hue0-shape2 novel/corner    1.000
+    cont_mlp__retrain_without__conj-object_hue0-shape2 109 corners in 417s
+    cont_mlp__retrain_without__conj-object_hue0-shape2   novel/corner    0.046
+
+===== RIVAL COLUMN, SCOPE ITEM (109 survivor corners) =====
+    mlp__retrain_without__item-0.01        109 corners in 486s
+    mlp__retrain_without__item-0.01                      novel/corner    5.092
+    lstm__retrain_without__item-0.01       109 corners in 408s
+    lstm__retrain_without__item-0.01                     novel/corner    4.147
+    transformer__retrain_without__item-0.01 109 corners in 518s
+    transformer__retrain_without__item-0.01              novel/corner    1.128
+    cont_mlp__retrain_without__item-0.01   109 corners in 412s
+    cont_mlp__retrain_without__item-0.01                 novel/corner    0.028
+
+wrote C:\chlu\outputs\w15-single-design-seeds\deletion\test_seed0_K32\rivals.json

@@ -1,0 +1,109 @@
+[17:47:30] [gen-classifier] seed 0
+[17:47:31]   split shapes3d: n_total=480000 n_train=479928 n_test=72
+[17:47:31]   rows: clf_train=8192 (pool 469730, 10270 excluded incl. 288 corner + 936 wide held-out) · eval_a=1024 eval_b=72 matched_seen=198
+[17:47:33]   ⭐ FROZEN: encoder 98d326028316ae2c… probe c03bfb8916d00932… cache scope=full n=480000
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[17:47:34]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[17:47:34]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[17:47:34]   streaming 9486 images (clf_train + A + B + MS, one pass) …
+[17:48:36]   streamed in 62s
+[17:49:13]   ⭐ no-leak: 8192 training rows checked, 72/72 held-out-combination images excluded, 0 leaked; 0 decoder renders in training (64 rows bit-identical to the h5); lineage overlap with bridge_train/eval_a/corner = 0/0/0
+[17:49:13]   fitting the EXTERNAL classifier on REAL images (1500 steps) …
+[17:49:20]     step 1/1500  loss=2.18491
+[17:51:09]     step 300/1500  loss=0.00246
+[17:53:42]     step 600/1500  loss=0.00053
+[17:55:03]     step 900/1500  loss=0.00024
+[17:56:36]     step 1200/1500  loss=0.00013
+[17:58:24]     step 1500/1500  loss=0.00008
+[17:58:24]   external classifier c8741ac417d88ebf… (978873 params)
+[17:58:27]   ⭐ GATE seed 0: external in-corner shape balacc on REAL = 1.0000 (floor 0.95) -> PASS | probe 1.0000 | n_pos=72 n_neg=198
+[17:58:39]   ⭐⭐ LEG 3 seed 0: on the SAME renders — external 0.9085 vs probe 0.9223 (gap -0.0139); R22 reference for this seed 0.9223
+[17:58:39]   ✓ seed 0 in 669s -> /Users/user/Desktop/CHLU/.claude/outputs/gen-external-classifier/seed_0/classifier_manifest.json
+[17:58:39] [gen-classifier] seed 1
+[17:58:39]   split shapes3d: n_total=480000 n_train=479928 n_test=72
+[17:58:40]   rows: clf_train=8192 (pool 469717, 10283 excluded incl. 288 corner + 936 wide held-out) · eval_a=1024 eval_b=72 matched_seen=199
+[17:58:40]   ⭐ FROZEN: encoder fc05e2c5f39694b2… probe fb16109ded84c908… cache scope=used n=9288
+[17:58:41]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[17:58:41]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (hash + recipe asserted)
+[17:58:41]   streaming 9487 images (clf_train + A + B + MS, one pass) …
+[17:59:39]   streamed in 58s
+[18:00:13]   ⭐ no-leak: 8192 training rows checked, 72/72 held-out-combination images excluded, 0 leaked; 0 decoder renders in training (64 rows bit-identical to the h5); lineage overlap with bridge_train/eval_a/corner = 0/0/0
+[18:00:13]   fitting the EXTERNAL classifier on REAL images (1500 steps) …
+[18:00:14]     step 1/1500  loss=2.17657
+[18:01:22]     step 300/1500  loss=0.00257
+[18:02:30]     step 600/1500  loss=0.00050
+[18:03:38]     step 900/1500  loss=0.00023
+[18:04:46]     step 1200/1500  loss=0.00013
+[18:05:57]     step 1500/1500  loss=0.00008
+[18:05:57]   external classifier aa69b436989b2de5… (978873 params)
+[18:06:00]   ⭐ GATE seed 1: external in-corner shape balacc on REAL = 1.0000 (floor 0.95) -> PASS | probe 1.0000 | n_pos=72 n_neg=199
+[18:06:07]     extending cache coverage: 196 row(s) encoded through the frozen encoder
+[18:06:11]   ⭐⭐ LEG 3 seed 1: on the SAME renders — external 0.9472 vs probe 0.9365 (gap +0.0108); R22 reference for this seed 0.9365
+[18:06:11]   ✓ seed 1 in 452s -> /Users/user/Desktop/CHLU/.claude/outputs/gen-external-classifier/seed_1/classifier_manifest.json
+[18:06:11] [gen-classifier] seed 2
+[18:06:12]   split shapes3d: n_total=480000 n_train=479928 n_test=72
+[18:06:12]   rows: clf_train=8192 (pool 469726, 10274 excluded incl. 288 corner + 936 wide held-out) · eval_a=1024 eval_b=72 matched_seen=199
+[18:06:12]   ⭐ FROZEN: encoder 154d498610648fac… probe 5cdaa90a6b67f1b3… cache scope=used n=9288
+[18:06:13]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[18:06:13]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=2d7eea75add77044… (hash + recipe asserted)
+[18:06:13]   streaming 9487 images (clf_train + A + B + MS, one pass) …
+[18:07:07]   streamed in 55s
+[18:07:45]   ⭐ no-leak: 8192 training rows checked, 72/72 held-out-combination images excluded, 0 leaked; 0 decoder renders in training (64 rows bit-identical to the h5); lineage overlap with bridge_train/eval_a/corner = 0/0/0
+[18:07:45]   fitting the EXTERNAL classifier on REAL images (1500 steps) …
+[18:07:46]     step 1/1500  loss=2.17976
+[18:08:52]     step 300/1500  loss=0.00259
+[18:10:00]     step 600/1500  loss=0.00055
+[18:11:12]     step 900/1500  loss=0.00024
+[18:12:40]     step 1200/1500  loss=0.00012
+[18:14:12]     step 1500/1500  loss=0.00008
+[18:14:12]   external classifier ad16c4e532731958… (978873 params)
+[18:14:15]   ⭐ GATE seed 2: external in-corner shape balacc on REAL = 1.0000 (floor 0.95) -> PASS | probe 1.0000 | n_pos=72 n_neg=199
+[18:14:22]     extending cache coverage: 196 row(s) encoded through the frozen encoder
+[18:14:27]   ⭐⭐ LEG 3 seed 2: on the SAME renders — external 0.9514 vs probe 0.9653 (gap -0.0139); R22 reference for this seed 0.9653
+[18:14:27]   ✓ seed 2 in 495s -> /Users/user/Desktop/CHLU/.claude/outputs/gen-external-classifier/seed_2/classifier_manifest.json
+/Users/user/Desktop/CHLU-gen-extclf/chlu/experiments/exp_gen_classifier.py:657: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-extclf/chlu/experiments/exp_gen_classifier.py:658: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=130)
+[18:14:27]   ⭐ gate = PASS (3/3 seeds, min 1.0000, floor 0.95) -> /Users/user/Desktop/CHLU/.claude/outputs/gen-external-classifier/classifier_gate.json

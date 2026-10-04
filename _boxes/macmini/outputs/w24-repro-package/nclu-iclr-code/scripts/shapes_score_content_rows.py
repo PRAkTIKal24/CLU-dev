@@ -1,0 +1,263 @@
+"""Score the n-CLU-content baseline set on a rung (as shapes_score_arms.py)."""
+
+from __future__ import annotations
+from nclu.paths import run_dir
+import argparse
+import json
+import pickle
+import sys
+import time
+from pathlib import Path
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from shapes_content_rows_lib import (
+    OUT,
+    PART_TEST,
+    assert_worktree,
+    jdump,
+    log,
+    rung_partition,
+    perturb_modes_deranged,
+)
+
+CONTROLS = (
+    ("landscape_removed", "zero"),
+    ("landscape_shuffled", "value_permute"),
+    ("landscape_shuffled_across_wells", "well_permute"),
+    ("random_atoms", "random_span"),
+)
+
+
+def summarise(rows, family=None):
+    sel = [r for r in rows if family is None or r["family"] == family]
+    if not sel:
+        return {"n_corners": 0}
+    nov = np.array([r["distinct_valid_novel_tuples"] for r in sel], float)
+    cei = np.array([r.get("ceiling", np.nan) for r in sel], float)
+    return {
+        "n_corners": len(sel),
+        "novel_per_corner_mean": float(nov.mean()),
+        "ceiling_per_corner_mean": float(np.nanmean(cei)),
+        "judge_accuracy_mean": float(np.mean([r["judge_accuracy"] for r in sel])),
+    }
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--corners", required=True)
+    ap.add_argument("--seed", type=int, required=True)
+    ap.add_argument("--arms", required=True)
+    ap.add_argument("--run-n", type=int, default=0)
+    ap.add_argument("--no-controls", action="store_true")
+    ap.add_argument("--only-controls", default="", help="comma list: score only these controls")
+    ap.add_argument("--out-tag", default="")
+    ap.add_argument("--slow", action="store_true", help="T7's per-corner path + shipped Judge")
+    a = ap.parse_args(argv)
+    wt = assert_worktree()
+    log("nclu.__file__ = %s" % wt)
+    if not a.corners.startswith("rung:"):
+        raise SystemExit("scores LADDER RUNG corners only; %r refused" % a.corners)
+    from nclu.experiments import factor_wells as fw
+    from nclu.experiments import exp_gen_read as R
+    from nclu.experiments.gen_deletion import assert_generation2
+    from shapes_nclu_lib import ShimStore, qr_basis
+
+    seed = int(a.seed)
+    fw.PINS["seed"] = seed
+    fw.PINS["condition"] = "val" if a.corners == "val" else "test"
+    man = assert_generation2(seed)
+    rung = a.corners.split(":", 1)[1] if a.corners.startswith("rung:") else None
+    if rung is not None:
+        import shapes_ladder_lib as LEG
+        from nclu.experiments import composition_cell as CC
+
+        cond = LEG.make_condition(rung)
+        LEG._COND["cond"] = cond
+        fw.load_condition = LEG._patched_load_condition
+        CC.fw.load_condition = LEG._patched_load_condition
+        R.fw.load_condition = LEG._patched_load_condition
+        corners = cond["corners"]
+        fw.assert_corners_disjoint_and_heldout(corners, cond["test_rows"], rung)
+    else:
+        cond = fw.load_condition()
+        corners = (
+            fw.val_corners(cond)
+            if a.corners == "val"
+            else fw.pair_subcorners(cond) + fw.nway_corners(cond)
+        )
+    grid = cond["grid"]
+    bitmap = fw.value_presence_bitmap(grid, cond["train_rows"])
+    if a.corners == "val":
+        seen_mask = fw.seen_tuple_mask(
+            grid, np.setdiff1d(cond["train_rows"], fw.val_corner_rows(cond))
+        )
+    else:
+        seen_mask = fw.seen_tuple_mask(grid, cond["train_rows"])
+    ceiling = {
+        c["corner_id"]: int((~seen_mask[np.unique(np.asarray(c["rows"], np.int64))]).sum())
+        for c in corners
+    }
+    judge = fw.Judge(seed, log=lambda *_: None)
+    if rung is not None or not a.slow:
+        import shapes_ladder_lib as LEG
+        from shapes_fast_judge import FastJudge, assert_identical
+
+        fast = FastJudge(judge)
+        pool0 = (
+            np.load(str(rung_partition(rung, 0)))["pool"]
+            if rung is not None
+            else np.load(PART_TEST)["pool"]
+        )
+        chk = assert_identical(judge, fast, fw.gather(fw.features_mmap(seed), pool0[:256]))
+        log("FastJudge positive control: %s" % chk["identical"])
+    log("corners=%s seed=%d: %d corners" % (a.corners, seed, len(corners)))
+
+    def score(obj):
+        if rung is not None or not a.slow:
+            cond_ = dict(cond, corners=corners)
+            per = LEG.score_arm(obj, cond_, fast, bitmap, seen_mask)
+        else:
+            from shapes_scoring_lib import score_corners_full
+
+            done = score_corners_full(obj, corners, grid, judge, bitmap, obj["arm"])
+            per = fw._per_corner(corners, done, grid, seen_mask)
+        for r in per:
+            r["ceiling"] = ceiling[r["corner_id"]]
+        return per
+
+    outd = OUT / "scores" / (a.corners.replace(":", "") + a.out_tag) / ("seed%d" % seed)
+    outd.mkdir(parents=True, exist_ok=True)
+
+    def emit(label, obj, extra):
+        p = outd / ("%s.json" % label)
+        if p.exists():
+            log("  %-44s already on disk" % label)
+            return
+        t = time.time()
+        per = score(obj)
+        s = {
+            "all": summarise(per),
+            "row3_pair": summarise(per, "pair"),
+            "row4_nway": summarise(per, "nway"),
+        }
+        jdump(
+            {
+                "label": label,
+                "corners": a.corners,
+                "seed": seed,
+                "cache": man,
+                "summary": s,
+                "extra": extra,
+                "per_corner": per,
+                "seconds": round(time.time() - t, 1),
+                "package_file": wt,
+            },
+            p,
+        )
+        log(
+            "  %-44s novel/corner %.3f (ceiling %.2f)  in %.0fs"
+            % (
+                label,
+                s["all"]["novel_per_corner_mean"],
+                s["all"]["ceiling_per_corner_mean"],
+                time.time() - t,
+            )
+        )
+
+    only = [x for x in a.only_controls.split(",") if x]
+    for spec in [x for x in a.arms.split(",") if x]:
+        kind = spec.split(":", 1)[0]
+        if kind == "store":
+            path = spec[len("store:") : spec.rfind(":")]
+            label = spec[spec.rfind(":") + 1 :]
+            with open(path, "rb") as fh:
+                arm = pickle.load(fh)
+            st, addr, basis = (arm["store"], arm["address"], arm["basis"])
+            obj = {
+                "arm": label,
+                "read": "tensor",
+                "kind": "span",
+                "store": st,
+                "basis": basis,
+                "address": addr,
+                "protos": None,
+                "head_bytes": {"head_bytes": 0},
+            }
+            if not only:
+                emit(label, obj, {"source": path, "K": len(st.modes)})
+            if a.no_controls:
+                continue
+            for name, ck in CONTROLS:
+                if only and name not in only:
+                    continue
+                mods, info = perturb_modes_deranged(st.modes, ck, seed)
+                sh = ShimStore(mods, st.well_channels, st.dim, st.deployed_rank)
+                if ck == "zero":
+                    cobj = dict(obj, store=sh, basis=basis, zeroed=True, arm=name)
+                else:
+                    cobj = dict(
+                        obj,
+                        store=sh,
+                        arm=name,
+                        basis=qr_basis(mods, st.deployed_rank, widths=[b.shape[1] for b in basis]),
+                    )
+                if ck == "well_permute":
+                    log(
+                        "  across-wells DERANGEMENT perm=%s fixed_points=%d | historical T7 perm fixed_points=%d"
+                        % (info["perm"], info["fixed_points"], info["historical_T7_fixed_points"])
+                    )
+                emit(
+                    "%s__%s" % (label, name),
+                    cobj,
+                    {
+                        "control": name,
+                        "perturbation": info,
+                        "source": path,
+                        "when": "AFTER the address book was fitted; read through a basis of its own atoms at the book's widths (qr_basis)",
+                    },
+                )
+        elif kind in ("rival", "priorcomp", "table"):
+            from nclu.eval.baselines import api as baseline_api
+            from nclu.eval.baselines.refusal_comparator import load_comparator
+
+            if kind == "rival":
+                _, tag, name = spec.split(":")
+                rv = baseline_api.load_rival(seed, name, root=str(OUT / "rivals" / tag / "ckpt"))
+                label = "%s@%s" % (name, tag)
+            elif kind == "priorcomp":
+                name = spec.split(":")[1]
+                rv = load_comparator(
+                    seed, name, root=str(run_dir("shapes3d/refusal_comparator/comparators"))
+                )
+                label = "priorcomp_%s" % name
+            else:
+                rv = baseline_api.load_rival(seed, "table")
+                label = "table_FLOOR"
+            obj = {
+                "arm": label,
+                "read": "rival",
+                "kind": "rival",
+                "rival": rv,
+                "rival_partial": None,
+                "store": None,
+                "protos": None,
+                "head_bytes": {"head_bytes": 0},
+            }
+            emit(
+                label,
+                obj,
+                {
+                    "spec": spec,
+                    "param_count": (rv.meta or {}).get("param_count"),
+                    "meta": {k: v for k, v in (rv.meta or {}).items() if k not in ("grid_values",)},
+                },
+            )
+        else:
+            raise SystemExit("unknown arm spec %r" % spec)
+    log("done")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

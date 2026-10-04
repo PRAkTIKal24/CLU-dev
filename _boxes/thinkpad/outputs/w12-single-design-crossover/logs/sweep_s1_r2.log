@@ -1,0 +1,76 @@
+condition=val  pool 131,072  red rows 11,024  dead channels 67
+
+### seed 1: cache {'generation': 2, 'scope': 'full', 'n_rows': 480000, 'root': 'C:/chlu/outputs/spoke-a-rivals/cache_generation2'}
+    24 val corners, judge seed 1
+
+===== K=32 seed=1 cond=val  wells 64..64  A=63 =====
+  built 12.1s  deployed_rank 17..62  span_rank 17..63 (sum 1969)
+  RANK/WIDTH  min 0.2656  max 0.9844  (A/width_min = 0.9844)
+  address book fitted 1238.6s  1,053,064 B  (90/10 split, 117,964 train)
+  LEDGER  atoms 516,096 | cov+count 560,608 | address 1,053,064 | coupling 6,610
+          TOTAL 2,136,378 B = 4.0748x the 524,288 B REFERENCE (not a budget here)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cov_tensor K=32                    valid 0.9323 +- 0.0856 [0.6806, 1.0000]  (41s)
+    landscape_removed                  valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (43s)
+    landscape_shuffled                 valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (43s)
+    landscape_shuffled_across_wells    valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (45s)
+    random_atoms                       valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (46s)
+  EXACTNESS  downdate 1.48s vs refit 10.8s  max|mode dev| 9.313e-10  max subspace dist 1.207e-11  ranks agree True
+  wrote C:\chlu\outputs\w12-single-design-crossover\val_sweep\val_K32_seed1\row.json
+
+===== K=5 seed=1 cond=val  wells 409..410  A=64 =====
+  built 11.5s  deployed_rank 63..63  span_rank 64..64 (sum 320)
+  RANK/WIDTH  min 0.1561  max 0.1565  (A/width_min = 0.1565)
+  address book fitted 595.9s  195,584 B  (90/10 split, 117,964 train)
+  LEDGER  atoms 524,288 | cov+count 3,391,552 | address 195,584 | coupling 6,610
+          TOTAL 4,118,034 B = 7.8545x the 524,288 B REFERENCE (not a budget here)
+    cov_tensor K=5                     valid 0.8912 +- 0.1333 [0.5556, 1.0000]  (43s)
+    landscape_removed                  valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (44s)
+    landscape_shuffled                 valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (45s)
+    landscape_shuffled_across_wells    valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (44s)
+    random_atoms                       valid 0.0000 +- 0.0000 [0.0000, 0.0000]  (42s)
+  EXACTNESS  downdate 1.40s vs refit 12.5s  max|mode dev| 7.276e-12  max subspace dist 7.276e-12  ranks agree True
+  wrote C:\chlu\outputs\w12-single-design-crossover\val_sweep\val_K5_seed1\row.json
+
+2 rows written under C:\chlu\outputs\w12-single-design-crossover\val_sweep

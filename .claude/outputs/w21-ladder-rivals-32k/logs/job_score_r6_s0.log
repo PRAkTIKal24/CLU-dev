@@ -1,0 +1,55 @@
+[19:49:18] chlu.__file__ = C:\chlu\worktrees\CHLU-w21-ladder-rivals-32k\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:49:27] FastJudge positive control: True
+[19:49:27] corners=rung:6 seed=0: 120 corners
+[19:50:40]   mlp__declared@rung6_n32768                   novel/corner 45.775 (ceiling 72.00)  in 72s
+[19:51:57]   mlp__tenx@rung6_n32768                       novel/corner 54.608 (ceiling 72.00)  in 77s
+[19:53:18]   lstm__declared@rung6_n32768                  novel/corner 45.642 (ceiling 72.00)  in 78s
+[19:54:35]   lstm__tenx@rung6_n32768                      novel/corner 48.167 (ceiling 72.00)  in 78s
+[19:55:56]   transformer__declared@rung6_n32768           novel/corner 36.867 (ceiling 72.00)  in 77s
+[19:57:15]   transformer__tenx@rung6_n32768               novel/corner 35.442 (ceiling 72.00)  in 79s
+[19:58:34]   cont_mlp__declared@rung6_n32768              novel/corner 9.150 (ceiling 72.00)  in 78s
+[19:59:53]   cont_mlp__tenx@rung6_n32768                  novel/corner 33.283 (ceiling 72.00)  in 79s
+[20:01:10]   mlp__ownpoolsched@rung6_n32768               novel/corner 14.525 (ceiling 72.00)  in 77s
+[20:01:10] done

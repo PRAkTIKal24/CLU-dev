@@ -1,0 +1,330 @@
+[14:01:23] C02 tag=ref seed=0 spec=val -> 32 corners: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63]
+[14:01:28] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[14:01:29]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[14:01:29]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[14:01:30] context ready in 6.8s
+[14:01:31] [c1] pool 32761 rows / 32761 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:02:17] [c1] clu_linear             tuples_valid_novel= 28  agg=0.8773  distinct= 51  exact=0.3889  bytes=469,504
+[14:02:19] [c1] knn_proto              tuples_valid_novel= 42  agg=0.9190  distinct= 50  exact=0.5833  bytes=475,136
+[14:02:20] [c1] store_removed_zero     tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=469,504
+[14:02:22] [c1] store_removed_shuffle  tuples_valid_novel=  0  agg=0.0764  distinct= 54  exact=0.0000  bytes=469,504
+[14:02:24] [c1] head_additive_only     tuples_valid_novel= 19  agg=0.8403  distinct= 36  exact=0.2639  bytes=406,016
+[14:02:44] [c1] lookup_feat            tuples_valid_novel=  0  agg=0.4514  distinct=  4  exact=0.0000  bytes=466,944
+[14:02:46] [c1] lookup_tuple           tuples_valid_novel=  0  agg=0.3241  distinct=  5  exact=0.0000  bytes=466,944
+[14:02:47] [c1] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[14:02:48] [c1] const_mu               tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=8,192
+[14:02:48] [c1] done in 78.2s
+[14:02:49] [c3] pool 32765 rows / 32765 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:03:34] [c3] clu_linear             tuples_valid_novel=  0  agg=0.8125  distinct= 48  exact=0.0000  bytes=469,504
+[14:03:36] [c3] knn_proto              tuples_valid_novel=  0  agg=0.8287  distinct= 48  exact=0.0000  bytes=475,136
+[14:03:37] [c3] store_removed_zero     tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=469,504
+[14:03:38] [c3] store_removed_shuffle  tuples_valid_novel=  0  agg=0.2014  distinct= 46  exact=0.0000  bytes=469,504
+[14:03:40] [c3] head_additive_only     tuples_valid_novel=  0  agg=0.8009  distinct= 43  exact=0.0000  bytes=406,016
+[14:04:01] [c3] lookup_feat            tuples_valid_novel=  0  agg=0.4514  distinct=  6  exact=0.0000  bytes=466,944
+[14:04:03] [c3] lookup_tuple           tuples_valid_novel=  0  agg=0.5880  distinct=  4  exact=0.0000  bytes=466,944
+[14:04:05] [c3] ceiling                tuples_valid_novel= 43  agg=0.9167  distinct= 61  exact=0.5972  bytes=0
+[14:04:06] [c3] const_mu               tuples_valid_novel=  0  agg=0.1667  distinct=  1  exact=0.0000  bytes=8,192
+[14:04:06] [c3] done in 77.6s
+[14:04:07] [c5] pool 32764 rows / 32764 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:04:51] [c5] clu_linear             tuples_valid_novel=  2  agg=0.6852  distinct= 59  exact=0.0278  bytes=469,504
+[14:04:53] [c5] knn_proto              tuples_valid_novel=  0  agg=0.6898  distinct= 57  exact=0.0000  bytes=475,136
+[14:04:54] [c5] store_removed_zero     tuples_valid_novel=  0  agg=0.1667  distinct=  1  exact=0.0000  bytes=469,504
+[14:04:56] [c5] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1042  distinct= 46  exact=0.0000  bytes=469,504
+[14:04:58] [c5] head_additive_only     tuples_valid_novel=  0  agg=0.5069  distinct= 51  exact=0.0000  bytes=406,016
+[14:05:16] [c5] lookup_feat            tuples_valid_novel=  0  agg=0.3194  distinct=  7  exact=0.0000  bytes=466,944
+[14:05:18] [c5] lookup_tuple           tuples_valid_novel=  0  agg=0.5417  distinct=  7  exact=0.0000  bytes=466,944
+[14:05:19] [c5] ceiling                tuples_valid_novel= 20  agg=0.8796  distinct= 63  exact=0.2778  bytes=0
+[14:05:20] [c5] const_mu               tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=8,192
+[14:05:20] [c5] done in 74.1s
+[14:05:21] [c7] pool 32761 rows / 32761 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:06:00] [c7] clu_linear             tuples_valid_novel= 23  agg=0.8519  distinct= 43  exact=0.3194  bytes=469,504
+[14:06:02] [c7] knn_proto              tuples_valid_novel= 21  agg=0.8495  distinct= 43  exact=0.2917  bytes=475,136
+[14:06:03] [c7] store_removed_zero     tuples_valid_novel=  0  agg=0.0833  distinct=  1  exact=0.0000  bytes=469,504
+[14:06:04] [c7] store_removed_shuffle  tuples_valid_novel=  0  agg=0.2083  distinct= 58  exact=0.0000  bytes=469,504
+[14:06:05] [c7] head_additive_only     tuples_valid_novel=  0  agg=0.7222  distinct= 30  exact=0.0000  bytes=406,016
+[14:06:24] [c7] lookup_feat            tuples_valid_novel=  0  agg=0.3542  distinct=  7  exact=0.0000  bytes=466,944
+[14:06:25] [c7] lookup_tuple           tuples_valid_novel=  0  agg=0.3287  distinct=  6  exact=0.0000  bytes=466,944
+[14:06:26] [c7] ceiling                tuples_valid_novel= 61  agg=0.9722  distinct= 62  exact=0.8472  bytes=0
+[14:06:28] [c7] const_mu               tuples_valid_novel=  0  agg=0.3056  distinct=  1  exact=0.0000  bytes=8,192
+[14:06:28] [c7] done in 67.3s
+[14:06:28] [c9] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[14:06:28] [c11] pool 32765 rows / 32765 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:07:06] [c11] clu_linear             tuples_valid_novel= 12  agg=0.8218  distinct= 54  exact=0.1667  bytes=469,504
+[14:07:08] [c11] knn_proto              tuples_valid_novel= 24  agg=0.8681  distinct= 48  exact=0.3333  bytes=475,136
+[14:07:10] [c11] store_removed_zero     tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=469,504
+[14:07:11] [c11] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1620  distinct= 45  exact=0.0000  bytes=469,504
+[14:07:12] [c11] head_additive_only     tuples_valid_novel= 10  agg=0.8009  distinct= 46  exact=0.1389  bytes=406,016
+[14:07:37] [c11] lookup_feat            tuples_valid_novel=  0  agg=0.4097  distinct=  5  exact=0.0000  bytes=466,944
+[14:07:40] [c11] lookup_tuple           tuples_valid_novel=  0  agg=0.5046  distinct=  4  exact=0.0000  bytes=466,944
+[14:07:41] [c11] ceiling                tuples_valid_novel= 49  agg=0.9468  distinct= 56  exact=0.6806  bytes=0
+[14:07:43] [c11] const_mu               tuples_valid_novel=  0  agg=0.3056  distinct=  1  exact=0.0000  bytes=8,192
+[14:07:43] [c11] done in 75.0s
+[14:07:43] [c13] pool 32766 rows / 32766 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:08:42] [c13] clu_linear             tuples_valid_novel=  5  agg=0.6944  distinct= 41  exact=0.0694  bytes=469,504
+[14:08:44] [c13] knn_proto              tuples_valid_novel=  0  agg=0.7060  distinct= 56  exact=0.0000  bytes=475,136
+[14:08:45] [c13] store_removed_zero     tuples_valid_novel=  0  agg=0.3333  distinct=  1  exact=0.0000  bytes=469,504
+[14:08:46] [c13] store_removed_shuffle  tuples_valid_novel=  0  agg=0.2847  distinct= 61  exact=0.0000  bytes=469,504
+[14:08:48] [c13] head_additive_only     tuples_valid_novel=  0  agg=0.6250  distinct= 41  exact=0.0000  bytes=406,016
+[14:09:08] [c13] lookup_feat            tuples_valid_novel=  0  agg=0.4028  distinct=  7  exact=0.0000  bytes=466,944
+[14:09:10] [c13] lookup_tuple           tuples_valid_novel=  0  agg=0.3472  distinct=  5  exact=0.0000  bytes=466,944
+[14:09:11] [c13] ceiling                tuples_valid_novel= 23  agg=0.8866  distinct= 64  exact=0.3194  bytes=0
+[14:09:13] [c13] const_mu               tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=8,192
+[14:09:13] [c13] done in 89.9s
+[14:09:13] [c15] pool 32762 rows / 32762 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:10:01] [c15] clu_linear             tuples_valid_novel=  9  agg=0.7894  distinct= 58  exact=0.1250  bytes=469,504
+[14:10:03] [c15] knn_proto              tuples_valid_novel= 21  agg=0.8519  distinct= 59  exact=0.2917  bytes=475,136
+[14:10:05] [c15] store_removed_zero     tuples_valid_novel=  0  agg=0.3333  distinct=  1  exact=0.0000  bytes=469,504
+[14:10:06] [c15] store_removed_shuffle  tuples_valid_novel=  0  agg=0.3403  distinct= 51  exact=0.0000  bytes=469,504
+[14:10:08] [c15] head_additive_only     tuples_valid_novel=  0  agg=0.7407  distinct= 45  exact=0.0000  bytes=406,016
+[14:10:28] [c15] lookup_feat            tuples_valid_novel=  0  agg=0.3889  distinct=  6  exact=0.0000  bytes=466,944
+[14:10:30] [c15] lookup_tuple           tuples_valid_novel=  0  agg=0.3380  distinct=  5  exact=0.0000  bytes=466,944
+[14:10:32] [c15] ceiling                tuples_valid_novel= 47  agg=0.9306  distinct= 60  exact=0.6528  bytes=0
+[14:10:33] [c15] const_mu               tuples_valid_novel=  0  agg=0.0833  distinct=  1  exact=0.0000  bytes=8,192
+[14:10:33] [c15] done in 80.5s
+[14:10:34] [c17] pool 32763 rows / 32763 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:11:16] [c17] clu_linear             tuples_valid_novel=  6  agg=0.7454  distinct= 43  exact=0.0833  bytes=469,504
+[14:11:17] [c17] knn_proto              tuples_valid_novel=  5  agg=0.8056  distinct= 51  exact=0.0694  bytes=475,136
+[14:11:19] [c17] store_removed_zero     tuples_valid_novel=  0  agg=0.1667  distinct=  1  exact=0.0000  bytes=469,504
+[14:11:20] [c17] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1875  distinct= 57  exact=0.0000  bytes=469,504
+[14:11:21] [c17] head_additive_only     tuples_valid_novel=  1  agg=0.6968  distinct= 38  exact=0.0139  bytes=406,016
+[14:11:39] [c17] lookup_feat            tuples_valid_novel=  0  agg=0.4236  distinct=  6  exact=0.0000  bytes=466,944
+[14:11:40] [c17] lookup_tuple           tuples_valid_novel=  0  agg=0.3472  distinct=  3  exact=0.0000  bytes=466,944
+[14:11:41] [c17] ceiling                tuples_valid_novel= 65  agg=0.9838  distinct= 66  exact=0.9028  bytes=0
+[14:11:43] [c17] const_mu               tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=8,192
+[14:11:43] [c17] done in 69.2s
+[14:11:43] [c19] pool 32761 rows / 32761 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:12:21] [c19] clu_linear             tuples_valid_novel= 37  agg=0.9051  distinct= 57  exact=0.5139  bytes=469,504
+[14:12:23] [c19] knn_proto              tuples_valid_novel= 51  agg=0.9491  distinct= 60  exact=0.7083  bytes=475,136
+[14:12:24] [c19] store_removed_zero     tuples_valid_novel=  0  agg=0.1667  distinct=  1  exact=0.0000  bytes=469,504
+[14:12:25] [c19] store_removed_shuffle  tuples_valid_novel=  0  agg=0.2269  distinct= 55  exact=0.0000  bytes=469,504
+[14:12:26] [c19] head_additive_only     tuples_valid_novel= 32  agg=0.8866  distinct= 41  exact=0.4444  bytes=406,016
+[14:12:46] [c19] lookup_feat            tuples_valid_novel=  0  agg=0.4444  distinct=  8  exact=0.0000  bytes=466,944
+[14:12:47] [c19] lookup_tuple           tuples_valid_novel=  0  agg=0.3657  distinct=  6  exact=0.0000  bytes=466,944
+[14:12:48] [c19] ceiling                tuples_valid_novel= 52  agg=0.9537  distinct= 56  exact=0.7222  bytes=0
+[14:12:49] [c19] const_mu               tuples_valid_novel=  0  agg=0.0833  distinct=  1  exact=0.0000  bytes=8,192
+[14:12:49] [c19] done in 66.7s
+[14:12:50] [c21] pool 32764 rows / 32764 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:13:28] [c21] clu_linear             tuples_valid_novel= 14  agg=0.8264  distinct= 40  exact=0.1944  bytes=469,504
+[14:13:30] [c21] knn_proto              tuples_valid_novel=  9  agg=0.8495  distinct= 60  exact=0.1250  bytes=475,136
+[14:13:31] [c21] store_removed_zero     tuples_valid_novel=  0  agg=0.1667  distinct=  1  exact=0.0000  bytes=469,504
+[14:13:32] [c21] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1458  distinct= 67  exact=0.0000  bytes=469,504
+[14:13:34] [c21] head_additive_only     tuples_valid_novel= 10  agg=0.7546  distinct= 32  exact=0.1389  bytes=406,016
+[14:13:51] [c21] lookup_feat            tuples_valid_novel=  0  agg=0.5486  distinct=  4  exact=0.0000  bytes=466,944
+[14:13:53] [c21] lookup_tuple           tuples_valid_novel=  0  agg=0.3866  distinct=  6  exact=0.0000  bytes=466,944
+[14:13:54] [c21] ceiling                tuples_valid_novel= 70  agg=0.9954  distinct= 70  exact=0.9722  bytes=0
+[14:13:55] [c21] const_mu               tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=8,192
+[14:13:55] [c21] done in 66.0s
+[14:13:56] [c23] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.0, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[14:13:56] [c25] pool 32765 rows / 32765 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:14:36] [c25] clu_linear             tuples_valid_novel= 10  agg=0.7917  distinct= 39  exact=0.1389  bytes=469,504
+[14:14:37] [c25] knn_proto              tuples_valid_novel= 11  agg=0.8495  distinct= 58  exact=0.1528  bytes=475,136
+[14:14:39] [c25] store_removed_zero     tuples_valid_novel=  0  agg=0.1667  distinct=  1  exact=0.0000  bytes=469,504
+[14:14:40] [c25] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1852  distinct= 66  exact=0.0000  bytes=469,504
+[14:14:41] [c25] head_additive_only     tuples_valid_novel=  0  agg=0.7083  distinct= 33  exact=0.0000  bytes=406,016
+[14:14:59] [c25] lookup_feat            tuples_valid_novel=  0  agg=0.3819  distinct=  5  exact=0.0000  bytes=466,944
+[14:15:01] [c25] lookup_tuple           tuples_valid_novel=  0  agg=0.4167  distinct=  5  exact=0.0000  bytes=466,944
+[14:15:02] [c25] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[14:15:03] [c25] const_mu               tuples_valid_novel=  0  agg=0.3056  distinct=  1  exact=0.0000  bytes=8,192
+[14:15:03] [c25] done in 67.2s
+[14:15:03] [c27] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.0, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[14:15:03] [c29] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[14:15:04] [c31] pool 32764 rows / 32764 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:15:41] [c31] clu_linear             tuples_valid_novel=  2  agg=0.8264  distinct= 46  exact=0.0278  bytes=469,504
+[14:15:43] [c31] knn_proto              tuples_valid_novel= 14  agg=0.8519  distinct= 48  exact=0.1944  bytes=475,136
+[14:15:44] [c31] store_removed_zero     tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=469,504
+[14:15:45] [c31] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1250  distinct= 55  exact=0.0000  bytes=469,504
+[14:15:46] [c31] head_additive_only     tuples_valid_novel=  5  agg=0.8426  distinct= 44  exact=0.0694  bytes=406,016
+[14:16:04] [c31] lookup_feat            tuples_valid_novel=  0  agg=0.5000  distinct=  6  exact=0.0000  bytes=466,944
+[14:16:05] [c31] lookup_tuple           tuples_valid_novel=  0  agg=0.5440  distinct=  7  exact=0.0000  bytes=466,944
+[14:16:07] [c31] ceiling                tuples_valid_novel= 43  agg=0.9306  distinct= 69  exact=0.5972  bytes=0
+[14:16:08] [c31] const_mu               tuples_valid_novel=  0  agg=0.0000  distinct=  1  exact=0.0000  bytes=8,192
+[14:16:08] [c31] done in 64.6s
+[14:16:08] [c33] pool 32762 rows / 32762 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:16:47] [c33] clu_linear             tuples_valid_novel= 46  agg=0.9398  distinct= 54  exact=0.6389  bytes=469,504
+[14:16:49] [c33] knn_proto              tuples_valid_novel= 50  agg=0.9491  distinct= 51  exact=0.6944  bytes=475,136
+[14:16:51] [c33] store_removed_zero     tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=469,504
+[14:16:52] [c33] store_removed_shuffle  tuples_valid_novel=  0  agg=0.3194  distinct= 47  exact=0.0000  bytes=469,504
+[14:16:53] [c33] head_additive_only     tuples_valid_novel= 46  agg=0.9398  distinct= 49  exact=0.6389  bytes=406,016
+[14:17:12] [c33] lookup_feat            tuples_valid_novel=  0  agg=0.5231  distinct=  4  exact=0.0000  bytes=466,944
+[14:17:14] [c33] lookup_tuple           tuples_valid_novel=  0  agg=0.5093  distinct= 10  exact=0.0000  bytes=466,944
+[14:17:15] [c33] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[14:17:16] [c33] const_mu               tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=8,192
+[14:17:16] [c33] done in 68.3s
+[14:17:16] [c35] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[14:17:17] [c37] pool 32761 rows / 32761 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:17:54] [c37] clu_linear             tuples_valid_novel= 16  agg=0.8356  distinct= 53  exact=0.2222  bytes=469,504
+[14:17:56] [c37] knn_proto              tuples_valid_novel= 35  agg=0.9144  distinct= 55  exact=0.4861  bytes=475,136
+[14:17:57] [c37] store_removed_zero     tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=469,504
+[14:17:58] [c37] store_removed_shuffle  tuples_valid_novel=  0  agg=0.2245  distinct= 45  exact=0.0000  bytes=469,504
+[14:17:59] [c37] head_additive_only     tuples_valid_novel=  5  agg=0.8218  distinct= 64  exact=0.0694  bytes=406,016
+[14:18:18] [c37] lookup_feat            tuples_valid_novel=  0  agg=0.5208  distinct=  5  exact=0.0000  bytes=466,944
+[14:18:19] [c37] lookup_tuple           tuples_valid_novel=  0  agg=0.5556  distinct=  6  exact=0.0000  bytes=466,944
+[14:18:20] [c37] ceiling                tuples_valid_novel= 71  agg=0.9977  distinct= 71  exact=0.9861  bytes=0
+[14:18:21] [c37] const_mu               tuples_valid_novel=  0  agg=0.2222  distinct=  1  exact=0.0000  bytes=8,192
+[14:18:21] [c37] done in 65.3s
+[14:18:22] [c39] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 3.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[14:18:22] [c41] ⛔ REFUSED (touches a held-out set): ⛔ DEV corner {'hue_lo': 0.4, 'scale_hi': True, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[14:18:22] [c43] pool 32763 rows / 32763 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:19:00] [c43] clu_linear             tuples_valid_novel=  0  agg=0.7176  distinct= 49  exact=0.0000  bytes=469,504
+[14:19:02] [c43] knn_proto              tuples_valid_novel=  7  agg=0.7847  distinct= 54  exact=0.0972  bytes=475,136
+[14:19:04] [c43] store_removed_zero     tuples_valid_novel=  0  agg=0.2500  distinct=  1  exact=0.0000  bytes=469,504
+[14:19:05] [c43] store_removed_shuffle  tuples_valid_novel=  0  agg=0.0856  distinct= 49  exact=0.0000  bytes=469,504
+[14:19:06] [c43] head_additive_only     tuples_valid_novel=  0  agg=0.6574  distinct= 31  exact=0.0000  bytes=406,016
+[14:19:25] [c43] lookup_feat            tuples_valid_novel=  0  agg=0.3819  distinct=  8  exact=0.0000  bytes=466,944
+[14:19:26] [c43] lookup_tuple           tuples_valid_novel=  0  agg=0.3148  distinct=  5  exact=0.0000  bytes=466,944
+[14:19:27] [c43] ceiling                tuples_valid_novel= 40  agg=0.9236  distinct= 57  exact=0.5556  bytes=0
+[14:19:28] [c43] const_mu               tuples_valid_novel=  0  agg=0.0833  distinct=  1  exact=0.0000  bytes=8,192
+[14:19:28] [c43] done in 66.8s
+[14:19:29] [c45] pool 32763 rows / 32763 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:20:23] [c45] clu_linear             tuples_valid_novel=  9  agg=0.7569  distinct= 34  exact=0.1250  bytes=469,504
+[14:20:26] [c45] knn_proto              tuples_valid_novel=  4  agg=0.7940  distinct= 44  exact=0.0556  bytes=475,136
+[14:20:28] [c45] store_removed_zero     tuples_valid_novel=  0  agg=0.0833  distinct=  1  exact=0.0000  bytes=469,504
+[14:20:29] [c45] store_removed_shuffle  tuples_valid_novel=  0  agg=0.2037  distinct= 59  exact=0.0000  bytes=469,504
+[14:20:32] [c45] head_additive_only     tuples_valid_novel=  0  agg=0.7153  distinct= 28  exact=0.0000  bytes=406,016
+[14:21:02] [c45] lookup_feat            tuples_valid_novel=  0  agg=0.3333  distinct=  5  exact=0.0000  bytes=466,944
+[14:21:04] [c45] lookup_tuple           tuples_valid_novel=  0  agg=0.3333  distinct=  4  exact=0.0000  bytes=466,944
+[14:21:06] [c45] ceiling                tuples_valid_novel= 64  agg=0.9815  distinct= 65  exact=0.8889  bytes=0
+[14:21:07] [c45] const_mu               tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=8,192
+[14:21:07] [c45] done in 98.3s
+[14:21:07] [c47] pool 32760 rows / 32760 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:21:52] [c47] clu_linear             tuples_valid_novel= 19  agg=0.8727  distinct= 43  exact=0.2639  bytes=469,504
+[14:21:54] [c47] knn_proto              tuples_valid_novel= 19  agg=0.8449  distinct= 46  exact=0.2639  bytes=475,136
+[14:21:55] [c47] store_removed_zero     tuples_valid_novel=  0  agg=0.0833  distinct=  1  exact=0.0000  bytes=469,504
+[14:21:57] [c47] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1505  distinct= 53  exact=0.0000  bytes=469,504
+[14:21:59] [c47] head_additive_only     tuples_valid_novel=  4  agg=0.7292  distinct= 32  exact=0.0556  bytes=406,016
+[14:22:23] [c47] lookup_feat            tuples_valid_novel=  0  agg=0.4514  distinct=  4  exact=0.0000  bytes=466,944
+[14:22:24] [c47] lookup_tuple           tuples_valid_novel=  0  agg=0.3148  distinct=  7  exact=0.0000  bytes=466,944
+[14:22:26] [c47] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[14:22:27] [c47] const_mu               tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=8,192
+[14:22:27] [c47] done in 80.1s
+[14:22:28] [c49] pool 32759 rows / 32759 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:23:15] [c49] clu_linear             tuples_valid_novel= 15  agg=0.8194  distinct= 50  exact=0.2083  bytes=469,504
+[14:23:18] [c49] knn_proto              tuples_valid_novel= 39  agg=0.9097  distinct= 48  exact=0.5417  bytes=475,136
+[14:23:19] [c49] store_removed_zero     tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=469,504
+[14:23:21] [c49] store_removed_shuffle  tuples_valid_novel=  0  agg=0.0394  distinct= 52  exact=0.0000  bytes=469,504
+[14:23:22] [c49] head_additive_only     tuples_valid_novel= 14  agg=0.8218  distinct= 43  exact=0.1944  bytes=406,016
+[14:23:46] [c49] lookup_feat            tuples_valid_novel=  0  agg=0.3889  distinct=  4  exact=0.0000  bytes=466,944
+[14:23:48] [c49] lookup_tuple           tuples_valid_novel=  0  agg=0.3611  distinct=  5  exact=0.0000  bytes=466,944
+[14:23:49] [c49] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[14:23:51] [c49] const_mu               tuples_valid_novel=  0  agg=0.3056  distinct=  1  exact=0.0000  bytes=8,192
+[14:23:51] [c49] done in 82.9s
+[14:23:51] [c51] pool 32766 rows / 32766 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:24:44] [c51] clu_linear             tuples_valid_novel=  4  agg=0.7292  distinct= 43  exact=0.0556  bytes=469,504
+[14:24:47] [c51] knn_proto              tuples_valid_novel=  2  agg=0.7894  distinct= 56  exact=0.0278  bytes=475,136
+[14:24:48] [c51] store_removed_zero     tuples_valid_novel=  0  agg=0.0833  distinct=  1  exact=0.0000  bytes=469,504
+[14:24:50] [c51] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1667  distinct= 58  exact=0.0000  bytes=469,504
+[14:24:53] [c51] head_additive_only     tuples_valid_novel=  0  agg=0.7245  distinct= 39  exact=0.0000  bytes=406,016
+[14:25:18] [c51] lookup_feat            tuples_valid_novel=  0  agg=0.4931  distinct=  2  exact=0.0000  bytes=466,944
+[14:25:20] [c51] lookup_tuple           tuples_valid_novel=  0  agg=0.2963  distinct=  5  exact=0.0000  bytes=466,944
+[14:25:22] [c51] ceiling                tuples_valid_novel= 27  agg=0.8681  distinct= 56  exact=0.3750  bytes=0
+[14:25:23] [c51] const_mu               tuples_valid_novel=  0  agg=0.2500  distinct=  1  exact=0.0000  bytes=8,192
+[14:25:23] [c51] done in 92.5s
+[14:25:24] [c53] pool 32764 rows / 32764 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:26:16] [c53] clu_linear             tuples_valid_novel=  0  agg=0.6898  distinct= 48  exact=0.0000  bytes=469,504
+[14:26:19] [c53] knn_proto              tuples_valid_novel= 13  agg=0.8264  distinct= 47  exact=0.1806  bytes=475,136
+[14:26:20] [c53] store_removed_zero     tuples_valid_novel=  0  agg=0.2222  distinct=  1  exact=0.0000  bytes=469,504
+[14:26:22] [c53] store_removed_shuffle  tuples_valid_novel=  0  agg=0.1343  distinct= 55  exact=0.0000  bytes=469,504
+[14:26:23] [c53] head_additive_only     tuples_valid_novel=  2  agg=0.8079  distinct= 46  exact=0.0278  bytes=406,016
+[14:26:49] [c53] lookup_feat            tuples_valid_novel=  0  agg=0.4444  distinct=  7  exact=0.0000  bytes=466,944
+[14:26:51] [c53] lookup_tuple           tuples_valid_novel=  0  agg=0.5185  distinct=  6  exact=0.0000  bytes=466,944
+[14:26:53] [c53] ceiling                tuples_valid_novel= 35  agg=0.8819  distinct= 68  exact=0.4861  bytes=0
+[14:26:55] [c53] const_mu               tuples_valid_novel=  0  agg=0.0833  distinct=  1  exact=0.0000  bytes=8,192
+[14:26:55] [c53] done in 91.2s
+[14:26:55] [c55] pool 32765 rows / 32765 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:27:53] [c55] clu_linear             tuples_valid_novel= 28  agg=0.8472  distinct= 59  exact=0.3889  bytes=469,504
+[14:27:56] [c55] knn_proto              tuples_valid_novel=  9  agg=0.8032  distinct= 51  exact=0.1250  bytes=475,136
+[14:27:57] [c55] store_removed_zero     tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=469,504
+[14:27:59] [c55] store_removed_shuffle  tuples_valid_novel=  0  agg=0.0856  distinct= 47  exact=0.0000  bytes=469,504
+[14:28:01] [c55] head_additive_only     tuples_valid_novel=  8  agg=0.7940  distinct= 37  exact=0.1111  bytes=406,016
+[14:28:27] [c55] lookup_feat            tuples_valid_novel=  0  agg=0.4167  distinct=  5  exact=0.0000  bytes=466,944
+[14:28:29] [c55] lookup_tuple           tuples_valid_novel=  0  agg=0.5648  distinct=  8  exact=0.0000  bytes=466,944
+[14:28:31] [c55] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[14:28:32] [c55] const_mu               tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=8,192
+[14:28:32] [c55] done in 97.4s
+[14:28:33] [c57] pool 32766 rows / 32766 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:29:29] [c57] clu_linear             tuples_valid_novel=  5  agg=0.8171  distinct= 58  exact=0.0694  bytes=469,504
+[14:29:32] [c57] knn_proto              tuples_valid_novel=  8  agg=0.8380  distinct= 48  exact=0.1111  bytes=475,136
+[14:29:33] [c57] store_removed_zero     tuples_valid_novel=  0  agg=0.0556  distinct=  1  exact=0.0000  bytes=469,504
+[14:29:35] [c57] store_removed_shuffle  tuples_valid_novel=  0  agg=0.0463  distinct= 52  exact=0.0000  bytes=469,504
+[14:29:37] [c57] head_additive_only     tuples_valid_novel= 10  agg=0.8495  distinct= 45  exact=0.1389  bytes=406,016
+[14:30:02] [c57] lookup_feat            tuples_valid_novel=  0  agg=0.5486  distinct=  5  exact=0.0000  bytes=466,944
+[14:30:04] [c57] lookup_tuple           tuples_valid_novel=  0  agg=0.4884  distinct=  8  exact=0.0000  bytes=466,944
+[14:30:05] [c57] ceiling                tuples_valid_novel= 43  agg=0.9282  distinct= 70  exact=0.5972  bytes=0
+[14:30:07] [c57] const_mu               tuples_valid_novel=  0  agg=0.0833  distinct=  1  exact=0.0000  bytes=8,192
+[14:30:07] [c57] done in 94.6s
+[14:30:08] [c59] pool 32763 rows / 32763 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:31:01] [c59] clu_linear             tuples_valid_novel=  9  agg=0.8403  distinct= 61  exact=0.1250  bytes=469,504
+[14:31:03] [c59] knn_proto              tuples_valid_novel=  9  agg=0.8287  distinct= 56  exact=0.1250  bytes=475,136
+[14:31:05] [c59] store_removed_zero     tuples_valid_novel=  0  agg=0.0000  distinct=  1  exact=0.0000  bytes=469,504
+[14:31:07] [c59] store_removed_shuffle  tuples_valid_novel=  0  agg=0.0625  distinct= 59  exact=0.0000  bytes=469,504
+[14:31:09] [c59] head_additive_only     tuples_valid_novel=  2  agg=0.7292  distinct= 42  exact=0.0278  bytes=406,016
+[14:31:28] [c59] lookup_feat            tuples_valid_novel=  0  agg=0.5208  distinct=  6  exact=0.0000  bytes=466,944
+[14:31:29] [c59] lookup_tuple           tuples_valid_novel=  0  agg=0.5417  distinct=  8  exact=0.0000  bytes=466,944
+[14:31:31] [c59] ceiling                tuples_valid_novel= 61  agg=0.9745  distinct= 69  exact=0.8472  bytes=0
+[14:31:32] [c59] const_mu               tuples_valid_novel=  0  agg=0.1389  distinct=  1  exact=0.0000  bytes=8,192
+[14:31:32] [c59] done in 84.7s
+[14:31:32] [c61] pool 32758 rows / 32758 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:32:11] [c61] clu_linear             tuples_valid_novel=  9  agg=0.8079  distinct= 54  exact=0.1250  bytes=469,504
+[14:32:14] [c61] knn_proto              tuples_valid_novel=  8  agg=0.8310  distinct= 65  exact=0.1111  bytes=475,136
+[14:32:15] [c61] store_removed_zero     tuples_valid_novel=  0  agg=0.0000  distinct=  1  exact=0.0000  bytes=469,504
+[14:32:17] [c61] store_removed_shuffle  tuples_valid_novel=  0  agg=0.0278  distinct= 57  exact=0.0000  bytes=469,504
+[14:32:18] [c61] head_additive_only     tuples_valid_novel=  0  agg=0.6852  distinct= 51  exact=0.0000  bytes=406,016
+[14:32:41] [c61] lookup_feat            tuples_valid_novel=  0  agg=0.4583  distinct=  2  exact=0.0000  bytes=466,944
+[14:32:43] [c61] lookup_tuple           tuples_valid_novel=  0  agg=0.5370  distinct=  9  exact=0.0000  bytes=466,944
+[14:32:44] [c61] ceiling                tuples_valid_novel= 72  agg=1.0000  distinct= 72  exact=1.0000  bytes=0
+[14:32:45] [c61] const_mu               tuples_valid_novel=  0  agg=0.3056  distinct=  1  exact=0.0000  bytes=8,192
+[14:32:45] [c61] done in 73.6s
+[14:32:46] [c63] pool 32761 rows / 32761 distinct tuples; todo: ['clu_linear', 'knn_proto', 'store_removed_zero', 'store_removed_shuffle', 'head_additive_only', 'lookup_feat', 'lookup_tuple', 'const_mu', 'ceiling']
+[14:33:33] [c63] clu_linear             tuples_valid_novel=  3  agg=0.7292  distinct= 63  exact=0.0417  bytes=469,504
+[14:33:35] [c63] knn_proto              tuples_valid_novel=  5  agg=0.7917  distinct= 61  exact=0.0694  bytes=475,136
+[14:33:36] [c63] store_removed_zero     tuples_valid_novel=  0  agg=0.0000  distinct=  1  exact=0.0000  bytes=469,504
+[14:33:38] [c63] store_removed_shuffle  tuples_valid_novel=  0  agg=0.0694  distinct= 60  exact=0.0000  bytes=469,504
+[14:33:40] [c63] head_additive_only     tuples_valid_novel=  4  agg=0.7847  distinct= 50  exact=0.0556  bytes=406,016
+[14:34:01] [c63] lookup_feat            tuples_valid_novel=  0  agg=0.4583  distinct=  5  exact=0.0000  bytes=466,944
+[14:34:03] [c63] lookup_tuple           tuples_valid_novel=  0  agg=0.5463  distinct=  7  exact=0.0000  bytes=466,944
+[14:34:04] [c63] ceiling                tuples_valid_novel= 44  agg=0.9282  distinct= 63  exact=0.6111  bytes=0
+[14:34:06] [c63] const_mu               tuples_valid_novel=  0  agg=0.2500  distinct=  1  exact=0.0000  bytes=8,192
+[14:34:06] [c63] done in 80.1s
+[14:34:06] C02 done: 25 corners scored, 7 refused [9, 23, 27, 29, 35, 39, 41], 1962.4s total

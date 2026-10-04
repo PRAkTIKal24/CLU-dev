@@ -1,0 +1,562 @@
+{
+  "schema": "chlu-gen-pretrain/1",
+  "dataset": "shapes3d",
+  "variant": "vae",
+  "seed": 0,
+  "encoder": {
+    "variant": "vae",
+    "family": "vae",
+    "note": "DECLARED COMPARISON ARM: mse + beta*KL, features = mu",
+    "is_control": false,
+    "is_comparison_arm": true,
+    "enc_channels": [
+      32,
+      64,
+      128,
+      128
+    ],
+    "dec_channels": [
+      128,
+      64,
+      32
+    ],
+    "dec_blocks_per_stage": 1,
+    "steps": 400,
+    "steps_mult": 1,
+    "batch": 128,
+    "lr": 0.001,
+    "encoder_param_hash": "01d652fbd9388fb88c7f487ed5d0dd263b232c0049e4e74eac0f8bd5149bf105",
+    "encoder_param_count": 461600,
+    "pretext_head_param_hash": "d3e022b6fb4012d3b59447fa7f6db8cc7753be6b4741a1eac1c67644c966510c",
+    "pretext_head_param_count": 250467,
+    "pretext_head_discarded": true,
+    "feat_shape": [
+      128,
+      4,
+      4
+    ],
+    "D": 2048,
+    "loss_first": 0.1899832785129547,
+    "loss_final": 0.016243431717157364,
+    "loss_final_mean_last_50": 0.016193610057234763,
+    "objective": "mean((dec(z)-x)**2) + 0.05 * KL,  z = mu + sigma*eps",
+    "path": "gen_encoders.train_variant"
+  },
+  "rows": {
+    "enc_train": 4096,
+    "probe_train": 4096,
+    "probe_eval": 2048,
+    "corner_eval": 213
+  },
+  "n_corner_dropped_in_enc_train": 3,
+  "pools": {
+    "grid": {
+      "n": 2048,
+      "realised": {
+        "floor_hue": {
+          "n_values_realised": 10,
+          "chance": 0.1,
+          "majority_rate": 0.10888671875,
+          "values": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "wall_hue": {
+          "n_values_realised": 10,
+          "chance": 0.1,
+          "majority_rate": 0.1162109375,
+          "values": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "object_hue": {
+          "n_values_realised": 10,
+          "chance": 0.1,
+          "majority_rate": 0.10400390625,
+          "values": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "scale": {
+          "n_values_realised": 8,
+          "chance": 0.125,
+          "majority_rate": 0.13427734375,
+          "values": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        },
+        "shape": {
+          "n_values_realised": 4,
+          "chance": 0.25,
+          "majority_rate": 0.26220703125,
+          "values": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "orientation": {
+          "n_values_realised": 15,
+          "chance": 0.06666666666666667,
+          "majority_rate": 0.07275390625,
+          "values": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14
+          ]
+        }
+      }
+    },
+    "corner": {
+      "n": 213,
+      "realised": {
+        "floor_hue": {
+          "n_values_realised": 2,
+          "chance": 0.5,
+          "majority_rate": 0.5023474178403756,
+          "values": [
+            8,
+            9
+          ]
+        },
+        "wall_hue": {
+          "n_values_realised": 2,
+          "chance": 0.5,
+          "majority_rate": 0.5023474178403756,
+          "values": [
+            8,
+            9
+          ]
+        },
+        "object_hue": {
+          "n_values_realised": 2,
+          "chance": 0.5,
+          "majority_rate": 0.5023474178403756,
+          "values": [
+            8,
+            9
+          ]
+        },
+        "scale": {
+          "n_values_realised": 3,
+          "chance": 0.3333333333333333,
+          "majority_rate": 0.3380281690140845,
+          "values": [
+            5,
+            6,
+            7
+          ]
+        },
+        "shape": {
+          "n_values_realised": 3,
+          "chance": 0.3333333333333333,
+          "majority_rate": 0.3333333333333333,
+          "values": [
+            0,
+            2,
+            3
+          ]
+        },
+        "orientation": {
+          "n_values_realised": 3,
+          "chance": 0.3333333333333333,
+          "majority_rate": 0.3380281690140845,
+          "values": [
+            12,
+            13,
+            14
+          ]
+        }
+      }
+    },
+    "probe_train": {
+      "n": 4096,
+      "realised": {
+        "floor_hue": {
+          "n_values_realised": 10,
+          "chance": 0.1,
+          "majority_rate": 0.105712890625,
+          "values": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "wall_hue": {
+          "n_values_realised": 10,
+          "chance": 0.1,
+          "majority_rate": 0.107421875,
+          "values": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "object_hue": {
+          "n_values_realised": 10,
+          "chance": 0.1,
+          "majority_rate": 0.106201171875,
+          "values": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        },
+        "scale": {
+          "n_values_realised": 8,
+          "chance": 0.125,
+          "majority_rate": 0.131103515625,
+          "values": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        },
+        "shape": {
+          "n_values_realised": 4,
+          "chance": 0.25,
+          "majority_rate": 0.256591796875,
+          "values": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "orientation": {
+          "n_values_realised": 15,
+          "chance": 0.06666666666666667,
+          "majority_rate": 0.07177734375,
+          "values": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14
+          ]
+        }
+      }
+    }
+  },
+  "probes": {
+    "linear": {
+      "kind": "linear",
+      "hidden": 0,
+      "steps": 1500,
+      "param_hash": "8b833e7f6fd4ff3b2a3896098c88fd8150be806665385f9de6702b1d1bc28ccb",
+      "loss_first": 2.249077796936035,
+      "loss_final": 0.1341075748205185,
+      "fit_seconds": 13.135181903839111,
+      "train": {
+        "n": 4096,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "wall_hue": 1.0,
+          "object_hue": 1.0,
+          "scale": 0.8359375,
+          "shape": 0.968017578125,
+          "orientation": 0.99609375
+        },
+        "aggregate": 0.9666748046875,
+        "exact_match": 0.811279296875
+      },
+      "grid": {
+        "n": 2048,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "wall_hue": 1.0,
+          "object_hue": 1.0,
+          "scale": 0.6650390625,
+          "shape": 0.93408203125,
+          "orientation": 0.93798828125
+        },
+        "aggregate": 0.9228515625,
+        "exact_match": 0.5810546875
+      },
+      "corner": {
+        "n": 213,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "wall_hue": 1.0,
+          "object_hue": 1.0,
+          "scale": 0.6244131455399061,
+          "shape": 0.8591549295774648,
+          "orientation": 0.971830985915493
+        },
+        "aggregate": 0.9092331768388107,
+        "exact_match": 0.5164319248826291
+      }
+    },
+    "mlp": {
+      "kind": "mlp",
+      "hidden": 256,
+      "steps": 1500,
+      "param_hash": "2bcfbf75da7ea141ec3bc48ac51a875322ee06f31e04a3d0de4fb7ed712c35e7",
+      "loss_first": 2.2072839736938477,
+      "loss_final": 0.00353207322768867,
+      "fit_seconds": 23.909991025924683,
+      "train": {
+        "n": 4096,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "wall_hue": 1.0,
+          "object_hue": 1.0,
+          "scale": 1.0,
+          "shape": 1.0,
+          "orientation": 1.0
+        },
+        "aggregate": 1.0,
+        "exact_match": 1.0
+      },
+      "grid": {
+        "n": 2048,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "wall_hue": 1.0,
+          "object_hue": 0.99853515625,
+          "scale": 0.76171875,
+          "shape": 0.95556640625,
+          "orientation": 0.93603515625
+        },
+        "aggregate": 0.9419759114583334,
+        "exact_match": 0.6806640625
+      },
+      "corner": {
+        "n": 213,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "wall_hue": 1.0,
+          "object_hue": 1.0,
+          "scale": 0.7136150234741784,
+          "shape": 0.8028169014084507,
+          "orientation": 0.892018779342723
+        },
+        "aggregate": 0.9014084507042254,
+        "exact_match": 0.49295774647887325
+      }
+    }
+  },
+  "bar": {
+    "linear": {
+      "grid": {
+        "bar": 0.9,
+        "factors": [
+          "scale",
+          "orientation"
+        ],
+        "values": {
+          "scale": 0.6650390625,
+          "orientation": 0.93798828125
+        },
+        "verdict": "FAIL",
+        "margin": {
+          "scale": -0.23496093750000002,
+          "orientation": 0.03798828124999998
+        }
+      },
+      "corner": {
+        "bar": 0.9,
+        "factors": [
+          "scale",
+          "orientation"
+        ],
+        "values": {
+          "scale": 0.6244131455399061,
+          "orientation": 0.971830985915493
+        },
+        "verdict": "FAIL",
+        "margin": {
+          "scale": -0.2755868544600939,
+          "orientation": 0.07183098591549297
+        }
+      }
+    },
+    "mlp": {
+      "grid": {
+        "bar": 0.9,
+        "factors": [
+          "scale",
+          "orientation"
+        ],
+        "values": {
+          "scale": 0.76171875,
+          "orientation": 0.93603515625
+        },
+        "verdict": "FAIL",
+        "margin": {
+          "scale": -0.13828125000000002,
+          "orientation": 0.03603515624999998
+        }
+      },
+      "corner": {
+        "bar": 0.9,
+        "factors": [
+          "scale",
+          "orientation"
+        ],
+        "values": {
+          "scale": 0.7136150234741784,
+          "orientation": 0.892018779342723
+        },
+        "verdict": "FAIL",
+        "margin": {
+          "scale": -0.18638497652582164,
+          "orientation": -0.007981220657277022
+        }
+      }
+    }
+  },
+  "timing": {
+    "train_seconds": 615.7788519859314,
+    "encode_seconds": 3.9446239471435547
+  },
+  "flags": {
+    "quick": false,
+    "dataset": "shapes3d",
+    "variants": [
+      "recon_control",
+      "random_init",
+      "ae_plain",
+      "recon_control_2x",
+      "ae_deep",
+      "mae",
+      "ae_hires",
+      "vae"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "n_enc_train": 4096,
+    "n_probe_train": 4096,
+    "n_probe_eval": 2048,
+    "enc_channels": [
+      32,
+      64,
+      128,
+      128
+    ],
+    "hires_channels": [
+      32,
+      64,
+      128
+    ],
+    "enc_kernel": 4,
+    "enc_stride": 2,
+    "enc_groups": 8,
+    "enc_steps": 400,
+    "enc_batch": 128,
+    "enc_lr": 0.001,
+    "dec_channels": [
+      128,
+      64,
+      32
+    ],
+    "dec_groups": 8,
+    "deep_width_mult": 1.0,
+    "deep_blocks_per_stage": 2,
+    "mae_mask_ratio": 0.5,
+    "mae_patch": 8,
+    "mae_loss_on_masked": true,
+    "vae_beta": 0.05,
+    "compute_control_mult": 2,
+    "probe_kinds": [
+      "linear",
+      "mlp"
+    ],
+    "probe_hidden": 256,
+    "probe_steps": 1500,
+    "probe_batch": 256,
+    "probe_lr": 0.001,
+    "pass_bar": 0.9,
+    "bar_factors": [
+      "scale",
+      "orientation"
+    ],
+    "jax_version": "0.9.0"
+  }
+}

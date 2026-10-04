@@ -1,0 +1,26 @@
+2026-09-21T11:14:32Z tag=probe_K16_s0 bashpid=112632 cmd=scripts/w12_val_sweep.py --condition val --K 16 --seed 0
+2026-09-21T11:15:42Z tag=sweep_s1 bashpid=112835 cmd=scripts/w12_val_sweep.py --condition val --seed 1 --K 5 --K 8 --K 10 --K 12 --K 16 --K 20 --K 24 --K 28 --K 32 --no-controls
+2026-09-21T11:15:45Z tag=sweep_s2 bashpid=112845 cmd=scripts/w12_val_sweep.py --condition val --seed 2 --K 5 --K 8 --K 10 --K 12 --K 16 --K 20 --K 24 --K 28 --K 32 --no-controls
+2026-09-21T11:15:59Z tag=sweep_s0 bashpid=112879 cmd=scripts/w12_val_sweep.py --condition val --seed 0 --K 5 --K 8 --K 10 --K 12 --K 16 --K 20 --K 24 --K 28 --K 32
+2026-09-21T11:15:59Z KILLED own probe_K16_s0 (msys 112632 / win 26668) to relaunch seed 0 as a full sweep with controls
+2026-09-21T11:16:47Z tag=sweep_s0 bashpid=113039 cmd=scripts/w12_val_sweep.py --condition val --seed 0 --K 5 --K 8 --K 10 --K 12 --K 16 --K 20 --K 24 --K 28 --K 32
+2026-09-21T11:16:47Z tag=sweep_s1 bashpid=113042 cmd=scripts/w12_val_sweep.py --condition val --seed 1 --K 5 --K 8 --K 10 --K 12 --K 16 --K 20 --K 24 --K 28 --K 32 --no-controls
+2026-09-21T11:16:47Z tag=sweep_s2 bashpid=113045 cmd=scripts/w12_val_sweep.py --condition val --seed 2 --K 5 --K 8 --K 10 --K 12 --K 16 --K 20 --K 24 --K 28 --K 32 --no-controls
+2026-09-21T11:18:48Z tag=sweep_s1 bashpid=113362 cmd=scripts/w12_val_sweep.py --condition val --seed 1 --K 32 --K 28 --K 24 --K 20 --K 16 --K 12 --K 10 --K 8 --K 5 --no-controls
+2026-09-21T11:18:48Z tag=sweep_s2 bashpid=113365 cmd=scripts/w12_val_sweep.py --condition val --seed 2 --K 32 --K 28 --K 24 --K 20 --K 16 --K 12 --K 10 --K 8 --K 5 --no-controls
+2026-09-21T11:18:48Z KILLED own sweep_s1(113042)/sweep_s2(113045) after 8 min to reverse their K order: seed 0 sweeps K ascending, seeds 1/2 descending, so the curve is bracketed from both ends if the wall clock runs out
+2026-09-21T11:21:46Z tag=sweep_s0_A bashpid=113742 cmd=scripts/w12_val_sweep.py --condition val --seed 0 --K 5 --K 32 --K 12
+2026-09-21T11:21:46Z tag=sweep_s0_B bashpid=113745 cmd=scripts/w12_val_sweep.py --condition val --seed 0 --K 8 --K 28 --K 16
+2026-09-21T11:21:46Z tag=sweep_s0_C bashpid=113748 cmd=scripts/w12_val_sweep.py --condition val --seed 0 --K 10 --K 24 --K 20
+2026-09-21T11:21:46Z KILLED own sweep_s0(113039)/sweep_s1(113362)/sweep_s2(113365) and RE-PLANNED: all three of my processes now sweep SEED 0 with the K axis SPLIT three ways (A: 5,32,12 | B: 8,28,16 | C: 10,24,20), balanced by expected cost (address-fit cost grows with span = sum_k r_k ~ K). Reason: a complete 9-point curve at ONE seed WITH the charter-C controls is worth more than two K values at three seeds, and seeds 1/2 are queued behind it. Loss: ~5 min of address fit per process.
+2026-09-21T11:33:34Z tag=deletion_val_K5_s0 bashpid=115344 cmd=scripts/w12_deletion_rows.py --condition val --seed 0 --K 5 --reuse-arm /c/chlu/outputs/w12-single-design-crossover/val_sweep/val_K5_seed0
+2026-09-21T12:16:51Z tag=sweep_s0_A2 bashpid=119400 cmd=scripts/w12_val_sweep.py --condition val --seed 0 --K 32 --K 12
+2026-09-21T12:16:51Z tag=sweep_s0_B2 bashpid=119403 cmd=scripts/w12_val_sweep.py --condition val --seed 0 --K 28
+2026-09-21T12:16:51Z tag=sweep_s0_C2 bashpid=119406 cmd=scripts/w12_val_sweep.py --condition val --seed 0 --K 16
+2026-09-21T12:16:51Z RELAUNCH after MY OWN BUG: qr_basis returned min(d,1+r) columns while pinned_basis returns r or r+1; the two disagree where the mean lies inside the span, which crashed the landscape_shuffled control at K=32 (sweep_s0_A) and K=28 (sweep_s0_B). Fixed by requiring widths=[b.shape[1] for b in pinned_basis] and slicing a COMPLETE QR. K=5/8/10/20/24 are UNAFFECTED: their widths agreed, and the leading columns of a complete QR are the reduced QR, so those controls were computed correctly.
+2026-09-21T12:38:49Z tag=deletion_val_K5_s0_v2 bashpid=120647 cmd=scripts/w12_deletion_rows.py --condition val --seed 0 --K 5 --reuse-arm /c/chlu/outputs/w12-single-design-crossover/val_sweep/val_K5_seed0
+2026-09-21T12:52:49Z tag=sweep_s1_r2 bashpid=122354 cmd=scripts/w12_val_sweep.py --condition val --seed 1 --K 32 --K 5
+2026-09-21T12:52:49Z tag=sweep_s2_r2 bashpid=122357 cmd=scripts/w12_val_sweep.py --condition val --seed 2 --K 32 --K 5
+2026-09-21T12:53:09Z tag=scored_run1_s0 bashpid=122381 cmd=scripts/w12_scored_leg.py --run-n 1 --seed 0
+2026-09-21T13:59:46Z tag=deletion_test_K32_s0 bashpid=124825 cmd=scripts/w12_deletion_rows.py --condition test --seed 0 --K 32 --run-n 1 --reuse-arm /c/chlu/outputs/w12-single-design-crossover/scored/run1_seed0_K32
+2026-09-21T14:24:00Z tag=deletion_probe_test_K32 bashpid=125618 cmd=scripts/w12_deletion_probe.py --arm /c/chlu/outputs/w12-single-design-crossover/scored/run1_seed0_K32 --condition test --seed 0

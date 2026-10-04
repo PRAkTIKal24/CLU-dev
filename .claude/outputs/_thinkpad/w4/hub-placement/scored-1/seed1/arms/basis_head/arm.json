@@ -1,0 +1,85 @@
+{
+ "arm": "basis_head",
+ "byte_ledger": {
+  "budget_bytes": 524288,
+  "deployed_bytes": 524288,
+  "what": "5 wells x 64 modes, float32"
+ },
+ "fit_seconds": 138.27556204795837,
+ "head_bytes": {
+  "bytes_formula": "sum_k P * M_k * 4",
+  "dtype": "float32",
+  "head_bytes": 1766400,
+  "head_bytes_per_well": [
+   353280,
+   353280,
+   353280,
+   353280,
+   353280
+  ],
+  "note": "EXTRA to gen_store.store_bytes and reported beside it, never inside it. It is the same size for every arm on this hub."
+ },
+ "kind": "span",
+ "partition": "ward",
+ "prov": {
+  "n_head_rows": 131072,
+  "n_store_train": 32768,
+  "well_sizes": [
+   338,
+   322,
+   321,
+   679,
+   388
+  ]
+ },
+ "read_mode": "linear",
+ "recon_mse": {
+  "feature_variance": 0.2255214899778366,
+  "mse": 0.055808067321777344,
+  "n": 32768,
+  "relative_mse": 0.2474623031590557
+ },
+ "request_only": {
+  "bitwise_stable_under_feature_perturbation": true,
+  "feature_argument_present": false,
+  "n_checked": 64,
+  "read_signature": [
+   "heads",
+   "store",
+   "Phi"
+  ],
+  "statement": "the read's only inputs are the head, the store and the request design; no feature tensor enters launch, settle or read (charter section B.3)"
+ },
+ "store_ledger": {
+  "bits_per_read": 30.0,
+  "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+  "dim": 2048,
+  "dtype": "float32",
+  "n_modes": 64,
+  "n_modes_per_well": [
+   64,
+   64,
+   64,
+   64,
+   64
+  ],
+  "n_wells": 5,
+  "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+  "store_bytes": 524288,
+  "store_bytes_per_well": [
+   86528,
+   82432,
+   82176,
+   173824,
+   99328
+  ],
+  "uniform_allocation": true
+ },
+ "train_history_tail": [
+  28.474634170532227,
+  28.591054916381836,
+  28.113645553588867,
+  28.203414916992188,
+  28.19768714904785
+ ]
+}

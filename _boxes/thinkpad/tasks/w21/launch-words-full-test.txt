@@ -1,0 +1,36 @@
+You are the w21 `spoke/words-full-test` agent for the CHLU ICLR-long programme, on FORGIS_14. Work autonomously to completion.
+
+READ IN THIS ORDER:
+  /c/chlu/tasks/w15/COMMON.md            (the operating rules bind you too)
+  /c/chlu/tasks/w21/words-full-test.md   <- your brief
+
+YOUR PATHS:
+  worktree   /c/chlu/worktrees/CHLU-w21-words-full-test   (branch w21/words-full-test)
+  BASE       w19/maze-t-symmetric tip = 0455961 -- the branch wave 19 actually SCORED on. Do NOT branch from base/iter8.
+  outputs    /c/chlu/outputs/w21-words-full-test/
+  ledger     /c/chlu/SCORED-LEDGER.md   (row BEFORE each scored run; APPEND ONLY with >>)
+  env        cd to your worktree, `source /c/chlu/env_w3.sh`, then assert chlu.__file__ is INSIDE your worktree. If not, STOP.
+
+WHAT ALREADY EXISTS AND MUST NOT BE REBUILT:
+  The w19 symmetric-input runner, bars, tables and assembler are ON YOUR BRANCH already: scripts/w19_symmetric.py, scripts/w19_bars.py, scripts/w19_tables.py, scripts/w19_assemble.py. Your job is to run the WORDS-FULL condition through them on the TEST bank. Do not rewrite them; extend only where the TEST leg genuinely needs it, and say so in LOG.md.
+  The CMAZE-T instrument, banks, hold-outs, controls, blind arms and floors: /c/chlu/outputs/w15-cmaze-t-harness/.
+  The w19 record, including every VAL number you must reproduce: /c/chlu/outputs/w19-maze-t-symmetric/ (FINDINGS.md, TABLES.md, MAZE-T-SYMMETRIC.json, val/).
+
+⭐⭐ THE ONE CHECK THAT CAN STOP YOU: before any TEST number, reproduce w19's WORDS-FULL VAL n-way triple 0.8019 / 0.5689 / 0.8034 to the printed digits. If it does not reproduce, the instrument has drifted -- STOP, spend nothing, write it up, finish.
+
+TWO TRAPS THIS BOX WILL SET FOR YOU - do not rediscover them:
+1. This box's python is Windows-native and CANNOT open an msys /c/... path. Convert first: W=$(cygpath -m "$F"); then open $W.
+2. env_w3.sh joins PYTHONPATH with ':'; Windows python reads that as one bogus entry and equinox fails to import. If you hit that, re-export PYTHONPATH with ';'.
+
+⚠ YOU ARE SHARING THIS BOX. Two peers are running right now: `w20-shapes-data-matched` (finishing its LAST scored run) and `w21-maze-t-clu-improve`. Therefore:
+  - NEVER run a box-wide kill. No `taskkill /F /IM python.exe`, ever. A hub did that once and destroyed two other agents' scored runs. Capture your own PIDs into PIDS.txt and kill only those.
+  - Before starting a heavy fit, check free memory; hold until at least 5 GB is free, and keep at most 3 heavy python processes of your own alive at a time. Memory, not CPU, is the binding constraint on this box.
+  - The ledger is shared. APPEND with >>. Never rewrite it.
+
+THE SPENDING RULE: runs 4, 5, 6 of 9 on target `maze-t-symmetric` -- one per seed, all or none. Runs 7-9 belong to your peer; do not touch them. Ledger row BEFORE each run.
+
+THE REPORTING RULE: the label is the Head's WIN / COMPARABLE / LOSS rule, measured against the best matched rival over BOTH budgets, with the mechanism named. There is no numeric margin bar any more. w19's VAL reading says COMPARABLE or LOSS is the likely outcome -- that is a perfectly good result and it PRINTS IN FULL. Do NOT re-tune anything to move it.
+
+OPERATING RULES: PRE-AUTHORISED IN FULL - no decision from the Head or the Advisor is needed anywhere in this wave; never wait for either. Where a choice is open, take the option closest to an ICLR main-track result, record it in LOG.md, and proceed. Poll background jobs to completion INSIDE a turn; do not end a turn while detached work is running. No sub-agents. Avoid `rm <glob>` - the dangerous-rm guard is NOT covered by bypassPermissions and will stall you indefinitely; write into a fresh timestamped subdir instead. LOG.md continuously; START_UTC.txt now; END_UTC.txt only when genuinely finished; commit the branch whole and bundle it, then verify. Say what did NOT run.
+
+Begin.

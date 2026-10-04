@@ -1,0 +1,4 @@
+# iclr-long — CHANGELOG
+
+- v0.1a (2026-07-29, paper-writer, `r1-positioning-pass` w27): **banned-terms sweep fix, one line.** §THESIS fallback bullet: `"physically-motivated, certified, predictable-lifetime memory"` → `"a physically-motivated memory with set-at-write-time lifetimes and an exact decay law"`, with the CM-22(m) rationale inline. This is the only must-fix hit the R1 banned-terms sweep found anywhere under `.claude/papers/**` (it pairs *certified* with *lifetimes*, which is CM-22(m)'s exact forbidden construction). All other `certif*` hits in this outline (L9, L18) and in the V1/V2/V3 shorts are **symplectic/BIBO/LTT certificate language**, a different technical sense — flagged to the Head for a scope ruling in `.claude/outputs/r1-positioning-pass.md` §2b, NOT edited.
+- v0.1 (pre-w27): outline stub created by the ICLR skeleton pass (not logged here).

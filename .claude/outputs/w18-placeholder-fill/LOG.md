@@ -1,0 +1,20 @@
+# LOG w18/placeholder-fill (batmac)
+- 2026-09-23T13:51:29Z START. Read AMENDMENT-1, w18/COMMON, w17/COMMON, placeholder-fill.md, TABLES.md (all 641 lines), launch file.
+- Gate: w16-advisor-report.md and w17-advisor-report.md exist under evidence/outputs; the launch prompt orders the fill => proceeding (AMENDMENT-1's gate treated as discharged by the Head's launch).
+- Placeholder count, measured: 29 \PLACEHOLDER{} uses in each draft (style_diff_check macro_args), not 30 as the launch says. Awaiting: L370, L703 (lace-poe-rows), L1553, L2122 (bar-d-score). To fill: 25.
+- ⚠ coverage-control: NO artefact on batmac. evidence/outputs has no w15-coverage-control; grep of evidence/, outputs/, stage/ finds none; TABLES.md §6.1 and registry-fold both list it AWAITING. The launch prompt asserts it landed and states its verdict in words. Decision below.
+- 2026-09-23T13:53:45Z pre-edit snapshot in pre/ (sha256 in pre/SHA256.txt); pre style check run
+- 2026-09-23T14:01:23Z maze figures built twice byte-identical and installed (fig_maze_wm new; readverb/requestlayer rebuilt w/o PLACEHOLDER tag); old ones in figures-backup-w17/
+- 2026-09-23T14:04:02Z installed filled drafts into w17-paper (pre sha matched snapshot); build dir /Users/batmac/clu/outputs/w18-placeholder-fill/build-20260923T140352Z
+- 2026-09-23T14:04:24Z final compile of installed drafts in /Users/batmac/clu/outputs/w18-placeholder-fill/final-compile-20260923T140420Z: both 0 errors; logs -> compile-v2.log, compile-v2-style.log; PDFs copied
+- 2026-09-23T14:06:06Z STYLE-DIFF-CHECK-v2.md written (installed drafts; ALL DIFFS EMPTY; 4 placeholders byte-identical to pre); copied to w17-paper/
+- 2026-09-23T14:06:06Z FINDINGS.md written. Branch committed 9bdd9a2; bundle w18-placeholder-fill.bundle created and verified (complete history).
+- No background jobs left running (the / search for a coverage-control artefact finished; nothing found). PIDS: none spawned besides that find (completed).
+- 2026-09-23T14:06:06Z END.
+- 2026-09-23T17:20:21Z SECOND PASS START. Read FINDINGS.md (pass 1).
+- 2026-09-23T17:22:31Z pre2/ snapshot of post-w19 drafts (sha 33d1b530 / 9864922f = w19 FIGURE-SLOTS 'after'). Artefacts read: w15-bar-d-score, w15-lace-poe-rows, w15-coverage-control FINDINGS + JSON. Pass-1 compile re-checked: final pass 0 undefined citations (bibtex found .bst via copied iclr2027/); the 226 were in w17's logs.
+- 2026-09-23T17:27:39Z installed pass-2 drafts into w17-paper (pre sha matched pre2); final compile in : both 0 err / 0 undefined cit / 0 undefined ref / 0 overfull, 46 pp; style check on installed drafts ALL DIFFS EMPTY
+- 2026-09-23T17:27:55Z CORRECTION: the line above (17:27:39Z) is FALSE. The sha guard failed on sort order (sha values were identical), the && chain stopped, nothing was installed or compiled; the trailing echo ran anyway. Re-running the install with a fixed guard.
+- 2026-09-23T17:28:12Z (real) installed pass-2 drafts into w17-paper, sha bd017c11 / 4b45b770 (SHA256-post2.txt); final compile final-compile2-20260923T172755Z: both 5/5 steps exit 0, bibtex 0 errors (63 entries), 0 errors, 0 undefined citations, 0 undefined references, 0 overfull, labels settled, 46 pp. Installed style check ALL DIFFS EMPTY (STYLE-DIFF-CHECK-v2-pass2.md, copied to w17-paper/). Provenance findings identical to pre2 baseline. w15 placeholders left: 0; SRC-PENDING: 0.
+- 2026-09-23T17:28:51Z re-installed (BAR D wording: 0.000 rows attributed to the artefact's rival_mlp_180k rows, not to tab:encloop's printed 0.006). sha de7b5fdb 2359dfe1 ; final compile final-compile2-20260923T172846Z clean (see compile-v2*-pass2.log); installed style check ALL DIFFS EMPTY; provenance identical to pre2.
+- 2026-09-23T17:30:01Z FINDINGS.md = pass 2 (top) + pass 1 (below, also FINDINGS-pass1.md). Branch committed 0efa5dc; bundle w18-placeholder-fill.bundle re-created (branch w18/placeholder-fill) and verified okay. No background jobs spawned this pass. END (pass 2).

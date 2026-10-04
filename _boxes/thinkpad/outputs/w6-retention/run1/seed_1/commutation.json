@@ -1,0 +1,131 @@
+{
+ "seed": 1,
+ "schedule": {
+  "mu2": 26.30281182388601,
+  "rho": 0.9746794344808964,
+  "n_half": 27.026814667929827,
+  "n_refuse_steps": 539,
+  "band": "underdamped",
+  "eps": 0.05,
+  "gamma": 0.05
+ },
+ "n_target_items": 6,
+ "n_disjoint_decayed": 6,
+ "A_commutation": {
+  "disjoint_item_set": {
+   "per_n": [
+    {
+     "n_steps": 1,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    },
+    {
+     "n_steps": 4,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    },
+    {
+     "n_steps": 16,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    },
+    {
+     "n_steps": 64,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    },
+    {
+     "n_steps": 539,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    },
+    {
+     "n_steps": 555,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    }
+   ],
+   "commutes_at_every_n": true
+  },
+  "same_item_set": {
+   "per_n": [
+    {
+     "n_steps": 1,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    },
+    {
+     "n_steps": 4,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    },
+    {
+     "n_steps": 16,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    },
+    {
+     "n_steps": 64,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    },
+    {
+     "n_steps": 539,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    },
+    {
+     "n_steps": 555,
+     "bytes_differing": 0,
+     "per_segment": {},
+     "commutes": true
+    }
+   ],
+   "commutes_at_every_n": true
+  }
+ },
+ "A_statement": "evict o decay^n == decay^n o evict, byte for byte, at every tested n",
+ "B_never_inserted": {
+  "n_pool_rows_before": 131072,
+  "n_pool_rows_after": 119870,
+  "n_rows_removed": 11202,
+  "rebuild_seconds": 48.60667324066162,
+  "rebuilt_store_matches_byte_ledger": true,
+  "bytes_differing_from_evicted_store": 1338974,
+  "total_image_bytes": 2054866,
+  "fraction_of_image_differing": 0.6516113459466457,
+  "per_segment": {
+   "atoms": 207232,
+   "atom_life": 12,
+   "atom_alive": 6,
+   "atom_row": 175,
+   "atom_basin": 321,
+   "well_sigma": 9,
+   "basin_sigma": 112,
+   "basin_gap": 135,
+   "basin_n": 35,
+   "coupling": 189,
+   "coupling_w": 2226,
+   "coupling_dp_fg": 4132,
+   "coupling_dp_gf": 4177,
+   "coupling_u": 33560,
+   "coupling_v": 813394,
+   "term_mu": 267431,
+   "term_n": 92,
+   "global_mu": 5736
+  },
+  "byte_identical": false
+ },
+ "B_statement": "\u26d4 the post-delete store is NOT byte-identical to a store built from the never-inserted history. \u26a0 This falsifies the PAPER'S PRECONDITION on this object, not the paper's law: V5 App. G.8 conditions byte-equality on CANONICAL (Blelloch-Golovin) placement, in which the layout L(K) is a function of the live key set and the fixed geometry alone. The field store selects its 64 atoms by GREEDY SPAN SELECTION against the address manifold and fits `term_mu`/`well_sigma`/`coupling` on the pool, so both its layout AND its fitted interface depend on which rows were present. The segments that differ are printed above and they say which half is which."
+}

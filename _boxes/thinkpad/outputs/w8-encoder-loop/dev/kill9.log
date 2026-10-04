@@ -1,0 +1,23 @@
+== kill -9 proof, out=/c/chlu/outputs/w8-encoder-loop/dev/kill9
+-- warm start done
+-- leg A: clean run (no interruption)
+   leg A rc=0
+-- leg B: start, wait for a checkpoint, kill -9, relaunch
+   leg B pid 71638 (the ONLY pid this script ever kills)
+   2 checkpoint(s) on disk
+   SIGKILLed 71638
+2
+-- leg B: relaunch (must RESUME, not restart)
+   leg B relaunch rc=0
+[19:41:18]     [loop_swap] RESUMED from checkpoint step 2; 58 steps remain
+
+== VERDICT
+   clean  encoder 7b03cb1d3b2f28639ba06c8a  store 9ccd790f3d7133c3316eacf4
+   killed encoder 7b03cb1d3b2f28639ba06c8a  store 9ccd790f3d7133c3316eacf4
+   the killed leg RESUMED FROM STEP 2 (0 would mean it restarted)
+   RESUMABILITY: PROVED -- bit-identical parameters after a kill -9
+
+-- fingerprint refusal: resume a checkpoint under a DIFFERENT config
+   REFUSED, by name: checkpoint C:\chlu\outputs\w8-encoder-loop\dev\kill9\killed\seed_0\loop_swap\ckpt\ckpt_000000000060.npz was written by config fingerprint 942c3fb5d9ce
+
+== kill -9 proof: resume=PROVED refusal=PROVED

@@ -1,0 +1,95 @@
+[gen-cert] dataset=shapes3d pretext=recon stage=certificate arm=all seed=1 condition=recomb2element out=/Users/user/Desktop/CHLU/.claude/outputs/gen-certificate/runs/shapes3d_recon
+[gen-cert] ⭐ the distance-to-store laundering control runs in this job and is reported beside every certificate number; ⛔ it is never optional.
+[14:26:00 +    0.0s] ⭐ structural guard: the certificate is a function of the request, the store's modes and the store's own addressing over valid train rows; nothing is decoded, so no decoder recipe can change a number here
+  split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+[14:26:05 +    4.8s] frozen encoder fc05e2c5f39694b2 · condition=recomb2element · bridge=/Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+    extending cache coverage: 32199 row(s) encoded through the frozen encoder
+[14:27:34 +   94.2s] features: store_train=(32768, 2048)
+[14:27:36 +   95.5s] requests: A=1024 A7=1024 B=72 C=72 (C kinds: ['duplicate_factor', 'out_of_range'])
+[14:27:46 +  106.3s] [correlation] wells [397, 300, 307, 300, 744] — training the store (1200 steps)
+[14:45:58 + 1197.7s] [correlation] ⭐ BIT-IDENTICAL re-materialisation (rel_mse 0.26975176078844887)
+[14:46:00 + 1200.3s] [correlation] term statistics over 32768 valid train rows; mean used modes 64.0/64
+    scored 256/1024 requests
+    scored 512/1024 requests
+    scored 768/1024 requests
+    scored 1024/1024 requests
+[14:46:04 + 1203.9s] [correlation] scored A: 1024 requests
+[14:46:09 + 1209.0s] [correlation] scored A7: 1024 requests
+[14:46:09 + 1209.2s] [correlation] scored B: 72 requests
+[14:46:10 + 1209.6s] [correlation] scored C: 72 requests
+[14:46:10 + 1209.7s] [correlation] clu             B-vs-C 0.9616 (dup 0.9232 / oor 1.0000) · A-vs-C 0.9604 · bal 0.9610 · AURC(B∪C) 0.1829 · ⭐A7-vs-Cdup 0.9268
+[14:46:10 + 1209.7s] [correlation] clu_pair_reach  B-vs-C 0.9441 (dup 0.8881 / oor 1.0000) · A-vs-C 0.9735 · bal 0.9588 · AURC(B∪C) 0.2070 · ⭐A7-vs-Cdup 0.9469
+[14:46:10 + 1209.7s] [correlation] reach           B-vs-C 0.7500 (dup 0.5000 / oor 1.0000) · A-vs-C 0.7500 · bal 0.7500 · AURC(B∪C) 0.3600 · ⭐A7-vs-Cdup 0.5000
+[14:46:10 + 1209.8s] [correlation] pair            B-vs-C 0.5764 (dup 0.8881 / oor 0.2647) · A-vs-C 0.7316 · bal 0.6540 · AURC(B∪C) 0.5103 · ⭐A7-vs-Cdup 0.9469
+[14:46:10 + 1209.8s] [correlation] curv            B-vs-C 0.6252 (dup 0.6111 / oor 0.6393) · A-vs-C 0.5667 · bal 0.5959 · AURC(B∪C) 0.4324 · ⭐A7-vs-Cdup 0.5624
+[14:46:10 + 1209.8s] [correlation] energy          B-vs-C 0.8974 (dup 0.9456 / oor 0.8492) · A-vs-C 0.6402 · bal 0.7688 · AURC(B∪C) 0.2417 · ⭐A7-vs-Cdup 0.7514
+[14:46:10 + 1209.8s] [correlation] distance        B-vs-C 0.7554 (dup 0.7809 / oor 0.7299) · A-vs-C 0.5496 · bal 0.6525 · AURC(B∪C) 0.3094 · ⭐A7-vs-Cdup 0.5801
+[14:46:10 + 1209.8s] [correlation] distance_reach  B-vs-C 0.8904 (dup 0.7809 / oor 1.0000) · A-vs-C 0.7912 · bal 0.8408 · AURC(B∪C) 0.2298 · ⭐A7-vs-Cdup 0.5801
+[14:46:10 + 1209.9s] [correlation] count           B-vs-C 0.7500 (dup 1.0000 / oor 0.5000) · A-vs-C 0.7500 · bal 0.7500 · AURC(B∪C) 0.3750 · ⭐A7-vs-Cdup 0.5000
+[14:46:10 + 1209.9s] [correlation] ⭐ AUDIT PASSED: 15 fits, 78848 ids, 0 of 72 C ids found in any fit
+[14:46:10 + 1210.3s] [correlation] written -> /Users/user/Desktop/CHLU/.claude/outputs/gen-certificate/runs/shapes3d_recon/seed_1
+[14:46:20 + 1220.3s] [random] wells [397, 300, 307, 300, 744] — training the store (1200 steps)
+[15:10:58 + 2697.8s] [random] ⭐ BIT-IDENTICAL re-materialisation (rel_mse 0.41951284319427884)
+[15:11:00 + 2699.7s] [random] term statistics over 32768 valid train rows; mean used modes 64.0/64
+    scored 256/1024 requests
+    scored 512/1024 requests
+    scored 768/1024 requests
+    scored 1024/1024 requests
+[15:11:02 + 2702.1s] [random] scored A: 1024 requests
+[15:11:04 + 2704.4s] [random] scored A7: 1024 requests
+[15:11:05 + 2704.5s] [random] scored B: 72 requests
+[15:11:05 + 2704.7s] [random] scored C: 72 requests
+[15:11:05 + 2704.8s] [random] clu             B-vs-C 0.9863 (dup 0.9726 / oor 1.0000) · A-vs-C 0.9016 · bal 0.9439 · AURC(B∪C) 0.1634 · ⭐A7-vs-Cdup 0.8124
+[15:11:05 + 2704.8s] [random] clu_pair_reach  B-vs-C 0.9576 (dup 0.9151 / oor 1.0000) · A-vs-C 0.9277 · bal 0.9426 · AURC(B∪C) 0.1862 · ⭐A7-vs-Cdup 0.8554
+[15:11:05 + 2704.8s] [random] reach           B-vs-C 0.7500 (dup 0.5000 / oor 1.0000) · A-vs-C 0.7500 · bal 0.7500 · AURC(B∪C) 0.3600 · ⭐A7-vs-Cdup 0.5000
+[15:11:05 + 2704.8s] [random] pair            B-vs-C 0.7712 (dup 0.9151 / oor 0.6273) · A-vs-C 0.6937 · bal 0.7325 · AURC(B∪C) 0.3410 · ⭐A7-vs-Cdup 0.8554
+[15:11:05 + 2704.8s] [random] curv            B-vs-C 0.5486 (dup 0.5556 / oor 0.5417) · A-vs-C 0.4906 · bal 0.5196 · AURC(B∪C) 0.4752 · ⭐A7-vs-Cdup 0.4992
+[15:11:05 + 2704.8s] [random] energy          B-vs-C 0.8883 (dup 0.8970 / oor 0.8796) · A-vs-C 0.5917 · bal 0.7400 · AURC(B∪C) 0.2283 · ⭐A7-vs-Cdup 0.6504
+[15:11:05 + 2704.8s] [random] distance        B-vs-C 0.9956 (dup 0.9911 / oor 1.0000) · A-vs-C 0.4873 · bal 0.7414 · AURC(B∪C) 0.1578 · ⭐A7-vs-Cdup 0.4992
+[15:11:05 + 2704.8s] [random] distance_reach  B-vs-C 0.9956 (dup 0.9911 / oor 1.0000) · A-vs-C 0.7464 · bal 0.8710 · AURC(B∪C) 0.1578 · ⭐A7-vs-Cdup 0.4992
+[15:11:05 + 2704.9s] [random] count           B-vs-C 0.7500 (dup 1.0000 / oor 0.5000) · A-vs-C 0.7500 · bal 0.7500 · AURC(B∪C) 0.3750 · ⭐A7-vs-Cdup 0.5000
+[15:11:05 + 2704.9s] [random] ⭐ AUDIT PASSED: 15 fits, 78848 ids, 0 of 72 C ids found in any fit
+[15:11:05 + 2704.9s] [random] written -> /Users/user/Desktop/CHLU/.claude/outputs/gen-certificate/runs/shapes3d_recon/seed_1

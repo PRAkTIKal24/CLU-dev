@@ -1,0 +1,40 @@
+{
+  "gauge_is_a_real_problem_on_the_svd_basis": true,
+  "improvement_factor": 803588.0,
+  "n_rows_deleted": 11024,
+  "pinned_basis": {
+    "basis": "pinned_span_basis",
+    "comparable": true,
+    "max_abs_render_dev": 3.725290298461914e-09,
+    "median_row_l2_dev": 3.362713753285451e-12,
+    "relative_to_render_scale": 1.0338853012609432e-09,
+    "render_scale": 3.6031949520111084,
+    "span_ranks": [
+      64,
+      64,
+      64,
+      13,
+      41
+    ],
+    "what": "the same coefficients through two stores that agree to 1e-10; any deviation here is the BASIS, not the deletion"
+  },
+  "pinned_basis_fixes_it": true,
+  "stores_agree_to": 1.1641532182693481e-10,
+  "svd_basis": {
+    "basis": "span_basis",
+    "comparable": true,
+    "max_abs_render_dev": 0.0029935985803604126,
+    "median_row_l2_dev": 0.008530366234481335,
+    "relative_to_render_scale": 0.0007817948615611698,
+    "render_scale": 3.8291356563568115,
+    "span_ranks": [
+      64,
+      64,
+      64,
+      14,
+      41
+    ],
+    "what": "the same coefficients through two stores that agree to 1e-10; any deviation here is the BASIS, not the deletion"
+  },
+  "what": "\u26d4 Two stores that agree to 1e-10 are handed IDENTICAL coefficients. Under gen_read.span_basis the rendered vectors differ by O(1), because that basis is the SVD of an atom block whose spectrum is maximally degenerate (r unit rows), so a 1e-10 atom perturbation rotates it by O(1). Under pinned_span_basis -- the store's own already-orthonormal rows, no SVD -- they do not. \u2b50 The deletion is exact either way; what the pinned basis buys is that the READ survives it."
+}

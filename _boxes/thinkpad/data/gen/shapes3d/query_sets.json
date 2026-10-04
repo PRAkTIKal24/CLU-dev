@@ -1,0 +1,46 @@
+{
+  "dataset": "shapes3d",
+  "excluded_record_keys": [
+    "kind",
+    "violated_factor",
+    "reason",
+    "row",
+    "redundant_factor"
+  ],
+  "schema": {
+    "description": "The registered query sets of this dataset directory.  Every invalid set names, per kind, the valid set that is its STRUCTURAL control; the no-model detector test discovers this file and audits the invalid sets against those controls.",
+    "version": 1
+  },
+  "sets": {
+    "a7_redundant": {
+      "builder": "chlu.data.gen_splits.build_a7_redundant",
+      "description": "valid requests carrying one redundant (same-value) term.",
+      "file": "a7_redundant.json",
+      "n_records": 72,
+      "n_terms": "n_factors + 1",
+      "role": "valid",
+      "sha256": "536773ed9c1bb8cdede0dbd956a5921f0f0bc7746f14c1cb6a261ff9c4e01191"
+    },
+    "base": {
+      "builder": "chlu.data.gen_splits.build_base_requests",
+      "derived_from": "factor_index.npz",
+      "derived_from_sha256": "5f1fce25c40cceae6de2d00fd2145c4cdc73dcc38cee7f6545cbcaea3ce78f49",
+      "description": "A and B: one term per factor, the plain valid request.",
+      "n_records": 480000,
+      "n_terms": "n_factors",
+      "role": "valid"
+    },
+    "c_invalid": {
+      "builder": "chlu.data.gen_splits.build_c_invalid",
+      "controls": {
+        "duplicate_factor": "a7_redundant",
+        "out_of_range": "base"
+      },
+      "description": "structurally invalid requests (the C set).",
+      "file": "c_invalid.json",
+      "n_records": 72,
+      "role": "invalid",
+      "sha256": "b886da239e97b19e9001a88ce04fded329dda4884d301f78c3097ea6cc66ba49"
+    }
+  }
+}

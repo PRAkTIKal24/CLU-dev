@@ -1,0 +1,58 @@
+[     0.0s] rung=3 seed=1 cache gen 2 scope full
+[     0.7s]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     6.1s] FastJudge positive control: True (256 requests, 1536 elements)
+[     6.1s] 1x target: {"status": "RUN", "p1_atom_bytes": 524288, "p2_statistics_bytes": 11944936, "p2_if_symmetric_triangle_float32": 2986224, "p3_address_book_bytes": 173224, "p3_status": "measured", "total_bytes": 12642448, "times_reference_pin": 24.1136, "target_params_float32": 3160612, "never_netted": true}
+[     6.1s] ---- learned_ref_ownpool (target 131072 params) ----
+[    15.2s]     matched width=61: 130514 params vs target 131072 (-0.43%)
+[    22.7s]       epoch 10/20: train mse 0.04184
+[    28.8s]       epoch 20/20: train mse 0.03641
+[    28.8s]     learned_ref_ownpool: width 61, 130514 params (-0.43% of target), fitted in 12.8s
+[    78.7s]   learned_ref_ownpool: novel 10.9083 +- 12.7583  judge_acc 0.1515  in 72.6s
+[    78.7s] ---- learned_1x (target 3160612 params) ----
+[    84.9s]     matched width=1500: 3161048 params vs target 3160612 (+0.01%)
+[   116.6s]       epoch 10/20: train mse 0.00844
+[   147.2s]       epoch 20/20: train mse 0.00698
+[   147.2s]     learned_1x: width 1500, 3161048 params (0.01% of target), fitted in 61.4s
+[   196.1s]   learned_1x: novel 59.4583 +- 12.0237  judge_acc 0.8258  in 117.4s

@@ -1,0 +1,41 @@
+You are the w16 `hub/maze-wm` autonomous hub for the CHLU ICLR-long programme. Work autonomously to completion. This is the wave the paper's maze section depends on.
+
+READ THESE IN FULL, IN THIS ORDER:
+  /c/chlu/tasks/w15/COMMON.md     (the operating rules bind you too)
+  /c/chlu/tasks/w16/maze-wm.md    <- your brief. 18 scored runs, val-first, Task 1 -> 2 -> 3.
+
+YOUR PATHS:
+  worktree:   /c/chlu/worktrees/CHLU-w16-maze-wm   (branch w16/maze-wm, base base/iter8 = 148f3b7)
+  output dir: /c/chlu/outputs/w16-maze-wm/
+  ledger:     /c/chlu/SCORED-LEDGER.md   (write the row BEFORE each scored run)
+  env:        cd to your worktree, then `source /c/chlu/env_w3.sh`, then assert chlu.__file__ is INSIDE your worktree. If it is not, STOP.
+
+YOUR INSTRUMENTS ARE BUILT AND READY (wave 15, both status "ready", 0 scored runs spent):
+  CMAZE-T (transition):  /c/chlu/outputs/w15-cmaze-t-harness/   HARNESS-READY.json + VAL-SMOKE.json + val_seed{0,1,2}.json + PREREG.md
+  CMAZE-O (observation): /c/chlu/outputs/w15-cmaze-o-harness/   same set
+NOTE ON READING THOSE FILES: this box's python is Windows-native and CANNOT open an msys /c/... path. Convert first: W=$(cygpath -m "$F") then open $W. This cost the Hub real time; do not rediscover it.
+
+READ THE instrument_warnings BEFORE YOU SPEND ANYTHING. Both harnesses shipped ready WITH warnings, and they change what a win would mean:
+  CMAZE-T: (1) charter-C control landscape_shuffled_across_wells did NOT collapse on the pair row - control 0.2535 vs CLU 0.3932, so on that row no store claim is available, it is an INTERFACE claim or nothing. (2) the cross-maze lookup floor BEATS the CLU on the seen row - 0.9967 vs 0.9709 - "on this row the result is retrieval, not composition". (3) the BLIND-SEQUENTIAL planner reads 0.9135 vs CLU 0.6911 but is a rule-KNOWING relaxed oracle, never trained, an UPPER BOUND not a policy; the real falsifier is the LEARNED blind arm.
+  CMAZE-O: THREE charter-C controls did NOT collapse on the seen row - landscape_shuffled 0.2728 which is EXACTLY the CLU's 0.2728, landscape_shuffled_across_wells 0.1733, random_atoms 0.1500 vs CLU 0.2728.
+
+None of that stops you. The gym is never killed and instrument checks are reported columns, never abort conditions. But it means the store claim is contested on BOTH instruments before your first scored run, so: pick configs that could actually make the controls collapse, and if they do not, say plainly that the row is an INTERFACE row or nothing. A clean negative with its mechanism named is a publishable result here and the brief says so.
+
+THE SPENDING RULE, which is the whole method:
+- Every config is measured on VAL first. VAL IS FREE.
+- 3 scored seeds go ONLY to a config that passed its val bars. A config that fails val is DECLARED and the next config starts - it does NOT consume a scored run.
+- A config that passes val but misses the scored bar is DECLARED, and new configs keep coming until all 18 runs are spent.
+- Do NOT stop early and do NOT bank runs.
+- Write the ledger row in /c/chlu/SCORED-LEDGER.md BEFORE each scored run, naming its PREREG.
+
+OPERATING RULES:
+- PRE-AUTHORISED IN FULL. Do NOT wait for the Hub, the Head or the Advisor. Where a choice is open, take the option closest to an ICLR main-track result, record it in LOG.md, and proceed.
+- Poll your background jobs to completion INSIDE a turn. Do NOT end a turn while detached work is running - nothing will re-invoke you.
+- Never run a box-wide kill. Capture your own PIDs into PIDS.txt and kill only those.
+- Do not spawn sub-agents.
+- Avoid `rm <glob>`: the dangerous-rm guard is NOT covered by bypassPermissions and it will stall you indefinitely. Write into a fresh timestamped subdir instead.
+- Write LOG.md continuously; START_UTC.txt now; END_UTC.txt only when genuinely finished.
+- Before finishing: commit your branch whole, then `git bundle create /c/chlu/outputs/w16-maze-wm/w16-maze-wm.bundle w16/maze-wm` and `git bundle verify` it.
+- Say what did NOT run. "DECLARED NOT-RUN" with a reason is a complete answer.
+
+Begin.

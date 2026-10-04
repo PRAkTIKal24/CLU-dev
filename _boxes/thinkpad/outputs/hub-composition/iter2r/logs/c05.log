@@ -1,0 +1,82 @@
+[14:42:59] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[14:42:59]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[14:42:59]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[14:43:03] [c0] tau=4.1202 (store's own mode-distance scale); n=72; steps=300
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:43:06] [c0] CONTROL A zero-step launch β=0: LINEAR=  0 (distinct  70)  ARGMAX=  0
+[14:43:08] [c0] CONTROL A zero-step launch β=1: LINEAR=  0 (distinct  15)  ARGMAX=  0
+[14:43:33] [c0] β=0 T=0      LINEAR=  0 (distinct  70)  ARGMAX=  0  |Δx|/|x|=0.00000  codes moved=0.0000
+[14:43:38] [c0] β=0 T=0.005  LINEAR=  0 (distinct  70)  ARGMAX=  0  |Δx|/|x|=0.13224  codes moved=0.0312
+[14:43:44] [c0] β=0 T=0.05   LINEAR=  0 (distinct  71)  ARGMAX=  0  |Δx|/|x|=0.25316  codes moved=0.0534
+[14:43:50] [c0] β=0 T=0.5    LINEAR=  0 (distinct  70)  ARGMAX=  0  |Δx|/|x|=0.71597  codes moved=0.2361
+[14:43:54] [c0] β=1 T=0      LINEAR=  0 (distinct  15)  ARGMAX=  0  |Δx|/|x|=0.00000  codes moved=0.0000
+[14:43:59] [c0] β=1 T=0.005  LINEAR=  0 (distinct  13)  ARGMAX=  1  |Δx|/|x|=0.12661  codes moved=0.1762
+[14:44:05] [c0] β=1 T=0.05   LINEAR=  0 (distinct  19)  ARGMAX=  2  |Δx|/|x|=0.25609  codes moved=0.2305
+[14:44:10] [c0] β=1 T=0.5    LINEAR=  0 (distinct  34)  ARGMAX=  0  |Δx|/|x|=0.73745  codes moved=0.4605
+[14:44:10] [c0] done in 69.8s -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-composition\iter2r\dev\c05_dream_dream_seed0.json
+[14:44:12] [c2] tau=4.1033 (store's own mode-distance scale); n=72; steps=300
+[14:44:14] [c2] CONTROL A zero-step launch β=0: LINEAR=  0 (distinct  70)  ARGMAX=  0
+[14:44:16] [c2] CONTROL A zero-step launch β=1: LINEAR=  0 (distinct   9)  ARGMAX=  0
+[14:44:38] [c2] β=0 T=0      LINEAR=  0 (distinct  70)  ARGMAX=  0  |Δx|/|x|=0.00000  codes moved=0.0000
+[14:44:43] [c2] β=0 T=0.005  LINEAR=  0 (distinct  69)  ARGMAX=  0  |Δx|/|x|=0.13432  codes moved=0.0282
+[14:44:48] [c2] β=0 T=0.05   LINEAR=  0 (distinct  69)  ARGMAX=  0  |Δx|/|x|=0.25409  codes moved=0.0595
+[14:44:54] [c2] β=0 T=0.5    LINEAR=  0 (distinct  69)  ARGMAX=  0  |Δx|/|x|=0.71797  codes moved=0.2574
+[14:44:59] [c2] β=1 T=0      LINEAR=  0 (distinct   9)  ARGMAX=  0  |Δx|/|x|=0.00000  codes moved=0.0000
+[14:45:05] [c2] β=1 T=0.005  LINEAR=  0 (distinct  17)  ARGMAX=  0  |Δx|/|x|=0.13324  codes moved=0.1259
+[14:45:10] [c2] β=1 T=0.05   LINEAR=  0 (distinct  24)  ARGMAX=  0  |Δx|/|x|=0.26178  codes moved=0.2144
+[14:45:16] [c2] β=1 T=0.5    LINEAR=  0 (distinct  32)  ARGMAX=  0  |Δx|/|x|=0.74854  codes moved=0.4618
+[14:45:16] [c2] done in 66.1s -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-composition\iter2r\dev\c05_dream_dream_seed0.json
+[14:45:18] [c4] tau=4.1486 (store's own mode-distance scale); n=72; steps=300
+[14:45:21] [c4] CONTROL A zero-step launch β=0: LINEAR=  0 (distinct  72)  ARGMAX=  0
+[14:45:23] [c4] CONTROL A zero-step launch β=1: LINEAR=  0 (distinct  10)  ARGMAX=  0
+[14:45:50] [c4] β=0 T=0      LINEAR=  0 (distinct  72)  ARGMAX=  0  |Δx|/|x|=0.00000  codes moved=0.0000
+[14:45:56] [c4] β=0 T=0.005  LINEAR=  0 (distinct  71)  ARGMAX=  0  |Δx|/|x|=0.13411  codes moved=0.0174
+[14:46:02] [c4] β=0 T=0.05   LINEAR=  0 (distinct  72)  ARGMAX=  0  |Δx|/|x|=0.25385  codes moved=0.0369
+[14:46:08] [c4] β=0 T=0.5    LINEAR=  0 (distinct  67)  ARGMAX=  0  |Δx|/|x|=0.71374  codes moved=0.2296
+[14:46:13] [c4] β=1 T=0      LINEAR=  0 (distinct  10)  ARGMAX=  0  |Δx|/|x|=0.00000  codes moved=0.0000
+[14:46:19] [c4] β=1 T=0.005  LINEAR=  0 (distinct   7)  ARGMAX=  0  |Δx|/|x|=0.13376  codes moved=0.1710
+[14:46:24] [c4] β=1 T=0.05   LINEAR=  0 (distinct   9)  ARGMAX=  0  |Δx|/|x|=0.26210  codes moved=0.2283
+[14:46:30] [c4] β=1 T=0.5    LINEAR=  0 (distinct  19)  ARGMAX=  0  |Δx|/|x|=0.74496  codes moved=0.4492
+[14:46:30] [c4] done in 74.2s -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-composition\iter2r\dev\c05_dream_dream_seed0.json
+[14:46:30] C05 done in 213.0s

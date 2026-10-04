@@ -1,0 +1,92 @@
+[18:14:47Z] START python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners val --seed 0 --arms "store:C:/chlu/outputs/w20-shapes-data-matched/stores/val/seed0/K32_n32256/arm.pkl:store_K32_n32256,store:C:/chlu/outputs/w20-shapes-data-matched/stores/val/seed0/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/val/seed0/K5_n32256/arm.pkl:store_K5_n32256,store:C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K5_seed0/arm.pkl:store_K5_n131072"
+[20:15:34] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+[20:15:46] corners=val seed=0: 24 corners
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    store_K32_n32256                       24 corners in 130s
+[20:17:57]   store_K32_n32256                             novel/corner 63.792 (ceiling 72.00)  in 131s
+    landscape_removed                      24 corners in 128s
+[20:20:05]   store_K32_n32256__landscape_removed          novel/corner 0.000 (ceiling 72.00)  in 128s
+    landscape_shuffled                     24 corners in 125s
+[20:22:11]   store_K32_n32256__landscape_shuffled         novel/corner 0.000 (ceiling 72.00)  in 125s
+[20:22:11]   across-wells DERANGEMENT perm=[28, 29, 25, 18, 24, 14, 15, 13, 9, 19, 7, 20, 5, 10, 3, 26, 12, 4, 0, 6, 27, 30, 11, 31, 8, 17, 22, 1, 23, 21, 2, 16] fixed_points=0 | historical T7 perm fixed_points=0
+    landscape_shuffled_across_wells        24 corners in 120s
+[20:24:11]   store_K32_n32256__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 120s
+    random_atoms                           24 corners in 113s
+[20:26:04]   store_K32_n32256__random_atoms               novel/corner 0.000 (ceiling 72.00)  in 113s
+    store_K5_n16384                        24 corners in 102s
+[20:27:46]   store_K5_n16384                              novel/corner 63.292 (ceiling 72.00)  in 102s
+    landscape_removed                      24 corners in 106s
+[20:29:31]   store_K5_n16384__landscape_removed           novel/corner 0.000 (ceiling 72.00)  in 106s
+    landscape_shuffled                     24 corners in 102s
+[20:31:13]   store_K5_n16384__landscape_shuffled          novel/corner 0.000 (ceiling 72.00)  in 102s
+[20:31:14]   across-wells DERANGEMENT perm=[1, 2, 4, 0, 3] fixed_points=0 | historical T7 perm fixed_points=1
+    landscape_shuffled_across_wells        24 corners in 107s
+[20:33:01]   store_K5_n16384__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 107s
+    random_atoms                           24 corners in 103s
+[20:34:44]   store_K5_n16384__random_atoms                novel/corner 0.000 (ceiling 72.00)  in 103s
+    store_K5_n32256                        24 corners in 120s
+[20:36:44]   store_K5_n32256                              novel/corner 61.833 (ceiling 72.00)  in 120s
+    landscape_removed                      24 corners in 116s
+[20:38:40]   store_K5_n32256__landscape_removed           novel/corner 0.000 (ceiling 72.00)  in 116s
+    landscape_shuffled                     24 corners in 133s
+[20:40:53]   store_K5_n32256__landscape_shuffled          novel/corner 0.000 (ceiling 72.00)  in 133s
+[20:40:53]   across-wells DERANGEMENT perm=[1, 2, 4, 0, 3] fixed_points=0 | historical T7 perm fixed_points=1
+    landscape_shuffled_across_wells        24 corners in 122s
+[20:42:55]   store_K5_n32256__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 122s
+    random_atoms                           24 corners in 113s
+[20:44:48]   store_K5_n32256__random_atoms                novel/corner 0.000 (ceiling 72.00)  in 113s
+    store_K5_n131072                       24 corners in 115s
+[20:46:43]   store_K5_n131072                             novel/corner 64.208 (ceiling 72.00)  in 115s
+    landscape_removed                      24 corners in 130s
+[20:48:54]   store_K5_n131072__landscape_removed          novel/corner 0.000 (ceiling 72.00)  in 130s
+    landscape_shuffled                     24 corners in 116s
+[20:50:49]   store_K5_n131072__landscape_shuffled         novel/corner 0.000 (ceiling 72.00)  in 116s
+[20:50:50]   across-wells DERANGEMENT perm=[1, 2, 4, 0, 3] fixed_points=0 | historical T7 perm fixed_points=1
+    landscape_shuffled_across_wells        24 corners in 120s
+[20:52:49]   store_K5_n131072__landscape_shuffled_across_wells novel/corner 0.000 (ceiling 72.00)  in 120s
+    random_atoms                           24 corners in 121s
+[20:54:51]   store_K5_n131072__random_atoms               novel/corner 0.000 (ceiling 72.00)  in 121s
+[20:54:51] done
+[18:59:02Z] END rc=0 python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_score.py --corners val --seed 0 --arms "store:C:/chlu/outputs/w20-shapes-data-matched/stores/val/seed0/K32_n32256/arm.pkl:store_K32_n32256,store:C:/chlu/outputs/w20-shapes-data-matched/stores/val/seed0/K5_n16384/arm.pkl:store_K5_n16384,store:C:/chlu/outputs/w20-shapes-data-matched/stores/val/seed0/K5_n32256/arm.pkl:store_K5_n32256,store:C:/chlu/outputs/w12-single-design-crossover/val_sweep/val_K5_seed0/arm.pkl:store_K5_n131072"
+[18:59:02Z] LANE DONE

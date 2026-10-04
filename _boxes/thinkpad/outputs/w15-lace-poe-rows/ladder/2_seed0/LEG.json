@@ -1,0 +1,209 @@
+{
+ "rung": "2",
+ "seed": 0,
+ "chlu_file": "C:\\chlu\\worktrees\\CHLU-w15-lace-poe-rows\\chlu\\__init__.py",
+ "cache": {
+  "generation": 2,
+  "scope": "full",
+  "n_rows": 480000,
+  "root": "C:/chlu/outputs/spoke-a-rivals/cache_generation2"
+ },
+ "corner_check": {
+  "n_corners": 60,
+  "n_rows": 2160,
+  "pairwise_disjoint": true,
+  "all_rows_held_out": true,
+  "rows_per_corner": [
+   36
+  ]
+ },
+ "n_corners": 60,
+ "DEV_truncated": false,
+ "fastjudge_positive_control": {
+  "check": "FastJudge == exp_gen_factor_wells.Judge.read_back",
+  "n_requests": 256,
+  "n_elements_compared": 1536,
+  "identical": true,
+  "what": "the shipped path rebuilds eqx.filter_jit(jax.vmap(model)) on every call, so it recompiles per call; this path builds it once. Same weights, same dtype, same batching, same argmax."
+ },
+ "fit_split": {
+  "mode": "stratified",
+  "rule": "deficit-priority greedy on the pool's own per-factor marginals (target[f][v] = n_val * count_pool[f][v] / n_pool), seeded tie-break",
+  "n_pool": 32768,
+  "n_fit": 32256,
+  "n_val": 512,
+  "tiebreak_jitter": 1.0,
+  "rng": "np.random.default_rng(0*6637+20260914)",
+  "fit_is_pool_minus_val": true
+ },
+ "estimand": {
+  "metric": "distinct_valid_novel_tuples",
+  "unit": "corner",
+  "function": "exp_gen_factor_wells.per_corner_scores"
+ },
+ "arms": {
+  "lace": {
+   "arm": "lace",
+   "n_corners": 60,
+   "distinct_valid_novel_tuples_mean": 0.06666666666666667,
+   "distinct_valid_novel_tuples_sd": 0.2515488742932317,
+   "judge_accuracy_mean": 0.0018518518518518517,
+   "budget": {
+    "classifier_params": 4073663,
+    "whitening_floats": 4196352,
+    "deployed_bytes_classifier_only": 16294652,
+    "deployed_bytes_classifier_plus_whitening": 33080060,
+    "x_store_reference_classifier_only": 31.08,
+    "x_store_reference_with_whitening": 63.095,
+    "fit_rows": 32256,
+    "val_rows": 512,
+    "epochs": 50,
+    "steps": 12600,
+    "tuning_trials": 36,
+    "tune_epochs": 6,
+    "tune_ld_steps": 30,
+    "tune_n": 256,
+    "sampler": "ode (dopri5, the PRIMARY sampler)",
+    "convention": "float32 parameters x 4 B; the classifier alone and classifier + whitening are BOTH printed; \u26d4 never matched to the store"
+   },
+   "selected": {
+    "sigma": 0.03,
+    "form": "both",
+    "shrinkage": "1e-3",
+    "val_aggregate": 0.306640625
+   },
+   "whitening_checks": {
+    "none": {
+     "n": 8192.0,
+     "mean_abs_mean": 0.007429190445691347,
+     "mean_abs_diag_minus_one": 0.056362357567103206,
+     "mean_abs_offdiag": 0.007349643664103747,
+     "roundtrip_max_abs_err": 4.4226646423339844e-05
+    },
+    "ledoit_wolf": {
+     "n": 8192.0,
+     "mean_abs_mean": 0.006930493749678135,
+     "mean_abs_diag_minus_one": 0.1601476004044045,
+     "mean_abs_offdiag": 0.006458372628804571,
+     "roundtrip_max_abs_err": 5.054473876953125e-05
+    },
+    "1e-3": {
+     "n": 8192.0,
+     "mean_abs_mean": 0.006492886692285538,
+     "mean_abs_diag_minus_one": 0.2579235537978084,
+     "mean_abs_offdiag": 0.0059512430767722805,
+     "roundtrip_max_abs_err": 3.4332275390625e-05
+    }
+   },
+   "classifier": {
+    "steps": 12600,
+    "steps_per_epoch": 252,
+    "n_epochs": 50,
+    "batch": 128,
+    "lr": 0.0001,
+    "warmup_iters": 1000,
+    "loss_first": 2.3793907165527344,
+    "loss_final": 0.0005280573386698961
+   },
+   "own_val_accuracy": {
+    "per_factor": [
+     1.0,
+     1.0,
+     1.0,
+     0.990234375,
+     1.0,
+     0.998046875
+    ],
+    "mean": 0.998046875,
+    "n": 512
+   },
+   "seconds_fit": 2813.0,
+   "seconds_score": 3798.4,
+   "seconds_total": 6611.4,
+   "OWN_BUDGET": true,
+   "refusals": {}
+  },
+  "poe": {
+   "arm": "poe",
+   "n_corners": 60,
+   "distinct_valid_novel_tuples_mean": 0.016666666666666666,
+   "distinct_valid_novel_tuples_sd": 0.12909944487358058,
+   "judge_accuracy_mean": 0.0004629629629629629,
+   "budget": {
+    "expert_params": 3556665,
+    "standardiser_floats": 4096,
+    "deployed_bytes": 14226660,
+    "x_store_reference": 27.135,
+    "fit_rows": 32256,
+    "val_rows": 512,
+    "n_experts": 6,
+    "hidden": 256,
+    "depth": 2,
+    "epochs": 20,
+    "tuning_trials": 36,
+    "tune_n": 256,
+    "sampler": "SGLD from noise, Langevin-consistent sqrt(2 lr) noise, prior explicit",
+    "convention": "float32 parameters x 4 B; \u26d4 never matched to the store"
+   },
+   "selected": {
+    "step_size": 0.03,
+    "prior_sigma": 2.0,
+    "n_steps": 200,
+    "clip": false,
+    "val_aggregate": 0.20703125
+   },
+   "experts_fit": [
+    {
+     "factor": "floor_hue",
+     "loss_first": 2.322174310684204,
+     "loss_final": 1.9650897797873768e-07,
+     "epochs": 20
+    },
+    {
+     "factor": "wall_hue",
+     "loss_first": 2.3135623931884766,
+     "loss_final": 9.68574909165909e-08,
+     "epochs": 20
+    },
+    {
+     "factor": "object_hue",
+     "loss_first": 2.301992416381836,
+     "loss_final": 1.726584287098376e-06,
+     "epochs": 20
+    },
+    {
+     "factor": "scale",
+     "loss_first": 2.0809216499328613,
+     "loss_final": 1.084285668184748e-05,
+     "epochs": 20
+    },
+    {
+     "factor": "shape",
+     "loss_first": 1.3838826417922974,
+     "loss_final": 2.46798975922502e-07,
+     "epochs": 20
+    },
+    {
+     "factor": "orientation",
+     "loss_first": 2.7078795433044434,
+     "loss_final": 2.7247806428931653e-06,
+     "epochs": 20
+    }
+   ],
+   "own_val_accuracy_per_factor": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "seconds_fit": 2237.1,
+   "seconds_score": 218.7,
+   "seconds_total": 2456.0,
+   "OWN_BUDGET": true,
+   "refusals": {}
+  }
+ },
+ "failed_arms": []
+}

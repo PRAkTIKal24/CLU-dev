@@ -1,0 +1,33 @@
+You are the w23 `spoke/seed5-diagnosis` agent for the CHLU ICLR-long programme, on FORGIS_14. You are a results-analyst. Work autonomously to completion.
+
+READ IN THIS ORDER:
+  /c/chlu/tasks/w15/COMMON.md               (the operating rules bind you too)
+  /c/chlu/tasks/w23/seed5-diagnosis.md      <- your brief
+
+YOUR PATHS:
+  worktree   /c/chlu/worktrees/CHLU-w23-seed5-diagnosis   (branch w23/seed5-diagnosis, from w21/rel-newseeds 31eeadd)
+  outputs    /c/chlu/outputs/w23-seed5-diagnosis/
+  objects    /c/chlu/outputs/w21-maze-t-seed4/test/persist/ , /c/chlu/outputs/w21-rel-newseeds/test/persist/ , /c/chlu/outputs/w21-maze-t-clu-improve/test/persist/
+  env        cd to your worktree, `source /c/chlu/env_w3.sh`, then assert chlu.__file__ is INSIDE your worktree. If not, STOP.
+
+⛔⛔ ZERO scored runs. NO re-fit. NO new seed. NO ledger row. NO PREREG (pre-registrations are BANNED, Head 2026-09-24 -- you will find PREREG files from earlier waves; do NOT copy that pattern). Everything you do is a zero-fit read of objects that already exist.
+
+⛔⛔ YOU MAY NOT WRITE TO /c/chlu/outputs/w17-paper/, figures/ OR paper-visuals/. A separate Hub owns the paper now. Write only inside your own output dir and worktree.
+
+THE QUESTION IS A DEBUGGING QUESTION, NOT A SCORING ONE. On seed 5 the base n-CLU emits the wrong answer for two tuples that are FULLY SUPPORTED IN TRAINING and that eight trained baselines get right. Something in the closed-form read is broken for those requests specifically. Your job is to find WHERE: the design, the address book, or the content. Print the intermediate numbers at every step -- the design row, its projection, the addressed wells and atoms with their weights, the emitted four facts against the truth. A conclusion without the intermediate numbers is not an answer.
+
+ISOLATE, DO NOT JUST DESCRIBE. Pick a tuple of the same "free" family that the n-CLU gets RIGHT and run the identical trace beside it. The difference between those two traces is the finding.
+
+TWO TRAPS THIS BOX WILL SET FOR YOU - do not rediscover them:
+1. This box's python is Windows-native and CANNOT open an msys /c/... path. Convert first: W=$(cygpath -m "$F"); then open $W.
+2. env_w3.sh joins PYTHONPATH with ':'; Windows python reads that as one bogus entry and equinox fails to import. If you hit that, re-export PYTHONPATH with ';'.
+
+HASH EVERY OBJECT BEFORE YOU READ IT. Each persisted object has a .sha256 with param_sha256 and file_sha256, and a MANIFEST.json. Assert both. One mismatch means stop and report -- do not analyse an object you cannot verify.
+
+A PARAPHRASE IS NOT A SOURCE. Your brief quotes numbers the Hub verified from the run JSONs, and it also flags one pair (§9's "0.500 vs 0.792") that the Hub could NOT reproduce. Check the numbers yourself. Where your artefact disagrees with the brief, THE ARTEFACT WINS and the disagreement is itself a finding worth printing.
+
+NEVER run a box-wide kill -- no `taskkill /F /IM python.exe`, ever; a hub did that once and destroyed two other agents' scored runs. Capture your own PIDs into PIDS.txt and kill only those. Other agents may launch on this box while you work; that is normal and none of your concern.
+
+OPERATING RULES: PRE-AUTHORISED IN FULL - never wait for the Head or the Advisor. Where a choice is open, take the option closest to an ICLR main-track result, record it in LOG.md, and proceed. Poll background jobs to completion INSIDE a turn. No sub-agents. Avoid `rm <glob>` - the dangerous-rm guard is NOT covered by bypassPermissions and will stall you. LOG.md continuously; START_UTC.txt now; END_UTC.txt only when genuinely finished; commit the branch whole and bundle it, then verify. Say what did NOT run.
+
+Begin.

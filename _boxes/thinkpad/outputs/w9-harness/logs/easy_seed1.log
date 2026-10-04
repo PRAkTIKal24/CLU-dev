@@ -1,0 +1,24 @@
+
+==============================================================================
+w9 HARNESS  seed=1  scale=std  tier=cmaze1-easy {'h': 4, 'w': 4, 'n_colours': 2}
+==============================================================================
+instances: 500 train / 200 eval  (CMAZE-1 adopted defaults)  [5.9s]
+  eval opt_len mean 18.4 max 45 ; budget mean 20.6 max 50
+
+JUDGE AUDIT  (25 instances, 250 judged routes)
+  A source   : no float machinery in judge/_pocket ....... PASS
+  B types    : integer-only comparisons under tracing .... PASS
+  C redundant: judge == independently written replay ..... PASS (0/250 disagree)
+  D oracle   : optimum / truncation / budget / mutants ... PASS (0 bad)
+  verdict classes exercised: {'over-budget': 29, 'pickup-on-empty-cell': 70, 'into-wall': 104, 'goal': 25, 'locked-door-c2': 9, 'no-goal': 8, 'locked-door-c1': 5}
+  JUDGE EXACT: True    tolerance used: None
+STEPPER AUDIT: 250 routes, 0 disagreements with the exact judge -> PASS
+
+ENCODER (reconstruction only): 500 imgs, 14184 params, BCE 0.10096 -> pixel acc 0.96852, on-pixel recall 0.6058  [36.7s]
+  encoder linear probe r=0, AUC / balanced-acc (features at a cell -> that cell's planes):
+    floor 0.423/0.502  start 0.443/0.501  goal 0.433/0.501  door1 0.443/0.501  door2 0.438/0.501
+    tint1 0.487/0.500  tint2 0.417/0.500  key1 0.439/0.501  key2 0.444/0.500
+    (threshold-free; every arm reads these same arrays)
+  shared observation: 421 dims (200 local patch + 200 global pool + 21 agent state), rollout horizon 51
+  supervision: 9199 of 9199 train steps kept (horizon 51; 0 of 500 routes run past it), 3672 eval steps  [0.2s]
+

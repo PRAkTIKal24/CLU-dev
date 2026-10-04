@@ -1,0 +1,12 @@
+# w17/plots LOG
+- 2026-09-22T21:48:42Z START. Read AMENDMENT-1, COMMON, plots.md. Loaded dataviz skill. Surveying w<=14 evidence.
+- 2026-09-22T21:54:34Z make_figures.py v1 written in worktree (w17_plots/); 6 figures build; layout pass 2.
+- 2026-09-22T21:57:19Z Evidence mapped: crossover=w12 CROSSOVER-val.json; ladder=w12b KSTAR-LADDER.json + w12 LADDER.csv; deletion=w12 test_seed0_K32/deletion.json + w12-deletion-baselines seed_0 retrain_without; encoder=w13 CROSS-ARM.json; maze=w14 read-verb runs + request-layer-fix artefacts. No w15/w16 path read.
+- 2026-09-22T21:57:19Z DECISION: one byte convention (four-part honest ledger) across all figures; K=5 full-square 1x opponent not drawn.
+- 2026-09-22T21:57:19Z DECISION: ladder panel (b) titled 'Margin vs learned 1x' -- build found learned_1x is not strongest at n=3 seeds 0,2; TODO recorded (no artefact for margin vs best-of-all).
+- 2026-09-22T21:57:19Z DECISION: placeholder marking = red suptitle tag + FIGURES.md list + PROVENANCE.json flag.
+- 2026-09-22T21:57:19Z NOT-RUN: palette validator (no node on machine).
+- 2026-09-22T21:57:19Z Layout passes 2-3 (tag overlap, legends, tick collisions, env colours neutral). CLU named 'CLU' everywhere.
+- 2026-09-22T21:57:19Z build.sh: REBUILD BYTE-IDENTICAL; installed to w17-paper/figures/. pdflatex check vs iclr2027 template: 0 errors, 0 overfull.
+- 2026-09-22T21:57:19Z FIGURES.md, FINDINGS.md written.
+- 2026-09-22T21:57:29Z committed cccf0c6 on w17/plots; bundle created + verified (complete history). No background jobs were started (PIDS.txt holds only the session shell PID). FINISHED.

@@ -1,0 +1,103 @@
+[14:31:56] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[14:31:56]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[14:31:56]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[14:31:58] table=screen nvariants=13 corners[3:6] set=select
+[14:31:58]   SCR_K32_mean       K= 32 A=  928 rank=   0 n_add=52 n_pair=160 method=mean         alloc=uniform   bytes_pred=463872
+[14:31:58]   SCR_K32_atoms_medoid K= 32 A=  928 rank=   0 n_add=52 n_pair=160 method=atoms_medoid alloc=uniform   bytes_pred=463872
+[14:31:58]   SCR_K32_pca_affine K= 32 A=  928 rank=   0 n_add=52 n_pair=160 method=pca_affine   alloc=uniform   bytes_pred=463872
+[14:31:58]   SCR_K32_random     K= 32 A=  928 rank=   0 n_add=52 n_pair=160 method=random       alloc=uniform   bytes_pred=463872
+[14:31:58]   SCR_K64_mean       K= 64 A= 1280 rank=   0 n_add=52 n_pair=160 method=mean         alloc=uniform   bytes_pred=463360
+[14:31:58]   SCR_K64_atoms_medoid K= 64 A= 1280 rank=   0 n_add=52 n_pair=160 method=atoms_medoid alloc=uniform   bytes_pred=463360
+[14:31:58]   SCR_K64_pca_affine K= 64 A= 1280 rank=   0 n_add=52 n_pair=160 method=pca_affine   alloc=uniform   bytes_pred=463360
+[14:31:58]   SCR_K64_random     K= 64 A= 1280 rank=   0 n_add=52 n_pair=160 method=random       alloc=uniform   bytes_pred=463360
+[14:31:58]   SCR_K128_mean      K=128 A= 1536 rank=   0 n_add=52 n_pair=160 method=mean         alloc=uniform   bytes_pred=451072
+[14:31:58]   SCR_K128_atoms_medoid K=128 A= 1536 rank=   0 n_add=52 n_pair=160 method=atoms_medoid alloc=uniform   bytes_pred=451072
+[14:31:58]   SCR_K128_pca_affine K=128 A= 1536 rank=   0 n_add=52 n_pair=160 method=pca_affine   alloc=uniform   bytes_pred=451072
+[14:31:58]   SCR_K128_random    K=128 A= 1536 rank=   0 n_add=52 n_pair=160 method=random       alloc=uniform   bytes_pred=451072
+[14:31:58]   SCR_K128_kmeans    K=128 A= 1536 rank=   0 n_add=52 n_pair=160 method=kmeans       alloc=uniform   bytes_pred=451072
+[14:31:59] admitted 49 corners, REFUSED 15 (held-out overlap / not 72 rows) - refused, never trimmed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[14:32:03] [c6 0188999d1c] SCR_K32_mean       agg=0.1157 tup=10 B=463872 r=52 [2.9s]
+[14:32:43] [c6 0188999d1c] SCR_K32_atoms_medoid agg=0.8519 tup=40 B=463872 r=52 [39.1s]
+[14:32:50] [c6 0188999d1c] SCR_K32_pca_affine agg=0.8681 tup=45 B=463872 r=52 [7.0s]
+[14:32:52] [c6 0188999d1c] SCR_K32_random     agg=0.6157 tup=27 B=463872 r=52 [2.2s]
+[14:32:56] [c6 0188999d1c] SCR_K64_mean       agg=0.2917 tup=19 B=463360 r=52 [2.4s]
+[14:33:31] [c6 0188999d1c] SCR_K64_atoms_medoid agg=0.8866 tup=40 B=463360 r=52 [35.1s]
+[14:33:35] [c6 0188999d1c] SCR_K64_pca_affine agg=0.8704 tup=44 B=463360 r=52 [4.4s]
+[14:33:38] [c6 0188999d1c] SCR_K64_random     agg=0.7847 tup=32 B=463360 r=52 [2.7s]
+[14:33:42] [c6 0188999d1c] SCR_K128_mean      agg=0.5185 tup=24 B=451072 r=52 [2.8s]
+[14:34:06] [c6 0188999d1c] SCR_K128_atoms_medoid agg=0.8819 tup=42 B=451072 r=52 [24.0s]
+[14:34:10] [c6 0188999d1c] SCR_K128_pca_affine agg=0.8657 tup=41 B=451072 r=52 [3.8s]
+[14:34:12] [c6 0188999d1c] SCR_K128_random    agg=0.7477 tup=40 B=451072 r=52 [2.4s]
+[14:34:32] [c6 0188999d1c] SCR_K128_kmeans    agg=0.8773 tup=42 B=451072 r=52 [20.4s]
+[14:34:32] [c6] corner done in 153.4s
+[14:34:36] [c8 18792b5479] SCR_K32_mean       agg=0.3403 tup=14 B=463872 r=52 [1.8s]
+[14:35:19] [c8 18792b5479] SCR_K32_atoms_medoid agg=0.9560 tup=55 B=463872 r=52 [43.7s]
+[14:35:28] [c8 18792b5479] SCR_K32_pca_affine agg=0.9954 tup=70 B=463872 r=52 [9.0s]
+[14:35:32] [c8 18792b5479] SCR_K32_random     agg=0.7963 tup=53 B=463872 r=52 [3.3s]
+[14:35:37] [c8 18792b5479] SCR_K64_mean       agg=0.5324 tup=32 B=463360 r=52 [3.0s]
+[14:36:23] [c8 18792b5479] SCR_K64_atoms_medoid agg=0.9884 tup=67 B=463360 r=52 [46.0s]
+[14:36:27] [c8 18792b5479] SCR_K64_pca_affine agg=0.9954 tup=70 B=463360 r=52 [4.1s]
+[14:36:29] [c8 18792b5479] SCR_K64_random     agg=0.8866 tup=64 B=463360 r=52 [2.2s]
+[14:36:32] [c8 18792b5479] SCR_K128_mean      agg=0.6736 tup=25 B=451072 r=52 [2.3s]
+[14:36:57] [c8 18792b5479] SCR_K128_atoms_medoid agg=0.9815 tup=64 B=451072 r=52 [24.2s]
+[14:37:01] [c8 18792b5479] SCR_K128_pca_affine agg=0.9884 tup=67 B=451072 r=52 [4.3s]
+[14:37:03] [c8 18792b5479] SCR_K128_random    agg=0.9699 tup=62 B=451072 r=52 [2.4s]
+[14:37:29] [c8 18792b5479] SCR_K128_kmeans    agg=0.9907 tup=68 B=451072 r=52 [25.4s]
+[14:37:29] [c8] corner done in 176.5s
+[14:37:33] [c12 ff22c5a995] SCR_K32_mean       agg=0.1458 tup=11 B=463872 r=52 [2.3s]
+[14:38:12] [c12 ff22c5a995] SCR_K32_atoms_medoid agg=0.8380 tup=60 B=463872 r=52 [39.2s]
+[14:38:19] [c12 ff22c5a995] SCR_K32_pca_affine agg=0.9699 tup=67 B=463872 r=52 [7.0s]
+[14:38:22] [c12 ff22c5a995] SCR_K32_random     agg=0.5000 tup=40 B=463872 r=52 [2.8s]
+[14:38:26] [c12 ff22c5a995] SCR_K64_mean       agg=0.3287 tup=13 B=463360 r=52 [2.6s]
+[14:39:00] [c12 ff22c5a995] SCR_K64_atoms_medoid agg=0.9514 tup=54 B=463360 r=52 [34.0s]
+[14:39:04] [c12 ff22c5a995] SCR_K64_pca_affine agg=0.9699 tup=68 B=463360 r=52 [4.5s]
+[14:39:07] [c12 ff22c5a995] SCR_K64_random     agg=0.7037 tup=19 B=463360 r=52 [2.4s]
+[14:39:10] [c12 ff22c5a995] SCR_K128_mean      agg=0.4676 tup=16 B=451072 r=52 [2.3s]
+[14:39:34] [c12 ff22c5a995] SCR_K128_atoms_medoid agg=0.9491 tup=59 B=451072 r=52 [24.0s]
+[14:39:38] [c12 ff22c5a995] SCR_K128_pca_affine agg=0.9653 tup=62 B=451072 r=52 [4.1s]
+[14:39:41] [c12 ff22c5a995] SCR_K128_random    agg=0.6921 tup=28 B=451072 r=52 [2.5s]
+[14:40:04] [c12 ff22c5a995] SCR_K128_kmeans    agg=0.9421 tup=58 B=451072 r=52 [23.5s]
+[14:40:04] [c12] corner done in 155.5s
+[14:40:04] r1 screen done in 488.0s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table/relaunch\runs\r1_ledger_w1.jsonl

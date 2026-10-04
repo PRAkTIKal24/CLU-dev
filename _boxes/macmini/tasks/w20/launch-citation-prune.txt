@@ -1,0 +1,36 @@
+You are the w20 `citation-prune` spoke on `batmac`. Work autonomously to completion.
+
+READ IN THIS ORDER:
+  /Users/batmac/clu/tasks/w17/AMENDMENT-1.md   (Head ruling; still binding)
+  /Users/batmac/clu/tasks/w20/citation-prune.md   <- your one job
+  /Users/batmac/clu/outputs/w20-referee3-fixes/REFEREE3-FIXES.md  <- what just changed in the prose, and why it changes what must be cited
+
+YOUR PATHS:
+  worktree /Users/batmac/clu/worktrees/CHLU-w20-citation-prune (branch w20/citation-prune, base base/iter8 = 148f3b7)
+  outputs  /Users/batmac/clu/outputs/w20-citation-prune/
+  drafts   /Users/batmac/clu/outputs/w17-paper/DRAFT-v2.tex and DRAFT-v2-style.tex
+  bib      /Users/batmac/clu/outputs/w17-paper/references.bib (96 entries) and CITATIONS.md, CITATIONS-FOR-ZOTERO.md
+  env: cd to your worktree, `source /Users/batmac/clu/env_bm.sh`; pdflatex is installed.
+
+⛔⛔ YOU HOLD THE EXCLUSIVE .tex LOCK. referee3-fixes has finished and been reaped. If w20-referee3-fixes, w18-placeholder-fill, w18-referee-4 or w19-draft-figure-slots appears as a live tmux session, STOP and say so.
+
+WHAT CHANGED IMMEDIATELY BEFORE YOU - this is why you run second:
+referee3-fixes rewrote the positioning to the Head's framing (the CLU is a NAIVE AI UNIT compared against other naive units; no best-system claim; systems built on top of units are out of scope by definition) and REMOVED "the intersection is empty" everywhere - 0 hits now in both drafts. So the citation set that supported an emptiness claim is no longer the citation set the paper needs.
+
+⭐⭐ ONE THING IT HANDED YOU: PINN, HNN and CDM are now named in PROSE ONLY, each marked `% cite-tagger: bib entry needed`. They are NOT in references.bib. You must ADD proper entries for those three (they are the "one sentence each in related work with the unit/system distinction" that the Head's framing requires) while still cutting the total to <= 55. Do not drop them and do not leave them uncited.
+
+TARGET: <= 55 entries, down from 96.
+KEEP the prior art a referee will name: TensorFaces, Tenenbaum-Freeman, MLC-VAE, PandA, Cao-Yang, the decremental-PCA line, exact unlearning on frozen foundation models, SISA, certified removal, compositional diffusion. Plus the baselines and their sources, the datasets and the hold-out protocol, the parameter-matching precedent (retrieval/memory-augmented models), the world-model and compositional-generalisation anchors, the LDM-class positioning papers, and the three shorts' key physics references.
+DROP everything cited once for colour.
+
+THEN: re-tag BOTH .tex files; regenerate references.bib; regenerate BOTH Zotero blocks (one arXiv ID per line, one DOI per line, each a single fenced code block, omitted counts stated beneath); prove prose is BYTE-IDENTICAL after stripping cites (w17's PROSE-CHECK.txt is the template); and report the full dropped list with one line each on why.
+
+INVARIANTS: both drafts must compile with 0 UNDEFINED CITATIONS - compile pdflatex -> bibtex (BIBINPUTS/BSTINPUTS = w17-paper/) -> pdflatex x3 and CHECK the count, do not assume; bibtex silently failed for a long stretch of this campaign and 226 undefined citations went unnoticed. Re-run the style diff-check and show all four diffs EMPTY. Do not touch the 10 w19 placeholders or the w20 placeholder referee3-fixes added.
+
+⛔ Do NOT fabricate an arXiv ID or a DOI. If a kept entry lacks one, mark it `no DOI` / `no arXiv` - never a plausible-looking guess.
+
+⭐ If you cannot get under 55 without dropping something a referee would name, STOP AT THE SMALLEST DEFENSIBLE NUMBER and say so. Do not cut a load-bearing citation to hit a target.
+
+OPERATING RULES: PRE-AUTHORISED; never wait for anyone. No sub-agents. Never `tmux kill-server` on this machine. Avoid `rm <glob>`; use a fresh timestamped subdir. Poll background jobs inside a turn. LOG.md continuously; START_UTC.txt now; END_UTC.txt only when genuinely finished; bundle and verify. Say what did NOT run.
+
+Begin.

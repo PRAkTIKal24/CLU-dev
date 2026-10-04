@@ -1,0 +1,50 @@
+[23:19:38] chlu.__file__ = C:\chlu\worktrees\CHLU-w21-ladder-rivals-32k\chlu\__init__.py
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[23:19:47] FastJudge positive control: True
+[23:19:47] corners=rung:2 seed=2: 60 corners
+[23:20:07]   mlp__steps204800@rung2_n32768                novel/corner 30.383 (ceiling 36.00)  in 18s
+[23:20:24]   cont_mlp__steps204800@rung2_n32768           novel/corner 26.683 (ceiling 36.00)  in 15s
+[23:20:40]   lstm__steps20480@rung2_n32768                novel/corner 26.150 (ceiling 36.00)  in 14s
+[23:20:58]   transformer__steps20480@rung2_n32768         novel/corner 26.100 (ceiling 36.00)  in 16s
+[23:20:58] done

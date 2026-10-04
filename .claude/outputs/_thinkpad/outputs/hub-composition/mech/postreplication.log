@@ -1,0 +1,69 @@
+  ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+  ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+  ⭐ cache coverage: shortfall 0 — nothing will be encoded
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+  ⭐ store loaded from C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-read-compose\runs\shapes3d_recon\seed_0\store_s0.pkl (⛔ not re-trained)
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+R1 permuted residual over 25 draws: mean=115.6 sd=7.7 range [102, 134]  (my original single draw was 95)
+R1 gaussian over 25 draws:          mean=382.4 sd=11.1 range [359, 406]  (my original single draw was 393)
+R3 per-factor (round-trip vs ceiling, with n_values_realised):
+   floor_hue     roundtrip=0.9980  ceiling=1.0000  n_values=10
+   wall_hue      roundtrip=0.9824  ceiling=1.0000  n_values=10
+   object_hue    roundtrip=0.6914  ceiling=1.0000  n_values=10
+   scale         roundtrip=0.2383  ceiling=0.9727  n_values=8
+   shape         roundtrip=0.6094  ceiling=0.9883  n_values=4
+   orientation   roundtrip=0.1738  ceiling=0.9980  n_values=15
+R2 dynread (A, full)      seed0: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread/B (full)       seed0: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread/A_request_off  seed0: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread/B_request_off  seed0: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread (A, full)      seed1: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread/B (full)       seed1: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread/A_request_off  seed1: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread/B_request_off  seed1: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread (A, full)      seed2: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread/B (full)       seed2: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread/A_request_off  seed2: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+R2 dynread/B_request_off  seed2: STRICT=  0  WEAK(in-cell & novel)=  0  items landing in the cell=  0/72
+done

@@ -1,0 +1,56 @@
+[23:04:34Z] START bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 5 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_lace_poe.py --rung shipped --seed 0 --run-n 1
+[     0.0s] chlu.__file__ = C:\chlu\worktrees\CHLU-w20-shapes-data-matched\chlu\__init__.py
+[     0.0s] rung=shipped seed=0 nrows=131072 cache gen 2 scope full
+[    57.7s] corners: {'n_corners': 109, 'n_rows': 5688, 'pairwise_disjoint': True, 'all_rows_held_out': True, 'rows_per_corner': [36, 72]}
+[   121.8s] fit 130560 / val 512 rows (stratified, from the ladder pool's first 131072)
+[   123.0s]   judge: decoder 01ef91f75eea (v1_capacity_schedule) + classifier c8741ac417d8
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[ 11180.1s]   [lace] 36-trial selection done in 11020s: {'sigma': 0.03, 'form': 'both', 'shrinkage': 'none', 'val_aggregate': 0.2994791666666667}
+[ 27632.3s]   [lace] classifier 4073663 params, own val mean 1.0000; budget {'classifier_params': 4073663, 'whitening_floats': 4196352, 'deployed_bytes_classifier_only': 16294652, 'deployed_bytes_classifier_plus_whitening': 33080060, 'x_store_reference_classifier_only': 31.08, 'x_store_reference_with_whitening': 63.095, 'fit_rows': 130560, 'val_rows': 512, 'epochs': 50, 'steps': 51000, 'tuning_trials': 36, 'tune_epochs': 6, 'tune_ld_steps': 30, 'tune_n': 256, 'sampler': 'ode (dopri5, the PRIMARY sampler)', 'convention': 'float32 parameters x 4 B; the classifier alone and classifier + whitening are BOTH printed; ⛔ never matched to the store'}
+[ 30453.3s]   lace   novel 0.0183  judge_acc 0.0004  in 30294s (score 2821s)
+[ 35564.3s]   [poe] 6 experts, 3556665 params, own val [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]; selected {'step_size': 0.03, 'prior_sigma': 1.0, 'n_steps': 50, 'clip': False, 'val_aggregate': 0.22135416666666666} (5111s)
+[ 35710.9s]   poe    novel 0.0000  judge_acc 0.0000  in 5258s (score 146s)
+[ 35710.9s] leg done -> C:\chlu\outputs\w20-shapes-data-matched\lacepoe\shipped_seed0 failed=[]
+[09:01:06Z] END rc=0 bash /c/chlu/outputs/w20-shapes-data-matched/waitmem.sh 5 && python /c/chlu/worktrees/CHLU-w20-shapes-data-matched/scripts/w20_lace_poe.py --rung shipped --seed 0 --run-n 1
+[09:01:06Z] LANE DONE

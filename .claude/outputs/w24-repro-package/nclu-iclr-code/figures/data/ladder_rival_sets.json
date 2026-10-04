@@ -1,0 +1,66 @@
+{
+ "store": {
+  "label": "n-CLU",
+  "source": "shapes3d/ladder_nclu/KSTAR-LADDER.json",
+  "reader": "json_path",
+  "path_template": "by_rung.{n}.kstar_K32.store.per_seed.{seed}",
+  "mean_template": "by_rung.{n}.kstar_K32.store.mean"
+ },
+ "floor": {
+  "label": "Lookup table (floor)",
+  "source": "shapes3d/ladder_earlier/LADDER.csv",
+  "reader": "ladder_csv",
+  "arm": "rival_table"
+ },
+ "rungs": [
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "sets": [
+  {
+   "id": "data_matched_131072",
+   "status": "landed",
+   "title": "Data-matched rivals, 131,072-row pool",
+   "pool_rows": 131072,
+   "pool_note": "each rung's own 131,072-row pool, the store's exact rows; P1-carried fit per family and seed",
+   "pool_source": "shapes3d/SHAPES-MATCHED.json",
+   "pool_path": "ladder.2.convergence_evidence.mlp.0.declared.n_fit_rows",
+   "source": "shapes3d/SHAPES-MATCHED.json",
+   "reader": "matched_carried",
+   "store_key": "store_K32_n131072",
+   "arms": {
+    "mlp": "mlp",
+    "lstm": "lstm",
+    "transformer": "transformer",
+    "cont_mlp": "cont_mlp"
+   },
+   "constant_for_n_ge_3": false,
+   "steps": [
+    20480,
+    204800
+   ],
+   "steps_label": "20,480/204,800 steps",
+   "steps_check": {
+    "reader": "matched_convergence"
+   },
+   "store_check": "ladder.{n}.arms.store_K32_n131072.all.per_seed == KSTAR-LADDER store per seed"
+  },
+  {
+   "id": "ladder_rivals_32k",
+   "status": "not_landed",
+   "title": "Data-matched rivals, 32,768-row pool",
+   "pool_rows": 32768,
+   "awaiting": "ladder-rivals-32k (32,768-row ladder rival set). Drop-in: set status 'landed', source, reader, arms, steps, steps_check.",
+   "steps": null,
+   "steps_label": "steps: from its artefact"
+  }
+ ]
+}

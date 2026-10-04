@@ -1,0 +1,99 @@
+  ⭐ encode precision: requested=highest resolved=HIGHEST backend=cpu device=cpu n_devices=1 (jax 0.9.0)
+  ⭐ cache re-encode check: 64 rows, 1280/131072 elements differ (0.977%), max |delta| = 0.00195312 = 51.000 float16 ULP (bounds: 1 ULP, 1.0% of elements)
+  ⚠ NOT ENFORCED (enforced=false): hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.
+  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN (ulp) and was NOT enforced, because: hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.. ⭐ The run encodes nothing new, so no inconsistent feature can be written — but the encoder does NOT reproduce this cache on this machine, and any run that extends the cache here WILL abort.
+      re-encoding 64 cached rows did not reproduce the cache to within one float16 ULP: max |delta| = 0.00195312 = 51.000 ULP of the cache dtype (bound 1); 1280/131072 elements (0.977%) differ.  ⭐ That is further than a rounding step of the stored format, so the loaded encoder does not reproduce these cached values — {'n_checked': 64, 'n_elements': 131072, 'max_abs_delta': 0.001953125, 'max_ulp_delta': 51.0, 'n_differing': 1280, 'frac_differing': 0.009765625, 'n_nonfinite': 0, 'cache_dtype': 'float16', 'ulp_bound': 1.0, 'frac_bound': 0.01, 'enforced': False, 'enforced_reason': 'hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.'}
+  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed
+[   44.1s] land K=5 N=64 dim=2048 sigma=[4.6343, 5.0714, 9.1827, 6.3054, 5.1006] cert_radius=[13.3657, 14.6262, 26.4835, 18.1852, 14.7104]
+[   45.9s] SELF-CHECK identity_E_le_0_on_live_store: holds (max over wells -30.3937)
+[   45.9s] 192 val rows (of 512); features read from the cache at their pool positions -- ⛔ nothing re-encoded
+[   45.9s] SELF-CHECK term_experts vs shipped request_experts: {'max_abs_delta_vs_request_experts': 0.0, 'bit_identical': True, 'shape_ref': [6, 192, 5, 64], 'shape_got': [6, 192, 5, 64]}
+[   46.3s] kNN calibrated on 4096 fit_rows CACHED FEATURES: whole=[21.16] factored=[6.5996, 7.0452, 11.2302, 8.1455, 7.5483]
+[   47.9s] kNN calibrated on the R8 embeddings of the same corners: whole=[18.773] factored=[5.3384, 5.7898, 9.6462, 7.0806, 6.581]
+[   47.9s]   ⭐ decoder: v1_capacity_schedule (gen-decoder-lift winner) param_hash=01ef91f75eeaae7b… params=1516227 — asserted
+[   47.9s]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[   48.1s] settle: steps=1000 {'steps': 1000, 'step_size': 0.2, 'sigma_scale_start': 4.0, 'sigma_scale_end': 1.0, 'temp_start': 0.0, 'temp_end': 0.0, 'metropolis': True, 'trace_every': 1}
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[  107.3s]   t=   0.0  min d/sig= 0.812  maxE=    -37.40  refuse=0.000 cert=0.000  knnW=0.057 knnF=0.167  acc_plain=0.9931  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 17.97 -> d/sig 0.832)
+[  154.0s]   t=   2.0  min d/sig= 0.827  maxE=    -37.05  refuse=0.000 cert=0.000  knnW=0.057 knnF=0.208  acc_plain=0.9931  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 18.09 -> d/sig 0.832)
+[  198.6s]   t=   4.0  min d/sig= 0.869  maxE=    -36.05  refuse=0.000 cert=0.000  knnW=0.078 knnF=0.266  acc_plain=0.9939  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 18.44 -> d/sig 0.832)
+[  240.6s]   t=   6.0  min d/sig= 0.931  maxE=    -34.39  refuse=0.000 cert=0.000  knnW=0.120 knnF=0.349  acc_plain=0.9852  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 18.99 -> d/sig 0.832)
+[  279.4s]   t=   8.0  min d/sig= 1.006  maxE=    -32.06  refuse=0.000 cert=0.000  knnW=0.172 knnF=0.510  acc_plain=0.9740  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 19.73 -> d/sig 0.832)
+[  317.4s]   t=  10.0  min d/sig= 1.087  maxE=    -29.06  refuse=0.005 cert=0.000  knnW=0.276 knnF=0.714  acc_plain=0.9609  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 20.64 -> d/sig 0.832)
+[  354.6s]   t=  13.0  min d/sig= 1.212  maxE=    -23.26  refuse=0.005 cert=0.000  knnW=0.536 knnF=0.969  acc_plain=0.9436  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 22.27 -> d/sig 0.832)
+[  392.3s]   t=  16.0  min d/sig= 1.336  maxE=    -15.90  refuse=0.016 cert=0.000  knnW=0.859 knnF=0.995  acc_plain=0.9210  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 24.17 -> d/sig 0.832)
+[  429.8s]   t=  19.0  min d/sig= 1.464  maxE=     -6.95  refuse=0.193 cert=0.000  knnW=0.979 knnF=1.000  acc_plain=0.8958  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 26.27 -> d/sig 0.832)
+[  473.0s]   t=  22.0  min d/sig= 1.599  maxE=      3.60  refuse=0.651 cert=0.000  knnW=1.000 knnF=1.000  acc_plain=0.8707  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 28.53 -> d/sig 0.832)
+[  516.8s]   t=  25.0  min d/sig= 1.740  maxE=     15.78  refuse=0.974 cert=0.000  knnW=1.000 knnF=1.000  acc_plain=0.8455  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 30.91 -> d/sig 0.832)
+[  556.8s]   t=  28.0  min d/sig= 1.886  maxE=     29.59  refuse=1.000 cert=0.021  knnW=1.000 knnF=1.000  acc_plain=0.8281  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 33.40 -> d/sig 0.832)
+[  597.5s]   t=  32.0  min d/sig= 2.087  maxE=     50.64  refuse=1.000 cert=0.573  knnW=1.000 knnF=1.000  acc_plain=0.7960  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 36.83 -> d/sig 0.832)
+[  639.6s]   t=  36.0  min d/sig= 2.293  maxE=     75.19  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.7656  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 40.36 -> d/sig 0.832)
+[  681.0s]   t=  40.0  min d/sig= 2.504  maxE=    104.65  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.7326  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 43.97 -> d/sig 0.832)
+[  722.2s]   t=  45.0  min d/sig= 2.771  maxE=    149.47  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.7005  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 48.57 -> d/sig 0.832)
+[  765.3s]   t=  50.0  min d/sig= 3.042  maxE=    203.69  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.6684  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 53.25 -> d/sig 0.832)
+[  808.4s]   t=  56.0  min d/sig= 3.371  maxE=    279.44  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.6311  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 58.92 -> d/sig 0.832)
+[  849.3s]   t=  63.0  min d/sig= 3.759  maxE=    381.29  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.6033  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 65.62 -> d/sig 0.832)
+[  893.3s]   t=  70.0  min d/sig= 4.150  maxE=    499.49  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.5486  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 72.37 -> d/sig 0.832)
+[  935.5s]   t=  78.0  min d/sig= 4.600  maxE=    655.10  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.5130  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 80.14 -> d/sig 0.832)
+[  977.8s]   t=  86.0  min d/sig= 5.051  maxE=    832.44  refuse=1.000 cert=1.000  knnW=1.000 knnF=1.000  acc_plain=0.4670  acc_clu_req=0.3507  acc_clu_storeonly=0.1198  (read moved 87.95 -> d/sig 0.832)
+[  977.8s] wrote C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-admission\CERTIFIED_ACCESS_FIGURE_seed0_A.json
+[  977.8s] 
+[  977.8s] === CROSSINGS (units: mean min_k d_k/sigma_k) ===
+[  977.8s]   zero_level_set_x           1.5548
+[  977.8s]   zero_level_set_x_by_meanE  1.5532
+[  977.8s]   certificate_flip_x         2.0603
+[  977.8s]   certified_refusal_x        2.0603
+[  977.8s]   knn_whole_x                1.1948
+[  977.8s]   knn_factored_x             1.0009
+[  977.8s]   knn_whole_r8_x             1.0084
+[  977.8s]   knn_factored_r8_x          never crosses in range
+[  977.8s]   decode_collapse_x          4.0809
+[  977.8s]   decode_below_half_x        4.7277
+[  977.8s]   clu_read_collapse_x        never crosses in range
+[  977.8s]   clu_read_below_half_x      never crosses in range
+[  977.8s]   clu_storeonly_collapse_x   never crosses in range
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-admission\scorer\u6_figure.py:220: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  transform=ax.transAxes, fontsize=7.8, color=MUTED,
+[  978.5s] figure -> C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-admission\certified_access_seed0_A.png
+[  978.5s] U6 DONE

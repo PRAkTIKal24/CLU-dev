@@ -1,0 +1,75 @@
+[seed 2] banks
+    bank 0/90 mazes, 306 rows
+    bank 10/90 mazes, 4303 rows
+    bank 20/90 mazes, 8743 rows
+    bank 30/90 mazes, 12993 rows
+    bank 40/90 mazes, 17492 rows
+    bank 50/90 mazes, 21293 rows
+    bank 60/90 mazes, 25377 rows
+    bank 70/90 mazes, 29577 rows
+    bank 80/90 mazes, 33245 rows
+  train 90 mazes / 36717 rows, val 45 mazes / 18055 rows  [29.9s]
+[seed 2] acceptance audits
+  replay 54772 rows, 0 disagreements  [3.5s]
+  train(seen) 17618 rows; val rows {'seen': 4000, 'value': 4000, 'pair': 2129, 'nway': 707}
+[seed 2] frozen codec (reconstruction only)
+[seed 2] frozen state encoder (reconstruction only)
+ENCODER (reconstruction only, 1 restart(s), best of ['0.0001']): 90 imgs, 17068 params, BCE 0.00008 -> pixel acc 1.00000, on-pixel recall 1.0000  [85.9s]
+[seed 2] CLU val sweep (selection on the `seen` row only)
+  CODEC latent 32  loss 0.00047  [4.5s]
+    latent  32 K  4 atoms  2 ridge 1 span 0.250 -> seen 0.6600 (worst control 0.6375) below bar
+  CODEC latent 48  loss 0.00016  [3.7s]
+    latent  48 K  4 atoms  2 ridge 1 span 0.167 -> seen 0.6910 (worst control 0.3272) below bar
+  CODEC latent 64  loss 0.00019  [4.0s]
+    latent  64 K  4 atoms  2 ridge 1 span 0.125 -> seen 0.5550 (worst control 0.2565) below bar
+    latent  64 K  4 atoms  3 ridge 1 span 0.188 -> seen 0.8735 (worst control 0.5180) below bar
+    latent  64 K  8 atoms  2 ridge 1 span 0.250 -> seen 0.7498 (worst control 0.6823) below bar
+    latent  64 K  8 atoms  3 ridge 1 span 0.375 -> seen 0.9670 (worst control 0.8992) below bar
+    latent  64 K  8 atoms  6 ridge 1 span 0.750 -> seen 0.9968 (worst control 0.9925) below bar
+    latent  64 K  8 atoms  2 ridge 0.1 span 0.250 -> seen 0.7498 (worst control 0.6820) below bar
+  CODEC latent 96  loss 0.00006  [3.5s]
+    latent  96 K  8 atoms  2 ridge 1 span 0.167 -> seen 0.8892 (worst control 0.5035) below bar
+    latent  96 K  8 atoms  3 ridge 1 span 0.250 -> seen 0.9580 (worst control 0.8290) below bar
+  CODEC latent 128  loss 0.00008  [3.5s]
+    latent 128 K  4 atoms  3 ridge 1 span 0.094 -> seen 0.9473 (worst control 0.8100) below bar
+    latent 128 K  8 atoms  2 ridge 1 span 0.125 -> seen 0.8898 (worst control 0.7030) below bar
+    latent 128 K  8 atoms  3 ridge 1 span 0.188 -> seen 0.9620 (worst control 0.7115) CLEARS
+    latent 128 K  8 atoms  6 ridge 1 span 0.375 -> seen 0.9770 (worst control 0.9885) below bar
+    latent 128 K  8 atoms  3 ridge 0.1 span 0.188 -> seen 0.9620 (worst control 0.7113) CLEARS
+  CODEC latent 256  loss 0.00008  [3.8s]
+    latent 256 K  8 atoms  3 ridge 1 span 0.094 -> seen 0.9513 (worst control 0.6647) CLEARS
+  CONFIG-A {'latent': 128, 'K': 8, 'n_atoms': 3, 'ridge': 1.0}  seen 0.9620  bar met: True
+  codec ceiling train 1.0000
+[seed 2] CLU + charter-C controls
+[seed 2] learned composition-blind arms
+[seed 2] matched-parameter rivals
+  MATCHED PARAMETERS (target 8016 = CLU read floats, obs 636, out 21)
+    mlp          width  11  params    8216  (+2.50%)
+    lstm         width  10  params    8255  (+2.98%)
+    transformer  width  10  params    8385  (+4.60%)  n_layers=1 heads=2
+    TRAIN mlp          params    8216  loss 0.8777  [20.5s]
+    TRAIN lstm         params    8255  loss 0.2746  [23.2s]
+    TRAIN transformer  params    8385  loss 0.0038  [34.5s]
+[seed 2] capacity diagnostic (rivals at 10x the read-path budget)
+  MATCHED PARAMETERS (target 80160 = CLU read floats, obs 636, out 21)
+    mlp          width 103  params   80344  (+0.23%)
+    lstm         width  66  params   79991  (-0.21%)
+    transformer  width  52  params   80025  (-0.17%)  n_layers=2 heads=2
+    TRAIN 10x mlp      params   80344  loss 0.0017  [37.5s]
+    TRAIN 10x lstm     params   79991  loss 0.0027  [48.6s]
+    TRAIN 10x transformer params   80025  loss 0.0001  [79.3s]
+[seed 2] lookup floors
+[seed 2] evaluate
+  row seen   n=4000  CLU 0.9620  blind-colour 0.8782  blind-seq 0.9928  lookup-words 0.9970
+  row pair   n=2129  CLU 0.5618  blind-colour 0.3199  blind-seq 0.9789  lookup-words 0.0000
+  row nway   n=707   CLU 0.8034  blind-colour 0.5545  blind-seq 0.9236  lookup-words 0.0000
+  row value  n=4000  CLU 0.4825  blind-colour 0.5490  blind-seq 0.9932  lookup-words 0.0580
+  evaluate done [2.9s]
+[seed 2] rollout row (FULL oracle routes, chained GENERATED states)
+  rollout CLU validity 0.0000 (per-step 0.9160, mean len 44.1)  [0.7s]
+[seed 2] deletion rows
+    TRAIN mlp retrain-without params    8216  loss 0.7938  [10.7s]
+    TRAIN mlp as-trained params    8216  loss 0.8777  [9.1s]
+    TRAIN mlp retrain-without params    8216  loss 0.9224  [8.9s]
+    TRAIN mlp as-trained params    8216  loss 0.8777  [8.1s]
+[seed 2] wrote C:/chlu/outputs/w15-cmaze-t-harness\val_seed2.json  [704.8 s]

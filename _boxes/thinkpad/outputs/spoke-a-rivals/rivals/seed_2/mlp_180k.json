@@ -1,0 +1,209 @@
+{
+  "artifact_name": "mlp_180k",
+  "callable_checkpoint": "C:\\chlu\\outputs\\spoke-a-rivals\\rivals\\seed_2\\mlp_180k.rival.eqx",
+  "family": "mlp_180k",
+  "fit": {
+    "batch": 256,
+    "epochs": 40,
+    "loss_final": 0.019721752032637596,
+    "loss_first": 0.5406783223152161,
+    "lr": 0.003,
+    "p_full_request": 1.0,
+    "request_dropout": false,
+    "steps": 5040,
+    "weight_decay": 0.0001
+  },
+  "input_kind": "onehot",
+  "param_count": 178952,
+  "param_error": -0.005645448079658606,
+  "param_target": 179968,
+  "param_target_is_table": false,
+  "param_target_multiple_of_table": 1.5150862068965518,
+  "param_within_10pct": true,
+  "partial_requests": {
+    "absent_encoding": "the factor's one-hot block is all zeros",
+    "caveat": "this variant never saw a partially specified request in training; val_mse_partial_requests below is what it does with one anyway, and is NOT a number to quote as this rival's partial-request performance - use the _dropout variant for that",
+    "note": "rows 3 and 4 ask partially specified requests; this rival was trained with request dropout so an absent factor is in distribution rather than answered blind",
+    "p_full_request_in_training": 1.0,
+    "supported": false
+  },
+  "row2_offgrid_hue": {
+    "NOT_APPLICABLE": true,
+    "reason": "this family's input is 'onehot', a closed vocabulary over the realised grid values. It cannot express an off-grid hue, so row 2 gets a dash and this footnote, never a number."
+  },
+  "scores": {
+    "distinct_counts_B": {
+      "factor_tuples": 66,
+      "feature_vectors": 72,
+      "images": 72,
+      "n": 72,
+      "note": "feature_vectors/images are trivially N for a continuous rival; factor_tuples is the comparable diversity count"
+    },
+    "external": {
+      "composition_B": {
+        "aggregate": 0.9768518518518517,
+        "compositional_factor": "shape",
+        "exact_match": 0.875,
+        "n": 72,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "object_hue": 1.0,
+          "orientation": 0.9027777777777778,
+          "scale": 1.0,
+          "shape": 0.9583333333333334,
+          "wall_hue": 1.0
+        }
+      },
+      "in_corner": {
+        "auroc": 0.9981155778894473,
+        "balanced_accuracy": 0.9716289782244556,
+        "detection_rate": 0.9583333333333334,
+        "n_neg": 199,
+        "n_pos": 72,
+        "sufficient": true,
+        "target": 1,
+        "tnr": 0.9849246231155779,
+        "tpr": 0.9583333333333334
+      }
+    },
+    "generation": 2,
+    "probe": {
+      "composition_B": {
+        "aggregate": 0.9861111111111112,
+        "compositional_factor": "shape",
+        "exact_match": 0.9166666666666666,
+        "n": 72,
+        "per_factor": {
+          "floor_hue": 1.0,
+          "object_hue": 1.0,
+          "orientation": 0.9166666666666666,
+          "scale": 1.0,
+          "shape": 1.0,
+          "wall_hue": 1.0
+        }
+      },
+      "in_corner": {
+        "auroc": 0.9960217755443886,
+        "balanced_accuracy": 0.9824120603015075,
+        "detection_rate": 1.0,
+        "n_neg": 199,
+        "n_pos": 72,
+        "sufficient": true,
+        "target": 1,
+        "tnr": 0.964824120603015,
+        "tpr": 1.0
+      }
+    }
+  },
+  "trained_on": "fully specified six-factor requests only",
+  "tuning": {
+    "budget": 8,
+    "criterion": "validation MSE against the cached feature. Two stages: lr x weight-decay on the short schedule, then the epoch axis at FULL length, because an axis selected on a schedule that does not vary it is selected by noise.",
+    "entitled": 36,
+    "full_trials": [
+      {
+        "epochs": 20,
+        "full_val_mse": 0.023401327431201935,
+        "lr": 0.003,
+        "weight_decay": 0.0001
+      },
+      {
+        "epochs": 40,
+        "full_val_mse": 0.020103663206100464,
+        "lr": 0.003,
+        "weight_decay": 0.0001
+      }
+    ],
+    "realised": 8,
+    "selected": {
+      "epochs": 40,
+      "full_val_mse": 0.020103663206100464,
+      "lr": 0.003,
+      "weight_decay": 0.0001
+    },
+    "short_trials": [
+      {
+        "lr": 0.0003,
+        "short_val_mse": 0.1558559238910675,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.0003,
+        "short_val_mse": 0.1556248664855957,
+        "weight_decay": 0.0001
+      },
+      {
+        "lr": 0.001,
+        "short_val_mse": 0.05458303540945053,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.001,
+        "short_val_mse": 0.054618388414382935,
+        "weight_decay": 0.0001
+      },
+      {
+        "lr": 0.003,
+        "short_val_mse": 0.038263317197561264,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.003,
+        "short_val_mse": 0.03793460875749588,
+        "weight_decay": 0.0001
+      }
+    ],
+    "trials": [
+      {
+        "lr": 0.0003,
+        "short_val_mse": 0.1558559238910675,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.0003,
+        "short_val_mse": 0.1556248664855957,
+        "weight_decay": 0.0001
+      },
+      {
+        "lr": 0.001,
+        "short_val_mse": 0.05458303540945053,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.001,
+        "short_val_mse": 0.054618388414382935,
+        "weight_decay": 0.0001
+      },
+      {
+        "lr": 0.003,
+        "short_val_mse": 0.038263317197561264,
+        "weight_decay": 0.0
+      },
+      {
+        "lr": 0.003,
+        "short_val_mse": 0.03793460875749588,
+        "weight_decay": 0.0001
+      },
+      {
+        "epochs": 20,
+        "full_val_mse": 0.023401327431201935,
+        "lr": 0.003,
+        "weight_decay": 0.0001
+      },
+      {
+        "epochs": 40,
+        "full_val_mse": 0.020103663206100464,
+        "lr": 0.003,
+        "weight_decay": 0.0001
+      }
+    ]
+  },
+  "use_for": [
+    "rows 3 and 4 - the pair and n-way corners, whose runner builds FULL six-factor requests"
+  ],
+  "val_mse_full_schedule": 0.020103663206100464,
+  "val_mse_partial_requests": 0.1055147796869278,
+  "variant": "full_only",
+  "wall_clock_s": 296.5240249633789,
+  "width": 84
+}

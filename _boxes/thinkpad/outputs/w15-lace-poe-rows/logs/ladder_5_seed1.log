@@ -1,0 +1,53 @@
+[     0.0s] chlu.__file__ = C:\chlu\worktrees\CHLU-w15-lace-poe-rows\chlu\__init__.py
+[     0.0s] rung=5 seed=1 cache gen 2 scope full
+[     9.0s] corners: {'n_corners': 120, 'n_rows': 8640, 'pairwise_disjoint': True, 'all_rows_held_out': True, 'rows_per_corner': [72]}
+[    17.2s] fit 32256 / val 512 rows (stratified, from the ladder pool's first 32768)
+[    17.4s]   judge: decoder 001011bc603a (v1_capacity_schedule) + classifier aa69b436989b
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[  1474.2s]   [lace] 36-trial selection done in 1427s: {'sigma': 0.03, 'form': 'both', 'shrinkage': '1e-3', 'val_aggregate': 0.2975260416666667}
+[  3937.5s]   [lace] classifier 4073663 params, own val mean 0.9977; budget {'classifier_params': 4073663, 'whitening_floats': 4196352, 'deployed_bytes_classifier_only': 16294652, 'deployed_bytes_classifier_plus_whitening': 33080060, 'x_store_reference_classifier_only': 31.08, 'x_store_reference_with_whitening': 63.095, 'fit_rows': 32256, 'val_rows': 512, 'epochs': 50, 'steps': 12600, 'tuning_trials': 36, 'tune_epochs': 6, 'tune_ld_steps': 30, 'tune_n': 256, 'sampler': 'ode (dopri5, the PRIMARY sampler)', 'convention': 'float32 parameters x 4 B; the classifier alone and classifier + whitening are BOTH printed; ⛔ never matched to the store'}
+[ 12078.4s]   lace   novel 0.1417  judge_acc 0.0020  in 12031s (score 8141s)
+[ 14105.4s]   [poe] 6 experts, 3556665 params, own val [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]; selected {'step_size': 0.01, 'prior_sigma': 1.0, 'n_steps': 200, 'clip': False, 'val_aggregate': 0.18489583333333334} (2027s)
+[ 14818.4s]   poe    novel 0.0083  judge_acc 0.0001  in 2740s (score 713s)
+[ 14818.4s] leg done -> C:\chlu\outputs\w15-lace-poe-rows\ladder\5_seed1 failed=[]

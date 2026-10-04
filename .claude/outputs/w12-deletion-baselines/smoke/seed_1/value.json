@@ -1,0 +1,1021 @@
+{
+  "counts": {
+    "deleted_fraction": 0.08251953125,
+    "n_deleted": 1352,
+    "n_fit_after": 15032,
+    "n_fit_before": 16384
+  },
+  "matched_compute": {
+    "gradient_row_visits": 296960,
+    "matched": true,
+    "per_arm": {
+      "cont_mlp/finetune": 296960,
+      "cont_mlp/neggrad": 296960,
+      "lstm/finetune": 296960,
+      "lstm/neggrad": 296960,
+      "mlp/finetune": 296960,
+      "mlp/neggrad": 296960,
+      "transformer/finetune": 296960,
+      "transformer/neggrad": 296960
+    }
+  },
+  "records": {
+    "cont_mlp__as_trained@value-object_hue-0": {
+      "arm": "cont_mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\cont_mlp__as_trained.rival.json",
+      "cost": {
+        "bytes_rewritten": 527564,
+        "data_rows_read": 16384,
+        "gradient_row_visits": 327680,
+        "note": "the arm as trained on the FULL fit pool; it has not deleted anything and its cost is the build cost, printed so the deletion costs below are readable against it",
+        "param_bytes_changed": null,
+        "passes_over_data": 20.0,
+        "seconds": 12.989
+      },
+      "kind": "as_trained",
+      "name_on_disk": "cont_mlp__as_trained",
+      "param_count": 131891,
+      "param_error": 0.00624847412109375,
+      "smoke": {
+        "forget_feature_mse": 0.1788349598646164,
+        "forget_minus_retain": 0.011247515678405762,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.16758744418621063
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "cont_mlp__retrain_without__value-object_hue-0": {
+      "arm": "cont_mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\cont_mlp__retrain_without__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "epochs": 20,
+        "gradient_row_visits": 296960,
+        "steps": 1160,
+        "steps_per_epoch": 58
+      },
+      "cost": {
+        "bytes_rewritten": 527564,
+        "data_rows_read": 15032,
+        "gradient_row_visits": 296960,
+        "note": "EXACT REFERENCE: the deleted rows were never in this pool. Every parameter byte is new, so bytes_rewritten is the whole arm; data_rows_read is every surviving row and it is read once per epoch (passes_over_data). 0.54 s of the total is the feature read.",
+        "param_bytes_changed": 527564,
+        "passes_over_data": 20.0,
+        "seconds": 13.586
+      },
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.1676492989063263,
+        "loss_first": 0.5694555640220642,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "retrain_without",
+      "param_count": 131891,
+      "param_error": 0.00624847412109375,
+      "smoke": {
+        "forget_feature_mse": 0.2063189446926117,
+        "forget_minus_retain": 0.0392460972070694,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.1670728474855423
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "cont_mlp__unlearn_finetune__value-object_hue-0": {
+      "arm": "cont_mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\cont_mlp__unlearn_finetune__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 296960,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 296960,
+          "steps": 1160,
+          "steps_per_epoch": 58
+        },
+        "steps": 1160
+      },
+      "cost": {
+        "bytes_rewritten": 527564,
+        "data_rows_read": 1352,
+        "gradient_row_visits": 296960,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 296,960 gradient row-visits the exact retrain of this arm was given, spent on 1352 distinct rows instead of 15032. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.05 s of the total is the feature read.",
+        "param_bytes_changed": 527564,
+        "passes_over_data": 219.645,
+        "seconds": 8.3353
+      },
+      "fit": {
+        "loss_final": 0.12132713198661804,
+        "loss_first": 0.16573123633861542,
+        "lr": 0.001,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_finetune",
+      "neggrad_ceiling_measured": 0.5700307488441467,
+      "param_count": 131891,
+      "param_error": 0.00624847412109375,
+      "smoke": {
+        "forget_feature_mse": 0.1635974943637848,
+        "forget_minus_retain": 0.04021575301885605,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.12338174134492874
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "cont_mlp__unlearn_neggrad__value-object_hue-0": {
+      "arm": "cont_mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\cont_mlp__unlearn_neggrad__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 296960,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 296960,
+          "steps": 1160,
+          "steps_per_epoch": 58
+        },
+        "steps": 1160
+      },
+      "cost": {
+        "bytes_rewritten": 527564,
+        "data_rows_read": 2704,
+        "gradient_row_visits": 296960,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 296,960 gradient row-visits the exact retrain of this arm was given, spent on 2704 distinct rows instead of 15032. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.04 s of the total is the feature read.",
+        "param_bytes_changed": 527564,
+        "passes_over_data": 109.8225,
+        "seconds": 11.8454
+      },
+      "fit": {
+        "loss_final": 0.21604686975479126,
+        "loss_first": 0.5543676614761353,
+        "lr": 0.001,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_neggrad",
+      "neggrad_ceiling_measured": 0.5700307488441467,
+      "param_count": 131891,
+      "param_error": 0.00624847412109375,
+      "smoke": {
+        "forget_feature_mse": 0.57449871301651,
+        "forget_minus_retain": 0.3651861399412155,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.2093125730752945
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "lstm__as_trained@value-object_hue-0": {
+      "arm": "lstm",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\lstm__as_trained.rival.json",
+      "cost": {
+        "bytes_rewritten": 522884,
+        "data_rows_read": 16384,
+        "gradient_row_visits": 327680,
+        "note": "the arm as trained on the FULL fit pool; it has not deleted anything and its cost is the build cost, printed so the deletion costs below are readable against it",
+        "param_bytes_changed": null,
+        "passes_over_data": 20.0,
+        "seconds": 29.0359
+      },
+      "kind": "as_trained",
+      "name_on_disk": "lstm__as_trained",
+      "param_count": 130721,
+      "param_error": -0.00267791748046875,
+      "smoke": {
+        "forget_feature_mse": 0.04828880354762077,
+        "forget_minus_retain": 4.7616660594940186e-05,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.04824118688702583
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "lstm__retrain_without__value-object_hue-0": {
+      "arm": "lstm",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\lstm__retrain_without__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "epochs": 20,
+        "gradient_row_visits": 296960,
+        "steps": 1160,
+        "steps_per_epoch": 58
+      },
+      "cost": {
+        "bytes_rewritten": 522884,
+        "data_rows_read": 15032,
+        "gradient_row_visits": 296960,
+        "note": "EXACT REFERENCE: the deleted rows were never in this pool. Every parameter byte is new, so bytes_rewritten is the whole arm; data_rows_read is every surviving row and it is read once per epoch (passes_over_data). 0.29 s of the total is the feature read.",
+        "param_bytes_changed": 522884,
+        "passes_over_data": 20.0,
+        "seconds": 19.9123
+      },
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.049959782510995865,
+        "loss_first": 0.53119295835495,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "retrain_without",
+      "param_count": 130721,
+      "param_error": -0.00267791748046875,
+      "smoke": {
+        "forget_feature_mse": 0.07010169327259064,
+        "forget_minus_retain": 0.019735388457775116,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.05036630481481552
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "lstm__unlearn_finetune__value-object_hue-0": {
+      "arm": "lstm",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\lstm__unlearn_finetune__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 296960,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 296960,
+          "steps": 1160,
+          "steps_per_epoch": 58
+        },
+        "steps": 1160
+      },
+      "cost": {
+        "bytes_rewritten": 522884,
+        "data_rows_read": 1352,
+        "gradient_row_visits": 296960,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 296,960 gradient row-visits the exact retrain of this arm was given, spent on 1352 distinct rows instead of 15032. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.04 s of the total is the feature read.",
+        "param_bytes_changed": 521048,
+        "passes_over_data": 219.645,
+        "seconds": 17.4244
+      },
+      "fit": {
+        "loss_final": 0.025707624852657318,
+        "loss_first": 0.04676574468612671,
+        "lr": 0.001,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_finetune",
+      "neggrad_ceiling_measured": 0.5379928350448608,
+      "param_count": 130721,
+      "param_error": -0.00267791748046875,
+      "smoke": {
+        "forget_feature_mse": 0.03680236637592316,
+        "forget_minus_retain": 0.007796412333846092,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.029005954042077065
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "lstm__unlearn_neggrad__value-object_hue-0": {
+      "arm": "lstm",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\lstm__unlearn_neggrad__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 296960,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 296960,
+          "steps": 1160,
+          "steps_per_epoch": 58
+        },
+        "steps": 1160
+      },
+      "cost": {
+        "bytes_rewritten": 522884,
+        "data_rows_read": 2704,
+        "gradient_row_visits": 296960,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 296,960 gradient row-visits the exact retrain of this arm was given, spent on 2704 distinct rows instead of 15032. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.05 s of the total is the feature read.",
+        "param_bytes_changed": 521252,
+        "passes_over_data": 109.8225,
+        "seconds": 15.1861
+      },
+      "fit": {
+        "loss_final": 0.04064405709505081,
+        "loss_first": 0.5365035533905029,
+        "lr": 0.001,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_neggrad",
+      "neggrad_ceiling_measured": 0.5379928350448608,
+      "param_count": 130721,
+      "param_error": -0.00267791748046875,
+      "smoke": {
+        "forget_feature_mse": 0.6349020600318909,
+        "forget_minus_retain": 0.592847190797329,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.04205486923456192
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "mlp__as_trained@value-object_hue-0": {
+      "arm": "mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\mlp__as_trained.rival.json",
+      "cost": {
+        "bytes_rewritten": 522056,
+        "data_rows_read": 16384,
+        "gradient_row_visits": 327680,
+        "note": "the arm as trained on the FULL fit pool; it has not deleted anything and its cost is the build cost, printed so the deletion costs below are readable against it",
+        "param_bytes_changed": null,
+        "passes_over_data": 20.0,
+        "seconds": 13.141
+      },
+      "kind": "as_trained",
+      "name_on_disk": "mlp__as_trained",
+      "param_count": 130514,
+      "param_error": -0.0042572021484375,
+      "smoke": {
+        "forget_feature_mse": 0.04528210312128067,
+        "forget_minus_retain": -0.0013135336339473724,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.04659563675522804
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "mlp__retrain_without__value-object_hue-0": {
+      "arm": "mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\mlp__retrain_without__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "epochs": 20,
+        "gradient_row_visits": 296960,
+        "steps": 1160,
+        "steps_per_epoch": 58
+      },
+      "cost": {
+        "bytes_rewritten": 522056,
+        "data_rows_read": 15032,
+        "gradient_row_visits": 296960,
+        "note": "EXACT REFERENCE: the deleted rows were never in this pool. Every parameter byte is new, so bytes_rewritten is the whole arm; data_rows_read is every surviving row and it is read once per epoch (passes_over_data). 0.62 s of the total is the feature read.",
+        "param_bytes_changed": 522056,
+        "passes_over_data": 20.0,
+        "seconds": 16.7421
+      },
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.046315088868141174,
+        "loss_first": 0.5286051034927368,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "retrain_without",
+      "param_count": 130514,
+      "param_error": -0.0042572021484375,
+      "smoke": {
+        "forget_feature_mse": 0.08834360539913177,
+        "forget_minus_retain": 0.04064089059829712,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.047702714800834656
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "mlp__unlearn_finetune__value-object_hue-0": {
+      "arm": "mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\mlp__unlearn_finetune__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 296960,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 296960,
+          "steps": 1160,
+          "steps_per_epoch": 58
+        },
+        "steps": 1160
+      },
+      "cost": {
+        "bytes_rewritten": 522056,
+        "data_rows_read": 1352,
+        "gradient_row_visits": 296960,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 296,960 gradient row-visits the exact retrain of this arm was given, spent on 1352 distinct rows instead of 15032. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.06 s of the total is the feature read.",
+        "param_bytes_changed": 521324,
+        "passes_over_data": 219.645,
+        "seconds": 8.4169
+      },
+      "fit": {
+        "loss_final": 0.027134772390127182,
+        "loss_first": 0.04478800296783447,
+        "lr": 0.001,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_finetune",
+      "neggrad_ceiling_measured": 0.5341706871986389,
+      "param_count": 130514,
+      "param_error": -0.0042572021484375,
+      "smoke": {
+        "forget_feature_mse": 0.037040986120700836,
+        "forget_minus_retain": 0.006596850231289864,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.030444135889410973
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "mlp__unlearn_neggrad__value-object_hue-0": {
+      "arm": "mlp",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\mlp__unlearn_neggrad__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 296960,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 296960,
+          "steps": 1160,
+          "steps_per_epoch": 58
+        },
+        "steps": 1160
+      },
+      "cost": {
+        "bytes_rewritten": 522056,
+        "data_rows_read": 2704,
+        "gradient_row_visits": 296960,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 296,960 gradient row-visits the exact retrain of this arm was given, spent on 2704 distinct rows instead of 15032. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.08 s of the total is the feature read.",
+        "param_bytes_changed": 521568,
+        "passes_over_data": 109.8225,
+        "seconds": 11.9955
+      },
+      "fit": {
+        "loss_final": 0.04295516759157181,
+        "loss_first": 0.5334012508392334,
+        "lr": 0.001,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_neggrad",
+      "neggrad_ceiling_measured": 0.5341706871986389,
+      "param_count": 130514,
+      "param_error": -0.0042572021484375,
+      "smoke": {
+        "forget_feature_mse": 0.5488175749778748,
+        "forget_minus_retain": 0.504184041172266,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.04463353380560875
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "transformer__as_trained@value-object_hue-0": {
+      "arm": "transformer",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\transformer__as_trained.rival.json",
+      "cost": {
+        "bytes_rewritten": 521732,
+        "data_rows_read": 16384,
+        "gradient_row_visits": 327680,
+        "note": "the arm as trained on the FULL fit pool; it has not deleted anything and its cost is the build cost, printed so the deletion costs below are readable against it",
+        "param_bytes_changed": null,
+        "passes_over_data": 20.0,
+        "seconds": 56.6387
+      },
+      "kind": "as_trained",
+      "name_on_disk": "transformer__as_trained",
+      "param_count": 130433,
+      "param_error": -0.00487518310546875,
+      "smoke": {
+        "forget_feature_mse": 0.05588587746024132,
+        "forget_minus_retain": 0.0003157369792461395,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.05557014048099518
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "transformer__refuse_token__value-object_hue-0": {
+      "applicability": {
+        "applies": true,
+        "n_certified_impossible": 1352,
+        "n_deleted_requests_tested": 1352,
+        "reasons": [
+          "deleted_value"
+        ],
+        "why": "a refusal row needs at least one request the post-deletion pool can never answer. 1352 of 1352 requests built from the deleted rows are certified impossible."
+      },
+      "arm": "transformer",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\transformer__refuse_token__value-object_hue-0.rival.eqx",
+      "cost": {
+        "bytes_rewritten": 521916,
+        "data_rows_read": 4096,
+        "gradient_row_visits": 92160,
+        "note": "the ONLY permitted comparator for refusal DISPLAY rows. Trained on EXACTLY-CERTIFIED impossible examples (1352 deleted-row requests + 0 out-of-range), with NO tuning loop.",
+        "param_bytes_changed": 521916,
+        "passes_over_data": 22.5,
+        "seconds": 12.1854
+      },
+      "fit": {
+        "loss_final": 0.19272547960281372,
+        "loss_first": 1.6199960708618164,
+        "lr": 0.001,
+        "steps": 360,
+        "weight_decay": 0.0
+      },
+      "kind": "refuse_token",
+      "out_of_range_diagnostic": {
+        "separation": {
+          "auroc": 0.8747382164001465,
+          "by_reason": {
+            "deleted_value": {
+              "mean_score": 0.9906402453368877,
+              "n": 499,
+              "refuse_rate": 1.0
+            },
+            "out_of_range": {
+              "mean_score": 0.4968946811021284,
+              "n": 525,
+              "refuse_rate": 0.4361904761904762
+            }
+          },
+          "false_refusal_on_possible": 0.126953125,
+          "mean_score_impossible": 0.737499208986059,
+          "mean_score_possible": 0.26579099020595864,
+          "n": 2048,
+          "n_impossible": 1024,
+          "n_possible": 1024,
+          "refuse_rate_on_impossible": 0.7109375,
+          "separation": 0.4717082187801004,
+          "threshold": 0.5,
+          "w9_reference": "w9's refuser separated at +0.047 (cmaze1) / +0.020 (easy) and a ridge probe on the same observation scored at chance. A poor separation here is a FINDING, not a bug, and is not tuned away."
+        },
+        "sets": {
+          "certifier": "exact: integer index membership against the factor grid and the KEPT pool's value-presence bitmap, plus the deletion's own terms. No tolerance and no model anywhere in it.",
+          "include_out_of_range": true,
+          "n_impossible": 2048,
+          "n_impossible_deleted": 1024,
+          "n_impossible_out_of_range": 1024,
+          "n_possible": 2048,
+          "train_eval_overlap": 0
+        },
+        "why": "DECLARED DIAGNOSTIC, not the primary. A `tokens` input is a closed vocabulary of grid classes, so an off-grid request is encoded as its nearest grid class and this family CANNOT see out-of-range-ness. The number is printed so the structural limit is a measurement rather than a paragraph."
+      },
+      "param_count": 130479,
+      "param_error": -0.00452423095703125,
+      "separation": {
+        "auroc": 1.0,
+        "by_reason": {
+          "deleted_value": {
+            "mean_score": 0.9958969232427558,
+            "n": 676,
+            "refuse_rate": 1.0
+          }
+        },
+        "false_refusal_on_possible": 0.0,
+        "mean_score_impossible": 0.9958969232427558,
+        "mean_score_possible": 0.0034957994684957634,
+        "n": 4772,
+        "n_impossible": 676,
+        "n_possible": 4096,
+        "refuse_rate_on_impossible": 1.0,
+        "separation": 0.99240112377426,
+        "threshold": 0.5,
+        "w9_reference": "w9's refuser separated at +0.047 (cmaze1) / +0.020 (easy) and a ridge probe on the same observation scored at chance. A poor separation here is a FINDING, not a bug, and is not tuned away."
+      },
+      "sets": {
+        "certifier": "exact: integer index membership against the factor grid and the KEPT pool's value-presence bitmap, plus the deletion's own terms. No tolerance and no model anywhere in it.",
+        "include_out_of_range": false,
+        "n_impossible": 1352,
+        "n_impossible_deleted": 1352,
+        "n_impossible_out_of_range": 0,
+        "n_possible": 8192,
+        "train_eval_overlap": 0
+      },
+      "smoke": {
+        "false_refusal_on_surviving_requests": 0.0,
+        "forget_feature_mse": 1.1368964910507202,
+        "forget_minus_retain": 0.9471444189548492,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "refuse_rate_on_deleted_requests": 1.0,
+        "refuse_score_on_deleted_requests": 0.9959050778052005,
+        "refuse_score_on_surviving_requests": 0.003510982597109505,
+        "retain_feature_mse": 0.18975207209587097
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "transformer__retrain_without__value-object_hue-0": {
+      "arm": "transformer",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\transformer__retrain_without__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "epochs": 20,
+        "gradient_row_visits": 296960,
+        "steps": 1160,
+        "steps_per_epoch": 58
+      },
+      "cost": {
+        "bytes_rewritten": 521732,
+        "data_rows_read": 15032,
+        "gradient_row_visits": 296960,
+        "note": "EXACT REFERENCE: the deleted rows were never in this pool. Every parameter byte is new, so bytes_rewritten is the whole arm; data_rows_read is every surviving row and it is read once per epoch (passes_over_data). 0.37 s of the total is the feature read.",
+        "param_bytes_changed": 521732,
+        "passes_over_data": 20.0,
+        "seconds": 37.1417
+      },
+      "fit": {
+        "batch": 256,
+        "epochs": 20,
+        "loss_final": 0.05608876049518585,
+        "loss_first": 0.8462145328521729,
+        "lr": 0.001,
+        "p_full_request": 1.0,
+        "request_dropout": false,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "retrain_without",
+      "param_count": 130433,
+      "param_error": -0.00487518310546875,
+      "smoke": {
+        "forget_feature_mse": 0.12374687194824219,
+        "forget_minus_retain": 0.0660860687494278,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.05766080319881439
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "transformer__unlearn_finetune__value-object_hue-0": {
+      "arm": "transformer",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\transformer__unlearn_finetune__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 296960,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 296960,
+          "steps": 1160,
+          "steps_per_epoch": 58
+        },
+        "steps": 1160
+      },
+      "cost": {
+        "bytes_rewritten": 521732,
+        "data_rows_read": 1352,
+        "gradient_row_visits": 296960,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 296,960 gradient row-visits the exact retrain of this arm was given, spent on 1352 distinct rows instead of 15032. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.06 s of the total is the feature read.",
+        "param_bytes_changed": 520112,
+        "passes_over_data": 219.645,
+        "seconds": 28.9665
+      },
+      "fit": {
+        "loss_final": 0.025538653135299683,
+        "loss_first": 0.053812768310308456,
+        "lr": 0.001,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_finetune",
+      "neggrad_ceiling_measured": 0.8655803799629211,
+      "param_count": 130433,
+      "param_error": -0.00487518310546875,
+      "smoke": {
+        "forget_feature_mse": 0.037484023720026016,
+        "forget_minus_retain": 0.009168146178126335,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.02831587754189968
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    },
+    "transformer__unlearn_neggrad__value-object_hue-0": {
+      "arm": "transformer",
+      "checkpoint": "C:\\chlu\\outputs\\w12-deletion-baselines\\comparators\\seed_1\\transformer__unlearn_neggrad__value-object_hue-0.rival.eqx",
+      "compute": {
+        "batch": 256,
+        "definition": "matched compute = the SAME gradient row-visits (steps x batch) the exact retrain of the SAME arm was given. Matched UPWARDS to the exact reference, never downwards to our own data-free adaptation.",
+        "fraction": 1.0,
+        "gradient_row_visits": 296960,
+        "reference": {
+          "batch": 256,
+          "epochs": 20,
+          "gradient_row_visits": 296960,
+          "steps": 1160,
+          "steps_per_epoch": 58
+        },
+        "steps": 1160
+      },
+      "cost": {
+        "bytes_rewritten": 521732,
+        "data_rows_read": 2704,
+        "gradient_row_visits": 296960,
+        "note": "APPROXIMATE UNLEARNING at MATCHED COMPUTE: the same 296,960 gradient row-visits the exact retrain of this arm was given, spent on 2704 distinct rows instead of 15032. bytes_rewritten is the whole arm; param_bytes_changed is MEASURED against the as-trained checkpoint. 0.12 s of the total is the feature read.",
+        "param_bytes_changed": 520292,
+        "passes_over_data": 109.8225,
+        "seconds": 39.4031
+      },
+      "fit": {
+        "loss_final": 0.046628862619400024,
+        "loss_first": 0.8629702925682068,
+        "lr": 0.001,
+        "steps": 1160,
+        "weight_decay": 0.0
+      },
+      "kind": "unlearn_neggrad",
+      "neggrad_ceiling_measured": 0.8655803799629211,
+      "param_count": 130433,
+      "param_error": -0.00487518310546875,
+      "smoke": {
+        "forget_feature_mse": 1.11931574344635,
+        "forget_minus_retain": 1.0717704109847546,
+        "n_forget": 1352,
+        "n_retain": 1352,
+        "out_of_range_forget": 0,
+        "out_of_range_retain": 0,
+        "retain_feature_mse": 0.047545332461595535
+      },
+      "spec": {
+        "fraction": 0.0,
+        "human": "object_hue = 0",
+        "kind": "value",
+        "label": "value-object_hue-0",
+        "rng_seed": 0,
+        "terms": [
+          [
+            2,
+            0
+          ]
+        ]
+      }
+    }
+  },
+  "spec": {
+    "fraction": 0.0,
+    "human": "object_hue = 0",
+    "kind": "value",
+    "label": "value-object_hue-0",
+    "rng_seed": 0,
+    "terms": [
+      [
+        2,
+        0
+      ]
+    ]
+  }
+}

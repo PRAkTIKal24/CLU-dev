@@ -1,0 +1,115 @@
+{
+ "arm": "knn_proto",
+ "base": "knn_proto",
+ "content": "P",
+ "set": "pairs",
+ "set_label": "the 3 pair corners (seeded subsample of 1176/corner, declared)",
+ "spec": {
+  "name": "P",
+  "blocks": [
+   "p"
+  ],
+  "half_channels": [],
+  "shuffle": [],
+  "shuffle_seed": 0,
+  "D": 2048,
+  "n_atoms": 64,
+  "store_bytes": 524288,
+  "budget_bytes": 524288,
+  "byte_matched": true,
+  "dims_per_block": {
+   "p": 2048
+  },
+  "bytes_formula": "n_atoms * D * 4",
+  "note": "THE INCUMBENT CONTENT: the penultimate map alone, 64 atoms. Every number in the programme so far was measured on this."
+ },
+ "n_requests": 3528,
+ "seed": 0,
+ "rows": {
+  "full": {
+   "n": 3528,
+   "aggregate": 0.7691326530612245,
+   "exact_match": 0.13378684807256236,
+   "per_factor": {
+    "floor_hue": 1.0,
+    "wall_hue": 1.0,
+    "object_hue": 1.0,
+    "scale": 0.28996598639455784,
+    "shape": 0.5354308390022676,
+    "orientation": 0.7893990929705216
+   },
+   "launch_mode": "knn_proto",
+   "per_corner": {
+    "pair-000": {
+     "n": 1176,
+     "aggregate": 0.7263321995464853,
+     "exact_match": 0.0782312925170068,
+     "per_factor": {
+      "floor_hue": 1.0,
+      "wall_hue": 1.0,
+      "object_hue": 1.0,
+      "scale": 0.2729591836734694,
+      "shape": 0.30272108843537415,
+      "orientation": 0.782312925170068
+     },
+     "distinct_valid_tuples": 92,
+     "distinct_valid_novel_tuples": 92,
+     "replayed_seen_tuples": 0,
+     "n_valid": 92
+    },
+    "pair-001": {
+     "n": 1176,
+     "aggregate": 0.7687074829931974,
+     "exact_match": 0.1360544217687075,
+     "per_factor": {
+      "floor_hue": 1.0,
+      "wall_hue": 1.0,
+      "object_hue": 1.0,
+      "scale": 0.28656462585034015,
+      "shape": 0.5391156462585034,
+      "orientation": 0.7865646258503401
+     },
+     "distinct_valid_tuples": 160,
+     "distinct_valid_novel_tuples": 160,
+     "replayed_seen_tuples": 0,
+     "n_valid": 160
+    },
+    "pair-002": {
+     "n": 1176,
+     "aggregate": 0.812358276643991,
+     "exact_match": 0.1870748299319728,
+     "per_factor": {
+      "floor_hue": 1.0,
+      "wall_hue": 1.0,
+      "object_hue": 1.0,
+      "scale": 0.31037414965986393,
+      "shape": 0.7644557823129252,
+      "orientation": 0.7993197278911565
+     },
+     "distinct_valid_tuples": 220,
+     "distinct_valid_novel_tuples": 220,
+     "replayed_seen_tuples": 0,
+     "n_valid": 220
+    }
+   }
+  }
+ },
+ "byte_ledger": {
+  "deployed_bytes": 475136,
+  "budget_bytes": 524288,
+  "what": "knn_proto: (Sigma_f V_f + 1) prototypes x D float32",
+  "budget_note": "DECLARED MISMATCH: 475,136 B against the 524,288 B budget (0.906x). The prototype table is this arm's whole deployed object and it is not byte-matchable at tolerance 0 without changing what the arm IS. It is the SECOND control for this reason; basis_head is the like-for-like.",
+  "n_prototypes": 57,
+  "dim": 2048,
+  "dtype": "float32",
+  "bytes_formula": "(sum_k C_k + 1) * D * 4",
+  "bytes": 475136,
+  "role": "request embedding == the kNN arm's ADDRESSING HEAD; the store's own byte count excludes the CLU addressing head by the same convention"
+ },
+ "provenance": {
+  "rule": "mu_global + sum_terms (mu_kv - mu_global)",
+  "D": 2048,
+  "seed": 0
+ },
+ "wall_seconds": 44.196460008621216
+}

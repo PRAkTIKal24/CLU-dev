@@ -1,0 +1,123 @@
+[01:10:15] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[01:10:15]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[01:10:15]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:10:52] ⭐ assertions PASS: request-only (independent re-implementation max|delta| 1.67e-06), no-bypass (pure codebook gather True)
+[01:11:01] [c0] modes=0.9097(61) atoms=0.7986 pca=0.8310 random=0.6829 mean=0.2130 | clu_argmax=0.6157(20) knn=0.7801(53) | total=469504 [45.1s]
+[01:11:43] [c1] modes=0.8773(51) atoms=0.9190 pca=0.6759 random=0.8773 mean=0.3148 | clu_argmax=0.6921(21) knn=0.9190(50) | total=469504 [42.1s]
+[01:12:25] [c2] modes=0.8912(61) atoms=0.8843 pca=0.5741 random=0.5880 mean=0.1944 | clu_argmax=0.5833(11) knn=0.8750(49) | total=469504 [41.2s]
+[01:13:08] [c3] modes=0.8125(48) atoms=0.8125 pca=0.8241 random=0.5926 mean=0.1806 | clu_argmax=0.5000(26) knn=0.8287(48) | total=469504 [43.0s]
+[01:13:53] [c4] modes=0.8935(59) atoms=0.8310 pca=0.6736 random=0.6088 mean=0.3056 | clu_argmax=0.6366(18) knn=0.8889(50) | total=469504 [45.2s]
+[01:14:32] [c5] modes=0.6852(59) atoms=0.6019 pca=0.7870 random=0.7106 mean=0.2685 | clu_argmax=0.5000(17) knn=0.6898(57) | total=469504 [39.2s]
+[01:15:15] [c6] modes=0.8981(51) atoms=0.7963 pca=0.7986 random=0.5995 mean=0.2940 | clu_argmax=0.6551(33) knn=0.8727(55) | total=469504 [43.3s]
+[01:15:58] [c7] modes=0.8519(43) atoms=0.8171 pca=0.5718 random=0.4699 mean=0.4306 | clu_argmax=0.6157(20) knn=0.8495(43) | total=469504 [42.6s]
+Traceback (most recent call last):
+  File "C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-generation-table\dev\exp24_final.py", line 80, in <module>
+    s = dev.dev_setup(c, corner)
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\hub-generation-table\dev\dev.py", line 66, in dev_setup
+    assert np.intersect1d(dev_rows, A).size == 0
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+exit=1
+[01:39:35] bridge C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.claude\outputs\gen-feature-bridge\runs\shapes3d_recon\seed_0
+[01:39:35]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+[01:39:35]   ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+[01:39:36] corner 0 already done
+[01:39:36] corner 1 already done
+[01:39:36] corner 2 already done
+[01:39:36] corner 3 already done
+[01:39:36] corner 4 already done
+[01:39:36] corner 5 already done
+[01:39:36] corner 6 already done
+[01:39:36] corner 7 already done
+[01:39:36] corner 8 SKIPPED — ⛔ DEV corner {'hue_lo': 0.6, 'scale_hi': False, 'shape_value': 2.0, 'orient_hi': True} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+[01:39:36] corner 9 SKIPPED — ⛔ DEV corner {'hue_lo': 0.2, 'scale_hi': False, 'shape_value': 0.0, 'orient_hi': False} intersects the held-out sets: eval_b 0 rows, eval_a 1 rows — REFUSED
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[01:40:20] [c10] modes=0.8264(33) atoms=0.8056 pca=0.7060 random=0.5856 mean=0.2199 | clu_argmax=0.6968(18) knn=0.8241(38) | total=469504 [43.4s]
+[01:41:03] [c11] modes=0.8218(54) atoms=0.6551 pca=0.5995 random=0.7731 mean=0.4213 | clu_argmax=0.7106(23) knn=0.8681(48) | total=469504 [43.2s]
+[01:41:03] [FINAL n=10] modes=0.8468±0.0633(52.0) | knn=0.8396±0.0619(49.1) Dknn=+0.0072 (6/10) | atoms=0.7921 Datoms=+0.0546 (8/10) | pca=0.7042 random=0.6488 mean=0.2843 | clu_argmax=0.6206(20.7) | best_const=0.5278 | total_bytes=469504
+[01:41:03] done in 94.9s -> C:/Users/PratikJawahar/chlu/chlu-bundle-v2/.claude/outputs/hub-generation-table\dev\exp24_seed0.json
+exit=0

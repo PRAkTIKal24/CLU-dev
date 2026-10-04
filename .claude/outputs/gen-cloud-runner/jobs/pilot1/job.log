@@ -1,0 +1,225 @@
+=== chlu startup 2026-09-15T20:23:02Z on chlu-pilot1 ===
+job=pilot1 exp=cluformer units=[0 1 2] image=us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:010435659b510551b64d2008361ac5c906bf127246d0d4fc678b8c204385c44c remote=gs://chlu-cloud-forgisprova/jobs zone=us-central1-a
+exp_args=[--stage s1 --scale toy] artefacts=[] commit=5ed3471e2c07c509f2555107000a00a280083973
+[exp] cluformer -> module=chlu.experiments.exp_cluformer_pilot out_mode=sweep needs_artefacts=0
+[resume] restoring gs://chlu-cloud-forgisprova/jobs/pilot1/out -> /var/chlu/out
+[artefacts] cluformer needs none (it generates or downloads its own stream)
+Tue Sep 15 20:23:11 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA L4                      Off |   00000000:00:03.0 Off |                    0 |
+| N/A   43C    P0             29W /   72W |       0MiB /  23034MiB |      4%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+name, driver_version, memory.total [MiB]
+NVIDIA L4, 580.178.04, 23034 MiB
+Get:1 file:/var/cudnn-local-repo-ubuntu2404-9.13.0  InRelease [1572 B]
+Get:1 file:/var/cudnn-local-repo-ubuntu2404-9.13.0  InRelease [1572 B]
+Hit:2 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy InRelease
+Get:3 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+Get:4 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-backports InRelease [127 kB]
+Hit:5 http://packages.cloud.google.com/apt apt-transport-artifact-registry-stable InRelease
+Get:6 https://us-apt.pkg.dev/projects/gce-ai-infra gpudirect-gib-apt InRelease [1239 B]
+Hit:7 https://nvidia.github.io/libnvidia-container/stable/deb/amd64  InRelease
+Get:8 http://security.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
+Get:9 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages [3795 kB]
+Get:10 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main Translation-en [563 kB]
+Get:11 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages [1282 kB]
+Get:12 https://us-apt.pkg.dev/projects/gce-ai-infra gpudirect-gib-apt/main amd64 Packages [11.5 kB]
+Get:13 http://security.ubuntu.com/ubuntu jammy-security/main amd64 Packages [3526 kB]
+Get:14 http://security.ubuntu.com/ubuntu jammy-security/main Translation-en [495 kB]
+Get:15 http://security.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages [6306 kB]
+Get:16 http://security.ubuntu.com/ubuntu jammy-security/restricted Translation-en [1211 kB]
+Get:17 http://security.ubuntu.com/ubuntu jammy-security/universe amd64 Packages [1048 kB]
+Get:18 http://security.ubuntu.com/ubuntu jammy-security/multiverse amd64 Packages [69.4 kB]
+Get:19 http://security.ubuntu.com/ubuntu jammy-security/multiverse Translation-en [12.9 kB]
+Fetched 18.7 MB in 3s (5410 kB/s)
+Reading package lists...
+W: http://packages.cloud.google.com/apt/dists/apt-transport-artifact-registry-stable/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+W: https://us-apt.pkg.dev/projects/gce-ai-infra/dists/gpudirect-gib-apt/InRelease: Key is stored in legacy trusted.gpg keyring (/etc/apt/trusted.gpg), see the DEPRECATION section in apt-key(8) for details.
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  bridge-utils containerd dns-root-data dnsmasq-base pigz runc ubuntu-fan
+Suggested packages:
+  ifupdown aufs-tools cgroupfs-mount | cgroup-lite debootstrap docker-buildx
+  docker-compose-v2 docker-doc rinse zfs-fuse | zfsutils
+The following NEW packages will be installed:
+  bridge-utils containerd dns-root-data dnsmasq-base docker.io pigz runc
+  ubuntu-fan
+0 upgraded, 8 newly installed, 0 to remove and 18 not upgraded.
+Need to get 74.0 MB of archives.
+After this operation, 279 MB of additional disk space will be used.
+Get:1 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy/universe amd64 pigz amd64 2.6-1 [63.6 kB]
+Get:2 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy/main amd64 bridge-utils amd64 1.7-1ubuntu3 [34.4 kB]
+Get:3 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 runc amd64 1.3.4-0ubuntu1~22.04.1 [9569 kB]
+Get:4 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 containerd amd64 2.2.1-0ubuntu1~22.04.2 [28.3 MB]
+Get:5 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 dns-root-data all 2024071801~ubuntu0.22.04.1 [6132 B]
+Get:6 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/main amd64 dnsmasq-base amd64 2.91-0ubuntu0.22.04.1 [379 kB]
+Get:7 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy-updates/universe amd64 docker.io amd64 29.1.3-0ubuntu3~22.04.2 [35.7 MB]
+Get:8 http://us-central1.gce.archive.ubuntu.com/ubuntu jammy/universe amd64 ubuntu-fan all 0.12.16 [35.2 kB]
+Preconfiguring packages ...
+Fetched 74.0 MB in 1s (52.7 MB/s)
+Selecting previously unselected package pigz.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 71520 files and directories currently installed.)
+Preparing to unpack .../0-pigz_2.6-1_amd64.deb ...
+Unpacking pigz (2.6-1) ...
+Selecting previously unselected package bridge-utils.
+Preparing to unpack .../1-bridge-utils_1.7-1ubuntu3_amd64.deb ...
+Unpacking bridge-utils (1.7-1ubuntu3) ...
+Selecting previously unselected package runc.
+Preparing to unpack .../2-runc_1.3.4-0ubuntu1~22.04.1_amd64.deb ...
+Unpacking runc (1.3.4-0ubuntu1~22.04.1) ...
+Selecting previously unselected package containerd.
+Preparing to unpack .../3-containerd_2.2.1-0ubuntu1~22.04.2_amd64.deb ...
+Unpacking containerd (2.2.1-0ubuntu1~22.04.2) ...
+Selecting previously unselected package dns-root-data.
+Preparing to unpack .../4-dns-root-data_2024071801~ubuntu0.22.04.1_all.deb ...
+Unpacking dns-root-data (2024071801~ubuntu0.22.04.1) ...
+Selecting previously unselected package dnsmasq-base.
+Preparing to unpack .../5-dnsmasq-base_2.91-0ubuntu0.22.04.1_amd64.deb ...
+Unpacking dnsmasq-base (2.91-0ubuntu0.22.04.1) ...
+Selecting previously unselected package docker.io.
+Preparing to unpack .../6-docker.io_29.1.3-0ubuntu3~22.04.2_amd64.deb ...
+Unpacking docker.io (29.1.3-0ubuntu3~22.04.2) ...
+Selecting previously unselected package ubuntu-fan.
+Preparing to unpack .../7-ubuntu-fan_0.12.16_all.deb ...
+Unpacking ubuntu-fan (0.12.16) ...
+Setting up dnsmasq-base (2.91-0ubuntu0.22.04.1) ...
+Setting up runc (1.3.4-0ubuntu1~22.04.1) ...
+Setting up dns-root-data (2024071801~ubuntu0.22.04.1) ...
+Setting up bridge-utils (1.7-1ubuntu3) ...
+Setting up pigz (2.6-1) ...
+Setting up containerd (2.2.1-0ubuntu1~22.04.2) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/containerd.service → /lib/systemd/system/containerd.service.
+Setting up ubuntu-fan (0.12.16) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/ubuntu-fan.service → /lib/systemd/system/ubuntu-fan.service.
+Setting up docker.io (29.1.3-0ubuntu3~22.04.2) ...
+Adding group `docker' (GID 122) ...
+Done.
+Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /lib/systemd/system/docker.service.
+Created symlink /etc/systemd/system/sockets.target.wants/docker.socket → /lib/systemd/system/docker.socket.
+Processing triggers for dbus (1.12.20-2ubuntu4.1) ...
+Processing triggers for man-db (2.10.2-1) ...
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+time="2026-09-15T20:23:34Z" level=info msg="Config file does not exist; using empty config"
+time="2026-09-15T20:23:34Z" level=info msg="Wrote updated config to /etc/docker/daemon.json"
+time="2026-09-15T20:23:34Z" level=info msg="It is recommended that docker daemon be restarted."
+Adding credentials for: us-central1-docker.pkg.dev
+Docker configuration file updated.
+us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:010435659b510551b64d2008361ac5c906bf127246d0d4fc678b8c204385c44c: Pulling from forgisprova/chlu/chlu-cuda
+a93a6afd6c0e: Pulling fs layer
+328d078769ae: Pulling fs layer
+e160a66abc82: Pulling fs layer
+882a85d46148: Pulling fs layer
+79ddb3af6a72: Pulling fs layer
+6128e8861235: Pulling fs layer
+57801808f646: Pulling fs layer
+3b85ad612926: Pulling fs layer
+dbaa5c62f0ed: Pulling fs layer
+5916320cd9ac: Pulling fs layer
+cb145bf730ce: Pulling fs layer
+751befe5c01d: Pulling fs layer
+9e1d1c1d13fd: Pulling fs layer
+751befe5c01d: Download complete
+3b85ad612926: Download complete
+5916320cd9ac: Download complete
+79ddb3af6a72: Download complete
+9e1d1c1d13fd: Download complete
+cb145bf730ce: Download complete
+6128e8861235: Download complete
+a93a6afd6c0e: Download complete
+57801808f646: Download complete
+882a85d46148: Download complete
+dbaa5c62f0ed: Download complete
+328d078769ae: Download complete
+dbaa5c62f0ed: Pull complete
+5916320cd9ac: Pull complete
+6128e8861235: Pull complete
+882a85d46148: Pull complete
+57801808f646: Pull complete
+751befe5c01d: Pull complete
+3b85ad612926: Pull complete
+328d078769ae: Pull complete
+e160a66abc82: Download complete
+e160a66abc82: Pull complete
+79ddb3af6a72: Pull complete
+cb145bf730ce: Pull complete
+9e1d1c1d13fd: Pull complete
+a93a6afd6c0e: Pull complete
+Digest: sha256:010435659b510551b64d2008361ac5c906bf127246d0d4fc678b8c204385c44c
+Status: Downloaded newer image for us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:010435659b510551b64d2008361ac5c906bf127246d0d4fc678b8c204385c44c
+us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:010435659b510551b64d2008361ac5c906bf127246d0d4fc678b8c204385c44c
+image digests: us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:010435659b510551b64d2008361ac5c906bf127246d0d4fc678b8c204385c44c
+[image] built from commit 84e1ab8 build 20260915T172421Z
+[journal] fingerprint 406073d0fc73fb29 :: 1 unit(s) already done: 0
+[sweep] unit 0 already banked -- skipping
+=== [sweep] unit 1 -> /var/chlu/out/cluformer :: python -u -m chlu.experiments.exp_cluformer_pilot --seed 1 --out /var/chlu/out/cluformer --stage s1 --scale toy
+[rss] run_pilot/enter                    rss    1.27 GB | peak    1.27 GB | children   0.00 GB (n=0) | t 0s
+downloading http://mattmahoney.net/dc/enwik8.zip -> /var/chlu/data/enwik8/enwik8.zip
+[rss] phi_gain/enter                     rss    1.31 GB | peak    1.31 GB | children   0.00 GB (n=0) | t 2s
+[rss] phi_gain/exit                      rss    1.69 GB | peak    1.69 GB | children   0.00 GB (n=0) | t 8s
+[rss] phi_gain/released                  rss    1.69 GB | peak    1.69 GB | children   0.00 GB (n=0) | t 9s
+[byte-ledger] budget 2,097,152 B (⚠ INTERIM — set in the rival-ladder prereg) | enforced=True | dtype normalisation: NONE (as deployed)
+   clu_store            41,152 B  occupancy 0.01962  within=True  phi=True
+   echo                      0 B  occupancy 0.00000  within=True  phi=True
+   gru_matched             408 B  occupancy 0.00019  within=True  phi=True
+   none                      0 B  occupancy 0.00000  within=True  phi=True
+   ttt_matched          41,112 B  occupancy 0.01960  within=True  phi=True
+[rss] monitors_init/enter                rss    1.95 GB | peak    1.95 GB | children   0.00 GB (n=0) | t 36s
+[rss] monitors_init/exit                 rss    2.75 GB | peak    2.75 GB | children   0.00 GB (n=0) | t 101s
+[rss] monitors_init/released             rss    2.75 GB | peak    2.75 GB | children   0.00 GB (n=0) | t 103s
+[rss] allocation_liveness_init/enter     rss    2.75 GB | peak    2.75 GB | children   0.00 GB (n=0) | t 103s
+[rss] allocation_liveness_init/exit      rss    2.76 GB | peak    2.76 GB | children   0.00 GB (n=0) | t 152s
+[rss] allocation_liveness_init/released  rss    2.76 GB | peak    2.76 GB | children   0.00 GB (n=0) | t 153s
+[rss] run_pilot/finish                   rss    2.76 GB | peak    2.76 GB | children   0.00 GB (n=0) | t 153s
+wrote /var/chlu/out/cluformer/pilot_toy_seed1_S1.json (153s, stages S1)
+[sweep] unit 1 ok in 163s
+[journal] unit 1 banked (2 done) -> gs://chlu-cloud-forgisprova/jobs/pilot1/journal
+=== [sweep] unit 2 -> /var/chlu/out/cluformer :: python -u -m chlu.experiments.exp_cluformer_pilot --seed 2 --out /var/chlu/out/cluformer --stage s1 --scale toy
+[rss] run_pilot/enter                    rss    1.27 GB | peak    1.27 GB | children   0.00 GB (n=0) | t 0s
+[rss] phi_gain/enter                     rss    1.31 GB | peak    1.31 GB | children   0.00 GB (n=0) | t 0s
+[rss] phi_gain/exit                      rss    1.68 GB | peak    1.68 GB | children   0.00 GB (n=0) | t 7s
+[rss] phi_gain/released                  rss    1.68 GB | peak    1.68 GB | children   0.00 GB (n=0) | t 7s
+[byte-ledger] budget 2,097,152 B (⚠ INTERIM — set in the rival-ladder prereg) | enforced=True | dtype normalisation: NONE (as deployed)
+   clu_store            41,152 B  occupancy 0.01962  within=True  phi=True
+   echo                      0 B  occupancy 0.00000  within=True  phi=True
+   gru_matched             408 B  occupancy 0.00019  within=True  phi=True
+   none                      0 B  occupancy 0.00000  within=True  phi=True
+   ttt_matched          41,112 B  occupancy 0.01960  within=True  phi=True
+[rss] monitors_init/enter                rss    1.95 GB | peak    1.95 GB | children   0.00 GB (n=0) | t 35s
+[rss] monitors_init/exit                 rss    2.72 GB | peak    2.72 GB | children   0.00 GB (n=0) | t 96s
+[rss] monitors_init/released             rss    2.72 GB | peak    2.72 GB | children   0.00 GB (n=0) | t 97s
+[rss] allocation_liveness_init/enter     rss    2.72 GB | peak    2.72 GB | children   0.00 GB (n=0) | t 97s
+[rss] allocation_liveness_init/exit      rss    2.74 GB | peak    2.74 GB | children   0.00 GB (n=0) | t 136s
+[rss] allocation_liveness_init/released  rss    2.74 GB | peak    2.74 GB | children   0.00 GB (n=0) | t 137s
+[rss] run_pilot/finish                   rss    2.74 GB | peak    2.74 GB | children   0.00 GB (n=0) | t 137s
+wrote /var/chlu/out/cluformer/pilot_toy_seed2_S1.json (137s, stages S1)
+[sweep] unit 2 ok in 147s
+[journal] unit 2 banked (3 done) -> gs://chlu-cloud-forgisprova/jobs/pilot1/journal
+[result] {"complete": true, "dec_recipe": "v1_capacity_schedule", "exp": "cluformer", "finished_at": "2026-09-15T20:31:56Z", "git_commit": "5ed3471e2c07c509f2555107000a00a280083973", "hostname": "chlu-pilot1", "image": "us-central1-docker.pkg.dev/forgisprova/chlu/chlu-cuda@sha256:010435659b510551b64d2008361ac5c906bf127246d0d4fc678b8c204385c44c", "job": "pilot1", "module": "chlu.experiments.exp_cluformer_pilot", "note": "launcher completion sentinel, not a result; the experiment's own manifests are under out/<exp>/", "sweep_wall_s": 332, "units_banked": ["0", "1", "2"], "units_requested": ["0", "1", "2"]}
+payload exited rc=0 (banked this attempt: 1 2; skipped: 0)
+=== finishing rc=0 2026-09-15T20:32:00Z ===

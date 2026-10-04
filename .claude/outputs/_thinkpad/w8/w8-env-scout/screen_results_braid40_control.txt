@@ -1,0 +1,61 @@
+CMAZE-1 screening -- exact judge, no tolerance anywhere
+
+==============================================================================
+A. ADOPTION CONFIGURATION   (n_eval=500, slack=10%, acceptance filter 'rule B bends the route': ON)
+==============================================================================
+  seed acceptance rate      : 0.898  (557 seeds for 500 instances)
+  optimal length under A+B  : mean   42.2   median  38   max 132
+  optimal length under A    : mean   30.7
+  detour forced by rule B   : mean +11.5 steps; rule B bends the route in 100.0% of episodes
+
+  planner                               validity     score   top failure mode
+  ORACLE          (full composition)      1.0000    1.0000   - x0
+  BLIND-A         (rule B dropped)        0.0000    0.0000   forbidden-tint-c1 x133
+  BLIND-B         (rule A dropped)        0.0000    0.0000   locked-door-c1 x139
+  BLIND-COLOUR    (colours collapsed)     0.0280    0.0280   no-route x134
+  BLIND-FACTOR    (A x B local only)      0.0840    0.0840   forbidden-tint-c1 x124
+  BLIND-SEQUENTIAL(key order from A)      0.5800    0.5779   no-route x195
+  RANDOM          (uniform walk)          0.0000    0.0000
+  FRAGMENT-LOOKUP r=1  (retrieval)        0.0000    0.0000   22299 signatures from 2000 routes, coverage 0.8379
+  FRAGMENT-LOOKUP r=2  (retrieval)        0.0000    0.0000   82935 signatures from 2000 routes, coverage 0.0202
+  [A. ADOPTION CONFIGURATION took 506.7s]
+
+==============================================================================
+B. UNFILTERED GENERATOR (no 'bends the route' filter)   (n_eval=500, slack=10%, acceptance filter 'rule B bends the route': OFF)
+==============================================================================
+  seed acceptance rate      : 1.000  (500 seeds for 500 instances)
+  optimal length under A+B  : mean   29.6   median  28   max 117
+  optimal length under A    : mean   26.8
+  detour forced by rule B   : mean +2.8 steps; rule B bends the route in 26.2% of episodes
+
+  planner                               validity     score   top failure mode
+  ORACLE          (full composition)      1.0000    1.0000   - x0
+  BLIND-A         (rule B dropped)        0.6720    0.6720   forbidden-tint-c3 x52
+  BLIND-B         (rule A dropped)        0.0000    0.0000   locked-door-c2 x133
+  BLIND-COLOUR    (colours collapsed)     0.1500    0.1496   no-route x97
+  BLIND-FACTOR    (A x B local only)      0.6920    0.6920   forbidden-tint-c3 x51
+  BLIND-SEQUENTIAL(key order from A)      0.8940    0.8932   no-route x49
+  RANDOM          (uniform walk)          0.0000    0.0000
+  FRAGMENT-LOOKUP r=1  (retrieval)        0.0020    0.0020   18281 signatures from 2000 routes, coverage 0.8102
+  FRAGMENT-LOOKUP r=2  (retrieval)        0.0000    0.0000   59952 signatures from 2000 routes, coverage 0.0130
+  [B. UNFILTERED GENERATOR (no 'bends the route' filter) took 127.5s]
+
+==============================================================================
+C. LOOSE BUDGET (+50% slack) -- how much the budget matters   (n_eval=500, slack=50%, acceptance filter 'rule B bends the route': ON)
+==============================================================================
+  seed acceptance rate      : 0.894  (559 seeds for 500 instances)
+  optimal length under A+B  : mean   41.4   median  38   max 115
+  optimal length under A    : mean   31.0
+  detour forced by rule B   : mean +10.4 steps; rule B bends the route in 100.0% of episodes
+
+  planner                               validity     score   top failure mode
+  ORACLE          (full composition)      1.0000    1.0000   - x0
+  BLIND-A         (rule B dropped)        0.0000    0.0000   forbidden-tint-c2 x136
+  BLIND-B         (rule A dropped)        0.0000    0.0000   locked-door-c2 x136
+  BLIND-COLOUR    (colours collapsed)     0.0420    0.0417   no-route x139
+  BLIND-FACTOR    (A x B local only)      0.0940    0.0940   forbidden-tint-c2 x119
+  BLIND-SEQUENTIAL(key order from A)      0.6040    0.5953   no-route x197
+  RANDOM          (uniform walk)          0.0000    0.0000
+  FRAGMENT-LOOKUP r=1  (retrieval)        0.0000    0.0000   22171 signatures from 2000 routes, coverage 0.8311
+  FRAGMENT-LOOKUP r=2  (retrieval)        0.0000    0.0000   80824 signatures from 2000 routes, coverage 0.0187
+  [C. LOOSE BUDGET (+50% slack) -- how much the budget matters took 474.2s]

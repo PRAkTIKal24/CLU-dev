@@ -1,0 +1,134 @@
+{
+ "D": 2048,
+ "dataset": "shapes3d",
+ "decoder_param_count": 250467,
+ "decoder_param_hash": "12981786fb809060b804649cd3fdd5a9b8f3f3fd5cc3a050a3eee5908f5018b4",
+ "encoder_param_hash": "fc05e2c5f39694b27b94d6cad5e1d59e11c27fa8e8f92e733acc599edf8944c5",
+ "feature_cache": {
+  "D": 2048,
+  "dataset": "shapes3d",
+  "dtype": "float16",
+  "encoder_param_hash": "fc05e2c5f39694b27b94d6cad5e1d59e11c27fa8e8f92e733acc599edf8944c5",
+  "feat_shape": [
+   128,
+   4,
+   4
+  ],
+  "features_bytes": 38043776,
+  "features_file": "features.npy",
+  "features_sha256": "484b446c4dbb9fc499863ff6873a15a8c555a517c8c290bdfa8087f95350b416",
+  "n_rows": 9288,
+  "rows_file": "feature_rows.npy",
+  "rows_sha256": "d7177d099dc76fdeb6b7e12d5c7d4264f403df924201459a09b792fc56b10179",
+  "schema": "nclu-gen-feature-cache/1",
+  "scope": "used"
+ },
+ "no_leak": {
+  "n_checked": 8192,
+  "n_holdout_excluded": 72,
+  "n_holdout_leaked": 0,
+  "n_holdout_total": 72,
+  "n_train_rows_used": 8192
+ },
+ "pretext": "recon",
+ "probe_param_count": 633049,
+ "probe_param_hash": "fb16109ded84c908d9e3b53b92a4c428215d3db7a19d00103f2d47aa6f5bd260",
+ "result": {
+  "gate": {
+   "ceiling_A": 0.9366861979166666,
+   "ceiling_B": 0.8171296296296297,
+   "floor": 0.8,
+   "note": "ceiling_B >= 0.8 x ceiling_A: the decoder can render held-out combinations, so kill rule (i) can be read on the store.",
+   "ratio": 0.8723621971232745,
+   "verdict": "PROCEED"
+  },
+  "per_split": {
+   "A": {
+    "ceiling": {
+     "aggregate": 0.9366861979166666,
+     "decoded_mean": 0.560865044593811,
+     "exact_match": 0.6611328125,
+     "n": 1024,
+     "per_factor": {
+      "floor_hue": 1.0,
+      "object_hue": 0.998046875,
+      "orientation": 0.9404296875,
+      "scale": 0.787109375,
+      "shape": 0.89453125,
+      "wall_hue": 1.0
+     }
+    },
+    "decode_mse": 0.0032202228903770447,
+    "n": 1024,
+    "probe_on_real": {
+     "aggregate": 1.0,
+     "exact_match": 1.0,
+     "n": 1024,
+     "per_factor": {
+      "floor_hue": 1.0,
+      "object_hue": 1.0,
+      "orientation": 1.0,
+      "scale": 1.0,
+      "shape": 1.0,
+      "wall_hue": 1.0
+     }
+    }
+   },
+   "B": {
+    "ceiling": {
+     "aggregate": 0.8171296296296297,
+     "decoded_mean": 0.5971385836601257,
+     "exact_match": 0.1388888888888889,
+     "n": 72,
+     "per_factor": {
+      "floor_hue": 1.0,
+      "object_hue": 1.0,
+      "orientation": 0.9583333333333334,
+      "scale": 0.375,
+      "shape": 0.5694444444444444,
+      "wall_hue": 1.0
+     }
+    },
+    "decode_mse": 0.00363698648288846,
+    "n": 72,
+    "probe_on_real": {
+     "aggregate": 1.0,
+     "exact_match": 1.0,
+     "n": 72,
+     "per_factor": {
+      "floor_hue": 1.0,
+      "object_hue": 1.0,
+      "orientation": 1.0,
+      "scale": 1.0,
+      "shape": 1.0,
+      "wall_hue": 1.0
+     }
+    }
+   }
+  }
+ },
+ "rows": {
+  "eval_a": 1024,
+  "eval_b": 72,
+  "train": 8192
+ },
+ "schema": "nclu-gen-bridge/1",
+ "seed": 1,
+ "training": {
+  "dec_loss_final": 0.0031585339456796646,
+  "dec_loss_first": 0.1705349087715149,
+  "dec_steps": 1200,
+  "probe_loss_final": 0.00016630362370051444,
+  "probe_loss_first": 2.243314743041992,
+  "probe_steps": 1500
+ },
+ "whitening": {
+  "D": 2048,
+  "N_train_features": 8192,
+  "full_whitening_feasible": true,
+  "lace_option": "1 \u2014 feature width chosen so LACE whitens natively (full D x D shrinkage covariance over the cached train features)",
+  "limit": 20000,
+  "note": "D=2048 <= 20000: a full D x D eigendecomposition is feasible, so the LACE arm runs in fully whitened coordinates and is NOT pushed onto channel-only whitening.",
+  "shrinkage_mandatory": false
+ }
+}

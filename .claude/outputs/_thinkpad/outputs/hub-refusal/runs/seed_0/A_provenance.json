@@ -1,0 +1,251 @@
+{
+ "seed": 0,
+ "budget": "A",
+ "coupling_certificate": {
+  "declared_coupling_strength": 1.0,
+  "max_safe_coupling_strength": 0.05393369911184618,
+  "safety_frac": 0.9,
+  "coupling_strength_used": 0.048540329200661564,
+  "certificate_bound_the_strength": true,
+  "certificate": {
+   "coupling_present": true,
+   "coupling_strength": 1.0,
+   "rank": 16,
+   "pair_spectral_norms": [
+    1.000000002738167,
+    1.0000000033319312,
+    0.9999999958725758,
+    0.9999999899766127,
+    1.0000000077594318,
+    1.0000000033930845,
+    1.000000005126701,
+    1.0000000065903527,
+    1.0000000042106059,
+    0.9999999881926392
+   ],
+   "well_radii": [
+    0.4945041835308075,
+    0.5232096314430237,
+    0.4494209587574005,
+    0.3573090136051178,
+    0.5594964027404785
+   ],
+   "certificate_min_eigenvalue": -1.8843105420572908,
+   "bounded_below": false,
+   "max_safe_coupling_strength": 0.05393369911184618,
+   "rule": "E >= u^T C u - const with C_kk = s_k^2/2 and C_kl = -lambda*||W_kl||_2/2; coercive iff C >= 0, so lambda* = 1/rho(D^-1/2 S D^-1/2)",
+   "note": "\u26d4 An unbounded-below landscape does not settle, it diverges \u2014 measured at E = -1.6e28 on the first smoke. The certificate is computed from the ATOMS, never hand-tuned."
+  }
+ },
+ "byte_ledger": {
+  "label": "budget A (MATCHED)",
+  "store": {
+   "n_atoms_per_well": 64,
+   "dim": 2048,
+   "well_sizes": [
+    303,
+    305,
+    573,
+    501,
+    366
+   ],
+   "store_bytes": 524288,
+   "dtype": "float32",
+   "bytes_formula": "N * sum_k d_k * 4 = N * D * 4",
+   "note": "\u2b50 matched bytes with the codebook at N = M: the landscape gets NO extra points and must win on the EXPONENT alone (PREREG \u00a72)."
+  },
+  "coupling": {
+   "rank": 16,
+   "n_pairs": 10,
+   "coupling_bytes": 524288,
+   "per_pair": [
+    {
+     "k": 0,
+     "l": 1,
+     "bytes": 38912
+    },
+    {
+     "k": 0,
+     "l": 2,
+     "bytes": 56064
+    },
+    {
+     "k": 0,
+     "l": 3,
+     "bytes": 51456
+    },
+    {
+     "k": 0,
+     "l": 4,
+     "bytes": 42816
+    },
+    {
+     "k": 1,
+     "l": 2,
+     "bytes": 56192
+    },
+    {
+     "k": 1,
+     "l": 3,
+     "bytes": 51584
+    },
+    {
+     "k": 1,
+     "l": 4,
+     "bytes": 42944
+    },
+    {
+     "k": 2,
+     "l": 3,
+     "bytes": 68736
+    },
+    {
+     "k": 2,
+     "l": 4,
+     "bytes": 60096
+    },
+    {
+     "k": 3,
+     "l": 4,
+     "bytes": 55488
+    }
+   ],
+   "dtype": "float32",
+   "bytes_formula": "sum_{k<l} r*(d_k + d_l)*4",
+   "identity": "= r*(K-1)*D*4 when the wells partition D",
+   "derived_free": "the per-well centre m_k and radius s_k are functions of the ATOMS (0 additional bytes)",
+   "note": "\u26d4 EXTRA to store_bytes \u2014 a byte-matched rival must be told about it."
+  },
+  "total_bytes": 1048576,
+  "budget_bytes": 524288,
+  "multiple_of_budget": 2.0,
+  "d3_rule": "store + coupling <= 2x budget",
+  "d3_rule_satisfied": true,
+  "d3_rule_binding": true
+ },
+ "byte_ledger_matches_prereg": {
+  "store_bytes": true,
+  "coupling_bytes": true,
+  "total_bytes": true,
+  "multiple_of_budget": true
+ },
+ "atoms_are_train_rows": {
+  "atoms_are_train_rows": true,
+  "max_abs_delta_vs_train_rows": 0.0,
+  "n_atoms": 64,
+  "n_distinct_atom_rows": 64,
+  "atom_selection": "kmeanspp",
+  "note": "\u26d4 The minima are NOT the k-means centres: every atom is a verbatim train feature row. Per-value weights over centres would be the old flat count table wearing a different hat."
+ },
+ "sigma": [
+  4.634332180023193,
+  5.071405410766602,
+  9.182735443115234,
+  6.305441856384277,
+  5.100610733032227
+ ],
+ "reencode_check": {
+  "n_checked": 64,
+  "n_elements": 131072,
+  "max_abs_delta": 0.001953125,
+  "max_ulp_delta": 51.0,
+  "n_differing": 1280,
+  "frac_differing": 0.009765625,
+  "n_nonfinite": 0,
+  "cache_dtype": "float16",
+  "ulp_bound": 1.0,
+  "frac_bound": 0.01,
+  "enforced": false,
+  "enforced_reason": "hub/refusal reads the frozen cache and never extends it: it gathers only store_train rows (already cached) and needs no feature for the invalid or control request sets, because the read is request-only. The enforced bound is re-applied at full strength by gather_features if any uncached row is ever requested.",
+  "would_have_failed": true,
+  "would_have_failed_why": [
+   "ulp"
+  ]
+ },
+ "cache_meta": {
+  "n_rows": 480000,
+  "scope": "full",
+  "D": 2048,
+  "dtype": "float16"
+ },
+ "row_split": {
+  "mode": "stratified",
+  "rule": "deficit-priority greedy on the pool's own per-factor marginals (target[f][v] = n_val * count_pool[f][v] / n_pool), seeded tie-break",
+  "n_pool": 32768,
+  "n_fit": 32256,
+  "n_val": 512,
+  "tiebreak_jitter": 1.0,
+  "rng": "np.random.default_rng(0*6637+20260914)",
+  "fit_is_pool_minus_val": true
+ },
+ "grouping": {
+  "grouping_source": "per_seed (re-derived at the plan's K)",
+  "n_corr_rows": 16384,
+  "n_dead_channels": 71,
+  "grouping_info": {
+   "method_requested": "auto",
+   "method_used": "ward",
+   "method_order": [
+    "average",
+    "ward"
+   ],
+   "min_well_frac": 0.1,
+   "min_well_size_floor": 39,
+   "attempts": [
+    {
+     "method": "average",
+     "sizes": [
+      1973,
+      1,
+      1,
+      1,
+      1
+     ],
+     "min_well_size": 1,
+     "floor": 39,
+     "accepted": false
+    },
+    {
+     "method": "ward",
+     "sizes": [
+      232,
+      305,
+      573,
+      501,
+      366
+     ],
+     "min_well_size": 232,
+     "floor": 39,
+     "accepted": true
+    }
+   ],
+   "n_dead_channels": 71,
+   "n_live_channels": 1977,
+   "well_sizes": [
+    303,
+    305,
+    573,
+    501,
+    366
+   ]
+  },
+  "well_sizes": [
+   303,
+   305,
+   573,
+   501,
+   366
+  ],
+  "plan_encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+  "this_encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+  "reproduces_the_plan_bit_identically": true
+ },
+ "encoder_param_hash": "98d326028316ae2cd6b960b26a922cd47fe8a2c9e73199fb1ba2927864a29c0d",
+ "n_rows": {
+  "pool": 32768,
+  "val": 512,
+  "A": 1024,
+  "B": 72,
+  "MS": 198
+ }
+}

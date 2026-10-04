@@ -1,0 +1,1586 @@
+{
+ "seed": 0,
+ "which": "val",
+ "n_mazes": 96,
+ "n_atoms": 8,
+ "K": 8,
+ "ridge": 1.0,
+ "ae_steps": 6000,
+ "bl_steps": 4000,
+ "latent_d": 256,
+ "n_train_requests": 1208,
+ "n_rows": {
+  "seen": 1208,
+  "unseen_pair": 208,
+  "nway": 392,
+  "budget_interp": 427
+ },
+ "ae_loss_history": [
+  [
+   1,
+   2.503530502319336
+  ],
+  [
+   500,
+   0.12499892711639404
+  ],
+  [
+   1000,
+   0.1051727682352066
+  ],
+  [
+   1500,
+   0.01498897559940815
+  ],
+  [
+   2000,
+   0.0056238118559122086
+  ],
+  [
+   2500,
+   0.0010155122727155685
+  ],
+  [
+   3000,
+   0.0004051862342748791
+  ],
+  [
+   3500,
+   0.0003599422052502632
+  ],
+  [
+   4000,
+   0.00023019075160846114
+  ],
+  [
+   4500,
+   8.625808550277725e-05
+  ],
+  [
+   5000,
+   8.259793685283512e-05
+  ],
+  [
+   5500,
+   3.830677815130912e-05
+  ],
+  [
+   6000,
+   6.135777221061289e-05
+  ]
+ ],
+ "representation_ceiling": {
+  "seen": {
+   "n": 1208,
+   "validity": 1.0,
+   "score": 1.0,
+   "collisions": 0
+  },
+  "unseen_pair": {
+   "n": 208,
+   "validity": 1.0,
+   "score": 1.0,
+   "collisions": 0
+  },
+  "nway": {
+   "n": 392,
+   "validity": 1.0,
+   "score": 1.0,
+   "collisions": 0
+  },
+  "budget_interp": {
+   "n": 427,
+   "validity": 1.0,
+   "score": 1.0,
+   "collisions": 0
+  }
+ },
+ "pipeline_ceiling_train": {
+  "n": 1208,
+  "validity": 1.0,
+  "score": 1.0,
+  "refusal": 0.0,
+  "tag": "train"
+ },
+ "pipeline_ceiling_rows": {
+  "seen": {
+   "n": 1208,
+   "validity": 1.0,
+   "score": 1.0,
+   "refusal": 0.0,
+   "tag": "seen"
+  },
+  "unseen_pair": {
+   "n": 208,
+   "validity": 0.40865384615384615,
+   "score": 0.40865384615384615,
+   "refusal": 0.0,
+   "tag": "unseen_pair"
+  },
+  "nway": {
+   "n": 392,
+   "validity": 0.20408163265306123,
+   "score": 0.20408163265306123,
+   "refusal": 0.0,
+   "tag": "nway"
+  },
+  "budget_interp": {
+   "n": 427,
+   "validity": 0.2810304449648712,
+   "score": 0.2810304449648712,
+   "refusal": 0.0,
+   "tag": "budget_interp"
+  }
+ },
+ "ledger": {
+  "read_floats": 105984,
+  "store_atom_floats": 2048,
+  "head_floats": 103936,
+  "deployed_bytes": 423936,
+  "statistic_floats_float64": 4488,
+  "statistic_bytes": 35904,
+  "note": "deployed bytes are the atoms plus the address book, which is what produces a read; the float64 sufficient statistic is what buys EXACT deletion and is declared beside them, never netted in",
+  "K": 8,
+  "n_atoms": 8,
+  "dim": 256,
+  "design_width": 1624,
+  "dead_channels": 0,
+  "deployed_rank_per_well": [
+   7,
+   7,
+   7,
+   7,
+   7,
+   7,
+   7,
+   7
+  ],
+  "rank_over_width": [
+   0.21875,
+   0.21875,
+   0.21875,
+   0.21875,
+   0.21875,
+   0.21875,
+   0.21875,
+   0.21875
+  ]
+ },
+ "request_only_assertion": {
+  "read_signature": [
+   "heads",
+   "store",
+   "Phi"
+  ],
+  "feature_argument_present": false,
+  "bitwise_stable_under_feature_perturbation": true,
+  "n_checked": 8,
+  "statement": "the read's only inputs are the head, the store and the request design; no feature tensor enters launch, settle or read (charter section B.3)"
+ },
+ "lookup_stored": {
+  "matched": 414,
+  "matched_floats": 105984,
+  "full": 1208,
+  "full_floats": 309248
+ },
+ "baseline_params": {
+  "mlp": {
+   "width": 189,
+   "params": 105907,
+   "matched": true,
+   "heldin_val_mse": 5479.1875
+  },
+  "lstm": {
+   "width": 95,
+   "params": 106466,
+   "matched": true,
+   "heldin_val_mse": 10419.4755859375
+  },
+  "transformer": {
+   "width": 74,
+   "params": 109984,
+   "matched": false,
+   "heldin_val_mse": 1725.1094970703125
+  }
+ },
+ "table": {
+  "seen": {
+   "clu": {
+    "n": 1208,
+    "validity": 0.10430463576158941,
+    "score": 0.10430463576158941,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 1208,
+     "validity": 0.10430463576158941,
+     "score": 0.10430463576158941,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 637,
+     "validity": 0.11145996860282574,
+     "score": 0.11145996860282574,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 571,
+     "validity": 0.09632224168126094,
+     "score": 0.09632224168126094,
+     "refusal": 0.0
+    }
+   },
+   "landscape_removed": {
+    "n": 1208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 1208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 637,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 571,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "landscape_shuffled": {
+    "n": 1208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 1208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 637,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 571,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "random_atoms": {
+    "n": 1208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 1208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 637,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 571,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "clu_nopair": {
+    "n": 1208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 1208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 637,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 571,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "lookup_matched": {
+    "n": 1208,
+    "validity": 0.6506622516556292,
+    "score": 0.6506622516556292,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 1208,
+     "validity": 0.6506622516556292,
+     "score": 0.6506622516556292,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 637,
+     "validity": 0.6216640502354788,
+     "score": 0.6216640502354788,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 571,
+     "validity": 0.6830122591943958,
+     "score": 0.6830122591943958,
+     "refusal": 0.0
+    }
+   },
+   "lookup_full": {
+    "n": 1208,
+    "validity": 1.0,
+    "score": 1.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 1208,
+     "validity": 1.0,
+     "score": 1.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 637,
+     "validity": 1.0,
+     "score": 1.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 571,
+     "validity": 1.0,
+     "score": 1.0,
+     "refusal": 0.0
+    }
+   },
+   "mlp": {
+    "n": 1208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 1208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 637,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 571,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "lstm": {
+    "n": 1208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 1208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 637,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 571,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "transformer": {
+    "n": 1208,
+    "validity": 0.1316225165562914,
+    "score": 0.1316225165562914,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 1208,
+     "validity": 0.1316225165562914,
+     "score": 0.1316225165562914,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 637,
+     "validity": 0.13186813186813187,
+     "score": 0.13186813186813187,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 571,
+     "validity": 0.13134851138353765,
+     "score": 0.13134851138353765,
+     "refusal": 0.0
+    }
+   }
+  },
+  "unseen_pair": {
+   "clu": {
+    "n": 208,
+    "validity": 0.014423076923076924,
+    "score": 0.014423076923076924,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 208,
+     "validity": 0.014423076923076924,
+     "score": 0.014423076923076924,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 115,
+     "validity": 0.02608695652173913,
+     "score": 0.02608695652173913,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 93,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "landscape_removed": {
+    "n": 208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 115,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 93,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "landscape_shuffled": {
+    "n": 208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 115,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 93,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "random_atoms": {
+    "n": 208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 115,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 93,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "clu_nopair": {
+    "n": 208,
+    "validity": 0.009615384615384616,
+    "score": 0.009615384615384616,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 208,
+     "validity": 0.009615384615384616,
+     "score": 0.009615384615384616,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 115,
+     "validity": 0.017391304347826087,
+     "score": 0.017391304347826087,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 93,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "lookup_matched": {
+    "n": 208,
+    "validity": 0.18269230769230768,
+    "score": 0.18269230769230768,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 208,
+     "validity": 0.18269230769230768,
+     "score": 0.18269230769230768,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 115,
+     "validity": 0.22608695652173913,
+     "score": 0.22608695652173913,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 93,
+     "validity": 0.12903225806451613,
+     "score": 0.12903225806451613,
+     "refusal": 0.0
+    }
+   },
+   "lookup_full": {
+    "n": 208,
+    "validity": 0.14903846153846154,
+    "score": 0.14903846153846154,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 208,
+     "validity": 0.14903846153846154,
+     "score": 0.14903846153846154,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 115,
+     "validity": 0.1565217391304348,
+     "score": 0.1565217391304348,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 93,
+     "validity": 0.13978494623655913,
+     "score": 0.13978494623655913,
+     "refusal": 0.0
+    }
+   },
+   "mlp": {
+    "n": 208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 115,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 93,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "lstm": {
+    "n": 208,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 208,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 115,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 93,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "transformer": {
+    "n": 208,
+    "validity": 0.10096153846153846,
+    "score": 0.10096153846153846,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 208,
+     "validity": 0.10096153846153846,
+     "score": 0.10096153846153846,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 115,
+     "validity": 0.08695652173913043,
+     "score": 0.08695652173913043,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 93,
+     "validity": 0.11827956989247312,
+     "score": 0.11827956989247312,
+     "refusal": 0.0
+    }
+   }
+  },
+  "nway": {
+   "clu": {
+    "n": 178,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 392,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 194,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 198,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "landscape_removed": {
+    "n": 178,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 392,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 194,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 198,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "landscape_shuffled": {
+    "n": 178,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 392,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 194,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 198,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "random_atoms": {
+    "n": 178,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 392,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 194,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 198,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "clu_nopair": {
+    "n": 178,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 392,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 194,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 198,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "lookup_matched": {
+    "n": 178,
+    "validity": 0.03932584269662921,
+    "score": 0.03932584269662921,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 392,
+     "validity": 0.09183673469387756,
+     "score": 0.09183673469387756,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 194,
+     "validity": 0.05670103092783505,
+     "score": 0.05670103092783505,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 198,
+     "validity": 0.12626262626262627,
+     "score": 0.12626262626262627,
+     "refusal": 0.0
+    }
+   },
+   "lookup_full": {
+    "n": 178,
+    "validity": 0.02247191011235955,
+    "score": 0.02247191011235955,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 392,
+     "validity": 0.08928571428571429,
+     "score": 0.08928571428571429,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 194,
+     "validity": 0.0979381443298969,
+     "score": 0.0979381443298969,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 198,
+     "validity": 0.08080808080808081,
+     "score": 0.08080808080808081,
+     "refusal": 0.0
+    }
+   },
+   "mlp": {
+    "n": 178,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 392,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 194,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 198,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "lstm": {
+    "n": 178,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 392,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 194,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 198,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "transformer": {
+    "n": 178,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 392,
+     "validity": 0.017857142857142856,
+     "score": 0.017857142857142856,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 194,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 198,
+     "validity": 0.03535353535353535,
+     "score": 0.03535353535353535,
+     "refusal": 0.0
+    }
+   }
+  },
+  "budget_interp": {
+   "clu": {
+    "n": 427,
+    "validity": 0.00468384074941452,
+    "score": 0.00468384074941452,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 427,
+     "validity": 0.00468384074941452,
+     "score": 0.00468384074941452,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 223,
+     "validity": 0.008968609865470852,
+     "score": 0.008968609865470852,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 204,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "landscape_removed": {
+    "n": 427,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 427,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 223,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 204,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "landscape_shuffled": {
+    "n": 427,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 427,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 223,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 204,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "random_atoms": {
+    "n": 427,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 427,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 223,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 204,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "clu_nopair": {
+    "n": 427,
+    "validity": 0.00468384074941452,
+    "score": 0.00468384074941452,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 427,
+     "validity": 0.00468384074941452,
+     "score": 0.00468384074941452,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 223,
+     "validity": 0.008968609865470852,
+     "score": 0.008968609865470852,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 204,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "lookup_matched": {
+    "n": 427,
+    "validity": 0.13114754098360656,
+    "score": 0.13114754098360656,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 427,
+     "validity": 0.13114754098360656,
+     "score": 0.13114754098360656,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 223,
+     "validity": 0.1210762331838565,
+     "score": 0.1210762331838565,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 204,
+     "validity": 0.14215686274509803,
+     "score": 0.14215686274509803,
+     "refusal": 0.0
+    }
+   },
+   "lookup_full": {
+    "n": 427,
+    "validity": 0.09836065573770492,
+    "score": 0.09836065573770492,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 427,
+     "validity": 0.09836065573770492,
+     "score": 0.09836065573770492,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 223,
+     "validity": 0.09417040358744394,
+     "score": 0.09417040358744394,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 204,
+     "validity": 0.10294117647058823,
+     "score": 0.10294117647058823,
+     "refusal": 0.0
+    }
+   },
+   "mlp": {
+    "n": 427,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 427,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 223,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 204,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "lstm": {
+    "n": 427,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 427,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 223,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 204,
+     "validity": 0.0,
+     "score": 0.0,
+     "refusal": 0.0
+    }
+   },
+   "transformer": {
+    "n": 427,
+    "validity": 0.04449648711943794,
+    "score": 0.04449648711943794,
+    "refusal": 0.0,
+    "per_route": {
+     "n": 427,
+     "validity": 0.04449648711943794,
+     "score": 0.04449648711943794,
+     "refusal": 0.0
+    },
+    "bend": {
+     "n": 223,
+     "validity": 0.03139013452914798,
+     "score": 0.03139013452914798,
+     "refusal": 0.0
+    },
+    "nobend": {
+     "n": 204,
+     "validity": 0.058823529411764705,
+     "score": 0.058823529411764705,
+     "refusal": 0.0
+    }
+   }
+  }
+ },
+ "env_columns": {
+  "unseen_pair": {
+   "blind": {
+    "ORACLE          (full composition)": {
+     "validity": 1.0,
+     "score": 1.0,
+     "n": 208,
+     "validity_bend": 1.0,
+     "validity_nobend": 1.0
+    },
+    "BLIND-A         (rule B dropped)": {
+     "validity": 0.3557692307692308,
+     "score": 0.3557692307692308,
+     "n": 208,
+     "validity_bend": 0.0,
+     "validity_nobend": 0.7956989247311828
+    },
+    "BLIND-B         (rule A dropped)": {
+     "validity": 0.0,
+     "score": 0.0,
+     "n": 208,
+     "validity_bend": 0.0,
+     "validity_nobend": 0.0
+    },
+    "BLIND-COLOUR    (colours collapsed)": {
+     "validity": 0.13942307692307693,
+     "score": 0.13942307692307693,
+     "n": 208,
+     "validity_bend": 0.05217391304347826,
+     "validity_nobend": 0.24731182795698925
+    },
+    "BLIND-FACTOR    (A x B local only)": {
+     "validity": 0.47596153846153844,
+     "score": 0.47596153846153844,
+     "n": 208,
+     "validity_bend": 0.19130434782608696,
+     "validity_nobend": 0.8279569892473119
+    },
+    "BLIND-SEQUENTIAL(key order from A)": {
+     "validity": 0.875,
+     "score": 0.875,
+     "n": 208,
+     "validity_bend": 0.7739130434782608,
+     "validity_nobend": 1.0
+    }
+   },
+   "random": {
+    "validity": 0.0,
+    "score": 0.0,
+    "n": 208
+   },
+   "bend": {
+    "n": 208,
+    "bend_fraction": 0.5528846153846154,
+    "detour_steps": 4.086538461538462,
+    "opt_mean": 30.552884615384617,
+    "opt_a_mean": 26.466346153846153
+   }
+  },
+  "nway": {
+   "blind": {
+    "ORACLE          (full composition)": {
+     "validity": 1.0,
+     "score": 1.0,
+     "n": 392,
+     "validity_bend": 1.0,
+     "validity_nobend": 1.0
+    },
+    "BLIND-A         (rule B dropped)": {
+     "validity": 0.39540816326530615,
+     "score": 0.39540816326530615,
+     "n": 392,
+     "validity_bend": 0.0,
+     "validity_nobend": 0.7828282828282829
+    },
+    "BLIND-B         (rule A dropped)": {
+     "validity": 0.0,
+     "score": 0.0,
+     "n": 392,
+     "validity_bend": 0.0,
+     "validity_nobend": 0.0
+    },
+    "BLIND-COLOUR    (colours collapsed)": {
+     "validity": 0.16071428571428573,
+     "score": 0.16071428571428573,
+     "n": 392,
+     "validity_bend": 0.030927835051546393,
+     "validity_nobend": 0.2878787878787879
+    },
+    "BLIND-FACTOR    (A x B local only)": {
+     "validity": 0.49744897959183676,
+     "score": 0.49744897959183676,
+     "n": 392,
+     "validity_bend": 0.15979381443298968,
+     "validity_nobend": 0.8282828282828283
+    },
+    "BLIND-SEQUENTIAL(key order from A)": {
+     "validity": 0.8596938775510204,
+     "score": 0.8588633127669673,
+     "n": 392,
+     "validity_bend": 0.7319587628865979,
+     "validity_nobend": 0.9848484848484849
+    }
+   },
+   "random": {
+    "validity": 0.0,
+    "score": 0.0,
+    "n": 392
+   },
+   "bend": {
+    "n": 392,
+    "bend_fraction": 0.49489795918367346,
+    "detour_steps": 3.7066326530612246,
+    "opt_mean": 30.948979591836736,
+    "opt_a_mean": 27.242346938775512
+   }
+  },
+  "fragment": {
+   "FRAG-r1": {
+    "validity": 0.02666666666666667,
+    "score": 0.02545254161043635,
+    "signatures": 5770,
+    "state_coverage": 0.9738735327527451,
+    "n": 600
+   },
+   "FRAG-r2": {
+    "validity": 0.46,
+    "score": 0.45862771239600514,
+    "signatures": 10424,
+    "state_coverage": 0.9426083193595499,
+    "n": 600
+   }
+  }
+ },
+ "seconds": 624.8216681480408,
+ "display": {
+  "n_conditions": {
+   "budget_infeasible": 264,
+   "walled": 837,
+   "mt_unseen": 573,
+   "grounded_possible": 600
+  },
+  "target_words": [
+   "red",
+   "green",
+   "blue",
+   "yellow",
+   "cyan",
+   "magenta"
+  ],
+  "refusal": {
+   "budget_infeasible": {
+    "n": 264,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.9962121212121212
+   },
+   "walled": {
+    "n": 837,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.995221027479092
+   },
+   "mt_unseen": {
+    "n": 573,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 1.0
+   },
+   "grounded_possible": {
+    "n": 600,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.9916666666666667
+   }
+  },
+  "supervised_refuser": {
+   "trained_on": {
+    "n": 1162,
+    "n_impossible": 544,
+    "mazes": "0..47 (half the bank)"
+   },
+   "params": 101309,
+   "matched": false,
+   "evaluated_on": "held-out mazes 48..95 only",
+   "refusal_rate": {
+    "budget_infeasible": 0.4825174825174825,
+    "walled": 0.3333333333333333,
+    "mt_unseen": 0.19852941176470587,
+    "grounded_possible": 0.21107266435986158
+   }
+  },
+  "clu_refusal_rate_heldout_mazes": {
+   "budget_infeasible": {
+    "n": 143,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.993006993006993
+   },
+   "walled": {
+    "n": 414,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.9975845410628019
+   },
+   "mt_unseen": {
+    "n": 272,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 1.0
+   },
+   "grounded_possible": {
+    "n": 289,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.986159169550173
+   }
+  },
+  "delete_move_left": {
+   "kind": "INTERFACE deletion -- the action word is removed from the emission interface and from the certificate's planning. NO ATOM IS TOUCHED, so this row carries none of the exactness claim of the content deletion below.",
+   "n_routes_needing_move_left": 574,
+   "n": 600,
+   "before": {
+    "refusal": 0.9916666666666667,
+    "validity": 0.0
+   },
+   "after_needs_W": {
+    "n": 574,
+    "refusal": 1.0,
+    "validity": 0.0
+   },
+   "after_no_W": {
+    "n": 26,
+    "refusal": 1.0,
+    "validity": 0.0
+   }
+  },
+  "delete_green_exactness": {
+   "receipt": {
+    "op": "delete_rows",
+    "n_rows_removed": 216,
+    "n_before": [
+     1208,
+     1208,
+     1208,
+     1208,
+     1208,
+     1208,
+     1208,
+     1208
+    ],
+    "n_after": [
+     992,
+     992,
+     992,
+     992,
+     992,
+     992,
+     992,
+     992
+    ],
+    "refit": false,
+    "passes_over_retained_data": 0,
+    "items_kept": false,
+    "basis_change_shapes": [
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ]
+    ],
+    "basis_change_bytes_deployed": 0,
+    "mechanism": "S_k -= x x^T, t_k -= x, n_k -= 1; the atoms are re-derived from the statistic and the address book is carried across the basis change by W_k <- W_k R_k, R_k = U_k^T U'_k. The pool is never touched."
+   },
+   "statistic_max_rel_residual": 4.900930885709639e-16,
+   "subspace_max_projector_residual": 0.0,
+   "n_rows_removed": 216,
+   "n_rows_kept": 992,
+   "refit": false,
+   "passes_over_retained_data": 0,
+   "items_kept": false
+  },
+  "delete_green": {
+   "kind": "CONTENT deletion -- every item written under the word is removed from the sufficient statistic by a rank-m subtract, the atoms are re-derived and the address book is carried across the basis change. No refit, no pass over the pool, the items were never kept.",
+   "receipt": {
+    "op": "delete_rows",
+    "n_rows_removed": 216,
+    "n_before": [
+     1208,
+     1208,
+     1208,
+     1208,
+     1208,
+     1208,
+     1208,
+     1208
+    ],
+    "n_after": [
+     992,
+     992,
+     992,
+     992,
+     992,
+     992,
+     992,
+     992
+    ],
+    "refit": false,
+    "passes_over_retained_data": 0,
+    "items_kept": false,
+    "basis_change_shapes": [
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ],
+     [
+      8,
+      8
+     ]
+    ],
+    "basis_change_bytes_deployed": 0,
+    "mechanism": "S_k -= x x^T, t_k -= x, n_k -= 1; the atoms are re-derived from the statistic and the address book is carried across the basis change by W_k <- W_k R_k, R_k = U_k^T U'_k. The pool is never touched.",
+    "n_items_deleted": 216,
+    "address_book_columns_cleared": 106,
+    "word": "target=1"
+   },
+   "green_before": {
+    "n": 102,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 1.0
+   },
+   "green_after": {
+    "n": 102,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 1.0
+   },
+   "other_before": {
+    "n": 498,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0
+   },
+   "other_after": {
+    "n": 498,
+    "validity": 0.0,
+    "score": 0.0,
+    "refusal": 0.0
+   },
+   "composition_without_retraining": {
+    "validity_delta_on_other_targets": 0.0,
+    "score_delta_on_other_targets": 0.0,
+    "retrained": false
+   }
+  }
+ },
+ "tag": "dev1",
+ "prereg": null
+}

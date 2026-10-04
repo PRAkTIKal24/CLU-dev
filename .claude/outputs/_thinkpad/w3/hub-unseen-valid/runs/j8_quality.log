@@ -1,0 +1,52 @@
+C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages\equinox\_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+=== CHECK 1: did the landscape actually TRAIN? (train_store docstring: compare the HARD read vs the k-means++ init) ===
+  k-means++ init (= basis_head atoms)    val hard-read MSE 0.096092
+  trained store (= clu_span atoms)       val hard-read MSE 0.060643
+
+=== CHECK 2: does the clu_span vs basis_head_pca TIE depend on the ridge? ===
+ ridge_phi  basis_pca   clu_span   dHUEMAE
+     1e-03     0.4170     0.4169   +0.0001
+     1e-02     0.4170     0.4169   +0.0001
+     1e-01     0.4170     0.4169   +0.0001
+     1e+00     0.4169     0.4168   +0.0002
